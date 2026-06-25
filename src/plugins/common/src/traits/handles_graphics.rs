@@ -1,4 +1,4 @@
-use crate::traits::accessors::get::{TryGetContext, TryGetContextMut};
+use crate::traits::accessors::get::{GetContextMut, TryGetContext, TryGetContextMut};
 use bevy::prelude::*;
 use macros::EntityKey;
 use std::ops::{Deref, DerefMut};
@@ -47,7 +47,17 @@ pub enum Highlight {
 }
 
 pub trait UiCamera {
-	type TUiCamera: Component;
+	type TUiCameraMut: for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi + ScreenPosition>;
+}
+
+pub struct CameraHandle;
+
+pub trait RenderUi {
+	fn render_ui(&mut self, ui: Entity);
+}
+
+pub trait ScreenPosition {
+	fn screen_position(&self, translation: Vec3) -> Option<Vec2>;
 }
 
 pub trait FirstPassCamera {

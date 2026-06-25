@@ -1,11 +1,12 @@
 use crate::{
 	components::{bar::Bar, bar_values::BarValues},
-	traits::{GetScreenPosition, UIBarUpdate},
+	traits::UIBarUpdate,
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	traits::{
-		accessors::get::{TryApplyOn, View, ViewField},
+		accessors::get::{GetContextMut, TryApplyOn, View, ViewField},
+		handles_graphics::{CameraHandle, ScreenPosition},
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -20,39 +21,36 @@ type OldBars<'a, TSource, TValue> = (
 );
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn bar<TSource, TValue, TCamera, TMainCameraLabel>(
+pub(crate) fn bar<TSource, TValue, TCamera>(
 	commands: ZyheedaCommands,
 	without_bar_values: Query<NewBars<TSource>, Without<BarValues<TValue>>>,
 	with_bar_values: Query<OldBars<TSource, TValue>>,
-	camera: Query<(&TCamera, &GlobalTransform), With<TMainCameraLabel>>,
+	mut camera: StaticSystemParam<TCamera>,
 ) where
 	TValue: ThreadSafe + for<'a> ViewField<TValue<'a> = TValue>,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 	TSource: Component + View<TValue>,
-	TCamera: Component + GetScreenPosition,
-	TMainCameraLabel: Component,
+	TCamera: for<'c> GetContextMut<CameraHandle, TContext<'c>: ScreenPosition>,
 {
-	let Ok((camera, camera_transform)) = camera.single() else {
-		return;
-	};
-	add_bar_values(commands, without_bar_values, camera, camera_transform);
-	update_bar_values(with_bar_values, camera, camera_transform);
+	let camera = TCamera::get_context_mut(&mut camera, CameraHandle);
+
+	add_bar_values(commands, without_bar_values, &camera);
+	update_bar_values(with_bar_values, &camera);
 }
 
 fn add_bar_values<TSource, TValue, TCamera>(
 	mut commands: ZyheedaCommands,
 	mut agents: Query<(Entity, &GlobalTransform, &TSource, &mut Bar), Without<BarValues<TValue>>>,
 	camera: &TCamera,
-	camera_transform: &GlobalTransform,
 ) where
 	TValue: ThreadSafe + for<'a> ViewField<TValue<'a> = TValue>,
 	TSource: Component + View<TValue>,
-	TCamera: Component + GetScreenPosition,
+	TCamera: ScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
 	for (id, transform, display, mut bar) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
-		bar.position = camera.get_screen_position(camera_transform, world_position);
+		bar.position = camera.screen_position(world_position);
 		let mut bar_values = BarValues::default();
 		bar_values.update(&display.view());
 
@@ -65,16 +63,15 @@ fn add_bar_values<TSource, TValue, TCamera>(
 fn update_bar_values<TSource, TValue, TCamera>(
 	mut agents: Query<(&GlobalTransform, &TSource, &mut Bar, &mut BarValues<TValue>)>,
 	camera: &TCamera,
-	camera_transform: &GlobalTransform,
 ) where
 	TValue: ThreadSafe + for<'a> ViewField<TValue<'a> = TValue>,
 	TSource: Component + View<TValue>,
-	TCamera: Component + GetScreenPosition,
+	TCamera: ScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
 	for (transform, display, mut bar, mut bar_values) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
-		bar.position = camera.get_screen_position(camera_transform, world_position);
+		bar.position = camera.screen_position(world_position);
 		bar_values.update(&display.view());
 	}
 }
@@ -86,27 +83,27 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		math::{Vec2, Vec3},
-		prelude::Bundle,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, ops::DerefMut};
 	use testing::{NestedMocks, SingleThreadedApp};
 
-	#[derive(Component, NestedMocks)]
+	#[derive(Resource, NestedMocks)]
 	pub struct _Camera {
 		pub mock: Mock_Camera,
 	}
 
 	#[automock]
-	impl GetScreenPosition for _Camera {
-		fn get_screen_position(
-			&self,
-			camera_transform: &GlobalTransform,
-			world_position: Vec3,
-		) -> Option<Vec2> {
-			self.mock
-				.get_screen_position(camera_transform, world_position)
+	impl ScreenPosition for _Camera {
+		fn screen_position(&self, translation: Vec3) -> Option<Vec2> {
+			self.mock.screen_position(translation)
+		}
+	}
+
+	impl ScreenPosition for &mut _Camera {
+		fn screen_position(&self, translation: Vec3) -> Option<Vec2> {
+			(self as &_Camera).screen_position(translation)
 		}
 	}
 
@@ -129,9 +126,6 @@ mod tests {
 		max: u8,
 	}
 
-	#[derive(Component, Default)]
-	struct _MainCameraLabel;
-
 	impl UIBarUpdate<_Value> for BarValues<_Value> {
 		fn update(&mut self, value: &_Value) {
 			self.current = value.current as f32;
@@ -139,26 +133,18 @@ mod tests {
 		}
 	}
 
-	fn setup<TLabel>(camera: Option<(_Camera, GlobalTransform, TLabel)>) -> App
-	where
-		TLabel: Bundle + Default,
-	{
+	fn setup(camera: Option<_Camera>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, bar::<_Source, _Value, _Camera, _MainCameraLabel>);
+		app.add_systems(Update, bar::<_Source, _Value, ResMut<_Camera>>);
 
 		match camera {
 			None => {
-				app.world_mut().spawn((
-					_Camera::new().with_mock(|mock| {
-						mock.expect_get_screen_position()
-							.return_const(Vec2::default());
-					}),
-					GlobalTransform::default(),
-					TLabel::default(),
-				));
+				app.insert_resource(_Camera::new().with_mock(|mock| {
+					mock.expect_screen_position().return_const(Vec2::default());
+				}));
 			}
 			Some(camera) => {
-				app.world_mut().spawn(camera);
+				app.insert_resource(camera);
 			}
 		}
 
@@ -167,7 +153,7 @@ mod tests {
 
 	#[test]
 	fn add_new_bar_values_when_new() {
-		let mut app = setup::<_MainCameraLabel>(None);
+		let mut app = setup(None);
 		let agent = app
 			.world_mut()
 			.spawn((
@@ -186,18 +172,13 @@ mod tests {
 
 	#[test]
 	fn set_position_with_camera_transform_and_agent_position_plus_ui_bar_offset() {
-		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
 		let offset = Vec3::new(1., 2., 3.);
-		let mut app = setup(Some((
-			_Camera::new().with_mock(|mock| {
-				mock.expect_get_screen_position()
-					.times(1)
-					.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
-					.return_const(Vec2::default());
-			}),
-			camera_transform,
-			_MainCameraLabel,
-		)));
+		let mut app = setup(Some(_Camera::new().with_mock(|mock| {
+			mock.expect_screen_position()
+				.times(1)
+				.with(eq(Vec3::new(5., 3., 9.) + offset))
+				.return_const(Vec2::default());
+		})));
 
 		app.world_mut().spawn((
 			GlobalTransform::from_xyz(5., 3., 9.),
@@ -210,14 +191,10 @@ mod tests {
 
 	#[test]
 	fn set_bar_position() {
-		let mut app = setup(Some((
-			_Camera::new().with_mock(|mock| {
-				mock.expect_get_screen_position()
-					.return_const(Vec2::new(42., 24.));
-			}),
-			GlobalTransform::default(),
-			_MainCameraLabel,
-		)));
+		let mut app = setup(Some(_Camera::new().with_mock(|mock| {
+			mock.expect_screen_position()
+				.return_const(Vec2::new(42., 24.));
+		})));
 
 		let agent = app
 			.world_mut()
@@ -240,7 +217,7 @@ mod tests {
 
 	#[test]
 	fn set_bar_values_current_and_max() {
-		let mut app = setup::<_MainCameraLabel>(None);
+		let mut app = setup(None);
 
 		let agent = app
 			.world_mut()
@@ -263,18 +240,13 @@ mod tests {
 
 	#[test]
 	fn set_position_with_camera_transform_and_agent_position_plus_ui_bar_offset_on_update() {
-		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
 		let offset = Vec3::new(11., 12., 13.);
-		let mut app = setup(Some((
-			_Camera::new().with_mock(|mock| {
-				mock.expect_get_screen_position()
-					.times(2)
-					.with(eq(camera_transform), eq(Vec3::new(5., 3., 9.) + offset))
-					.return_const(Vec2::default());
-			}),
-			camera_transform,
-			_MainCameraLabel,
-		)));
+		let mut app = setup(Some(_Camera::new().with_mock(|mock| {
+			mock.expect_screen_position()
+				.times(2)
+				.with(eq(Vec3::new(5., 3., 9.) + offset))
+				.return_const(Vec2::default());
+		})));
 
 		app.world_mut().spawn((
 			GlobalTransform::from_xyz(5., 3., 9.),
@@ -288,17 +260,12 @@ mod tests {
 
 	#[test]
 	fn update_bar_position() {
-		let mut app = setup(Some((
-			_Camera::new().with_mock(|mock| {
-				let mut screen_positions =
-					VecDeque::from([Vec2::new(11., 22.), Vec2::new(22., 33.)]);
+		let mut app = setup(Some(_Camera::new().with_mock(|mock| {
+			let mut screen_positions = VecDeque::from([Vec2::new(11., 22.), Vec2::new(22., 33.)]);
 
-				mock.expect_get_screen_position()
-					.returning(move |_, _| screen_positions.pop_front());
-			}),
-			GlobalTransform::default(),
-			_MainCameraLabel,
-		)));
+			mock.expect_screen_position()
+				.returning(move |_| screen_positions.pop_front());
+		})));
 
 		let agent = app
 			.world_mut()
@@ -321,34 +288,8 @@ mod tests {
 	}
 
 	#[test]
-	fn ignore_cameras_with_wrong_label() {
-		#[derive(Component, Default)]
-		struct _WrongLabel;
-
-		let camera_transform = GlobalTransform::from_xyz(4., 5., 6.);
-		let offset = Vec3::new(1., 2., 3.);
-		let mut app = setup(Some((
-			_Camera::new().with_mock(|mock| {
-				mock.expect_get_screen_position()
-					.never()
-					.return_const(Vec2::default());
-			}),
-			camera_transform,
-			_WrongLabel,
-		)));
-
-		app.world_mut().spawn((
-			GlobalTransform::from_xyz(5., 3., 9.),
-			Bar::new(offset, 0.),
-			_Source::default(),
-		));
-
-		app.update();
-	}
-
-	#[test]
 	fn update_bar_values_current_and_max() {
-		let mut app = setup::<_MainCameraLabel>(None);
+		let mut app = setup(None);
 
 		let agent = app
 			.world_mut()

@@ -4,7 +4,6 @@ mod traits;
 
 use bevy::{
 	app::{App, Plugin, Update},
-	camera::Camera,
 	ecs::schedule::IntoScheduleConfigs,
 };
 use common::{
@@ -41,9 +40,8 @@ where
 	TGraphics: ThreadSafe + UiCamera,
 {
 	fn build(&self, app: &mut App) {
-		let update_life_bars =
-			bar::<TPhysics::TAffectedComponent, Health, Camera, TGraphics::TUiCamera>;
-		let render_life_bars = render_bar::<Health, TGraphics::TUiCamera>;
+		let update_life_bars = bar::<TPhysics::TAffectedComponent, Health, TGraphics::TUiCameraMut>;
+		let render_life_bars = render_bar::<Health, TGraphics::TUiCameraMut>;
 
 		app.register_required_components::<TAgents::TAgent, Bar>();
 

@@ -452,7 +452,7 @@ impl Prefab<()> for WorldLight {
 	Tonemapping::from(Self),
 	Hdr
 )]
-pub struct UiPass;
+pub(crate) struct UiPass;
 
 impl From<UiPass> for Camera {
 	fn from(_: UiPass) -> Self {
