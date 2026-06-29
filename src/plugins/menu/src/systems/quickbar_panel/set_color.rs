@@ -6,53 +6,61 @@ use crate::{
 	},
 	traits::colors::ColorConfig,
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	tools::skill_execution::SkillExecution,
 	traits::{
-		accessors::get::{TryApplyOn, TryGetContext, View, ViewOf},
+		accessors::get::{Get, TryApplyOn, TryGetContext, View, ViewOf},
 		handles_input::MouseOverrideActive,
 		handles_loadout::skills::{ReadSkills, Skills},
+		handles_player::PlayerEntity,
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
 
 impl QuickbarPanel {
-	pub(crate) fn set_color<TAgent, TActionKeyButton, TLoadout>(
+	pub(crate) fn set_color<TPlayer, TActionKeyButton, TLoadout>(
 		commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self, &TActionKeyButton)>,
-		agents: Query<Entity, With<TAgent>>,
+		player: StaticSystemParam<TPlayer>,
 		param: StaticSystemParam<TLoadout>,
 	) where
-		TAgent: Component,
+		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TActionKeyButton: Component + View<MouseOverrideActive>,
 		TLoadout: for<'c> TryGetContext<Skills, TContext<'c>: ReadSkills>,
 	{
-		set_color(commands, buttons, agents, param)
+		set_color(commands, buttons, player, param)
 	}
 }
 
-fn set_color<TAgent, TActionKeyButton, TLoadout>(
+fn set_color<TPlayer, TActionKeyButton, TLoadout>(
 	mut commands: ZyheedaCommands,
 	buttons: Query<(Entity, &QuickbarPanel, &TActionKeyButton)>,
-	agents: Query<Entity, With<TAgent>>,
+	player: StaticSystemParam<TPlayer>,
 	param: StaticSystemParam<TLoadout>,
 ) where
-	TAgent: Component,
+	TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 	TActionKeyButton: Component + View<MouseOverrideActive>,
 	TLoadout: for<'c> TryGetContext<Skills, TContext<'c>: ReadSkills>,
 {
-	for entity in &agents {
-		let Some(ctx) = TLoadout::try_get_context(&param, Skills { entity }) else {
-			continue;
-		};
+	let Some(player) = player.view() else {
+		return;
+	};
+	let Some(entity) = commands.get(&player) else {
+		return;
+	};
+	let Some(ctx) = TLoadout::try_get_context(&param, Skills { entity }) else {
+		return;
+	};
 
-		for (btn_entity, panel, action_button) in &buttons {
-			commands.try_apply_on(&btn_entity, |e| {
-				let color = get_color_override(panel, action_button, &ctx);
-				update_color_override(color, e);
-			});
-		}
+	for (btn_entity, panel, action_button) in &buttons {
+		commands.try_apply_on(&btn_entity, |e| {
+			let color = get_color_override(panel, action_button, &ctx);
+			update_color_override(color, e);
+		});
 	}
 }
 
@@ -97,9 +105,12 @@ fn update_color_override(color: Option<ColorConfig>, mut entity: ZyheedaEntityCo
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::{ColorOverride, dispatch_text_color::DispatchTextColor};
-	use bevy::state::app::StatesPlugin;
+	use crate::{
+		components::{ColorOverride, dispatch_text_color::DispatchTextColor},
+		testing::{_Player, _PlayerParam},
+	};
 	use common::{
+		CommonPlugin,
 		tools::action_key::slot::HandSlot,
 		traits::{
 			handles_loadout::{
@@ -122,9 +133,6 @@ mod tests {
 			self.mouse_overridden
 		}
 	}
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Component, Clone)]
 	struct _Skills(HashMap<LoadoutKey, _Skill>);
@@ -171,11 +179,11 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.add_systems(
 			Update,
-			set_color::<_Agent, _ActionKeyButton, Query<Ref<_Skills>>>,
+			set_color::<_PlayerParam, _ActionKeyButton, Query<Ref<_Skills>>>,
 		);
-		app.add_plugins(StatesPlugin);
 
 		app
 	}
@@ -184,7 +192,7 @@ mod tests {
 	fn set_to_active_when_matching_skill_active() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Skills(HashMap::from([(
 				LoadoutKey::from(HandSlot::Left),
 				_Skill(SkillExecution::Active),
@@ -219,7 +227,7 @@ mod tests {
 	#[test]
 	fn no_override_when_no_matching_skill_active() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Skills(HashMap::from([]))));
+		app.world_mut().spawn((_Player, _Skills(HashMap::from([]))));
 		let panel = app
 			.world_mut()
 			.spawn((
@@ -245,7 +253,7 @@ mod tests {
 	fn no_override_when_skill_not_active() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Skills(HashMap::from([(
 				LoadoutKey::from(HandSlot::Left),
 				_Skill(SkillExecution::None),
@@ -276,7 +284,7 @@ mod tests {
 	fn set_to_pressed_when_matching_key_primed() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Skills(HashMap::from([(
 				LoadoutKey::from(HandSlot::Left),
 				_Skill(SkillExecution::None),
@@ -314,7 +322,7 @@ mod tests {
 	fn set_to_queued_when_matching_with_queued_skill() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Skills(HashMap::from([(
 				LoadoutKey::from(HandSlot::Left),
 				_Skill(SkillExecution::Queued),

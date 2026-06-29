@@ -99,7 +99,7 @@ where
 				TPhysics::TCharacterMotion::update_speed,
 				TPhysics::TCharacterMotion::animate_forward::<TAnimations::TAnimationsMut>,
 				TPhysics::TCharacterMotion::set_facing,
-				SetFace::get_faces.pipe(execute_face::<TPhysics::TRaycast, TPhysics::TAgent>),
+				SetFace::get_faces.pipe(execute_face::<TPhysics::TRaycastMut, TPhysics::TAgent>),
 				MovementParam::<TPhysics::TCharacterMotion>::update_just_removed,
 			)
 				.chain()

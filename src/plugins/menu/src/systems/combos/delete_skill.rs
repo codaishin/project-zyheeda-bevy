@@ -1,33 +1,46 @@
 use crate::components::DeleteSkill;
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::TryGetContextMut,
-	handles_loadout::combos::{Combos, UpdateCombos},
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
+use common::{
+	traits::{
+		accessors::get::{Get, TryGetContextMut, View},
+		handles_loadout::combos::{Combos, UpdateCombos},
+		handles_player::PlayerEntity,
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 
 impl DeleteSkill {
-	pub(crate) fn from_combos<TAgent, TLoadout, TId>(
+	pub(crate) fn from_combos<TPlayer, TLoadout, TId>(
+		commands: ZyheedaCommands,
 		deletes: Query<(&DeleteSkill, &Interaction)>,
-		agents: Query<Entity, With<TAgent>>,
+		player: StaticSystemParam<TPlayer>,
 		mut param: StaticSystemParam<TLoadout>,
 	) where
-		TAgent: Component,
+		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TLoadout: for<'c> TryGetContextMut<Combos, TContext<'c>: UpdateCombos<TId>>,
 	{
-		for entity in &agents {
-			let Some(mut ctx) = TLoadout::try_get_context_mut(&mut param, Combos { entity }) else {
-				continue;
-			};
-			let deletes = deletes
-				.iter()
-				.filter(pressed)
-				.map(|(delete, ..)| (delete.key_path.clone(), None))
-				.collect::<Vec<_>>();
-			if deletes.is_empty() {
-				continue;
-			}
-			ctx.update_combos(deletes);
+		let Some(player) = player.view() else {
+			return;
+		};
+		let Some(entity) = commands.get(&player) else {
+			return;
+		};
+
+		let Some(mut ctx) = TLoadout::try_get_context_mut(&mut param, Combos { entity }) else {
+			return;
+		};
+		let deletes = deletes
+			.iter()
+			.filter(pressed)
+			.map(|(delete, ..)| (delete.key_path.clone(), None))
+			.collect::<Vec<_>>();
+		if deletes.is_empty() {
+			return;
 		}
+		ctx.update_combos(deletes);
 	}
 }
 
@@ -38,16 +51,15 @@ fn pressed((.., interaction): &(&DeleteSkill, &Interaction)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::testing::{_Player, _PlayerParam};
 	use common::{
+		CommonPlugin,
 		tools::action_key::slot::{HandSlot, SlotKey},
 		traits::handles_loadout::combos::Combo,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Component, NestedMocks)]
 	struct _Combos {
@@ -66,9 +78,11 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
+
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.add_systems(
 			Update,
-			DeleteSkill::from_combos::<_Agent, Query<&mut _Combos>, _Id>,
+			DeleteSkill::from_combos::<_PlayerParam, Query<&mut _Combos>, _Id>,
 		);
 
 		app
@@ -78,7 +92,7 @@ mod tests {
 	fn set_combo_with_value_none() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Combos::new().with_mock(|mock| {
 				mock.expect_update_combos()
 					.times(1)
@@ -109,7 +123,7 @@ mod tests {
 	fn do_nothing_if_not_pressed() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Combos::new().with_mock(|mock| {
 				mock.expect_update_combos().never();
 			}),

@@ -1,5 +1,5 @@
-use crate::traits::accessors::get::{GetContextMut, TryGetContext, TryGetContextMut};
-use bevy::prelude::*;
+use crate::traits::accessors::get::{GetContext, GetContextMut, TryGetContext, TryGetContextMut};
+use bevy::{ecs::system::SystemParam, prelude::*};
 use macros::EntityKey;
 use std::ops::{Deref, DerefMut};
 
@@ -46,8 +46,12 @@ pub enum Highlight {
 	Interacting,
 }
 
-pub trait UiCamera {
-	type TUiCameraMut: for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi + ScreenPosition>;
+pub trait HandlesCameras {
+	type TCamera: for<'c> GetContext<CameraHandle, TContext<'c>: CameraTransform>;
+	type TCameraMut: SystemParam
+		+ for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi>
+		+ for<'c> GetContextMut<CameraHandle, TContext<'c>: ScreenPosition>
+		+ for<'c> GetContextMut<CameraHandle, TContext<'c>: CameraTransformMut>;
 }
 
 pub struct CameraHandle;
@@ -60,12 +64,30 @@ pub trait ScreenPosition {
 	fn screen_position(&self, translation: Vec3) -> Option<Vec2>;
 }
 
-pub trait FirstPassCamera {
-	type TFirstPassCamera: Component;
+pub trait CameraTransform {
+	fn camera_transform(&self) -> &'_ Transform;
 }
 
-pub trait WorldCameras {
-	type TWorldCameras: Component;
+impl<T> CameraTransform for T
+where
+	T: Deref<Target: CameraTransform>,
+{
+	fn camera_transform(&self) -> &'_ Transform {
+		self.deref().camera_transform()
+	}
+}
+
+pub trait CameraTransformMut: CameraTransform {
+	fn camera_transform_mut(&mut self) -> &'_ mut Transform;
+}
+
+impl<T> CameraTransformMut for T
+where
+	T: DerefMut<Target: CameraTransformMut>,
+{
+	fn camera_transform_mut(&mut self) -> &'_ mut Transform {
+		self.deref_mut().camera_transform_mut()
+	}
 }
 
 #[derive(EntityKey)]

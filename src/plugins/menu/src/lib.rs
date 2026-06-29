@@ -7,6 +7,9 @@ mod tools;
 mod traits;
 mod visualization;
 
+#[cfg(test)]
+mod testing;
+
 #[cfg(debug_assertions)]
 mod debug;
 
@@ -43,7 +46,7 @@ use common::{
 	},
 	tools::{action_key::ActionKey, path::Path},
 	traits::{
-		handles_graphics::UiCamera,
+		handles_graphics::HandlesCameras,
 		handles_input::{HandlesActionKeyButton, HandlesInput, HandlesInputMut},
 		handles_load_tracking::{
 			AssetsProgress,
@@ -117,7 +120,7 @@ where
 	TSavegame: ThreadSafe + HandlesSaving,
 	TInput: ThreadSafe + HandlesActionKeyButton + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
-	TGraphics: ThreadSafe + UiCamera,
+	TGraphics: ThreadSafe + HandlesCameras,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
@@ -149,7 +152,7 @@ where
 	TSavegame: ThreadSafe + HandlesSaving,
 	TInput: ThreadSafe + HandlesActionKeyButton + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
-	TGraphics: ThreadSafe + UiCamera,
+	TGraphics: ThreadSafe + HandlesCameras,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
@@ -189,10 +192,10 @@ where
 		let load_dependencies = TLoading::processing_state::<TLoadGroup, DependenciesProgress>();
 
 		app
-			.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
+			.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
 				load_assets
 			)
-			.add_ui::<LoadingScreen<DependenciesProgress>, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
+			.add_ui::<LoadingScreen<DependenciesProgress>, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
 				load_dependencies
 			);
 	}
@@ -208,7 +211,7 @@ where
 			.pipe(StartMenuButton::set_activity(quick_load));
 
 		app.add_prefab_observer::<StartMenuButton, ()>()
-			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
+			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
 				start_menu,
 			)
 			.add_systems(
@@ -224,7 +227,7 @@ where
 	}
 
 	fn pause_menu(&self, app: &mut App) {
-		app.add_ui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
+		app.add_ui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
 			GameState::IngameMenu(MenuState::Paused),
 		);
 	}
@@ -232,7 +235,7 @@ where
 	fn ui_overlay(&self, app: &mut App) {
 		let play = GameState::Play;
 
-		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(play)
+		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(play)
 			.add_observer(QuickbarPanel::add_input_control::<TInput::TActionKeyButton>)
 			.add_systems(
 				Update,
@@ -256,7 +259,7 @@ where
 
 		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
 
-		app.add_ui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
+		app.add_ui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
 			combo_overview,
 		);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
@@ -309,7 +312,7 @@ where
 	fn inventory_screen(&self, app: &mut App) {
 		let inventory = GameState::IngameMenu(MenuState::Inventory);
 
-		app.add_ui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
+		app.add_ui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
 			inventory,
 		)
 		.add_systems(
@@ -334,7 +337,7 @@ where
 
 		app.register_required_components::<KeyBindInput, Interaction>()
 			.register_required_components::<KeyRebindInput, PreventMenuChange>()
-			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TUiCameraMut>(
+			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
 				settings,
 			)
 			.add_systems(
@@ -395,7 +398,7 @@ where
 	TSavegame: ThreadSafe + HandlesSaving,
 	TInput: ThreadSafe + HandlesActionKeyButton + HandlesInput + HandlesInputMut,
 	TLocalization: ThreadSafe + HandlesLocalization,
-	TGraphics: ThreadSafe + UiCamera,
+	TGraphics: ThreadSafe + HandlesCameras,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
@@ -417,7 +420,7 @@ where
 		{
 			debug::setup_run_time_display::<
 				TLocalization::TLocalizationServer,
-				TGraphics::TUiCameraMut,
+				TGraphics::TCameraMut,
 			>(app);
 			debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
 		}

@@ -34,15 +34,14 @@ use crate::{
 		target::Target,
 		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
-		world_camera::WorldCamera,
 	},
 	messages::RayEvent,
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
-	resources::root_collisions::RootCollisions,
+	resources::{root_collisions::RootCollisions, world_camera::WorldCamera},
 	system_params::{
 		config::ConfigParamMut,
 		interactive::InteractiveParam,
-		ray_caster::{RayCaster, RayCasterMut},
+		ray_caster::RayCasterMut,
 		skill_agent::{SkillAgent, SkillAgentMut},
 		update_root_collisions::UpdateRootCollisions,
 	},
@@ -125,16 +124,8 @@ where
 			)
 			.add_observer(LinearVelocity::apply)
 			// World camera
-			.add_observer(WorldCamera::remove_old_cameras)
-			.add_systems(
-				Update,
-				(
-					WorldCamera::reset_camera,
-					WorldCamera::update_ray.pipe(OnError::log),
-				)
-					.chain()
-					.in_set(PhysicsSystems),
-			)
+			.init_resource::<WorldCamera>()
+			.add_systems(Update, WorldCamera::reset_camera.in_set(PhysicsSystems))
 			// Character Motion
 			.register_required_components::<KinematicCharacterController, CharacterGravity>()
 			.add_systems(
@@ -150,7 +141,7 @@ where
 			// Animations
 			.add_systems(
 				Update,
-				Target::update_pitch::<RayCaster, TAnimations::TAnimationsMut>,
+				Target::update_pitch::<RayCasterMut, TAnimations::TAnimationsMut>,
 			)
 			// Skills
 			.register_required_components::<Skill, TSaveGame::TSaveEntityMarker>()
@@ -196,7 +187,7 @@ where
 			.add_observer(LifetimeTiedTo::insert_on::<Anchor>)
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
 			// Anchor
-			.add_observer(AnchorDirty::process::<RayCaster>.pipe(OnError::log))
+			.add_observer(AnchorDirty::process::<RayCasterMut>.pipe(OnError::log))
 			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems))
 			.add_systems(
 				Update,
@@ -205,7 +196,7 @@ where
 					ColliderRoot::link_children,
 					// Skill spawning/lifetime
 					(
-						GroundTarget::set_position::<RayCaster>,
+						GroundTarget::set_position::<RayCasterMut>,
 						DestroyAfterDistanceTraveled::system,
 						SetVelocityForward::system,
 					)
@@ -256,8 +247,7 @@ struct CollisionSystems;
 pub struct PhysicsSystems;
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
-	type TRayCastMut = RayCasterMut<'static, 'static>;
-	type TRaycast = RayCaster<'static, 'static>;
+	type TRaycastMut = RayCasterMut<'static, 'static>;
 }
 
 impl<TDependencies> HandlesPhysicsConfig for PhysicsPlugin<TDependencies> {

@@ -1,12 +1,12 @@
 use crate::{
 	components::collider::{RAY_GROUP, TERRAIN_GROUP},
-	system_params::ray_caster::RayCaster,
+	system_params::ray_caster::RayCasterMut,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::{math::Real, prelude::*};
 use common::traits::handles_physics::{Raycast, Terrain, TimeOfImpact};
 
-impl Raycast<Terrain> for RayCaster<'_, '_> {
+impl Raycast<Terrain> for RayCasterMut<'_, '_> {
 	fn raycast(&mut self, Terrain { ray }: Terrain) -> Option<TimeOfImpact> {
 		let ray_caster = self.context.single().ok()?;
 
@@ -28,6 +28,7 @@ impl Raycast<Terrain> for RayCaster<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::resources::world_camera::WorldCamera;
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		mesh::MeshPlugin,
@@ -47,6 +48,7 @@ mod tests {
 			ScenePlugin,
 			RapierPhysicsPlugin::<NoUserData>::default(),
 		));
+		app.init_resource::<WorldCamera>();
 
 		app
 	}
@@ -66,7 +68,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(move |mut ray_caster: RayCaster| {
+			.run_system_once(move |mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(Terrain { ray })
 			})?;
 
@@ -92,7 +94,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(move |mut ray_caster: RayCaster| {
+			.run_system_once(move |mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(Terrain { ray })
 			})?;
 
@@ -118,7 +120,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(move |mut ray_caster: RayCaster| {
+			.run_system_once(move |mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(Terrain { ray })
 			})?;
 

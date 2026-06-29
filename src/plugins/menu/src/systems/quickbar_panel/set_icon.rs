@@ -1,46 +1,54 @@
 use crate::components::{icon::Icon, label::UILabel, quickbar_panel::QuickbarPanel};
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	traits::{
-		accessors::get::{TryApplyOn, TryGetContext, ViewOf},
+		accessors::get::{Get, TryApplyOn, TryGetContext, View, ViewOf},
 		handles_loadout::skills::{ReadSkills, SkillIcon, SkillToken, Skills},
 		handles_localization::Token,
+		handles_player::PlayerEntity,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl QuickbarPanel {
-	pub(crate) fn set_icon<TAgent, TLoadout>(
+	pub(crate) fn set_icon<TPlayer, TLoadout>(
 		mut commands: ZyheedaCommands,
 		param: StaticSystemParam<TLoadout>,
 		panels: Query<PanelComponents>,
-		agents: Query<Entity, With<TAgent>>,
+		player: StaticSystemParam<TPlayer>,
 	) where
-		TAgent: Component,
+		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TLoadout: for<'c> TryGetContext<Skills, TContext<'c>: ReadSkills>,
 	{
-		for entity in &agents {
-			let Some(ctx) = TLoadout::try_get_context(&param, Skills { entity }) else {
+		let Some(player) = player.view() else {
+			return;
+		};
+		let Some(entity) = commands.get(&player) else {
+			return;
+		};
+		let Some(ctx) = TLoadout::try_get_context(&param, Skills { entity }) else {
+			return;
+		};
+
+		for (panel_entity, Self { key, .. }, current_icon, current_label) in &panels {
+			let Some(skill) = ctx.get_skill(*key) else {
 				continue;
 			};
+			let token = skill.view_of::<SkillToken>();
+			let image = skill.view_of::<SkillIcon>();
 
-			for (panel_entity, Self { key, .. }, current_icon, current_label) in &panels {
-				let Some(skill) = ctx.get_skill(*key) else {
-					continue;
-				};
-				let token = skill.view_of::<SkillToken>();
-				let image = skill.view_of::<SkillIcon>();
+			commands.try_apply_on(&panel_entity, |mut e| {
+				if !loaded(current_icon, image) {
+					e.try_insert(Icon::Load(image.clone()));
+				}
 
-				commands.try_apply_on(&panel_entity, |mut e| {
-					if !loaded(current_icon, image) {
-						e.try_insert(Icon::Load(image.clone()));
-					}
-
-					if !labeled(current_label, token) {
-						e.try_insert(UILabel(token.clone()));
-					}
-				});
-			}
+				if !labeled(current_label, token) {
+					e.try_insert(UILabel(token.clone()));
+				}
+			});
 		}
 	}
 }
@@ -65,17 +73,16 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{icon::Icon, label::UILabel},
+		testing::{_Player, _PlayerParam},
 		tools::PanelState,
 	};
 	use common::{
+		CommonPlugin,
 		tools::{action_key::slot::HandSlot, skill_execution::SkillExecution},
 		traits::{accessors::get::View, handles_loadout::LoadoutKey, handles_localization::Token},
 	};
 	use std::collections::HashMap;
 	use testing::{IsChanged, SingleThreadedApp, new_handle};
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Component, Clone)]
 	struct _Skills(HashMap<LoadoutKey, _Skill>);
@@ -121,10 +128,11 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.add_systems(
 			Update,
 			(
-				QuickbarPanel::set_icon::<_Agent, Query<Ref<_Skills>>>,
+				QuickbarPanel::set_icon::<_PlayerParam, Query<Ref<_Skills>>>,
 				IsChanged::<UILabel<Token>>::detect,
 			)
 				.chain(),
@@ -142,7 +150,7 @@ mod tests {
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Skills(HashMap::from([(
 				LoadoutKey::from(HandSlot::Right),
 				item.clone(),
@@ -173,7 +181,7 @@ mod tests {
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Skills(HashMap::from([(
 				LoadoutKey::from(HandSlot::Right),
 				item.clone(),
@@ -207,7 +215,7 @@ mod tests {
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Skills(HashMap::from([(
 				LoadoutKey::from(HandSlot::Right),
 				item.clone(),
@@ -238,7 +246,7 @@ mod tests {
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Skills(HashMap::from([(
 				LoadoutKey::from(HandSlot::Right),
 				item.clone(),
@@ -270,7 +278,7 @@ mod tests {
 		};
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Skills(HashMap::from([(
 				LoadoutKey::from(HandSlot::Right),
 				item.clone(),

@@ -1,4 +1,4 @@
-use crate::components::{player::Player, player_camera::PlayerCamera};
+use crate::components::player::Player;
 use MovementKey::{Backward, Forward, Left, Pointer, Right};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
@@ -7,7 +7,8 @@ use bevy::{
 use common::{
 	tools::action_key::movement::MovementKey,
 	traits::{
-		accessors::get::TryGetContextMut,
+		accessors::get::{GetContext, TryGetContextMut},
+		handles_graphics::{CameraHandle, CameraTransform},
 		handles_input::{GetAllInputStates, InputState},
 		handles_movement::{ConfiguredMovement, StartMovement, StopMovement},
 		handles_physics::{MouseTerrainHover, MouseTerrainPoint, Raycast},
@@ -15,27 +16,24 @@ use common::{
 };
 
 impl Player {
-	pub(crate) fn movement<TInput, TRaycast, TMovement>(
-		mut m: StaticSystemParam<TMovement>,
+	pub(crate) fn movement<TInput, TRaycast, TMovement, TCamera>(
+		mut movement: StaticSystemParam<TMovement>,
 		mut raycast: StaticSystemParam<TRaycast>,
 		input: StaticSystemParam<TInput>,
-		cameras: Query<&Transform, With<PlayerCamera>>,
+		camera: StaticSystemParam<TCamera>,
 		players: Query<Entity, With<Self>>,
 	) where
-		for<'w, 's> TInput: SystemParam<Item<'w, 's>: GetAllInputStates>,
-		for<'w, 's> TRaycast: SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>,
-		for<'c> TMovement:
-			TryGetContextMut<ConfiguredMovement, TContext<'c>: StartMovement + StopMovement>,
+		TInput: for<'w, 's> SystemParam<Item<'w, 's>: GetAllInputStates>,
+		TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>,
+		TMovement: for<'c> TryGetContextMut<ConfiguredMovement, TContext<'c>: StartMovement + StopMovement>,
+		TCamera: for<'c> GetContext<CameraHandle, TContext<'c>: CameraTransform>,
 	{
-		let Some(cam_transform) = cameras.iter().next() else {
-			return;
-		};
+		let cam_transform = *TCamera::get_context(&camera, CameraHandle).camera_transform();
 		let inputs = || input.get_all_input_states::<MovementKey>();
 
 		for entity in &players {
-			let Some(mut ctx) =
-				TMovement::try_get_context_mut(&mut m, ConfiguredMovement { entity })
-			else {
+			let ray = ConfiguredMovement { entity };
+			let Some(mut ctx) = TMovement::try_get_context_mut(&mut movement, ray) else {
 				continue;
 			};
 
@@ -80,10 +78,10 @@ impl Player {
 				(Ok(dir), ..) => {
 					ctx.start(dir);
 				}
-				(_, Some(MouseTerrainPoint(point)), DirectionalMovement::NotStopped) => {
+				(.., Some(MouseTerrainPoint(point)), DirectionalMovement::NotStopped) => {
 					ctx.start(point);
 				}
-				(Err(_), .., DirectionalMovement::Stopped) => {
+				(.., DirectionalMovement::Stopped) => {
 					ctx.stop();
 				}
 				_ => {}
@@ -101,7 +99,6 @@ enum DirectionalMovement {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::player_camera::PlayerCamera;
 	use common::{
 		tools::action_key::{ActionKey, movement::MovementKey},
 		traits::{
@@ -172,14 +169,26 @@ mod tests {
 		}
 	}
 
-	fn setup(input: _Input, raycast: _Raycast) -> App {
+	#[derive(Resource)]
+	struct _Camera {
+		transform: Transform,
+	}
+
+	impl CameraTransform for _Camera {
+		fn camera_transform(&self) -> &'_ Transform {
+			&self.transform
+		}
+	}
+
+	fn setup(input: _Input, raycast: _Raycast, camera: _Camera) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(input);
 		app.insert_resource(raycast);
+		app.insert_resource(camera);
 		app.add_systems(
 			Update,
-			Player::movement::<Res<_Input>, ResMut<_Raycast>, Query<&mut _Movement>>,
+			Player::movement::<Res<_Input>, ResMut<_Raycast>, Query<&mut _Movement>, Res<_Camera>>,
 		);
 
 		app
@@ -198,6 +207,9 @@ mod tests {
 				mock.expect_raycast()
 					.return_const(Some(MouseTerrainPoint(target)));
 			}),
+			_Camera {
+				transform: cam_transform.looking_at(target, Dir3::Y),
+			},
 		);
 		app.world_mut().spawn((
 			Player,
@@ -209,8 +221,6 @@ mod tests {
 					.return_const(());
 			}),
 		));
-		app.world_mut()
-			.spawn((PlayerCamera, cam_transform.looking_at(target, Dir3::Y)));
 
 		app.update();
 	}
@@ -235,6 +245,9 @@ mod tests {
 					.returning(move || Box::new(std::iter::once((movement_key, input))));
 			}),
 			_Raycast::new(),
+			_Camera {
+				transform: Transform::from_xyz(0., 1., 0.).looking_to(cam_direction, Dir3::Y),
+			},
 		);
 		app.world_mut().spawn((
 			Player,
@@ -245,10 +258,6 @@ mod tests {
 					.with(eq(move_direction))
 					.return_const(());
 			}),
-		));
-		app.world_mut().spawn((
-			PlayerCamera,
-			Transform::from_xyz(0., 1., 0.).looking_to(cam_direction, Dir3::Y),
 		));
 
 		app.update();
@@ -264,6 +273,9 @@ mod tests {
 				});
 			}),
 			_Raycast::new(),
+			_Camera {
+				transform: Transform::from_xyz(0., 1., 0.).looking_to(Dir3::NEG_Y, cam_up),
+			},
 		);
 		app.world_mut().spawn((
 			Player,
@@ -274,10 +286,6 @@ mod tests {
 					.with(eq(move_direction))
 					.return_const(());
 			}),
-		));
-		app.world_mut().spawn((
-			PlayerCamera,
-			Transform::from_xyz(0., 1., 0.).looking_to(Dir3::NEG_Y, cam_up),
 		));
 
 		app.update();
@@ -297,6 +305,10 @@ mod tests {
 				});
 			}),
 			_Raycast::new(),
+			_Camera {
+				transform: Transform::from_xyz(0., 1., 0.)
+					.looking_to(Vec3::new(-1., -1., 0.), Dir3::Y),
+			},
 		);
 		app.world_mut().spawn((
 			Player,
@@ -310,10 +322,6 @@ mod tests {
 					})
 					.return_const(());
 			}),
-		));
-		app.world_mut().spawn((
-			PlayerCamera,
-			Transform::from_xyz(0., 1., 0.).looking_to(Vec3::new(-1., -1., 0.), Dir3::Y),
 		));
 
 		app.update();
@@ -329,6 +337,10 @@ mod tests {
 				});
 			}),
 			_Raycast::new(),
+			_Camera {
+				transform: Transform::from_xyz(0., 1., 0.)
+					.looking_to(Vec3::new(-1., -1., 0.), Dir3::Y),
+			},
 		);
 		app.world_mut().spawn((
 			Player,
@@ -337,10 +349,6 @@ mod tests {
 				mock.expect_start::<Dir3>().never();
 				mock.expect_start::<Vec3>().never();
 			}),
-		));
-		app.world_mut().spawn((
-			PlayerCamera,
-			Transform::from_xyz(0., 1., 0.).looking_to(Vec3::new(-1., -1., 0.), Dir3::Y),
 		));
 
 		app.update();
@@ -362,6 +370,10 @@ mod tests {
 				mock.expect_raycast()
 					.return_const(MouseTerrainPoint(Vec3::new(4., 2., 1.)));
 			}),
+			_Camera {
+				transform: Transform::from_xyz(0., 1., 0.)
+					.looking_to(Vec3::new(-1., -1., 0.), Dir3::Y),
+			},
 		);
 		app.world_mut().spawn((
 			Player,
@@ -370,10 +382,6 @@ mod tests {
 				mock.expect_start::<Dir3>().times(1).return_const(());
 				mock.expect_start::<Vec3>().never();
 			}),
-		));
-		app.world_mut().spawn((
-			PlayerCamera,
-			Transform::from_xyz(0., 1., 0.).looking_to(Vec3::new(-1., -1., 0.), Dir3::Y),
 		));
 
 		app.update();
@@ -401,6 +409,9 @@ mod tests {
 				mock.expect_raycast()
 					.return_const(MouseTerrainPoint(Vec3::ZERO));
 			}),
+			_Camera {
+				transform: Transform::default(),
+			},
 		);
 		app.world_mut().spawn((
 			Player,
@@ -411,7 +422,6 @@ mod tests {
 				mock.expect_stop().times(1).return_const(());
 			}),
 		));
-		app.world_mut().spawn((PlayerCamera, Transform::default()));
 
 		app.update();
 	}
@@ -427,6 +437,9 @@ mod tests {
 					.returning(move || Box::new(std::iter::once((input, InputState::released()))));
 			}),
 			_Raycast::new(),
+			_Camera {
+				transform: Transform::default(),
+			},
 		);
 		app.world_mut().spawn((
 			Player,
@@ -435,7 +448,6 @@ mod tests {
 				mock.expect_stop().never();
 			}),
 		));
-		app.world_mut().spawn((PlayerCamera, Transform::default()));
 
 		app.update();
 	}
@@ -462,6 +474,9 @@ mod tests {
 					});
 			}),
 			_Raycast::new(),
+			_Camera {
+				transform: Transform::default(),
+			},
 		);
 		app.world_mut().spawn((
 			Player,
@@ -472,33 +487,6 @@ mod tests {
 				mock.expect_start::<Dir3>().return_const(());
 			}),
 		));
-		app.world_mut().spawn((PlayerCamera, Transform::default()));
-
-		app.update();
-	}
-
-	#[test]
-	fn no_movement_when_cam_missing() {
-		let mut app = setup(
-			_Input::new().with_mock(move |mock| {
-				mock.expect_get_all_input_states()
-					.returning(move || Box::new(std::iter::once((Pointer, InputState::pressed()))));
-			}),
-			_Raycast::new().with_mock(|mock| {
-				mock.expect_raycast()
-					.return_const(MouseTerrainPoint(Vec3::ZERO));
-			}),
-		);
-		app.world_mut().spawn((
-			Player,
-			Transform::default(),
-			_Movement::new().with_mock(move |mock| {
-				mock.expect_start::<Vec3>().never();
-				mock.expect_start::<Dir3>().never();
-			}),
-		));
-		app.world_mut()
-			.spawn(/* no camera component */ Transform::default());
 
 		app.update();
 	}
@@ -514,6 +502,9 @@ mod tests {
 				mock.expect_raycast()
 					.return_const(MouseTerrainPoint(Vec3::ZERO));
 			}),
+			_Camera {
+				transform: Transform::default(),
+			},
 		);
 		app.world_mut().spawn((
 			/* No player */
@@ -523,7 +514,6 @@ mod tests {
 				mock.expect_start::<Dir3>().never();
 			}),
 		));
-		app.world_mut().spawn((PlayerCamera, Transform::default()));
 
 		app.update();
 	}

@@ -1,5 +1,6 @@
 mod assets;
 mod components;
+mod system_params;
 mod systems;
 
 use crate::{
@@ -10,8 +11,8 @@ use crate::{
 		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
 		player::Player,
-		player_camera::PlayerCamera,
 	},
+	system_params::player_param::PlayerParam,
 };
 use bevy::prelude::*;
 use common::{
@@ -24,7 +25,7 @@ use common::{
 		handles_animations::HandlesAnimations,
 		handles_custom_assets::HandlesCustomFolderAssets,
 		handles_enemies::HandlesEnemies,
-		handles_graphics::HandlesGraphics,
+		handles_graphics::{HandlesCameras, HandlesGraphics},
 		handles_input::HandlesInput,
 		handles_interactive::HandlesInteractive,
 		handles_loadout::HandlesLoadout,
@@ -32,7 +33,7 @@ use common::{
 		handles_movement::HandlesMovement,
 		handles_orientation::HandlesOrientation,
 		handles_physics::{HandlesInteractiveDetection, HandlesPhysicsConfig, HandlesRaycast},
-		handles_player::{HandlesPlayer, PlayerMainCamera},
+		handles_player::HandlesPlayer,
 		handles_saving::HandlesSaving,
 		handles_skill_physics::HandlesPhysicalSkillAgent,
 		prefab::AddPrefabObserver,
@@ -78,7 +79,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TGraphics: ThreadSafe + HandlesGraphics,
+	TGraphics: ThreadSafe + HandlesGraphics + HandlesCameras,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -135,7 +136,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TGraphics: ThreadSafe + HandlesGraphics,
+	TGraphics: ThreadSafe + HandlesGraphics + HandlesCameras,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -170,7 +171,6 @@ where
 		// # Savedata
 		TSaveGame::register_savable_component::<Agent>(app);
 		TSaveGame::register_savable_component::<Enemy>(app);
-		TSaveGame::register_savable_component::<PlayerCamera>(app);
 		TSaveGame::register_savable_component::<EnemyAttackPhase>(app);
 		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
@@ -179,14 +179,16 @@ where
 		app.add_prefab_observer::<VoidSphere, ()>();
 
 		// # Behaviors
-		app.add_observer(
-			PlayerCamera::set_as_world_camera::<TPhysics::TRayCastMut>.pipe(OnError::log),
-		);
 		app.add_systems(
 			Update,
 			(
 				(
-					Player::movement::<TInput::TInput, TPhysics::TRaycast, TMovement::TMovementMut>,
+					Player::movement::<
+						TInput::TInput,
+						TPhysics::TRaycastMut,
+						TMovement::TMovementMut,
+						TGraphics::TCamera,
+					>,
 					Player::toggle_speed::<TInput::TInput, TMovement::TMovementMut>,
 					Player::animate_movement::<TMovement::TMovement, TAnimations::TAnimationsMut>,
 					Player::highlight_interactive::<
@@ -206,7 +208,7 @@ where
 				)
 					.chain(),
 				(
-					Enemy::attack_decision::<TPhysics::TRaycast>,
+					Enemy::attack_decision::<TPhysics::TRaycastMut>,
 					Enemy::chase_decision,
 					Enemy::chase_player::<TMovement::TMovementMut>,
 					Enemy::animate_movement::<TMovement::TMovement, TAnimations::TAnimationsMut>,
@@ -237,11 +239,7 @@ impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
-	type TPlayer = Player;
-}
-
-impl<TDependencies> PlayerMainCamera for AgentsPlugin<TDependencies> {
-	type TPlayerMainCamera = PlayerCamera;
+	type TPlayer = PlayerParam<'static, 'static>;
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {

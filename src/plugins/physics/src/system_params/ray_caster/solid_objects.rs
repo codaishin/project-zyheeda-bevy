@@ -1,12 +1,12 @@
 use crate::{
 	components::collider::{ChildColliderOf, MOUSE_HOVERABLE_GROUP, RAY_GROUP},
-	system_params::ray_caster::RayCaster,
+	system_params::ray_caster::RayCasterMut,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{Real, *};
 use common::traits::handles_physics::{Raycast, RaycastHit, SolidObjects};
 
-impl Raycast<SolidObjects> for RayCaster<'_, '_> {
+impl Raycast<SolidObjects> for RayCasterMut<'_, '_> {
 	fn raycast(
 		&mut self,
 		SolidObjects {
@@ -47,7 +47,7 @@ impl Raycast<SolidObjects> for RayCaster<'_, '_> {
 	}
 }
 
-impl RayCaster<'_, '_> {
+impl RayCasterMut<'_, '_> {
 	fn not_excluded(&self, exclude: Vec<Entity>) -> impl Fn(Entity) -> bool {
 		move |entity| {
 			if exclude.contains(&entity) {
@@ -70,6 +70,7 @@ mod tests {
 			collider::{ColliderRoot, MOUSE_HOVERABLE_GROUP},
 			collision_domains::Physical,
 		},
+		resources::world_camera::WorldCamera,
 		tests::TestCollisionsPlugin,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -80,6 +81,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(TestCollisionsPlugin);
+		app.init_resource::<WorldCamera>();
 		app.add_systems(Update, ColliderRoot::link_children);
 
 		app
@@ -96,7 +98,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(|mut ray_caster: RayCaster| {
+			.run_system_once(|mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
@@ -129,7 +131,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(|mut ray_caster: RayCaster| {
+			.run_system_once(|mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
@@ -166,7 +168,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(|mut ray_caster: RayCaster| {
+			.run_system_once(|mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
@@ -197,7 +199,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(|mut ray_caster: RayCaster| {
+			.run_system_once(|mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
@@ -224,7 +226,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(move |mut ray_caster: RayCaster| {
+			.run_system_once(move |mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![a, b],
@@ -259,7 +261,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(move |mut ray_caster: RayCaster| {
+			.run_system_once(move |mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![a, b],
@@ -292,7 +294,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(move |mut ray_caster: RayCaster| {
+			.run_system_once(move |mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
@@ -331,7 +333,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(move |mut ray_caster: RayCaster| {
+			.run_system_once(move |mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],
@@ -371,7 +373,7 @@ mod tests {
 
 		let hit = app
 			.world_mut()
-			.run_system_once(move |mut ray_caster: RayCaster| {
+			.run_system_once(move |mut ray_caster: RayCasterMut| {
 				ray_caster.raycast(SolidObjects {
 					ray: Ray3d::new(Vec3::Y, Dir3::NEG_Y),
 					exclude: vec![],

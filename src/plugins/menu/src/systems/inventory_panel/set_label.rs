@@ -2,47 +2,55 @@ use crate::{
 	components::{KeyedPanel, inventory_panel::InventoryPanel, label::UILabel},
 	tools::PanelState,
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	traits::{
-		accessors::get::{TryApplyOn, TryGetContext, View},
+		accessors::get::{Get, TryApplyOn, TryGetContext, View},
 		handles_loadout::items::{Items, ReadItems},
+		handles_player::PlayerEntity,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl InventoryPanel {
-	pub(crate) fn set_label<TAgent, TLoadout>(
+	pub(crate) fn set_label<TPlayer, TLoadout>(
 		mut commands: ZyheedaCommands,
-		agents: Query<Entity, With<TAgent>>,
 		mut panels: Query<(Entity, &mut Self, &KeyedPanel)>,
+		player: StaticSystemParam<TPlayer>,
 		param: StaticSystemParam<TLoadout>,
 	) where
-		TAgent: Component,
+		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TLoadout: for<'c> TryGetContext<Items, TContext<'c>: ReadItems>,
 	{
-		for entity in &agents {
-			let Some(ctx) = TLoadout::try_get_context(&param, Items { entity }) else {
-				continue;
-			};
+		let Some(player) = player.view() else {
+			return;
+		};
+		let Some(entity) = commands.get(&player) else {
+			return;
+		};
+		let Some(ctx) = TLoadout::try_get_context(&param, Items { entity }) else {
+			return;
+		};
 
-			for (panel_entity, mut panel, KeyedPanel(key)) in &mut panels {
-				let panel_state = match ctx.get_item(*key) {
-					None => {
-						commands.try_apply_on(&panel_entity, |mut e| {
-							e.try_insert(UILabel::empty());
-						});
-						PanelState::Empty
-					}
-					Some(item) => {
-						commands.try_apply_on(&panel_entity, |mut e| {
-							e.try_insert(UILabel(item.view().clone()));
-						});
-						PanelState::Filled
-					}
-				};
-				*panel = Self(panel_state);
-			}
+		for (panel_entity, mut panel, KeyedPanel(key)) in &mut panels {
+			let panel_state = match ctx.get_item(*key) {
+				None => {
+					commands.try_apply_on(&panel_entity, |mut e| {
+						e.try_insert(UILabel::empty());
+					});
+					PanelState::Empty
+				}
+				Some(item) => {
+					commands.try_apply_on(&panel_entity, |mut e| {
+						e.try_insert(UILabel(item.view().clone()));
+					});
+					PanelState::Filled
+				}
+			};
+			*panel = Self(panel_state);
 		}
 	}
 }
@@ -52,9 +60,11 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{KeyedPanel, label::UILabel},
+		testing::{_Player, _PlayerParam},
 		tools::PanelState,
 	};
 	use common::{
+		CommonPlugin,
 		tools::action_key::slot::HandSlot,
 		traits::{
 			handles_loadout::{LoadoutKey, items::ItemToken},
@@ -63,9 +73,6 @@ mod tests {
 	};
 	use std::{collections::HashMap, sync::LazyLock};
 	use testing::SingleThreadedApp;
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Clone)]
 	struct _Item(Token);
@@ -108,9 +115,10 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.add_systems(
 			Update,
-			InventoryPanel::set_label::<_Agent, Query<Ref<_Container>>>,
+			InventoryPanel::set_label::<_PlayerParam, Query<Ref<_Container>>>,
 		);
 
 		app
@@ -122,7 +130,7 @@ mod tests {
 	fn set_label() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Container::from([(HandSlot::Left, _Item(TOKEN.clone()))]),
 		));
 		let panel = app
@@ -145,7 +153,7 @@ mod tests {
 	fn set_panel_to_filled() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Container::from([(HandSlot::Left, _Item(TOKEN.clone()))]),
 		));
 		let panel = app
@@ -167,7 +175,7 @@ mod tests {
 	#[test]
 	fn set_panel_to_empty() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Container::default()));
+		app.world_mut().spawn((_Player, _Container::default()));
 		let panel = app
 			.world_mut()
 			.spawn((

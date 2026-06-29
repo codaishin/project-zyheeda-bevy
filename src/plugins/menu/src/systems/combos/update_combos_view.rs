@@ -1,39 +1,51 @@
 use crate::traits::{UpdateCombosView, build_combo_tree_layout::BuildComboTreeLayout};
 use bevy::{
-	ecs::{component::Mutable, system::StaticSystemParam},
+	ecs::{
+		component::Mutable,
+		system::{StaticSystemParam, SystemParam},
+	},
 	prelude::*,
 };
-use common::traits::{
-	accessors::get::{ContextChanged, TryGetContext},
-	handles_loadout::combos::Combos,
+use common::{
+	traits::{
+		accessors::get::{ContextChanged, Get, TryGetContext, View},
+		handles_loadout::combos::Combos,
+		handles_player::PlayerEntity,
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::fmt::Debug;
 
 impl<T> UpdateComboOverview for T where T: Component<Mutability = Mutable> {}
 
 pub(crate) trait UpdateComboOverview: Component<Mutability = Mutable> + Sized {
-	fn update_from<TAgent, TLoadout, TId>(
+	fn update_from<TPlayer, TLoadout, TId>(
+		commands: ZyheedaCommands,
 		mut combo_overviews: Query<&mut Self>,
-		agents: Query<Entity, With<TAgent>>,
+		player: StaticSystemParam<TPlayer>,
 		param: StaticSystemParam<TLoadout>,
 	) where
 		Self: UpdateCombosView<TId>,
-		TAgent: Component,
+		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TLoadout: for<'c> TryGetContext<Combos, TContext<'c>: BuildComboTreeLayout<TId>>,
 		TId: Debug + PartialEq + Clone,
 	{
-		for entity in &agents {
-			let Some(ctx) = TLoadout::try_get_context(&param, Combos { entity }) else {
+		let Some(player) = player.view() else {
+			return;
+		};
+		let Some(entity) = commands.get(&player) else {
+			return;
+		};
+		let Some(ctx) = TLoadout::try_get_context(&param, Combos { entity }) else {
+			return;
+		};
+
+		for mut combo_overview in &mut combo_overviews {
+			if !ctx.context_changed() && !combo_overview.is_added() {
 				continue;
-			};
-
-			for mut combo_overview in &mut combo_overviews {
-				if !ctx.context_changed() && !combo_overview.is_added() {
-					continue;
-				}
-
-				combo_overview.update_combos_view(ctx.build_combo_tree_layout());
 			}
+
+			combo_overview.update_combos_view(ctx.build_combo_tree_layout());
 		}
 	}
 }
@@ -43,16 +55,14 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::combo_overview::ComboSkill,
+		testing::{_Player, _PlayerParam},
 		traits::build_combo_tree_layout::{ComboTreeElement, ComboTreeLayout, Symbol},
 	};
 	use bevy::ecs::system::SystemParam;
-	use common::tools::action_key::slot::SlotKey;
+	use common::{CommonPlugin, tools::action_key::slot::SlotKey};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Component, NestedMocks, Debug)]
 	struct _ComboOverview {
@@ -103,7 +113,11 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, _ComboOverview::update_from::<_Agent, _Param, _Id>);
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
+		app.add_systems(
+			Update,
+			_ComboOverview::update_from::<_PlayerParam, _Param, _Id>,
+		);
 
 		app
 	}
@@ -112,7 +126,7 @@ mod tests {
 	fn update_combos() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Combos(vec![vec![
 				ComboTreeElement::Symbol(Symbol::Root),
 				ComboTreeElement::Symbol(Symbol::Line),
@@ -135,7 +149,7 @@ mod tests {
 	#[test]
 	fn do_nothing_if_combos_was_not_added() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Combos(vec![])));
+		app.world_mut().spawn((_Player, _Combos(vec![])));
 		app.world_mut()
 			.spawn(_ComboOverview::new().with_mock(|mock| {
 				mock.expect_update_combos_view().times(1).return_const(());
@@ -148,7 +162,7 @@ mod tests {
 	#[test]
 	fn update_combos_again_after_combos_mut_deref() {
 		let mut app = setup();
-		let agent = app.world_mut().spawn((_Agent, _Combos(vec![]))).id();
+		let agent = app.world_mut().spawn((_Player, _Combos(vec![]))).id();
 		app.world_mut()
 			.spawn(_ComboOverview::new().with_mock(|mock| {
 				mock.expect_update_combos_view().times(2).return_const(());
@@ -165,7 +179,7 @@ mod tests {
 	#[test]
 	fn update_combos_after_combos_overview_added() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Combos(vec![])));
+		app.world_mut().spawn((_Player, _Combos(vec![])));
 
 		app.update();
 		app.world_mut()

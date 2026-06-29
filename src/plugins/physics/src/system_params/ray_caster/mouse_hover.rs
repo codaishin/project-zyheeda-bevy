@@ -1,4 +1,7 @@
-use crate::{components::offset::ComputeOffsetTranslation, system_params::ray_caster::RayCaster};
+use crate::{
+	components::offset::ComputeOffsetTranslation,
+	system_params::ray_caster::RayCasterMut,
+};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::handles_physics::{
 	HoverMode,
@@ -10,16 +13,15 @@ use common::traits::handles_physics::{
 	TimeOfImpact,
 };
 
-impl<T> Raycast<MouseHover> for RayCaster<'_, '_, T>
+impl<T> Raycast<MouseHover> for RayCasterMut<'_, '_, T>
 where
 	T: SystemParam + 'static,
 	Self: Raycast<SolidObjects> + Raycast<Terrain>,
 {
 	fn raycast(&mut self, mouse_hover: MouseHover) -> Option<MouseHoversOver> {
-		let cam = self.world_cams.single().ok()?;
-		let ray = cam.ray?;
+		let ray = self.world_camera.ray?;
 
-		if let Some(cached) = cam.mouse_hover.get(&mouse_hover) {
+		if let Some(cached) = self.world_camera.mouse_hover.get(&mouse_hover) {
 			return Some(*cached);
 		}
 
@@ -48,14 +50,15 @@ where
 			},
 		};
 
-		let mut cam = self.world_cams.single_mut().ok()?;
-		cam.mouse_hover.insert(mouse_hover.clone(), hover);
+		self.world_camera
+			.mouse_hover
+			.insert(mouse_hover.clone(), hover);
 
 		Some(hover)
 	}
 }
 
-impl<T> RayCaster<'_, '_, T>
+impl<T> RayCasterMut<'_, '_, T>
 where
 	T: SystemParam,
 {
@@ -78,9 +81,8 @@ fn point(ray: Ray3d, toi: f32) -> Vec3 {
 
 #[cfg(test)]
 mod tests {
-	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::components::world_camera::WorldCamera;
+	use crate::resources::world_camera::WorldCamera;
 	use bevy::{
 		app::{App, Update},
 		ecs::{
@@ -123,7 +125,7 @@ mod tests {
 	}
 
 	type _RayCaster<'w, 's> =
-		RayCaster<'w, 's, (ResMut<'static, _Objects>, ResMut<'static, _Ground>)>;
+		RayCasterMut<'w, 's, (ResMut<'static, _Objects>, ResMut<'static, _Ground>)>;
 
 	impl Raycast<SolidObjects> for _RayCaster<'_, '_> {
 		fn raycast(&mut self, args: SolidObjects) -> Option<RaycastHit> {
@@ -137,21 +139,18 @@ mod tests {
 		}
 	}
 
-	fn setup(ray: Ray3d, objects: _Objects, ground: _Ground) -> (App, Entity) {
+	fn setup(ray: Ray3d, objects: _Objects, ground: _Ground) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(objects);
 		app.insert_resource(ground);
 
-		let cam = app
-			.world_mut()
-			.spawn(WorldCamera {
-				ray: Some(ray),
-				..default()
-			})
-			.id();
+		app.insert_resource(WorldCamera {
+			ray: Some(ray),
+			..default()
+		});
 
-		(app, cam)
+		app
 	}
 
 	mod terrain_mode {
@@ -164,7 +163,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, _) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast()
@@ -209,7 +208,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, _) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast()
@@ -246,7 +245,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, _) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast()
@@ -290,7 +289,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, _) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast().return_const(None);
@@ -322,7 +321,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, _) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast().return_const(None);
@@ -354,7 +353,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, _) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast().return_const(None);
@@ -387,7 +386,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, _) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast().return_const(Some(RaycastHit {
@@ -430,7 +429,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, _) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast().return_const(Some(RaycastHit {
@@ -470,7 +469,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, cam) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast().never();
@@ -479,8 +478,7 @@ mod tests {
 					mock.expect_raycast().never();
 				}),
 			);
-			let mut cam = app.world_mut().entity_mut(cam);
-			let mut cam = cam.get_mut::<WorldCamera>().unwrap();
+			let mut cam = app.world_mut().resource_mut::<WorldCamera>();
 			cam.mouse_hover.insert(
 				MouseHover {
 					exclude: vec![exclude],
@@ -516,7 +514,7 @@ mod tests {
 				direction: Dir3::NEG_Y,
 			};
 			let exclude = fake_entity!(444);
-			let (mut app, cam) = setup(
+			let mut app = setup(
 				ray,
 				_Objects::new().with_mock(|mock| {
 					mock.expect_raycast()
@@ -546,7 +544,7 @@ mod tests {
 				})?;
 
 			assert_eq!(
-				Some(&WorldCamera {
+				&WorldCamera {
 					mouse_hover: HashMap::from([(
 						MouseHover {
 							exclude: vec![exclude],
@@ -558,8 +556,8 @@ mod tests {
 						}
 					)]),
 					ray: Some(ray),
-				}),
-				app.world().entity(cam).get::<WorldCamera>(),
+				},
+				app.world().resource::<WorldCamera>(),
 			);
 			Ok(())
 		}

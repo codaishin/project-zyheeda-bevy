@@ -1,25 +1,39 @@
-use std::fmt::Display;
-
-use crate::components::world_camera::WorldCamera;
-use bevy::{ecs::query::QuerySingleError, prelude::*};
+use crate::components::camera_labels::WorldPass;
+use bevy::{
+	ecs::{
+		query::QuerySingleError,
+		system::{StaticSystemParam, SystemParam},
+	},
+	prelude::*,
+};
 use common::{
 	errors::{ErrorData, Level},
-	traits::get_ray::GetCamRay,
+	traits::{
+		get_ray::GetCamRay,
+		handles_physics::{ChangedTargetRay, UpdateTargetRay},
+	},
 };
+use std::fmt::Display;
 
-impl WorldCamera {
-	pub(crate) fn update_ray(
-		cameras: Query<(&mut Self, Ref<Camera>, Ref<GlobalTransform>)>,
+impl WorldPass {
+	pub(crate) fn update_target_ray<TRaycast>(
+		raycast: StaticSystemParam<TRaycast>,
+		cameras: Query<(Ref<Camera>, Ref<GlobalTransform>), With<Self>>,
 		windows: Query<Ref<Window>>,
-	) -> Result<(), WindowError> {
-		Self::update_ray_internal(cameras, windows)
+	) -> Result<(), WindowError>
+	where
+		TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: UpdateTargetRay>,
+	{
+		Self::update_target_ray_internal(raycast, cameras, windows)
 	}
 
-	fn update_ray_internal<TCamera, TWindow>(
-		mut cameras: Query<(&mut Self, Ref<TCamera>, Ref<GlobalTransform>)>,
+	fn update_target_ray_internal<TRaycast, TCamera, TWindow>(
+		mut raycast: StaticSystemParam<TRaycast>,
+		cameras: Query<(Ref<TCamera>, Ref<GlobalTransform>), With<Self>>,
 		windows: Query<Ref<TWindow>>,
 	) -> Result<(), WindowError>
 	where
+		TRaycast: for<'w, 's> SystemParam<Item<'w, 's>: UpdateTargetRay>,
 		TCamera: Component + GetCamRay<TWindow>,
 		TWindow: Component,
 	{
@@ -30,12 +44,12 @@ impl WorldCamera {
 		};
 		let window_is_changed = window.is_changed();
 
-		for (mut world_camera, camera, transform) in &mut cameras {
+		for (camera, transform) in cameras {
 			if !window_is_changed && !camera.is_changed() && !transform.is_changed() {
 				continue;
 			}
 
-			world_camera.ray = camera.get_ray(&transform, &window);
+			raycast.update_target_ray(ChangedTargetRay(camera.get_ray(&transform, &window)));
 		}
 
 		Ok(())
@@ -92,12 +106,24 @@ mod tests {
 	#[derive(Resource, Debug, PartialEq)]
 	struct _Result(Result<(), WindowError>);
 
+	#[derive(Resource, Debug, PartialEq, Default)]
+	struct _WorldCamera {
+		ray: Option<Ray3d>,
+	}
+
+	impl UpdateTargetRay for _WorldCamera {
+		fn update_target_ray(&mut self, ChangedTargetRay(ray): ChangedTargetRay) {
+			self.ray = ray;
+		}
+	}
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.init_resource::<_WorldCamera>();
 		app.add_systems(
 			Update,
-			WorldCamera::update_ray_internal::<_Camera, _Window>.pipe(
+			WorldPass::update_target_ray_internal::<ResMut<_WorldCamera>, _Camera, _Window>.pipe(
 				|In(result), mut commands: Commands| {
 					commands.insert_resource(_Result(result));
 				},
@@ -110,65 +136,78 @@ mod tests {
 	#[test]
 	fn update_ray() {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				WorldCamera::default(),
-				_Camera::new().with_mock(|mock| {
-					mock.expect_get_ray()
-						.times(1)
-						.with(eq(GlobalTransform::from_xyz(1., 2., 3.)), eq(_Window))
-						.return_const(Ray3d {
-							origin: Vec3::new(4., 5., 6.),
-							direction: Dir3::NEG_X,
-						});
-				}),
-				GlobalTransform::from_xyz(1., 2., 3.),
-			))
-			.id();
+		app.world_mut().spawn((
+			WorldPass,
+			_Camera::new().with_mock(|mock| {
+				mock.expect_get_ray()
+					.times(1)
+					.with(eq(GlobalTransform::from_xyz(1., 2., 3.)), eq(_Window))
+					.return_const(Ray3d {
+						origin: Vec3::new(4., 5., 6.),
+						direction: Dir3::NEG_X,
+					});
+			}),
+			GlobalTransform::from_xyz(1., 2., 3.),
+		));
 		app.world_mut().spawn(_Window);
 
 		app.update();
 
 		assert_eq!(
-			Some(&WorldCamera {
+			&_WorldCamera {
 				ray: Some(Ray3d {
 					origin: Vec3::new(4., 5., 6.),
 					direction: Dir3::NEG_X,
-				}),
-				..default()
+				})
+			},
+			app.world().resource::<_WorldCamera>(),
+		);
+	}
+
+	#[test]
+	fn do_nothing_if_world_pass_missing() {
+		let mut app = setup();
+		app.world_mut().spawn((
+			_Camera::new().with_mock(|mock| {
+				mock.expect_get_ray().return_const(Ray3d {
+					origin: Vec3::new(4., 5., 6.),
+					direction: Dir3::NEG_X,
+				});
 			}),
-			app.world().entity(entity).get::<WorldCamera>()
+			GlobalTransform::from_xyz(1., 2., 3.),
+		));
+		app.world_mut().spawn(_Window);
+
+		app.update();
+
+		assert_eq!(
+			&_WorldCamera::default(),
+			app.world().resource::<_WorldCamera>(),
 		);
 	}
 
 	#[test]
 	fn act_only_once() {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				WorldCamera::default(),
-				_Camera::new().with_mock(|mock| {
-					mock.expect_get_ray().return_const(Ray3d {
-						origin: Vec3::new(4., 5., 6.),
-						direction: Dir3::NEG_X,
-					});
-				}),
-				GlobalTransform::from_xyz(1., 2., 3.),
-			))
-			.id();
+		app.world_mut().spawn((
+			WorldPass,
+			_Camera::new().with_mock(|mock| {
+				mock.expect_get_ray().return_const(Ray3d {
+					origin: Vec3::new(4., 5., 6.),
+					direction: Dir3::NEG_X,
+				});
+			}),
+			GlobalTransform::from_xyz(1., 2., 3.),
+		));
 		app.world_mut().spawn(_Window);
 
 		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(WorldCamera::default());
+		app.insert_resource(_WorldCamera::default());
 		app.update();
 
 		assert_eq!(
-			Some(&WorldCamera::default()),
-			app.world().entity(entity).get::<WorldCamera>()
+			&_WorldCamera::default(),
+			app.world().resource::<_WorldCamera>(),
 		);
 	}
 
@@ -178,7 +217,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				WorldCamera::default(),
+				WorldPass,
 				_Camera::new().with_mock(|mock| {
 					mock.expect_get_ray().return_const(Ray3d {
 						origin: Vec3::new(4., 5., 6.),
@@ -191,9 +230,7 @@ mod tests {
 		app.world_mut().spawn(_Window);
 
 		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(WorldCamera::default());
+		app.insert_resource(_WorldCamera::default());
 		app.world_mut()
 			.entity_mut(entity)
 			.get_mut::<GlobalTransform>()
@@ -201,39 +238,33 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&WorldCamera {
+			&_WorldCamera {
 				ray: Some(Ray3d {
 					origin: Vec3::new(4., 5., 6.),
 					direction: Dir3::NEG_X,
 				}),
-				..default()
-			}),
-			app.world().entity(entity).get::<WorldCamera>()
+			},
+			app.world().resource::<_WorldCamera>(),
 		);
 	}
 
 	#[test]
 	fn act_again_if_window_changed() {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				WorldCamera::default(),
-				_Camera::new().with_mock(|mock| {
-					mock.expect_get_ray().return_const(Ray3d {
-						origin: Vec3::new(4., 5., 6.),
-						direction: Dir3::NEG_X,
-					});
-				}),
-				GlobalTransform::from_xyz(1., 2., 3.),
-			))
-			.id();
+		app.world_mut().spawn((
+			WorldPass,
+			_Camera::new().with_mock(|mock| {
+				mock.expect_get_ray().return_const(Ray3d {
+					origin: Vec3::new(4., 5., 6.),
+					direction: Dir3::NEG_X,
+				});
+			}),
+			GlobalTransform::from_xyz(1., 2., 3.),
+		));
 		let window = app.world_mut().spawn(_Window).id();
 
 		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(WorldCamera::default());
+		app.insert_resource(_WorldCamera::default());
 		app.world_mut()
 			.entity_mut(window)
 			.get_mut::<_Window>()
@@ -241,14 +272,13 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&WorldCamera {
+			&_WorldCamera {
 				ray: Some(Ray3d {
 					origin: Vec3::new(4., 5., 6.),
 					direction: Dir3::NEG_X,
 				}),
-				..default()
-			}),
-			app.world().entity(entity).get::<WorldCamera>()
+			},
+			app.world().resource::<_WorldCamera>(),
 		);
 	}
 
@@ -258,7 +288,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				WorldCamera::default(),
+				WorldPass,
 				_Camera::new().with_mock(|mock| {
 					mock.expect_get_ray().return_const(Ray3d {
 						origin: Vec3::new(4., 5., 6.),
@@ -271,9 +301,7 @@ mod tests {
 		app.world_mut().spawn(_Window);
 
 		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(WorldCamera::default());
+		app.insert_resource(_WorldCamera::default());
 		app.world_mut()
 			.entity_mut(entity)
 			.get_mut::<_Camera>()
@@ -281,14 +309,13 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&WorldCamera {
+			&_WorldCamera {
 				ray: Some(Ray3d {
 					origin: Vec3::new(4., 5., 6.),
 					direction: Dir3::NEG_X,
 				}),
-				..default()
-			}),
-			app.world().entity(entity).get::<WorldCamera>()
+			},
+			app.world().resource::<_WorldCamera>(),
 		);
 	}
 
@@ -296,7 +323,7 @@ mod tests {
 	fn missing_window_error() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			WorldCamera::default(),
+			WorldPass,
 			_Camera::new().with_mock(|mock| {
 				mock.expect_get_ray().return_const(None);
 			}),
@@ -315,7 +342,7 @@ mod tests {
 	fn multiple_windows_error() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			WorldCamera::default(),
+			WorldPass,
 			_Camera::new().with_mock(|mock| {
 				mock.expect_get_ray().return_const(None);
 			}),

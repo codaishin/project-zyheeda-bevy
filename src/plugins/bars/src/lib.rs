@@ -10,7 +10,7 @@ use common::{
 	attributes::health::Health,
 	traits::{
 		handles_agents::HandlesAgents,
-		handles_graphics::UiCamera,
+		handles_graphics::HandlesCameras,
 		handles_physics::HandlesLife,
 		ownership_relation::OwnershipRelation,
 		thread_safe::ThreadSafe,
@@ -26,7 +26,7 @@ impl<TAgents, TPhysics, TGraphics> BarsPlugin<(TAgents, TPhysics, TGraphics)>
 where
 	TAgents: ThreadSafe + HandlesAgents,
 	TPhysics: ThreadSafe + HandlesLife,
-	TGraphics: ThreadSafe + UiCamera,
+	TGraphics: ThreadSafe + HandlesCameras,
 {
 	pub fn from_plugins(_: &TAgents, _: &TPhysics, _: &TGraphics) -> Self {
 		Self(PhantomData)
@@ -37,11 +37,11 @@ impl<TAgents, TPhysics, TGraphics> Plugin for BarsPlugin<(TAgents, TPhysics, TGr
 where
 	TAgents: ThreadSafe + HandlesAgents,
 	TPhysics: ThreadSafe + HandlesLife,
-	TGraphics: ThreadSafe + UiCamera,
+	TGraphics: ThreadSafe + HandlesCameras,
 {
 	fn build(&self, app: &mut App) {
-		let update_life_bars = bar::<TPhysics::TAffectedComponent, Health, TGraphics::TUiCameraMut>;
-		let render_life_bars = render_bar::<Health, TGraphics::TUiCameraMut>;
+		let update_life_bars = bar::<TPhysics::TAffectedComponent, Health, TGraphics::TCameraMut>;
+		let render_life_bars = render_bar::<Health, TGraphics::TCameraMut>;
 
 		app.register_required_components::<TAgents::TAgent, Bar>();
 
