@@ -406,7 +406,7 @@ impl From<WorldLight> for RenderLayers {
 
 impl Prefab<()> for WorldLight {
 	type TError = Unreachable;
-	type TSystemParam<'w, 's> = ();
+	type TSystemParam = ();
 
 	fn insert_prefab_components(
 		&self,

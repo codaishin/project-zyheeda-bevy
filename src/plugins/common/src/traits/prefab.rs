@@ -13,14 +13,14 @@ use bevy::{
 
 pub trait Prefab<TDependency>: Component<Mutability = Immutable> {
 	type TError: ErrorData;
-	type TSystemParam<'w, 's>: SystemParam;
+	type TSystemParam: SystemParam;
 
 	const REAPPLY: Reapply = Reapply::Never;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		system_param: StaticSystemParam<Self::TSystemParam<'_, '_>>,
+		system_param: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError>;
 }
 

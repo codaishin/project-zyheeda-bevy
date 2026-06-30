@@ -15,7 +15,7 @@ pub(crate) struct Door;
 
 impl Prefab<()> for Door {
 	type TError = Unreachable;
-	type TSystemParam<'w, 's> = Res<'w, AssetServer>;
+	type TSystemParam = Res<'static, AssetServer>;
 
 	fn insert_prefab_components(
 		&self,

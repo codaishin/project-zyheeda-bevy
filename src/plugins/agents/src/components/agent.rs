@@ -69,7 +69,7 @@ where
 	TGraphics: for<'c> TryGetContextMut<HasNoRole, TContext<'c>: SetRole>,
 {
 	type TError = RoleAlreadyConfigured;
-	type TSystemParam<'w, 's> = (Res<'w, AssetServer>, TGraphics);
+	type TSystemParam = (Res<'static, AssetServer>, TGraphics);
 
 	fn insert_prefab_components(
 		&self,

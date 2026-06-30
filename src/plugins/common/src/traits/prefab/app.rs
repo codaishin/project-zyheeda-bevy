@@ -26,7 +26,7 @@ fn instantiate<TEvent, TPrefab, TDependencies>(
 	trigger: On<TEvent, TPrefab>,
 	components: Query<&TPrefab>,
 	mut commands: Commands,
-	system_param: StaticSystemParam<TPrefab::TSystemParam<'_, '_>>,
+	system_param: StaticSystemParam<TPrefab::TSystemParam>,
 ) -> Result<(), TPrefab::TError>
 where
 	TEvent: EntityEvent,
@@ -73,7 +73,7 @@ mod tests {
 
 	impl Prefab<_Dependency> for _Component {
 		type TError = _Error;
-		type TSystemParam<'w, 's> = ResMut<'w, _Counter>;
+		type TSystemParam = ResMut<'static, _Counter>;
 
 		fn insert_prefab_components(
 			&self,

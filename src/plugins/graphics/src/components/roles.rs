@@ -19,12 +19,12 @@ pub(crate) struct Player;
 
 impl Prefab<()> for Player {
 	type TError = Unreachable;
-	type TSystemParam<'w, 's> = ();
+	type TSystemParam = ();
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		_: StaticSystemParam<Self::TSystemParam<'_, '_>>,
+		_: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError> {
 		entity
 			.try_insert(ModelRenderLayers::from(AgentsPass))
@@ -49,12 +49,12 @@ pub(crate) struct Enemy;
 
 impl Prefab<()> for Enemy {
 	type TError = Unreachable;
-	type TSystemParam<'w, 's> = ();
+	type TSystemParam = ();
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		_: StaticSystemParam<Self::TSystemParam<'_, '_>>,
+		_: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError> {
 		entity.try_insert(ModelRenderLayers::from(AgentsPass));
 
