@@ -57,7 +57,7 @@ impl TriggerState for StartMenuButton {
 
 impl Prefab<()> for StartMenuButton {
 	type TError = Unreachable;
-	type TSystemParam<'w, 's> = ();
+	type TSystemParam = ();
 
 	fn insert_prefab_components(
 		&self,

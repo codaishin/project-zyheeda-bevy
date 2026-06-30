@@ -74,7 +74,7 @@ impl From<BodyConfig> for Body {
 
 impl Prefab<()> for Body {
 	type TError = Unreachable;
-	type TSystemParam<'w, 's> = ();
+	type TSystemParam = ();
 
 	fn insert_prefab_components(
 		&self,

@@ -84,7 +84,7 @@ where
 
 impl Prefab<()> for ColliderShape {
 	type TError = Unreachable;
-	type TSystemParam<'w, 's> = ();
+	type TSystemParam = ();
 
 	const REAPPLY: Reapply = Reapply::Always;
 

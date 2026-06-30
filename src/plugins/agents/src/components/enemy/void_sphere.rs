@@ -129,7 +129,7 @@ impl From<VoidSphere> for AgentType {
 
 impl Prefab<()> for VoidSphere {
 	type TError = Unreachable;
-	type TSystemParam<'w, 's> = ();
+	type TSystemParam = ();
 
 	fn insert_prefab_components(
 		&self,

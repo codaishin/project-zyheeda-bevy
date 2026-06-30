@@ -23,12 +23,12 @@ where
 	for<'c> TPhysics: TryGetContextMut<NoBodyConfigured, TContext<'c>: ConfigureBody>,
 {
 	type TError = HasAlreadyBody;
-	type TSystemParam<'w, 's> = TPhysics;
+	type TSystemParam = TPhysics;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		mut physics: StaticSystemParam<Self::TSystemParam<'_, '_>>,
+		mut physics: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError> {
 		let entity = entity.entity_id();
 		let key = NoBodyConfigured { entity };

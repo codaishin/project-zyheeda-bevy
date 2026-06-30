@@ -34,12 +34,12 @@ where
 	TGraphics: for<'c> TryGetContextMut<HasNoRole, TContext<'c>: SetRole>,
 {
 	type TError = Unreachable;
-	type TSystemParam<'w, 's> = TGraphics;
+	type TSystemParam = TGraphics;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		mut graphics: StaticSystemParam<Self::TSystemParam<'_, '_>>,
+		mut graphics: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError> {
 		let entity = entity.entity_id();
 		let no_role = HasNoRole { entity };

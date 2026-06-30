@@ -39,7 +39,7 @@ where
 {
 	type TError = Unreachable;
 
-	type TSystemParam<'w, 's> = ResMut<'w, TAssetServer>;
+	type TSystemParam = ResMut<'static, TAssetServer>;
 
 	fn insert_prefab_components(
 		&self,
