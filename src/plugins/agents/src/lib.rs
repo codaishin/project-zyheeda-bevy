@@ -79,7 +79,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TGraphics: ThreadSafe + HandlesGraphics + HandlesCameras,
+	TGraphics: ThreadSafe + SystemSetDefinition + HandlesGraphics + HandlesCameras,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -136,7 +136,7 @@ where
 		+ HandlesRaycast
 		+ HandlesPhysicalSkillAgent
 		+ HandlesInteractiveDetection,
-	TGraphics: ThreadSafe + HandlesGraphics + HandlesCameras,
+	TGraphics: ThreadSafe + SystemSetDefinition + HandlesGraphics + HandlesCameras,
 	TInteractive: ThreadSafe + SystemSetDefinition + HandlesInteractive,
 	TAnimations: ThreadSafe + HandlesAnimations,
 	TMaps: ThreadSafe + HandlesMapGeneration,
@@ -165,7 +165,11 @@ where
 				>,
 				ApplyAgentAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 					.pipe(OnError::log),
-			),
+			)
+				.after_plugin(TInput::SYSTEMS)
+				.after_plugin(TMovement::SYSTEMS)
+				.after_plugin(TInteractive::SYSTEMS)
+				.after_plugin(TGraphics::SYSTEMS),
 		);
 
 		// # Savedata
@@ -229,7 +233,8 @@ where
 				.run_if(in_state(GameState::Play))
 				.after_plugin(TInput::SYSTEMS)
 				.after_plugin(TMovement::SYSTEMS)
-				.after_plugin(TInteractive::SYSTEMS),
+				.after_plugin(TInteractive::SYSTEMS)
+				.after_plugin(TGraphics::SYSTEMS),
 		);
 	}
 }
