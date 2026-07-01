@@ -47,12 +47,12 @@ where
 
 		for (entity, button) in &buttons {
 			let Some(key) = button.key_path.last() else {
-				return;
+				continue;
 			};
 			let mut skills = ctx.get_available_skills(*key);
 
 			if skills.any(|skill| skill.get_skill_id() == button.skill.id) {
-				return;
+				continue;
 			}
 
 			commands.try_apply_on(&entity, |mut entity| {
