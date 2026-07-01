@@ -40,13 +40,15 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 		let Some(entity) = commands.get(&player) else {
 			return;
 		};
+		let Some(ctx) = TLoadout::try_get_context(&param, AvailableSkills { entity }) else {
+			return;
+		};
+
 		for (dropdown_entity, command) in &dropdown_commands {
 			let Some(key) = command.key_path.last() else {
 				continue;
 			};
-			let Some(ctx) = TLoadout::try_get_context(&param, AvailableSkills { entity }) else {
-				continue;
-			};
+
 			let items = ctx
 				.get_available_skills(*key)
 				.map(|skill| {
