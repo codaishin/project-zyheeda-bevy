@@ -128,6 +128,7 @@ where
 					EffectMaterialHandle::propagate_material,
 				)
 					.chain()
+					.in_set(GraphicSystems)
 					.after_plugin(TPhysics::SYSTEMS),
 			);
 	}
@@ -156,6 +157,7 @@ where
 					CameraParameters::apply_changes,
 				)
 					.chain()
+					.in_set(GraphicSystems)
 					.after_plugin(TPhysics::SYSTEMS),
 			)
 			.add_systems(
