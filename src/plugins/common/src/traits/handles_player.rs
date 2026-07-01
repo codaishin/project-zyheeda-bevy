@@ -1,11 +1,17 @@
-use bevy::{math::InvalidDirectionError, prelude::*};
+use crate::{
+	components::persistent_entity::PersistentEntity,
+	traits::accessors::get::{View, ViewField},
+};
+use bevy::{ecs::system::SystemParam, math::InvalidDirectionError};
 
 pub trait HandlesPlayer {
-	type TPlayer: Component;
+	type TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>;
 }
 
-pub trait PlayerMainCamera {
-	type TPlayerMainCamera: Component + Default;
+pub struct PlayerEntity;
+
+impl ViewField for PlayerEntity {
+	type TValue<'a> = Option<PersistentEntity>;
 }
 
 #[derive(Debug, PartialEq)]

@@ -1,38 +1,52 @@
 use crate::components::{Dad, KeyedPanel};
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	traits::{
-		accessors::get::{TryApplyOn, TryGetContextMut},
+		accessors::get::{Get, TryApplyOn, TryGetContextMut, View},
 		handles_loadout::items::{Items, SwapItems},
+		handles_player::PlayerEntity,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
-pub fn drop_item<TAgent, TLoadout>(
+pub fn drop_item<TPlayer, TLoadout>(
 	mut commands: ZyheedaCommands,
-	agents: Query<(Entity, &Dad), With<TAgent>>,
+	dads: Query<&Dad>,
+	player: StaticSystemParam<TPlayer>,
 	panels: Query<(&Interaction, &KeyedPanel)>,
 	mouse: Res<ButtonInput<MouseButton>>,
 	mut param: StaticSystemParam<TLoadout>,
 ) where
-	TAgent: Component,
+	TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 	TLoadout: for<'c> TryGetContextMut<Items, TContext<'c>: SwapItems>,
 {
 	if !mouse.just_released(MouseButton::Left) {
 		return;
 	}
 
-	for (entity, dad) in &agents {
-		let Some(mut ctx) = TLoadout::try_get_context_mut(&mut param, Items { entity }) else {
-			continue;
-		};
+	let Some(player) = player.view() else {
+		return;
+	};
+	let Some(entity) = commands.get(&player) else {
+		return;
+	};
 
-		for (.., keyed_panel) in panels.iter().filter(is_hovered) {
-			ctx.swap_items(dad.0, keyed_panel.0);
-			commands.try_apply_on(&entity, |mut e| {
-				e.try_remove::<Dad>();
-			});
-		}
+	let Some(mut ctx) = TLoadout::try_get_context_mut(&mut param, Items { entity }) else {
+		return;
+	};
+
+	let Ok(dad) = dads.get(entity) else {
+		return;
+	};
+
+	for (.., keyed_panel) in panels.iter().filter(is_hovered) {
+		ctx.swap_items(dad.0, keyed_panel.0);
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_remove::<Dad>();
+		});
 	}
 }
 
@@ -43,15 +57,17 @@ fn is_hovered((interaction, ..): &(&Interaction, &KeyedPanel)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::testing::{_Player, _PlayerParam};
 	use bevy::{
 		app::{App, Update},
 		ui::Interaction,
 	};
-	use common::{tools::action_key::slot::SlotKey, traits::handles_loadout::LoadoutKey};
+	use common::{
+		CommonPlugin,
+		tools::action_key::slot::SlotKey,
+		traits::handles_loadout::LoadoutKey,
+	};
 	use testing::{SingleThreadedApp, set_input};
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Container {
@@ -72,8 +88,10 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
+
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.insert_resource(ButtonInput::<MouseButton>::default());
-		app.add_systems(Update, drop_item::<_Agent, Query<&mut _Container>>);
+		app.add_systems(Update, drop_item::<_PlayerParam, Query<&mut _Container>>);
 
 		app
 	}
@@ -83,7 +101,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((_Agent, _Container::default(), Dad::from(SlotKey(42))))
+			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
 			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
@@ -123,7 +141,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((_Agent, _Container::default(), Dad::from(SlotKey(42))))
+			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
 			.spawn((Interaction::None, KeyedPanel::from(SlotKey(11))));
@@ -142,7 +160,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((_Agent, _Container::default(), Dad::from(SlotKey(42))))
+			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
 			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
@@ -161,7 +179,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((_Agent, _Container::default(), Dad::from(SlotKey(42))))
+			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
 			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));

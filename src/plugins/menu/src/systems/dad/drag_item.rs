@@ -1,27 +1,36 @@
 use crate::components::{Dad, KeyedPanel};
 use bevy::{
-	ecs::{component::Component, query::With, system::Query},
-	prelude::Entity,
-	ui::Interaction,
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
 };
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::{
+	traits::{
+		accessors::get::{Get, TryApplyOn, View},
+		handles_player::PlayerEntity,
+	},
+	zyheeda_commands::ZyheedaCommands,
+};
 
-pub fn drag_item<TAgent>(
+pub fn drag_item<TPlayer>(
 	mut commands: ZyheedaCommands,
-	agents: Query<Entity, With<TAgent>>,
+	player: StaticSystemParam<TPlayer>,
 	panels: Query<(&Interaction, &KeyedPanel)>,
 ) where
-	TAgent: Component,
+	TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 {
+	let Some(player) = player.view() else {
+		return;
+	};
+	let Some(entity) = commands.get(&player) else {
+		return;
+	};
 	let Some((.., panel)) = panels.iter().find(is_pressed) else {
 		return;
 	};
 
-	for entity in &agents {
-		commands.try_apply_on(&entity, |mut e| {
-			e.try_insert(Dad(panel.0));
-		});
-	}
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_insert(Dad(panel.0));
+	});
 }
 
 fn is_pressed((interaction, _): &(&Interaction, &KeyedPanel)) -> bool {
@@ -31,18 +40,19 @@ fn is_pressed((interaction, _): &(&Interaction, &KeyedPanel)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::Dad;
+	use crate::{
+		components::Dad,
+		testing::{_Player, _PlayerParam},
+	};
 	use bevy::app::{App, Update};
-	use common::tools::action_key::slot::SlotKey;
+	use common::{CommonPlugin, tools::action_key::slot::SlotKey};
 	use testing::SingleThreadedApp;
-
-	#[derive(Component)]
-	struct _Agent;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, drag_item::<_Agent>);
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
+		app.add_systems(Update, drag_item::<_PlayerParam>);
 
 		app
 	}
@@ -50,7 +60,7 @@ mod tests {
 	#[test]
 	fn drag_panel_on_pressed() {
 		let mut app = setup();
-		let agent = app.world_mut().spawn(_Agent).id();
+		let agent = app.world_mut().spawn(_Player).id();
 		app.world_mut()
 			.spawn((Interaction::Pressed, KeyedPanel::from(SlotKey(42))));
 
@@ -65,7 +75,7 @@ mod tests {
 	#[test]
 	fn drag_panel_on_pressed_when_multiple_panels_exist() {
 		let mut app = setup();
-		let agent = app.world_mut().spawn(_Agent).id();
+		let agent = app.world_mut().spawn(_Player).id();
 		app.world_mut()
 			.spawn((Interaction::Pressed, KeyedPanel::from(SlotKey(42))));
 		app.world_mut()
@@ -82,7 +92,7 @@ mod tests {
 	#[test]
 	fn no_drag_when_not_pressed() {
 		let mut app = setup();
-		let agent = app.world_mut().spawn(_Agent).id();
+		let agent = app.world_mut().spawn(_Player).id();
 		app.world_mut()
 			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(42))));
 

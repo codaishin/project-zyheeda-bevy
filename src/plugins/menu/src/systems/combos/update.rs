@@ -1,9 +1,17 @@
 use crate::components::combo_skill_button::{ComboSkillButton, DropdownItem};
-use bevy::{ecs::system::StaticSystemParam, prelude::*, ui::Interaction};
-use common::traits::{
-	accessors::get::TryGetContextMut,
-	handles_loadout::combos::{Combos, UpdateCombos},
-	thread_safe::ThreadSafe,
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+	ui::Interaction,
+};
+use common::{
+	traits::{
+		accessors::get::{Get, TryGetContextMut, View},
+		handles_loadout::combos::{Combos, UpdateCombos},
+		handles_player::PlayerEntity,
+		thread_safe::ThreadSafe,
+	},
+	zyheeda_commands::ZyheedaCommands,
 };
 use std::fmt::Debug;
 
@@ -12,29 +20,35 @@ where
 	TLayout: 'static,
 	TId: Debug + PartialEq + Clone + ThreadSafe,
 {
-	pub(crate) fn update<TAgent, TLoadout>(
+	pub(crate) fn update<TPlayer, TLoadout>(
+		commands: ZyheedaCommands,
 		skill_buttons: Query<(&Self, &Interaction)>,
-		agents: Query<Entity, With<TAgent>>,
+		player: StaticSystemParam<TPlayer>,
 		mut param: StaticSystemParam<TLoadout>,
 	) where
-		TAgent: Component,
+		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TLoadout: for<'c> TryGetContextMut<Combos, TContext<'c>: UpdateCombos<TId>>,
 	{
-		for entity in &agents {
-			let new_combos = skill_buttons
-				.iter()
-				.filter(pressed)
-				.map(|(button, ..)| (button.key_path.clone(), Some(button.skill.id.clone())))
-				.collect::<Vec<_>>();
-			if new_combos.is_empty() {
-				continue;
-			}
-			let Some(mut ctx) = TLoadout::try_get_context_mut(&mut param, Combos { entity }) else {
-				continue;
-			};
+		let Some(player) = player.view() else {
+			return;
+		};
+		let Some(entity) = commands.get(&player) else {
+			return;
+		};
 
-			ctx.update_combos(new_combos);
+		let new_combos = skill_buttons
+			.iter()
+			.filter(pressed)
+			.map(|(button, ..)| (button.key_path.clone(), Some(button.skill.id.clone())))
+			.collect::<Vec<_>>();
+		if new_combos.is_empty() {
+			return;
 		}
+		let Some(mut ctx) = TLoadout::try_get_context_mut(&mut param, Combos { entity }) else {
+			return;
+		};
+
+		ctx.update_combos(new_combos);
 	}
 }
 
@@ -45,8 +59,12 @@ fn pressed<T>((.., interaction): &(&T, &Interaction)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::combo_overview::ComboSkill;
+	use crate::{
+		components::combo_overview::ComboSkill,
+		testing::{_Player, _PlayerParam},
+	};
 	use common::{
+		CommonPlugin,
 		tools::action_key::slot::{HandSlot, SlotKey},
 		traits::{handles_loadout::combos::Combo, handles_localization::Token},
 	};
@@ -54,9 +72,6 @@ mod tests {
 	use mockall::{automock, predicate::eq};
 	use std::sync::LazyLock;
 	use testing::{NestedMocks, SingleThreadedApp};
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Component, NestedMocks)]
 	struct _Combos {
@@ -83,9 +98,14 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
+
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.add_systems(
 			Update,
-			ComboSkillButton::<DropdownItem<_Layout>, _Id>::update::<_Agent, Query<&mut _Combos>>,
+			ComboSkillButton::<DropdownItem<_Layout>, _Id>::update::<
+				_PlayerParam,
+				Query<&mut _Combos>,
+			>,
 		);
 
 		app
@@ -102,7 +122,7 @@ mod tests {
 			Interaction::Pressed,
 		));
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Combos::new().with_mock(|mock| {
 				mock.expect_update_combos()
 					.times(1)
@@ -125,7 +145,7 @@ mod tests {
 			Interaction::Hovered,
 		));
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Combos::new().with_mock(|mock| {
 				mock.expect_update_combos().never();
 			}),

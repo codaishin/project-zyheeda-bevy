@@ -24,7 +24,6 @@ pub(crate) mod skill_transform;
 pub(crate) mod target;
 pub(crate) mod velocity;
 pub(crate) mod when_traveled;
-pub(crate) mod world_camera;
 
 use bevy::{
 	ecs::{component::Component, entity::Entity},

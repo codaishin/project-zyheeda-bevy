@@ -4,14 +4,18 @@ use crate::components::{
 	combo_skill_button::{ComboSkillButton, DropdownItem},
 	dropdown::Dropdown,
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	traits::{
-		accessors::get::{TryApplyOn, TryGetContext, ViewOf},
+		accessors::get::{Get, TryApplyOn, TryGetContext, View, ViewOf},
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			skills::{GetSkillId, SkillIcon, SkillToken},
 		},
+		handles_player::PlayerEntity,
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -19,45 +23,50 @@ use common::{
 use std::fmt::Debug;
 
 impl<TLayout> SkillSelectDropdownCommand<TLayout> {
-	pub(crate) fn insert_dropdown<TAgent, TLoadout, TId>(
+	pub(crate) fn insert_dropdown<TPlayer, TLoadout, TId>(
 		mut commands: ZyheedaCommands,
 		dropdown_commands: Query<(Entity, &Self)>,
-		agents: Query<Entity, With<TAgent>>,
+		player: StaticSystemParam<TPlayer>,
 		param: StaticSystemParam<TLoadout>,
 	) where
 		TLayout: ThreadSafe + Sized,
-		TAgent: Component,
+		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TId: Debug + PartialEq + Clone + ThreadSafe,
 		TLoadout: for<'c> TryGetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
 	{
-		for entity in &agents {
-			for (dropdown_entity, command) in &dropdown_commands {
-				let Some(key) = command.key_path.last() else {
-					continue;
-				};
-				let Some(ctx) = TLoadout::try_get_context(&param, AvailableSkills { entity })
-				else {
-					continue;
-				};
-				let items = ctx
-					.get_available_skills(*key)
-					.map(|skill| {
-						ComboSkillButton::<DropdownItem<TLayout>, TId>::new(
-							ComboSkill {
-								id: skill.get_skill_id(),
-								token: skill.view_of::<SkillToken>().clone(),
-								icon: skill.view_of::<SkillIcon>().clone(),
-							},
-							command.key_path.clone(),
-						)
-					})
-					.collect::<Vec<_>>();
+		let Some(player) = player.view() else {
+			return;
+		};
+		let Some(entity) = commands.get(&player) else {
+			return;
+		};
+		let Some(ctx) = TLoadout::try_get_context(&param, AvailableSkills { entity }) else {
+			return;
+		};
 
-				commands.try_apply_on(&dropdown_entity, |mut e| {
-					e.try_insert(Dropdown { items });
-					e.try_remove::<Self>();
-				});
-			}
+		for (dropdown_entity, command) in &dropdown_commands {
+			let Some(key) = command.key_path.last() else {
+				continue;
+			};
+
+			let items = ctx
+				.get_available_skills(*key)
+				.map(|skill| {
+					ComboSkillButton::<DropdownItem<TLayout>, TId>::new(
+						ComboSkill {
+							id: skill.get_skill_id(),
+							token: skill.view_of::<SkillToken>().clone(),
+							icon: skill.view_of::<SkillIcon>().clone(),
+						},
+						command.key_path.clone(),
+					)
+				})
+				.collect::<Vec<_>>();
+
+			commands.try_apply_on(&dropdown_entity, |mut e| {
+				e.try_insert(Dropdown { items });
+				e.try_remove::<Self>();
+			});
 		}
 	}
 }
@@ -65,16 +74,17 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::dropdown::Dropdown;
+	use crate::{
+		components::dropdown::Dropdown,
+		testing::{_Player, _PlayerParam},
+	};
 	use common::{
+		CommonPlugin,
 		tools::action_key::slot::{HandSlot, SlotKey},
 		traits::{accessors::get::View, handles_localization::Token},
 	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Debug, PartialEq)]
 	struct _Layout;
@@ -130,10 +140,11 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.add_systems(
 			Update,
 			SkillSelectDropdownCommand::<_Layout>::insert_dropdown::<
-				_Agent,
+				_PlayerParam,
 				Query<Ref<_Slots>>,
 				&'static str,
 			>,
@@ -153,7 +164,7 @@ mod tests {
 			]))
 			.id();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Slots(HashMap::from([(
 				SlotKey::from(HandSlot::Right),
 				vec![_Skill {
@@ -223,7 +234,7 @@ mod tests {
 			]))
 			.id();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Slots(HashMap::from([(SlotKey::from(HandSlot::Right), vec![])])),
 		));
 

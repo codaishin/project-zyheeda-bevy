@@ -7,11 +7,7 @@ use crate::{
 	},
 };
 use bevy::{
-	camera::{
-		CameraOutputMode,
-		ComputedCameraValues,
-		visibility::{Layer, RenderLayers},
-	},
+	camera::visibility::{Layer, RenderLayers},
 	color::palettes::tailwind,
 	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
 	ecs::system::StaticSystemParam,
@@ -23,6 +19,7 @@ use common::{
 	errors::Unreachable,
 	tools::pixel::Pixel,
 	traits::prefab::{Prefab, PrefabEntityCommands},
+	zyheeda_commands::ZyheedaCommands,
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
@@ -36,26 +33,12 @@ const COMPOSITE_PASS: Layer = 5;
 const UI_PASS: Layer = 6;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
-pub struct MoveWithPlayerCam;
+pub struct MovableCamera;
 
-#[derive(
-	Component,
-	ExtractComponent,
-	SavableComponent,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	Default,
-	Clone,
-	Copy,
-	Serialize,
-	Deserialize,
-)]
-#[savable_component(id = "world pass camera")]
+#[derive(Component, ExtractComponent, Debug, PartialEq, Eq, Hash, Default, Clone)]
 #[require(
 	Camera3d,
-	MoveWithPlayerCam,
+	MovableCamera,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
@@ -65,14 +48,14 @@ pub struct MoveWithPlayerCam;
 	DepthPrepass
 )]
 #[cfg_attr(debug_assertions, require(Name::from("World Camera")))]
-pub struct WorldPass;
+pub(crate) struct WorldPass;
 
 impl From<WorldPass> for Camera {
 	fn from(_: WorldPass) -> Self {
-		new_camera(CameraConfig {
-			order: WORLD_PASS,
+		Camera {
+			order: WORLD_PASS as isize,
 			..default()
-		})
+		}
 	}
 }
 
@@ -95,24 +78,10 @@ impl From<WorldPass> for ModelRenderLayers {
 	}
 }
 
-#[derive(
-	Component,
-	ExtractComponent,
-	SavableComponent,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	Default,
-	Clone,
-	Copy,
-	Serialize,
-	Deserialize,
-)]
-#[savable_component(id = "outline pass camera")]
+#[derive(Component, ExtractComponent, Debug, PartialEq, Eq, Hash, Default, Clone)]
 #[require(
 	Camera3d,
-	MoveWithPlayerCam,
+	MovableCamera,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
@@ -124,13 +93,14 @@ pub(crate) struct OutlinePass;
 
 impl From<OutlinePass> for Camera {
 	fn from(_: OutlinePass) -> Self {
-		new_camera(CameraConfig {
-			order: OUTLINE_PASS,
+		Camera {
+			order: OUTLINE_PASS as isize,
 			// Clear color needs to have an alpha of `0.0`, because the outline shading tests against
 			// the alpha. If we want the full color on the outline pass result, we also need some light
 			// on the outline render layer.
 			clear_color: Color::NONE.into(),
-		})
+			..default()
+		}
 	}
 }
 
@@ -152,24 +122,10 @@ impl From<OutlinePass> for Tonemapping {
 	}
 }
 
-#[derive(
-	Component,
-	ExtractComponent,
-	SavableComponent,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	Default,
-	Clone,
-	Copy,
-	Serialize,
-	Deserialize,
-)]
-#[savable_component(id = "agents pass camera")]
+#[derive(Component, ExtractComponent, Debug, PartialEq, Eq, Hash, Default, Clone)]
 #[require(
 	Camera3d,
-	MoveWithPlayerCam,
+	MovableCamera,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
@@ -181,10 +137,11 @@ pub(crate) struct AgentsPass;
 
 impl From<AgentsPass> for Camera {
 	fn from(_: AgentsPass) -> Self {
-		new_camera(CameraConfig {
-			order: AGENTS_PASS,
+		Camera {
+			order: AGENTS_PASS as isize,
 			clear_color: Color::NONE.into(),
-		})
+			..default()
+		}
 	}
 }
 
@@ -206,24 +163,10 @@ impl From<AgentsPass> for Tonemapping {
 	}
 }
 
-#[derive(
-	Component,
-	ExtractComponent,
-	SavableComponent,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	Default,
-	Clone,
-	Copy,
-	Serialize,
-	Deserialize,
-)]
-#[savable_component(id = "visibility pass camera")]
+#[derive(Component, ExtractComponent, Debug, PartialEq, Default, Clone)]
 #[require(
 	Camera3d,
-	MoveWithPlayerCam,
+	MovableCamera,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
@@ -234,10 +177,11 @@ pub(crate) struct VisibilityPass;
 
 impl From<VisibilityPass> for Camera {
 	fn from(_: VisibilityPass) -> Self {
-		new_camera(CameraConfig {
-			order: VISIBILITY_PASS,
+		Camera {
+			order: VISIBILITY_PASS as isize,
 			clear_color: Color::NONE.into(),
-		})
+			..default()
+		}
 	}
 }
 
@@ -259,24 +203,10 @@ impl From<VisibilityPass> for Tonemapping {
 	}
 }
 
-#[derive(
-	Component,
-	ExtractComponent,
-	SavableComponent,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	Default,
-	Clone,
-	Copy,
-	Serialize,
-	Deserialize,
-)]
-#[savable_component(id = "effect light camera")]
+#[derive(Component, ExtractComponent, Debug, PartialEq, Default, Clone)]
 #[require(
 	Camera3d,
-	MoveWithPlayerCam,
+	MovableCamera,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
@@ -288,10 +218,11 @@ pub(crate) struct EffectLightPass;
 
 impl From<EffectLightPass> for Camera {
 	fn from(_: EffectLightPass) -> Self {
-		new_camera(CameraConfig {
-			order: EFFECT_LIGHT_PASS,
+		Camera {
+			order: EFFECT_LIGHT_PASS as isize,
 			clear_color: Color::NONE.into(),
-		})
+			..default()
+		}
 	}
 }
 
@@ -313,23 +244,10 @@ impl From<EffectLightPass> for Tonemapping {
 	}
 }
 
-#[derive(
-	Component,
-	SavableComponent,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	Default,
-	Clone,
-	Copy,
-	Serialize,
-	Deserialize,
-)]
-#[savable_component(id = "composite pass camera")]
+#[derive(Component, Debug, PartialEq, Default)]
 #[require(
 	Camera3d,
-	MoveWithPlayerCam,
+	MovableCamera,
 	PostProcessCamera::from(Self),
 	Camera::from(Self),
 	RenderLayers::from(Self),
@@ -342,10 +260,10 @@ pub(crate) struct CompositePass;
 
 impl From<CompositePass> for Camera {
 	fn from(_: CompositePass) -> Self {
-		new_camera(CameraConfig {
-			order: COMPOSITE_PASS,
+		Camera {
+			order: COMPOSITE_PASS as isize,
 			..default()
-		})
+		}
 	}
 }
 
@@ -379,22 +297,9 @@ impl From<CompositePass> for PostProcessCamera {
 	}
 }
 
-#[derive(
-	Component,
-	SavableComponent,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	Default,
-	Clone,
-	Copy,
-	Serialize,
-	Deserialize,
-)]
-#[savable_component(id = "world light")]
+#[derive(Component, Debug, PartialEq, Default)]
 #[component(immutable)]
-#[require(MoveWithPlayerCam, RenderLayers::from(Self), Visibility, Transform)]
+#[require(MovableCamera, RenderLayers::from(Self), Visibility, Transform)]
 #[cfg_attr(debug_assertions, require(Name::from("World Light")))]
 pub(crate) struct WorldLight;
 
@@ -450,29 +355,32 @@ impl Prefab<()> for WorldLight {
 	Serialize,
 	Deserialize,
 )]
-#[savable_component(id = "ui pass camera")]
+#[component(immutable)]
+#[savable_component(id = "camera")]
 #[require(
 	Camera3d,
-	MoveWithPlayerCam,
+	MovableCamera,
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
 	Hdr
 )]
-#[cfg_attr(debug_assertions, require(Name::from("UI Camera")))]
+#[cfg_attr(debug_assertions, require(Name::from("UI pass Camera")))]
 pub(crate) struct UiPass;
 
 impl UiPass {
-	pub(crate) const DEFAULT_TRANSFORM: &GlobalTransform = &GlobalTransform::IDENTITY;
-	pub(crate) const DEFAULT_CAMERA: &Camera = &new_camera(CameraConfig {
-		order: UI_PASS,
-		clear_color: ClearColorConfig::None,
-	});
+	pub(crate) fn spawn(mut commands: ZyheedaCommands) {
+		commands.spawn(Self);
+	}
 }
 
 impl From<UiPass> for Camera {
 	fn from(_: UiPass) -> Self {
-		UiPass::DEFAULT_CAMERA.clone()
+		Camera {
+			order: UI_PASS as isize,
+			clear_color: ClearColorConfig::None,
+			..default()
+		}
 	}
 }
 
@@ -485,33 +393,5 @@ impl From<UiPass> for RenderLayers {
 impl From<UiPass> for Tonemapping {
 	fn from(_: UiPass) -> Self {
 		Tonemapping::None
-	}
-}
-
-#[derive(Default)]
-struct CameraConfig {
-	order: usize,
-	clear_color: ClearColorConfig,
-}
-
-const fn new_camera(CameraConfig { order, clear_color }: CameraConfig) -> Camera {
-	Camera {
-		order: order as isize,
-		clear_color,
-		msaa_writeback: MsaaWriteback::Auto,
-		invert_culling: false,
-		is_active: true,
-		viewport: None,
-		sub_camera_view: None,
-		computed: ComputedCameraValues {
-			clip_from_view: Mat4::IDENTITY,
-			target_info: None,
-			old_sub_camera_view: None,
-			old_viewport_size: None,
-		},
-		output_mode: CameraOutputMode::Write {
-			blend_state: None,
-			clear_color: ClearColorConfig::Default,
-		},
 	}
 }

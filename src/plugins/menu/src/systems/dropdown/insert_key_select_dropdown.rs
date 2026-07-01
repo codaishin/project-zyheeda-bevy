@@ -3,73 +3,82 @@ use crate::{
 	components::key_select_dropdown_command::{ExcludeKeys, KeySelectDropdownCommand},
 	traits::GetComponent,
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	tools::action_key::slot::SlotKey,
 	traits::{
-		accessors::get::{TryApplyOn, TryGetContext},
+		accessors::get::{Get, TryApplyOn, TryGetContext, View},
 		handles_loadout::combos::{Combos, NextConfiguredKeys},
+		handles_player::PlayerEntity,
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
 };
 
 impl KeySelectDropdownCommand<AppendSkillCommand> {
-	pub(crate) fn insert_dropdown<TAgent, TLoadout>(
+	pub(crate) fn insert_dropdown<TPlayer, TLoadout>(
 		commands: ZyheedaCommands,
 		dropdown_commands: Query<(Entity, &Self)>,
-		agents: Query<Entity, With<TAgent>>,
+		player: StaticSystemParam<TPlayer>,
 		param: StaticSystemParam<TLoadout>,
 	) where
-		TAgent: Component,
+		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TLoadout: for<'c> TryGetContext<Combos, TContext<'c>: NextConfiguredKeys<SlotKey>>,
 	{
-		insert_key_select_dropdown(commands, dropdown_commands, agents, param);
+		insert_key_select_dropdown(commands, dropdown_commands, player, param);
 	}
 }
 
-fn insert_key_select_dropdown<TAgent, TLoadout, TExtra>(
+fn insert_key_select_dropdown<TPlayer, TLoadout, TExtra>(
 	mut commands: ZyheedaCommands,
 	dropdown_commands: Query<(Entity, &KeySelectDropdownCommand<TExtra>)>,
-	agents: Query<Entity, With<TAgent>>,
+	player: StaticSystemParam<TPlayer>,
 	param: StaticSystemParam<TLoadout>,
 ) where
-	TAgent: Component,
+	TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 	TLoadout: for<'c> TryGetContext<Combos, TContext<'c>: NextConfiguredKeys<SlotKey>>,
 	KeySelectDropdownCommand<TExtra>: ThreadSafe + GetComponent<TInput = ExcludeKeys<SlotKey>>,
 {
-	for entity in &agents {
-		let Some(ctx) = TLoadout::try_get_context(&param, Combos { entity }) else {
+	let Some(player) = player.view() else {
+		return;
+	};
+	let Some(entity) = commands.get(&player) else {
+		return;
+	};
+
+	let Some(ctx) = TLoadout::try_get_context(&param, Combos { entity }) else {
+		return;
+	};
+
+	for (entity, insert_command) in &dropdown_commands {
+		let next_keys = ctx.next_keys(&insert_command.key_path);
+		let Some(component) = insert_command.component(ExcludeKeys(next_keys)) else {
+			commands.try_apply_on(&entity, |e| e.try_despawn());
 			continue;
 		};
 
-		for (entity, insert_command) in &dropdown_commands {
-			let next_keys = ctx.next_keys(&insert_command.key_path);
-			let Some(component) = insert_command.component(ExcludeKeys(next_keys)) else {
-				commands.try_apply_on(&entity, |e| e.try_despawn());
-				continue;
-			};
-
-			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(component);
-				e.try_remove::<KeySelectDropdownCommand<TExtra>>();
-			});
-		}
+		commands.try_apply_on(&entity, |mut e| {
+			e.try_insert(component);
+			e.try_remove::<KeySelectDropdownCommand<TExtra>>();
+		});
 	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::key_select_dropdown_command::ExcludeKeys;
-	use common::tools::action_key::slot::HandSlot;
+	use crate::{
+		components::key_select_dropdown_command::ExcludeKeys,
+		testing::{_Player, _PlayerParam},
+	};
+	use common::{CommonPlugin, tools::action_key::slot::HandSlot};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashSet;
 	use testing::{NestedMocks, SingleThreadedApp};
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Component, NestedMocks)]
 	struct _Combos {
@@ -116,9 +125,10 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.add_systems(
 			Update,
-			insert_key_select_dropdown::<_Agent, Query<Ref<_Combos>>, _Extra>,
+			insert_key_select_dropdown::<_PlayerParam, Query<Ref<_Combos>>, _Extra>,
 		);
 
 		app
@@ -132,7 +142,7 @@ mod tests {
 		];
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Combos::new().with_mock(|mock| {
 				mock.expect_next_keys()
 					.times(1)
@@ -161,7 +171,7 @@ mod tests {
 	#[test]
 	fn remove_insert_command() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Combos::default()));
+		app.world_mut().spawn((_Player, _Combos::default()));
 		let entity = app
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {
@@ -182,7 +192,7 @@ mod tests {
 	#[test]
 	fn despawn_entity_if_bundle_is_none() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Combos::default()));
+		app.world_mut().spawn((_Player, _Combos::default()));
 		let entity = app
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {
@@ -200,7 +210,7 @@ mod tests {
 	#[test]
 	fn despawn_entity_recursively_if_bundle_is_none() {
 		let mut app = setup();
-		app.world_mut().spawn((_Agent, _Combos::default()));
+		app.world_mut().spawn((_Player, _Combos::default()));
 		let entity = app
 			.world_mut()
 			.spawn(KeySelectDropdownCommand {

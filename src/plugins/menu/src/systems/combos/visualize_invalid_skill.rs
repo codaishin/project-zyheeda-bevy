@@ -2,14 +2,18 @@ use crate::{
 	components::combo_skill_button::{ComboSkillButton, DropdownTrigger},
 	traits::InsertContentOn,
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::system::{StaticSystemParam, SystemParam},
+	prelude::*,
+};
 use common::{
 	traits::{
-		accessors::get::{TryApplyOn, TryGetContext},
+		accessors::get::{Get, TryApplyOn, TryGetContext, View},
 		handles_loadout::{
 			available_skills::{AvailableSkills, ReadAvailableSkills},
 			skills::GetSkillId,
 		},
+		handles_player::PlayerEntity,
 		thread_safe::ThreadSafe,
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -20,35 +24,40 @@ impl<TId> ComboSkillButton<DropdownTrigger, TId>
 where
 	TId: Debug + PartialEq + Clone + ThreadSafe,
 {
-	pub(crate) fn visualize_invalid<TVisualize, TAgent, TLoadout>(
+	pub(crate) fn visualize_invalid<TVisualize, TPlayer, TLoadout>(
 		mut commands: ZyheedaCommands,
 		buttons: Query<(Entity, &Self), Added<Self>>,
-		agents: Query<Entity, With<TAgent>>,
+		player: StaticSystemParam<TPlayer>,
 		param: StaticSystemParam<TLoadout>,
 	) where
 		TVisualize: InsertContentOn,
-		TAgent: Component,
+		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TLoadout: for<'c> TryGetContext<AvailableSkills, TContext<'c>: ReadAvailableSkills<TId>>,
 	{
-		for entity in &agents {
-			let Some(ctx) = TLoadout::try_get_context(&param, AvailableSkills { entity }) else {
+		let Some(player) = player.view() else {
+			return;
+		};
+		let Some(entity) = commands.get(&player) else {
+			return;
+		};
+
+		let Some(ctx) = TLoadout::try_get_context(&param, AvailableSkills { entity }) else {
+			return;
+		};
+
+		for (entity, button) in &buttons {
+			let Some(key) = button.key_path.last() else {
 				continue;
 			};
+			let mut skills = ctx.get_available_skills(*key);
 
-			for (entity, button) in &buttons {
-				let Some(key) = button.key_path.last() else {
-					continue;
-				};
-				let mut skills = ctx.get_available_skills(*key);
-
-				if skills.any(|skill| skill.get_skill_id() == button.skill.id) {
-					continue;
-				}
-
-				commands.try_apply_on(&entity, |mut entity| {
-					TVisualize::insert_content_on(&mut entity);
-				});
+			if skills.any(|skill| skill.get_skill_id() == button.skill.id) {
+				continue;
 			}
+
+			commands.try_apply_on(&entity, |mut entity| {
+				TVisualize::insert_content_on(&mut entity);
+			});
 		}
 	}
 }
@@ -56,8 +65,12 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::combo_overview::ComboSkill;
+	use crate::{
+		components::combo_overview::ComboSkill,
+		testing::{_Player, _PlayerParam},
+	};
 	use common::{
+		CommonPlugin,
 		tools::action_key::slot::{HandSlot, SlotKey},
 		traits::{
 			accessors::get::View,
@@ -68,9 +81,6 @@ mod tests {
 	};
 	use std::{collections::HashMap, marker::PhantomData, sync::LazyLock};
 	use testing::SingleThreadedApp;
-
-	#[derive(Component)]
-	struct _Agent;
 
 	#[derive(Component, Clone)]
 	struct _Slots(HashMap<SlotKey, Vec<_Skill>>);
@@ -133,11 +143,13 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
+
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.add_systems(
 			Update,
 			ComboSkillButton::<DropdownTrigger, &'static str>::visualize_invalid::<
 				_Visualization,
-				_Agent,
+				_PlayerParam,
 				Query<Ref<_Slots>>,
 			>,
 		);
@@ -149,7 +161,7 @@ mod tests {
 	fn visualize_unusable() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Slots(HashMap::from([(
 				SlotKey::from(HandSlot::Right),
 				vec![_Skill("compatible")],
@@ -178,7 +190,7 @@ mod tests {
 	fn do_not_visualize_usable() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Slots(HashMap::from([(
 				SlotKey::from(HandSlot::Right),
 				vec![_Skill("compatible")],
@@ -204,7 +216,7 @@ mod tests {
 	fn do_not_visualize_when_not_added() {
 		let mut app = setup();
 		app.world_mut().spawn((
-			_Agent,
+			_Player,
 			_Slots(HashMap::from([(
 				SlotKey::from(HandSlot::Right),
 				vec![_Skill("compatible")],

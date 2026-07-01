@@ -19,26 +19,28 @@ use std::{
 };
 
 pub trait HandlesRaycast {
-	type TRayCastMut: for<'w, 's> SystemParam<Item<'w, 's>: NoWorldCameraSet>;
-
-	/// Raycast system parameter. [`MouseHover`] raycast requires that `Self::TWorldCamera` is being
-	/// attached to the actual camera.
-	type TRaycast: SystemParam
+	type TRaycastMut: SystemParam
+		+ for<'w, 's> SystemParam<Item<'w, 's>: UpdateTargetRay>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<SolidObjects>>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<Terrain>>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseTerrainHover>>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>;
 }
 
-pub trait NoWorldCameraSet {
-	type TSetter: SetWorldCamera;
-
-	fn no_world_camera_set(self) -> Option<Self::TSetter>;
+pub trait UpdateTargetRay {
+	fn update_target_ray(&mut self, ray: ChangedTargetRay);
 }
 
-pub trait SetWorldCamera {
-	fn set_world_camera(self, entity: Entity);
+impl<T> UpdateTargetRay for T
+where
+	T: DerefMut<Target: UpdateTargetRay>,
+{
+	fn update_target_ray(&mut self, ray: ChangedTargetRay) {
+		self.deref_mut().update_target_ray(ray);
+	}
 }
+
+pub struct ChangedTargetRay(pub Option<Ray3d>);
 
 pub trait Raycast<TArgs>
 where

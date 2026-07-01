@@ -8,7 +8,7 @@ mod traits;
 
 use crate::{
 	components::{
-		camera_labels::{AgentsPass, EffectLightPass, OutlinePass, VisibilityPass, WorldLight},
+		camera_labels::{AgentsPass, OutlinePass, WorldLight},
 		model_render_layers::ModelRenderLayers,
 		only_depth_prepass::OnlyDepthPrepass,
 		post_process_camera::PostProcessCamera,
@@ -16,13 +16,14 @@ use crate::{
 	},
 	materials::effect_material::EffectMaterial,
 	resources::{
+		camera_parameters::CameraParameters,
 		depth_texture::{CopyDepthTexture, DepthTexture},
 		post_process_pipeline::SetupPostProcessPipeline,
 	},
 	system_params::{
+		camera::{CameraParam, CameraParamMut},
 		highlight::{HighlightParam, HighlightParamMut},
 		lights::RolesParamMut,
-		ui_camera::UiCameraParamMut,
 	},
 };
 use bevy::{
@@ -33,11 +34,13 @@ use common::{
 	components::essence::Essence,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	states::game_state::LoadingGame,
+	systems::log::OnError,
+	tools::plugin_system_set::PluginSystemSet,
 	traits::{
 		after_plugin::AfterPlugin,
-		handles_graphics::{FirstPassCamera, HandlesGraphics, UiCamera, WorldCameras},
+		handles_graphics::{HandlesCameras, HandlesGraphics},
 		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInSubApp},
-		handles_physics::HandlesAllPhysicalEffects,
+		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast},
 		handles_saving::HandlesSaving,
 		handles_skill_physics::HandlesSkillPhysics,
 		prefab::AddPrefabObserver,
@@ -47,14 +50,14 @@ use common::{
 	},
 };
 use components::{
-	camera_labels::{CompositePass, MoveWithPlayerCam, UiPass, WorldPass},
+	camera_labels::{UiPass, WorldPass},
 	effect_material_handle::EffectMaterialHandle,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
 use resources::window_size::WindowSize;
 use std::{hash::Hash, marker::PhantomData};
-use systems::{no_waiting_pipelines::no_waiting_pipelines, spawn_cameras::spawn_cameras};
+use systems::no_waiting_pipelines::no_waiting_pipelines;
 
 #[cfg(not(feature = "debug-utils"))]
 use components::no_debug_cam::NoDebugCam;
@@ -69,7 +72,11 @@ impl<TLoading, TSavegame, TPhysics> GraphicsPlugin<NoDebugCam, (TLoading, TSaveg
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
+	TPhysics: ThreadSafe
+		+ SystemSetDefinition
+		+ HandlesRaycast
+		+ HandlesAllPhysicalEffects
+		+ HandlesSkillPhysics,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self {
@@ -85,7 +92,11 @@ where
 	TDebugCam: Component,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
+	TPhysics: ThreadSafe
+		+ SystemSetDefinition
+		+ HandlesRaycast
+		+ HandlesAllPhysicalEffects
+		+ HandlesSkillPhysics,
 {
 	#[cfg(feature = "debug-utils")]
 	pub fn new(debug_cam: fn() -> TDebugCam, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
@@ -117,23 +128,18 @@ where
 					EffectMaterialHandle::propagate_material,
 				)
 					.chain()
+					.in_set(GraphicSystems)
 					.after_plugin(TPhysics::SYSTEMS),
 			);
 	}
 
 	fn cameras(&self, app: &mut App) {
-		app.register_required_components::<MoveWithPlayerCam, TSavegame::TSaveEntityMarker>();
-		TSavegame::register_savable_component::<WorldPass>(app);
-		TSavegame::register_savable_component::<AgentsPass>(app);
-		TSavegame::register_savable_component::<OutlinePass>(app);
-		TSavegame::register_savable_component::<VisibilityPass>(app);
-		TSavegame::register_savable_component::<EffectLightPass>(app);
-		TSavegame::register_savable_component::<CompositePass>(app);
+		app.register_required_components::<UiPass, TSavegame::TSaveEntityMarker>();
 		TSavegame::register_savable_component::<UiPass>(app);
-		TSavegame::register_savable_component::<WorldLight>(app);
 
 		app.insert_resource(GlobalAmbientLight::NONE)
 			.init_resource::<WindowSize>()
+			.init_resource::<CameraParameters>()
 			.register_required_components_with::<UiPass, TDebugCam>(self.debug_cam)
 			.copy_depth_texture::<WorldPass>()
 			.copy_depth_texture::<AgentsPass>()
@@ -142,7 +148,18 @@ where
 			.add_prefab_observer::<Player, ()>()
 			.add_prefab_observer::<Enemy, ()>()
 			.add_prefab_observer::<WorldLight, ()>()
-			.add_systems(PostStartup, spawn_cameras)
+			.add_systems(PostStartup, UiPass::spawn)
+			.add_systems(
+				Update,
+				(
+					UiPass::process_new_ui_pass.pipe(OnError::log),
+					WorldPass::update_target_ray::<TPhysics::TRaycastMut>.pipe(OnError::log),
+					CameraParameters::apply_changes,
+				)
+					.chain()
+					.in_set(GraphicSystems)
+					.after_plugin(TPhysics::SYSTEMS),
+			)
 			.add_systems(
 				First,
 				(WindowSize::update, OnlyDepthPrepass::update_render_targets).chain(),
@@ -156,7 +173,11 @@ where
 	TDebugCam: Component,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
-	TPhysics: ThreadSafe + SystemSetDefinition + HandlesAllPhysicalEffects + HandlesSkillPhysics,
+	TPhysics: ThreadSafe
+		+ SystemSetDefinition
+		+ HandlesRaycast
+		+ HandlesAllPhysicalEffects
+		+ HandlesSkillPhysics,
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
@@ -186,20 +207,22 @@ impl RegisterShader for App {
 	}
 }
 
-impl<TDebugCam, TDependencies> UiCamera for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TUiCameraMut = UiCameraParamMut<'static, 'static>;
-}
-
-impl<TDebugCam, TDependencies> FirstPassCamera for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TFirstPassCamera = WorldPass;
-}
-
-impl<TDebugCam, TDependencies> WorldCameras for GraphicsPlugin<TDebugCam, TDependencies> {
-	type TWorldCameras = MoveWithPlayerCam;
+impl<TDebugCam, TDependencies> HandlesCameras for GraphicsPlugin<TDebugCam, TDependencies> {
+	type TCamera = CameraParam<'static>;
+	type TCameraMut = CameraParamMut<'static, 'static>;
 }
 
 impl<TDebugCam, TDependencies> HandlesGraphics for GraphicsPlugin<TDebugCam, TDependencies> {
 	type THighlight = HighlightParam<'static, 'static>;
 	type THighlightMut = HighlightParamMut<'static, 'static>;
 	type TRolesMut = RolesParamMut<'static, 'static>;
+}
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
+pub struct GraphicSystems;
+
+impl<TDebugCam, TDependencies> SystemSetDefinition for GraphicsPlugin<TDebugCam, TDependencies> {
+	type TSystemSet = GraphicSystems;
+
+	const SYSTEMS: PluginSystemSet<GraphicSystems> = PluginSystemSet::from_set(GraphicSystems);
 }
