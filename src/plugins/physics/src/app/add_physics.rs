@@ -1,5 +1,4 @@
 use crate::{
-	CollisionSystems,
 	PhysicsSystems,
 	components::ongoing_effects::OngoingEffects,
 	systems::interactions::act_on::ActOnSystem,
@@ -37,8 +36,7 @@ impl AddPhysics for App {
 			Update,
 			Update::delta
 				.pipe(TActor::act_on::<TTarget>)
-				.in_set(PhysicsSystems)
-				.after(CollisionSystems),
+				.in_set(PhysicsSystems::Resolve),
 		)
 	}
 }

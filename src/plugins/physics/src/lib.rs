@@ -114,6 +114,25 @@ where
 		TSaveGame::register_savable_component::<LinearVelocity>(app);
 		TSaveGame::register_savable_component::<CharacterGravity>(app);
 
+		app.configure_sets(
+			Update,
+			(
+				PhysicsSystems::Prep,
+				PhysicsSystems::Collisions,
+				PhysicsSystems::Resolve,
+			)
+				.chain(),
+		);
+		app.configure_sets(
+			FixedUpdate,
+			(
+				PhysicsSystems::Prep,
+				PhysicsSystems::Collisions,
+				PhysicsSystems::Resolve,
+			)
+				.chain(),
+		);
+
 		app
 			// Rapier
 			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
@@ -125,7 +144,10 @@ where
 			.add_observer(LinearVelocity::apply)
 			// World camera
 			.init_resource::<WorldCamera>()
-			.add_systems(Update, WorldCamera::reset_camera.in_set(PhysicsSystems))
+			.add_systems(
+				Update,
+				WorldCamera::reset_camera.in_set(PhysicsSystems::Prep),
+			)
 			// Character Motion
 			.register_required_components::<KinematicCharacterController, CharacterGravity>()
 			.add_systems(
@@ -136,12 +158,13 @@ where
 					FixedUpdate::delta.pipe(CharacterGravity::apply),
 				)
 					.chain()
-					.in_set(PhysicsSystems),
+					.in_set(PhysicsSystems::Resolve),
 			)
 			// Animations
 			.add_systems(
 				Update,
-				Target::update_pitch::<RayCasterMut, TAnimations::TAnimationsMut>,
+				Target::update_pitch::<RayCasterMut, TAnimations::TAnimationsMut>
+					.in_set(PhysicsSystems::Resolve),
 			)
 			// Skills
 			.register_required_components::<Skill, TSaveGame::TSaveEntityMarker>()
@@ -149,7 +172,12 @@ where
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_prefab_observer::<Body, ()>()
-			.add_systems(Update, AsyncCollider::insert_collider.pipe(OnError::log))
+			.add_systems(
+				Update,
+				AsyncCollider::insert_collider
+					.pipe(OnError::log)
+					.in_set(PhysicsSystems::Prep),
+			)
 			.add_message::<RayEvent>()
 			.init_resource::<RootCollisions<Physical>>()
 			.init_resource::<RootCollisions<Interactive>>()
@@ -162,7 +190,7 @@ where
 				Update,
 				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead)
 					.chain()
-					.in_set(PhysicsSystems),
+					.in_set(PhysicsSystems::Resolve),
 			)
 			// Apply gravity effect
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
@@ -174,21 +202,21 @@ where
 					Update::delta.pipe(GravityAffected::apply_pull),
 				)
 					.chain()
-					.in_set(PhysicsSystems),
+					.in_set(PhysicsSystems::Resolve),
 			)
 			// Apply force effect
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
 			.add_observer(ForceEffect::update_blockers_observer)
 			.add_systems(
 				Update,
-				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems),
+				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems::Resolve),
 			)
 			// General Lifetime relationship
 			.add_observer(LifetimeTiedTo::insert_on::<Anchor>)
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
 			// Anchor
 			.add_observer(AnchorDirty::process::<RayCasterMut>.pipe(OnError::log))
-			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems))
+			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems::Prep))
 			.add_systems(
 				Update,
 				(
@@ -219,14 +247,9 @@ where
 						.chain(),
 				)
 					.chain()
-					.in_set(CollisionSystems),
+					.in_set(PhysicsSystems::Collisions),
 			)
-			.add_systems(
-				Update,
-				apply_fragile_blocks
-					.after(PhysicsSystems)
-					.after(CollisionSystems),
-			);
+			.add_systems(Update, apply_fragile_blocks.after(PhysicsSystems::Resolve));
 	}
 }
 
@@ -240,11 +263,12 @@ fn set_rapier_time_step(time_per_frame: Duration) -> impl Fn(ResMut<TimestepMode
 	}
 }
 
-#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-struct CollisionSystems;
-
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
-pub struct PhysicsSystems;
+pub enum PhysicsSystems {
+	Prep,
+	Collisions,
+	Resolve,
+}
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
 	type TRaycastMut = RayCasterMut<'static, 'static>;
@@ -257,7 +281,8 @@ impl<TDependencies> HandlesPhysicsConfig for PhysicsPlugin<TDependencies> {
 impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
 	type TSystemSet = PhysicsSystems;
 
-	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(PhysicsSystems);
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> =
+		PluginSystemSet::from_set(PhysicsSystems::Resolve);
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
