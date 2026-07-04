@@ -9,7 +9,7 @@ use common::{
 	traits::accessors::get::{Get, TryApplyOn},
 	zyheeda_commands::ZyheedaCommands,
 };
-use std::fmt::Display;
+use std::{fmt::Display, time::Duration};
 
 impl PersistentMapObject {
 	pub(crate) fn link_with_map(
@@ -21,12 +21,12 @@ impl PersistentMapObject {
 
 		for (entity, PersistentMapObject { map }) in map_objects {
 			let Some(map) = commands.get(map) else {
-				errors.push(PersistentMapObjectError::MissingMapEntity { map: *map });
+				errors.push(PersistentMapObjectError::MissingMapEntity { entity, map: *map });
 				continue;
 			};
 
 			if !maps.contains(map) {
-				errors.push(PersistentMapObjectError::MapEntityIsNotAMap { map });
+				errors.push(PersistentMapObjectError::MapEntityIsNotAMap { entity, map });
 				continue;
 			}
 
@@ -45,24 +45,34 @@ impl PersistentMapObject {
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum PersistentMapObjectError {
-	MissingMapEntity { map: PersistentEntity },
-	MapEntityIsNotAMap { map: Entity },
+	MissingMapEntity {
+		entity: Entity,
+		map: PersistentEntity,
+	},
+	MapEntityIsNotAMap {
+		entity: Entity,
+		map: Entity,
+	},
 }
 
 impl Display for PersistentMapObjectError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			PersistentMapObjectError::MissingMapEntity { map } => {
-				write!(f, "Map with entity ({map:?}) does not exist")
+			PersistentMapObjectError::MissingMapEntity { entity, map } => {
+				write!(f, "{entity}: Map with entity ({map:?}) does not exist")
 			}
-			PersistentMapObjectError::MapEntityIsNotAMap { map } => {
-				write!(f, "Entity ({map:?}) is not a map")
+			PersistentMapObjectError::MapEntityIsNotAMap { entity, map } => {
+				write!(f, "{entity}: Entity ({map:?}) is not a map")
 			}
 		}
 	}
 }
 
 impl ErrorData for PersistentMapObjectError {
+	fn rate_limit() -> Option<Duration> {
+		Some(Duration::from_secs(1))
+	}
+
 	fn level(&self) -> Level {
 		Level::Error
 	}
@@ -128,7 +138,10 @@ mod tests {
 		assert_eq!(
 			(
 				None,
-				Err(vec![PersistentMapObjectError::MissingMapEntity { map }])
+				Err(vec![PersistentMapObjectError::MissingMapEntity {
+					entity,
+					map
+				}])
 			),
 			(app.world().entity(entity).get::<MapObjectOf>(), result),
 		);
@@ -154,7 +167,10 @@ mod tests {
 		assert_eq!(
 			(
 				None,
-				Err(vec![PersistentMapObjectError::MapEntityIsNotAMap { map }])
+				Err(vec![PersistentMapObjectError::MapEntityIsNotAMap {
+					entity,
+					map
+				}])
 			),
 			(app.world().entity(entity).get::<MapObjectOf>(), result),
 		);
