@@ -189,6 +189,10 @@ impl<T> ErrorData for Vec<T>
 where
 	T: ErrorData,
 {
+	fn rate_limit() -> Option<Duration> {
+		T::rate_limit()
+	}
+
 	fn level(&self) -> Level {
 		if self.iter().any(|e| e.level() == Level::Error) {
 			return Level::Error;
