@@ -4,7 +4,7 @@ mod traits;
 
 use bevy::{
 	app::{App, Plugin, Update},
-	ecs::schedule::IntoScheduleConfigs,
+	ecs::{query::Without, schedule::IntoScheduleConfigs},
 };
 use common::{
 	attributes::health::Health,
@@ -47,7 +47,7 @@ where
 		app.add_systems(
 			Update,
 			(
-				Bar::add_to::<TAgents::TAgent>,
+				Bar::add_to::<TAgents::TAgent<Without<Bar>>>,
 				update_life_bars,
 				render_life_bars,
 			)

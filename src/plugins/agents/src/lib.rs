@@ -14,7 +14,7 @@ use crate::{
 	},
 	system_params::{agent_param::AgentParam, player_param::PlayerParam},
 };
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::{log::OnError, register_animations::RegisterAnimationsSystem},
@@ -248,5 +248,8 @@ impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
-	type TAgent = AgentParam<'static, 'static>;
+	type TAgent<TFilter>
+		= AgentParam<'static, 'static, TFilter>
+	where
+		TFilter: QueryFilter + 'static;
 }

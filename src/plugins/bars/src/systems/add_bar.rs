@@ -15,7 +15,7 @@ impl Bar {
 
 		for entity in agents {
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert_if_new(Bar::default());
+				e.try_insert(Bar::default());
 			});
 		}
 	}
@@ -66,37 +66,6 @@ mod tests {
 
 		assert_eq!(
 			[Some(&Bar::default()), Some(&Bar::default())],
-			app.world().entity(entities).map(|e| e.get::<Bar>()),
-		);
-	}
-
-	#[test]
-	fn only_insert_new_bars() {
-		let agents = [PersistentEntity::default(), PersistentEntity::default()];
-		let mut app = setup(agents);
-		let entities = [
-			app.world_mut().spawn(agents[0]).id(),
-			app.world_mut()
-				.spawn((
-					agents[1],
-					Bar {
-						scale: 11.,
-						..default()
-					},
-				))
-				.id(),
-		];
-
-		app.update();
-
-		assert_eq!(
-			[
-				Some(&Bar::default()),
-				Some(&Bar {
-					scale: 11.,
-					..default()
-				}),
-			],
 			app.world().entity(entities).map(|e| e.get::<Bar>()),
 		);
 	}
