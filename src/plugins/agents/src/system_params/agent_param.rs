@@ -10,19 +10,21 @@ use common::components::persistent_entity::PersistentEntity;
 use std::iter::Copied;
 
 #[derive(SystemParam)]
-pub struct AgentParam<'w, 's, TFilter>
+pub struct AgentParam<'w, 's, TFilter, TAgent = Agent>
 where
 	TFilter: QueryFilter + 'static,
+	TAgent: Component,
 {
-	agents: Query<'w, 's, &'static PersistentEntity, (With<Agent>, TFilter)>,
+	agents: Query<'w, 's, &'static PersistentEntity, (With<TAgent>, TFilter)>,
 }
 
-impl<'w, 's, TFilter> IntoIterator for AgentParam<'w, 's, TFilter>
+impl<'w, 's, TFilter, TAgent> IntoIterator for AgentParam<'w, 's, TFilter, TAgent>
 where
 	TFilter: QueryFilter + 'static,
+	TAgent: Component,
 {
 	type Item = PersistentEntity;
-	type IntoIter = Copied<QueryIter<'w, 's, &'static PersistentEntity, (With<Agent>, TFilter)>>;
+	type IntoIter = Copied<QueryIter<'w, 's, &'static PersistentEntity, (With<TAgent>, TFilter)>>;
 
 	fn into_iter(self) -> Self::IntoIter {
 		self.agents.into_iter().copied()
@@ -33,8 +35,10 @@ where
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::{handles_enemies::EnemyType, handles_map_generation::AgentType};
 	use testing::SingleThreadedApp;
+
+	#[derive(Component)]
+	struct _Agent;
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)
@@ -45,22 +49,12 @@ mod tests {
 		let mut app = setup();
 		let a = PersistentEntity::default();
 		let b = PersistentEntity::default();
-		app.world_mut().spawn((
-			a,
-			Agent {
-				agent_type: AgentType::Player,
-			},
-		));
-		app.world_mut().spawn((
-			b,
-			Agent {
-				agent_type: AgentType::Enemy(EnemyType::VoidSphere),
-			},
-		));
+		app.world_mut().spawn((a, _Agent));
+		app.world_mut().spawn((b, _Agent));
 
 		let entities = app
 			.world_mut()
-			.run_system_once(|a: AgentParam<()>| a.into_iter().collect::<Vec<_>>())?;
+			.run_system_once(|a: AgentParam<(), _Agent>| a.into_iter().collect::<Vec<_>>())?;
 
 		assert_eq!(vec![a, b], entities);
 		Ok(())
@@ -72,23 +66,13 @@ mod tests {
 		let a = PersistentEntity::default();
 		let b = PersistentEntity::default();
 		let c = PersistentEntity::default();
-		app.world_mut().spawn((
-			a,
-			Agent {
-				agent_type: AgentType::Player,
-			},
-		));
+		app.world_mut().spawn((a, _Agent));
 		app.world_mut().spawn(b);
-		app.world_mut().spawn((
-			c,
-			Agent {
-				agent_type: AgentType::Enemy(EnemyType::VoidSphere),
-			},
-		));
+		app.world_mut().spawn((c, _Agent));
 
 		let entities = app
 			.world_mut()
-			.run_system_once(|a: AgentParam<()>| a.into_iter().collect::<Vec<_>>())?;
+			.run_system_once(|a: AgentParam<(), _Agent>| a.into_iter().collect::<Vec<_>>())?;
 
 		assert_eq!(vec![a, c], entities);
 		Ok(())
@@ -103,29 +87,15 @@ mod tests {
 		let a = PersistentEntity::default();
 		let b = PersistentEntity::default();
 		let c = PersistentEntity::default();
-		app.world_mut().spawn((
-			a,
-			Agent {
-				agent_type: AgentType::Player,
-			},
-		));
-		app.world_mut().spawn((
-			b,
-			Skip,
-			Agent {
-				agent_type: AgentType::Enemy(EnemyType::VoidSphere),
-			},
-		));
-		app.world_mut().spawn((
-			c,
-			Agent {
-				agent_type: AgentType::Enemy(EnemyType::VoidSphere),
-			},
-		));
+		app.world_mut().spawn((a, _Agent));
+		app.world_mut().spawn((b, Skip, _Agent));
+		app.world_mut().spawn((c, _Agent));
 
-		let entities = app
-			.world_mut()
-			.run_system_once(|a: AgentParam<Without<Skip>>| a.into_iter().collect::<Vec<_>>())?;
+		let entities =
+			app.world_mut()
+				.run_system_once(|a: AgentParam<Without<Skip>, _Agent>| {
+					a.into_iter().collect::<Vec<_>>()
+				})?;
 
 		assert_eq!(vec![a, c], entities);
 		Ok(())

@@ -240,7 +240,10 @@ where
 }
 
 impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
-	type TEnemy = Enemy;
+	type TEnemy<TFilter>
+		= AgentParam<'static, 'static, TFilter, Enemy>
+	where
+		TFilter: QueryFilter + 'static;
 }
 
 impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
