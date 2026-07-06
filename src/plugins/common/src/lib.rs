@@ -20,6 +20,7 @@ use crate::{
 		gltf::GltfLookup,
 		lifetime::Lifetime,
 		load_scene::LoadScene,
+		persistent_entity::PersistentEntity,
 	},
 	error_logger::GlobalErrorLogger,
 	states::game_state::GameState,
@@ -64,6 +65,7 @@ fn game_state(app: &mut App) {
 fn persistent_entities(app: &mut App) {
 	app.register_persistent_entities();
 	app.add_observer(ChildOfPersistent::insert_child_of);
+	app.add_systems(Update, PersistentEntity::has_parent::<GlobalErrorLogger>);
 }
 
 fn life_cycles(app: &mut App) {
