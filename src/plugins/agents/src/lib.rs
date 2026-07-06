@@ -12,7 +12,7 @@ use crate::{
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
 		player::Player,
 	},
-	system_params::{agent_param::AgentParam, player_param::PlayerParam},
+	system_params::agent_param::AgentParam,
 };
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
@@ -247,7 +247,7 @@ impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
-	type TPlayer = PlayerParam<'static, 'static>;
+	type TPlayer = AgentParam<'static, 'static, (), Player>;
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
