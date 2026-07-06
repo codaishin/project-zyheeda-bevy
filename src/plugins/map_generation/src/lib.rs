@@ -97,7 +97,6 @@ where
 
 		app.init_resource::<PrefabRegister<AgentType>>()
 			.init_resource::<PrefabRegister<InteractiveType>>()
-			.register_required_components::<Map, TSavegame::TSaveEntityMarker>()
 			.add_systems(OnEnter(GameState::NewGame), Level::<0>::spawn)
 			.add_prefab_observer::<MeshCollider, TPhysics::TConfigMut>()
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))

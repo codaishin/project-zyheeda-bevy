@@ -1,9 +1,9 @@
 use crate::{
-	components::save::Save,
 	errors::{LockPoisonedError, SerializationErrors, SerializationOrLockError},
 	traits::write_buffer::WriteBuffer,
 };
 use bevy::prelude::*;
+use common::components::persistent_entity::PersistentEntity;
 use std::{
 	collections::HashMap,
 	sync::{Arc, Mutex},
@@ -23,7 +23,7 @@ pub(crate) trait WriteBufferSystem {
 				return Err(SerializationOrLockError::LockPoisoned(LockPoisonedError));
 			};
 
-			let mut save_entities = world.query_filtered::<EntityRef, With<Save>>();
+			let mut save_entities = world.query_filtered::<EntityRef, With<PersistentEntity>>();
 			let errors = save_entities
 				.iter(world)
 				.filter_map(|entity| match context.write_buffer(entity) {
@@ -64,7 +64,7 @@ mod test_save {
 	#[test]
 	fn buffer() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(Save).id();
+		let entity = app.world_mut().spawn(PersistentEntity::default()).id();
 		let context = Mock_SaveContext::new_mock(|mock| {
 			mock.expect_write_buffer()
 				.times(1)
@@ -80,7 +80,7 @@ mod test_save {
 	}
 
 	#[test]
-	fn ignore_entities_without_save() -> Result<(), RunSystemError> {
+	fn ignore_entities_without_persistent_entity() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let entity = app.world_mut().spawn_empty().id();
 		let context = Mock_SaveContext::new_mock(|mock| {
@@ -100,8 +100,8 @@ mod test_save {
 	#[test]
 	fn serialization_error() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let a = app.world_mut().spawn(Save).id();
-		let b = app.world_mut().spawn(Save).id();
+		let a = app.world_mut().spawn(PersistentEntity::default()).id();
+		let b = app.world_mut().spawn(PersistentEntity::default()).id();
 		let context = Mock_SaveContext::new_mock(|mock| {
 			mock.expect_write_buffer().returning(|_| {
 				Err(EntitySerializationErrors(vec![

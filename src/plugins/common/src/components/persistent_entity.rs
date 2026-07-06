@@ -4,9 +4,15 @@ use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-/// Used as an [`Entity`] reference through different game sessions
+/// Used as an [`Entity`] reference throughout different game sessions.
 ///
-/// Works in tandem with [`PersistentEntities`](crate::resources::persistent_entities::PersistentEntities).
+/// Plugins that implement saving should tread this component as the driver for what should be
+/// saved/loaded.
+///
+/// This component should only ever be present on the root entity of a hierarchy.
+///
+/// Works in tandem with [`PersistentEntities`](crate::resources::persistent_entities::PersistentEntities)
+/// and [`ZyheedaCommands`](crate::zyheeda_commands::ZyheedaCommands).
 /// Requires:
 /// - either [`CommonPlugin`](crate::CommonPlugin)
 /// - or [`RegisterPersistentEntities`](crate::traits::register_persistent_entities::RegisterPersistentEntities).

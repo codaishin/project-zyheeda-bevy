@@ -176,7 +176,6 @@ where
 		TSaveGame::register_savable_component::<Agent>(app);
 		TSaveGame::register_savable_component::<Enemy>(app);
 		TSaveGame::register_savable_component::<EnemyAttackPhase>(app);
-		app.register_required_components::<Agent, TSaveGame::TSaveEntityMarker>();
 
 		// # Prefabs
 		app.add_prefab_observer::<Agent, TGraphics::TRolesMut>();
