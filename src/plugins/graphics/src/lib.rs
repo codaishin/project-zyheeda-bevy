@@ -134,7 +134,6 @@ where
 	}
 
 	fn cameras(&self, app: &mut App) {
-		app.register_required_components::<UiPass, TSavegame::TSaveEntityMarker>();
 		TSavegame::register_savable_component::<UiPass>(app);
 
 		app.insert_resource(GlobalAmbientLight::NONE)

@@ -1,4 +1,4 @@
-pub(crate) mod despawn_savable_entities;
+pub(crate) mod despawn_persistent_entities;
 pub(crate) mod quick_save_file_exists;
 pub(crate) mod read_buffer;
 pub(crate) mod read_file;

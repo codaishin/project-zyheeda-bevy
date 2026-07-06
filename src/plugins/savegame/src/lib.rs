@@ -1,5 +1,3 @@
-pub mod components;
-
 mod context;
 mod errors;
 mod file_io;
@@ -9,7 +7,11 @@ mod traits;
 
 use crate::{
 	resources::{inspector::Inspector, unique_ids::UniqueIds},
-	systems::{trigger_state::TriggerState, write_buffer::WriteBufferSystem},
+	systems::{
+		despawn_persistent_entities::DespawnAll,
+		trigger_state::TriggerState,
+		write_buffer::WriteBufferSystem,
+	},
 };
 use bevy::prelude::*;
 use common::{
@@ -34,7 +36,6 @@ use common::{
 		thread_safe::ThreadSafe,
 	},
 };
-use components::save::Save;
 use context::SaveContext;
 use file_io::FileIO;
 use resources::register::Register;
@@ -136,7 +137,7 @@ where
 			.add_systems(
 				OnEnter(GameState::Save(SaveState::Load)),
 				(
-					Save::despawn_all,
+					PersistentEntity::despawn_all,
 					SaveContext::read_file_system(quick_save.clone()).pipe(OnError::log),
 					SaveContext::read_buffer_system(quick_save).pipe(OnError::log),
 				)
@@ -146,8 +147,6 @@ where
 }
 
 impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
-	type TSaveEntityMarker = Save;
-
 	fn can_quick_load() -> impl SystemCondition<()> {
 		IntoSystem::into_system(
 			Inspector::<FileIO>::quick_save_file_exists.pipe(OnError::log_and_return(|| false)),

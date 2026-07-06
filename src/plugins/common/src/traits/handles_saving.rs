@@ -6,8 +6,6 @@ use serde::{Serialize, de::DeserializeOwned};
 use std::{hash::Hash, ops::Deref, sync::OnceLock};
 
 pub trait HandlesSaving {
-	type TSaveEntityMarker: Component + Default;
-
 	/// Check whether quick loading is possible
 	///
 	/// Useful for button (dis|en)ables.

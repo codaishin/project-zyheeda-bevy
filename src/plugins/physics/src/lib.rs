@@ -167,7 +167,6 @@ where
 					.in_set(PhysicsSystems::Resolve),
 			)
 			// Skills
-			.register_required_components::<Skill, TSaveGame::TSaveEntityMarker>()
 			.add_observer(Skill::prefab)
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
