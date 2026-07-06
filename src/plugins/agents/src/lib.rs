@@ -12,9 +12,9 @@ use crate::{
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
 		player::Player,
 	},
-	system_params::player_param::PlayerParam,
+	system_params::agent_param::AgentParam,
 };
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
 	states::game_state::{GameState, LoadingEssentialAssets},
 	systems::{log::OnError, register_animations::RegisterAnimationsSystem},
@@ -240,13 +240,19 @@ where
 }
 
 impl<TDependencies> HandlesEnemies for AgentsPlugin<TDependencies> {
-	type TEnemy = Enemy;
+	type TEnemy<TFilter>
+		= AgentParam<'static, 'static, TFilter, Enemy>
+	where
+		TFilter: QueryFilter + 'static;
 }
 
 impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
-	type TPlayer = PlayerParam<'static, 'static>;
+	type TPlayer = AgentParam<'static, 'static, (), Player>;
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
-	type TAgent = AgentConfig;
+	type TAgent<TFilter>
+		= AgentParam<'static, 'static, TFilter>
+	where
+		TFilter: QueryFilter + 'static;
 }

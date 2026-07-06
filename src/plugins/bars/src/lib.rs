@@ -4,7 +4,7 @@ mod traits;
 
 use bevy::{
 	app::{App, Plugin, Update},
-	ecs::schedule::IntoScheduleConfigs,
+	ecs::{query::Without, schedule::IntoScheduleConfigs},
 };
 use common::{
 	attributes::health::Health,
@@ -43,9 +43,15 @@ where
 		let update_life_bars = bar::<TPhysics::TAffectedComponent, Health, TGraphics::TCameraMut>;
 		let render_life_bars = render_bar::<Health, TGraphics::TCameraMut>;
 
-		app.register_required_components::<TAgents::TAgent, Bar>();
-
 		app.manage_ownership::<Bar>(Update);
-		app.add_systems(Update, (update_life_bars, render_life_bars).chain());
+		app.add_systems(
+			Update,
+			(
+				Bar::add_to::<TAgents::TAgent<Without<Bar>>>,
+				update_life_bars,
+				render_life_bars,
+			)
+				.chain(),
+		);
 	}
 }

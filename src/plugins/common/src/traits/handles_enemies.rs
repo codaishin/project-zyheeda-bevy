@@ -1,12 +1,19 @@
-use crate::traits::{
-	accessors::get::ViewField,
-	iteration::{Iter, IterFinite},
+use crate::{
+	components::persistent_entity::PersistentEntity,
+	traits::{
+		accessors::get::ViewField,
+		iteration::{Iter, IterFinite},
+	},
 };
-use bevy::prelude::*;
+use bevy::ecs::{query::QueryFilter, system::SystemParam};
 use serde::{Deserialize, Serialize};
 
 pub trait HandlesEnemies {
-	type TEnemy: Component;
+	type TEnemy<TFilter>: for<'w, 's> SystemParam<
+		Item<'w, 's>: IntoIterator<Item = PersistentEntity>,
+	>
+	where
+		TFilter: QueryFilter + 'static;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Eq, Hash, Serialize, Deserialize)]
