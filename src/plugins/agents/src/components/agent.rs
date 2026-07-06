@@ -23,7 +23,7 @@ use std::{fmt::Display, ops::DerefMut};
 #[component(immutable)]
 #[savable_component(id = "agent")]
 #[require(AgentConfig, ApplyAgentConfig, Transform)]
-pub(crate) struct Agent {
+pub struct Agent {
 	pub(crate) agent_type: AgentType,
 }
 

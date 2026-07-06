@@ -12,7 +12,7 @@ use crate::{
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
 		player::Player,
 	},
-	system_params::player_param::PlayerParam,
+	system_params::{agent_param::AgentParam, player_param::PlayerParam},
 };
 use bevy::prelude::*;
 use common::{
@@ -248,5 +248,5 @@ impl<TDependencies> HandlesPlayer for AgentsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesAgents for AgentsPlugin<TDependencies> {
-	type TAgent = AgentConfig;
+	type TAgent = AgentParam<'static, 'static>;
 }
