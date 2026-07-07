@@ -1,7 +1,11 @@
 use crate::{
 	components::{
-		map::objects::{MapObjectOf, PersistentMapObject},
+		map::{
+			MapObjectType,
+			objects::{MapObjectOf, PersistentMapObject},
+		},
 		map_agents::GridAgent,
+		spawned::Spawned,
 		spawner::Spawner,
 		spawner_active::SpawnerActive,
 	},
@@ -20,8 +24,7 @@ use common::{
 
 impl<T> Spawner<T>
 where
-	T: PrefabType + Copy + ThreadSafe,
-	T::TTranslation: From<Vec3>,
+	T: PrefabType<TTranslation: From<Vec3>> + Copy + ThreadSafe + Into<MapObjectType>,
 {
 	pub(crate) fn execute(
 		mut commands: ZyheedaCommands,
@@ -33,7 +36,12 @@ where
 			let Ok(map) = maps.get(*map).copied() else {
 				continue;
 			};
-			let agent = commands.spawn((*transform, GridAgent, PersistentMapObject { map }));
+			let agent = commands.spawn((
+				*transform,
+				GridAgent,
+				PersistentMapObject { map },
+				Spawned::from(*agent_type),
+			));
 			agent_prefabs.apply(
 				ZyheedaEntityCommands::from(agent),
 				T::TTranslation::from(transform.translation()),
@@ -50,7 +58,10 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::map::objects::MapObjectOf;
+	use crate::components::{
+		map::{MapObjectType, objects::MapObjectOf},
+		spawned::Spawned,
+	};
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		traits::{
@@ -136,6 +147,36 @@ mod tests {
 		let mut agents = app.world_mut().query::<&GridAgent>();
 		let agents = assert_count!(2, agents.iter(app.world()));
 		assert_eq!([&GridAgent, &GridAgent], agents);
+	}
+
+	#[test]
+	fn spawn_agent_with_type_marker() {
+		let mut app = setup();
+		let map = app.world_mut().spawn(PersistentEntity::default()).id();
+		app.world_mut().spawn((
+			MapObjectOf(map),
+			Spawner(AgentType::Player),
+			GlobalTransform::from_xyz(1., 2., 3.),
+		));
+		app.world_mut().spawn((
+			MapObjectOf(map),
+			Spawner(AgentType::Enemy(EnemyType::VoidSphere)),
+			GlobalTransform::from_xyz(4., 5., 6.),
+		));
+
+		app.update();
+
+		let mut agents = app.world_mut().query::<&Spawned>();
+		let agents = assert_count!(2, agents.iter(app.world()));
+		assert_eq!(
+			[
+				&Spawned(MapObjectType::Agent(AgentType::Player)),
+				&Spawned(MapObjectType::Agent(AgentType::Enemy(
+					EnemyType::VoidSphere
+				)))
+			],
+			agents
+		);
 	}
 
 	#[test]

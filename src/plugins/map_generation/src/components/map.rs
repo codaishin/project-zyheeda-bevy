@@ -6,37 +6,33 @@ use crate::components::map::objects::MapObjects;
 use bevy::prelude::*;
 use common::{
 	components::persistent_entity::PersistentEntity,
-	errors::Unreachable,
-	traits::handles_custom_assets::TryLoadFrom,
+	traits::handles_map_generation::{AgentType, InteractiveType},
 };
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Default)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
 #[require(PersistentEntity, MapObjects)]
-#[savable_component(id = "map", dto = MapDto)]
+#[savable_component(id = "map")]
 pub(crate) struct Map {
-	pub(crate) created_from_save: bool,
+	pub(crate) persistent: HashSet<MapObjectType>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct MapDto;
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+pub(crate) enum MapObjectType {
+	Agent(AgentType),
+	InteractiveType(InteractiveType),
+}
 
-impl From<Map> for MapDto {
-	fn from(_: Map) -> Self {
-		Self
+impl From<AgentType> for MapObjectType {
+	fn from(agent: AgentType) -> Self {
+		Self::Agent(agent)
 	}
 }
 
-impl TryLoadFrom<MapDto> for Map {
-	type TInstantiationError = Unreachable;
-
-	fn try_load_from<TLoadAsset>(
-		_: MapDto,
-		_: &mut TLoadAsset,
-	) -> Result<Self, Self::TInstantiationError> {
-		Ok(Self {
-			created_from_save: true,
-		})
+impl From<InteractiveType> for MapObjectType {
+	fn from(interactive: InteractiveType) -> Self {
+		Self::InteractiveType(interactive)
 	}
 }
