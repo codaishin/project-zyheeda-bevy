@@ -1,9 +1,6 @@
 use crate::{
 	components::{
-		map::{
-			MapObjectType,
-			objects::{MapObjectOf, PersistentMapObject},
-		},
+		map::{MapObjectType, objects::MapObjectOf},
 		map_agents::GridAgent,
 		spawned::Spawned,
 		spawner::Spawner,
@@ -13,7 +10,6 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	components::persistent_entity::PersistentEntity,
 	traits::{
 		accessors::get::TryApplyOn,
 		handles_map_generation::PrefabType,
@@ -29,17 +25,13 @@ where
 	pub(crate) fn execute(
 		mut commands: ZyheedaCommands,
 		spawners: Query<(Entity, &Self, &GlobalTransform, &MapObjectOf), With<SpawnerActive>>,
-		maps: Query<&PersistentEntity>,
 		agent_prefabs: Res<PrefabRegister<T>>,
 	) {
 		for (entity, Self(agent_type), transform, MapObjectOf(map)) in spawners {
-			let Ok(map) = maps.get(*map).copied() else {
-				continue;
-			};
 			let agent = commands.spawn((
 				*transform,
 				GridAgent,
-				PersistentMapObject { map },
+				MapObjectOf(*map),
 				Spawned::from(*agent_type),
 			));
 			agent_prefabs.apply(
@@ -226,14 +218,11 @@ mod tests {
 
 		app.update();
 
-		let mut agents = app.world_mut().query::<&PersistentMapObject>();
+		let mut agents = app
+			.world_mut()
+			.query_filtered::<&MapObjectOf, With<_Agent>>();
 		let agents = assert_count!(1, agents.iter(app.world()));
-		assert_eq!(
-			[&PersistentMapObject {
-				map: map_persistent
-			}],
-			agents,
-		);
+		assert_eq!([&MapObjectOf(map)], agents);
 	}
 
 	#[test]

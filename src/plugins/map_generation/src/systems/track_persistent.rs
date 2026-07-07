@@ -1,22 +1,35 @@
 use crate::components::{
-	map::{Map, objects::MapObjects},
+	map::{
+		Map,
+		objects::{MapObjects, PersistentMapObject},
+	},
 	spawned::Spawned,
 };
 use bevy::prelude::*;
-use common::components::persistent_entity::PersistentEntity;
+use common::{
+	components::persistent_entity::PersistentEntity,
+	traits::accessors::get::TryApplyOn,
+	zyheeda_commands::ZyheedaCommands,
+};
 
 impl Map {
 	pub(crate) fn track_persistent(
-		maps: Query<(&mut Map, &MapObjects)>,
+		mut commands: ZyheedaCommands,
+		maps: Query<(&mut Map, &MapObjects, &PersistentEntity)>,
 		spawned: Query<&Spawned, (With<PersistentEntity>, Added<Spawned>)>,
 	) {
-		for (mut map, objects) in maps {
+		for (mut map, objects, map_persistent) in maps {
 			for obj in objects.iter() {
 				let Ok(Spawned(obj_type)) = spawned.get(obj) else {
 					continue;
 				};
 
 				map.persistent.insert(*obj_type);
+				commands.try_apply_on(&obj, |mut e| {
+					e.try_insert(PersistentMapObject {
+						map: *map_persistent,
+					});
+				});
 			}
 		}
 	}
@@ -26,7 +39,10 @@ impl Map {
 mod tests {
 	use super::*;
 	use crate::components::{
-		map::{MapObjectType, objects::MapObjectOf},
+		map::{
+			MapObjectType,
+			objects::{MapObjectOf, PersistentMapObject},
+		},
 		spawned::Spawned,
 	};
 	use common::{
@@ -76,6 +92,45 @@ mod tests {
 	}
 
 	#[test]
+	fn insert_persistent_map_reference() {
+		let mut app = setup();
+		let map_persistent = PersistentEntity::default();
+		let map = app.world_mut().spawn((map_persistent, Map::default())).id();
+		let entities = [
+			app.world_mut()
+				.spawn((
+					PersistentEntity::default(),
+					Spawned(MapObjectType::Agent(AgentType::Player)),
+					MapObjectOf(map),
+				))
+				.id(),
+			app.world_mut()
+				.spawn((
+					PersistentEntity::default(),
+					Spawned(MapObjectType::InteractiveType(InteractiveType::Container)),
+					MapObjectOf(map),
+				))
+				.id(),
+		];
+
+		app.update();
+
+		assert_eq!(
+			[
+				Some(&PersistentMapObject {
+					map: map_persistent
+				}),
+				Some(&PersistentMapObject {
+					map: map_persistent
+				}),
+			],
+			app.world()
+				.entity(entities)
+				.map(|e| e.get::<PersistentMapObject>()),
+		);
+	}
+
+	#[test]
 	fn do_not_set_persistent_map_agent_types_without_persistent_entity() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(Map::default()).id();
@@ -95,6 +150,36 @@ mod tests {
 				persistent: HashSet::from([]),
 			}),
 			app.world().entity(entity).get::<Map>(),
+		);
+	}
+
+	#[test]
+	fn do_not_insert_persistent_map_reference() {
+		let mut app = setup();
+		let map_persistent = PersistentEntity::default();
+		let map = app.world_mut().spawn((map_persistent, Map::default())).id();
+		let entities = [
+			app.world_mut()
+				.spawn((
+					Spawned(MapObjectType::Agent(AgentType::Player)),
+					MapObjectOf(map),
+				))
+				.id(),
+			app.world_mut()
+				.spawn((
+					Spawned(MapObjectType::InteractiveType(InteractiveType::Container)),
+					MapObjectOf(map),
+				))
+				.id(),
+		];
+
+		app.update();
+
+		assert_eq!(
+			[None, None],
+			app.world()
+				.entity(entities)
+				.map(|e| e.get::<PersistentMapObject>()),
 		);
 	}
 

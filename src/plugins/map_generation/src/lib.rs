@@ -111,9 +111,9 @@ where
 				(
 					NavMesh::spawn_grid::<MeshGridGraph>.pipe(OnError::log),
 					MapObject::link_with_map.pipe(OnError::log),
+					PersistentMapObject::link_with_map.pipe(OnError::log),
 					Spawner::<AgentType>::execute,
 					Spawner::<InteractiveType>::execute,
-					PersistentMapObject::link_with_map.pipe(OnError::log),
 					Map::track_persistent,
 					GridAgent::link_to_grid::<MeshGridGraph>.run_if(in_state(GameState::Play)),
 				)
