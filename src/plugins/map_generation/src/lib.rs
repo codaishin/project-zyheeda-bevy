@@ -92,6 +92,8 @@ where
 		TSavegame::register_savable_component::<GridAgent>(app);
 		TSavegame::register_savable_component::<Level<0>>(app);
 
+		TSavegame::on_before_save(app, Map::apply_map_persistence);
+
 		#[cfg(debug_assertions)]
 		crate::mesh_grid_graph::debug::draw(app);
 
@@ -114,7 +116,6 @@ where
 					PersistentMapObject::link_with_map.pipe(OnError::log),
 					Spawner::<AgentType>::execute,
 					Spawner::<InteractiveType>::execute,
-					Map::apply_map_persistence,
 					GridAgent::link_to_grid::<MeshGridGraph>.run_if(in_state(GameState::Play)),
 				)
 					.chain(),

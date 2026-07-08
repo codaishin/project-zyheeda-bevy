@@ -13,7 +13,7 @@ use crate::{
 		write_buffer::WriteBufferSystem,
 	},
 };
-use bevy::prelude::*;
+use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use common::{
 	components::{
 		child_of_persistent::ChildOfPersistent,
@@ -45,6 +45,8 @@ use std::{
 	path::PathBuf,
 	sync::{Arc, Mutex},
 };
+
+const ON_ENTER_SAVE: OnEnter<GameState> = OnEnter(GameState::Save(SaveState::Save));
 
 pub struct SavegamePlugin<TDependencies> {
 	game_directory: PathBuf,
@@ -102,6 +104,11 @@ where
 		Self::register_savable_component::<ChildOfPersistent>(app);
 		Self::register_savable_component::<Lifetime>(app);
 
+		app.configure_sets(
+			ON_ENTER_SAVE,
+			(SaveSystems::OnBeforeSave, SaveSystems::ExecuteSave).chain(),
+		);
+
 		app.init_resource::<Register>()
 			.insert_resource(Inspector {
 				quick_save: quick_save.clone(),
@@ -120,11 +127,12 @@ where
 					.after_plugin(TInput::SYSTEMS),
 			)
 			.add_systems(
-				OnEnter(GameState::Save(SaveState::Save)),
+				ON_ENTER_SAVE,
 				(
 					SaveContext::write_buffer_system(quick_save.clone()).pipe(OnError::log),
 					SaveContext::write_file_system(quick_save.clone()).pipe(OnError::log),
 				)
+					.in_set(SaveSystems::ExecuteSave)
 					.chain(),
 			)
 			.add_systems(
@@ -188,6 +196,16 @@ impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 			}
 		}
 	}
+
+	fn on_before_save<M>(app: &mut App, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) {
+		app.add_systems(ON_ENTER_SAVE, systems.in_set(SaveSystems::OnBeforeSave));
+	}
+}
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+enum SaveSystems {
+	OnBeforeSave,
+	ExecuteSave,
 }
 
 #[cfg(test)]

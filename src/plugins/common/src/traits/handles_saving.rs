@@ -1,7 +1,7 @@
 mod external;
 
 use crate::{errors::Unreachable, traits::handles_custom_assets::TryLoadFrom};
-use bevy::prelude::*;
+use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use serde::{Serialize, de::DeserializeOwned};
 use std::{hash::Hash, ops::Deref, sync::OnceLock};
 
@@ -17,6 +17,9 @@ pub trait HandlesSaving {
 	fn register_savable_component<TComponent>(app: &mut App)
 	where
 		TComponent: SavableComponent;
+
+	/// Register system to run just before saving
+	fn on_before_save<M>(app: &mut App, systems: impl IntoScheduleConfigs<ScheduleSystem, M>);
 }
 
 /// Marks components as being (de)serializable.
