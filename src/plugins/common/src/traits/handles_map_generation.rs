@@ -124,7 +124,7 @@ where
 }
 
 pub trait PrefabType {
-	type TTranslation;
+	type TTranslation: From<Vec3>;
 }
 
 pub struct MapPrefabs<T>(PhantomData<T>);
@@ -140,7 +140,7 @@ pub enum NaivePath {
 	PartialUntil(GroundPosition),
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum AgentType {
 	Player,
 	Enemy(EnemyType),
@@ -154,7 +154,7 @@ impl PrefabType for AgentType {
 	type TTranslation = GroundPosition;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum InteractiveType {
 	Door,
 	Container,

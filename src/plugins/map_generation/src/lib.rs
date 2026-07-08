@@ -105,15 +105,16 @@ where
 			.add_observer(Spawner::<InteractiveType>::identify(
 				Self::INTERACTIVE_SPAWNERS,
 			))
-			.add_observer(SpawnerActive::remove_when_map_created_from_save)
+			.add_observer(SpawnerActive::remove_from_disabled_sources)
 			.add_systems(
 				Update,
 				(
+					NavMesh::spawn_grid::<MeshGridGraph>.pipe(OnError::log),
 					MapObject::link_with_map.pipe(OnError::log),
 					PersistentMapObject::link_with_map.pipe(OnError::log),
-					NavMesh::spawn_grid::<MeshGridGraph>.pipe(OnError::log),
 					Spawner::<AgentType>::execute,
 					Spawner::<InteractiveType>::execute,
+					Map::apply_map_persistence,
 					GridAgent::link_to_grid::<MeshGridGraph>.run_if(in_state(GameState::Play)),
 				)
 					.chain(),

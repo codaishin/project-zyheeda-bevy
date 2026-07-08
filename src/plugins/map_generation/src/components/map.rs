@@ -4,39 +4,23 @@ pub(crate) mod objects;
 
 use crate::components::map::objects::MapObjects;
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	errors::Unreachable,
-	traits::handles_custom_assets::TryLoadFrom,
-};
+use common::components::persistent_entity::PersistentEntity;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
+use std::{borrow::Borrow, collections::HashSet};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Default)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
 #[require(PersistentEntity, MapObjects)]
-#[savable_component(id = "map", dto = MapDto)]
+#[savable_component(id = "map")]
 pub(crate) struct Map {
-	pub(crate) created_from_save: bool,
+	pub(crate) disabled_object_sources: HashSet<MapObjectSource>,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub(crate) struct MapDto;
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Default, Serialize, Deserialize)]
+pub(crate) struct MapObjectSource(pub(crate) String);
 
-impl From<Map> for MapDto {
-	fn from(_: Map) -> Self {
-		Self
-	}
-}
-
-impl TryLoadFrom<MapDto> for Map {
-	type TInstantiationError = Unreachable;
-
-	fn try_load_from<TLoadAsset>(
-		_: MapDto,
-		_: &mut TLoadAsset,
-	) -> Result<Self, Self::TInstantiationError> {
-		Ok(Self {
-			created_from_save: true,
-		})
+impl Borrow<String> for MapObjectSource {
+	fn borrow(&self) -> &String {
+		&self.0
 	}
 }
