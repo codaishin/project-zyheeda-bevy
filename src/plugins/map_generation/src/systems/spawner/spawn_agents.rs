@@ -1,14 +1,14 @@
 use crate::{
 	components::{
-		map::{MapObjectType, objects::MapObjectOf},
+		map::{MapObjectSource, objects::MapObjectOf},
 		map_agents::GridAgent,
-		spawned::Spawned,
+		spawned_from::SpawnedFrom,
 		spawner::Spawner,
 		spawner_active::SpawnerActive,
 	},
 	resources::agents::prefab::PrefabRegister,
 };
-use bevy::prelude::*;
+use bevy::{gltf::GltfMeshName, prelude::*};
 use common::{
 	traits::{
 		accessors::get::TryApplyOn,
@@ -20,24 +20,28 @@ use common::{
 
 impl<T> Spawner<T>
 where
-	T: PrefabType<TTranslation: From<Vec3>> + Copy + ThreadSafe + Into<MapObjectType>,
+	T: PrefabType<TTranslation: From<Vec3>> + Copy + ThreadSafe,
 {
 	pub(crate) fn execute(
 		mut commands: ZyheedaCommands,
-		spawners: Query<(Entity, &Self, &GlobalTransform, &MapObjectOf), With<SpawnerActive>>,
+		spawners: Query<
+			(Entity, &Self, &GlobalTransform, &MapObjectOf, &GltfMeshName),
+			With<SpawnerActive>,
+		>,
 		agent_prefabs: Res<PrefabRegister<T>>,
 	) {
-		for (entity, Self(agent_type), transform, MapObjectOf(map)) in spawners {
-			let agent = commands.spawn((
+		for (entity, Self(agent), transform, MapObjectOf(map), GltfMeshName(name)) in spawners {
+			let spawned = commands.spawn((
 				*transform,
 				GridAgent,
 				MapObjectOf(*map),
-				Spawned::from(*agent_type),
+				SpawnedFrom(MapObjectSource(name.clone())),
 			));
+
 			agent_prefabs.apply(
-				ZyheedaEntityCommands::from(agent),
+				ZyheedaEntityCommands::from(spawned),
 				T::TTranslation::from(transform.translation()),
-				*agent_type,
+				*agent,
 			);
 
 			commands.try_apply_on(&entity, |mut e| {
@@ -50,10 +54,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::{
-		map::{MapObjectType, objects::MapObjectOf},
-		spawned::Spawned,
-	};
+	use crate::components::{map::objects::MapObjectOf, spawned_from::SpawnedFrom};
 	use common::{
 		components::persistent_entity::PersistentEntity,
 		traits::{
@@ -93,11 +94,13 @@ mod tests {
 			MapObjectOf(map),
 			Spawner(AgentType::Player),
 			GlobalTransform::from_xyz(1., 2., 3.),
+			GltfMeshName(String::from("a")),
 		));
 		app.world_mut().spawn((
 			MapObjectOf(map),
 			Spawner(AgentType::Enemy(EnemyType::VoidSphere)),
 			GlobalTransform::from_xyz(4., 5., 6.),
+			GltfMeshName(String::from("b")),
 		));
 
 		app.update();
@@ -127,11 +130,13 @@ mod tests {
 			MapObjectOf(map),
 			Spawner(AgentType::Player),
 			GlobalTransform::from_xyz(1., 2., 3.),
+			GltfMeshName(String::from("a")),
 		));
 		app.world_mut().spawn((
 			MapObjectOf(map),
 			Spawner(AgentType::Enemy(EnemyType::VoidSphere)),
 			GlobalTransform::from_xyz(4., 5., 6.),
+			GltfMeshName(String::from("b")),
 		));
 
 		app.update();
@@ -149,23 +154,23 @@ mod tests {
 			MapObjectOf(map),
 			Spawner(AgentType::Player),
 			GlobalTransform::from_xyz(1., 2., 3.),
+			GltfMeshName(String::from("a")),
 		));
 		app.world_mut().spawn((
 			MapObjectOf(map),
 			Spawner(AgentType::Enemy(EnemyType::VoidSphere)),
 			GlobalTransform::from_xyz(4., 5., 6.),
+			GltfMeshName(String::from("b")),
 		));
 
 		app.update();
 
-		let mut agents = app.world_mut().query::<&Spawned>();
+		let mut agents = app.world_mut().query::<&SpawnedFrom>();
 		let agents = assert_count!(2, agents.iter(app.world()));
 		assert_eq!(
 			[
-				&Spawned(MapObjectType::Agent(AgentType::Player)),
-				&Spawned(MapObjectType::Agent(AgentType::Enemy(
-					EnemyType::VoidSphere
-				)))
+				&SpawnedFrom(MapObjectSource(String::from("a"))),
+				&SpawnedFrom(MapObjectSource(String::from("b")))
 			],
 			agents
 		);
@@ -179,11 +184,13 @@ mod tests {
 			MapObjectOf(map),
 			Spawner(AgentType::Player),
 			GlobalTransform::from(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y)),
+			GltfMeshName(String::from("a")),
 		));
 		app.world_mut().spawn((
 			MapObjectOf(map),
 			Spawner(AgentType::Enemy(EnemyType::VoidSphere)),
 			GlobalTransform::from(Transform::from_xyz(4., 5., 6.).looking_to(Dir3::Z, Dir3::Y)),
+			GltfMeshName(String::from("b")),
 		));
 
 		app.update();
@@ -214,6 +221,7 @@ mod tests {
 			MapObjectOf(map),
 			Spawner(AgentType::Player),
 			GlobalTransform::from_xyz(1., 2., 3.),
+			GltfMeshName(String::from("a")),
 		));
 
 		app.update();
@@ -235,6 +243,7 @@ mod tests {
 				MapObjectOf(map),
 				Spawner(AgentType::Player),
 				GlobalTransform::default(),
+				GltfMeshName(String::from("a")),
 			))
 			.id();
 
@@ -251,6 +260,7 @@ mod tests {
 			MapObjectOf(map),
 			Spawner(AgentType::Player),
 			GlobalTransform::default(),
+			GltfMeshName(String::from("a")),
 		));
 		entity.remove::<SpawnerActive>();
 

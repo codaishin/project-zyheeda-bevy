@@ -17,6 +17,7 @@ use crate::{
 		mesh_collider::MeshCollider,
 		nav_mesh::NavMesh,
 		spawner::Spawner,
+		spawner_active::SpawnerActive,
 	},
 	mesh_grid_graph::MeshGridGraph,
 	observers::identify_by_prefix::IdentifyByPrefix,
@@ -101,11 +102,10 @@ where
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
 			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
 			.add_observer(Spawner::<AgentType>::identify(Self::AGENT_SPAWNERS))
-			.add_observer(Spawner::<AgentType>::make_persistent_inactive)
 			.add_observer(Spawner::<InteractiveType>::identify(
 				Self::INTERACTIVE_SPAWNERS,
 			))
-			.add_observer(Spawner::<InteractiveType>::make_persistent_inactive)
+			.add_observer(SpawnerActive::remove_from_disabled_sources)
 			.add_systems(
 				Update,
 				(
@@ -114,7 +114,7 @@ where
 					PersistentMapObject::link_with_map.pipe(OnError::log),
 					Spawner::<AgentType>::execute,
 					Spawner::<InteractiveType>::execute,
-					Map::track_persistent,
+					Map::apply_map_persistence,
 					GridAgent::link_to_grid::<MeshGridGraph>.run_if(in_state(GameState::Play)),
 				)
 					.chain(),

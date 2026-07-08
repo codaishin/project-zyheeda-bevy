@@ -3,7 +3,7 @@ use crate::components::{
 		Map,
 		objects::{MapObjects, PersistentMapObject},
 	},
-	spawned::Spawned,
+	spawned_from::SpawnedFrom,
 };
 use bevy::prelude::*;
 use common::{
@@ -13,18 +13,18 @@ use common::{
 };
 
 impl Map {
-	pub(crate) fn track_persistent(
+	pub(crate) fn apply_map_persistence(
 		mut commands: ZyheedaCommands,
 		maps: Query<(&mut Map, &MapObjects, &PersistentEntity)>,
-		spawned: Query<&Spawned, (With<PersistentEntity>, Added<Spawned>)>,
+		spawned: Query<&SpawnedFrom, (With<PersistentEntity>, Added<SpawnedFrom>)>,
 	) {
 		for (mut map, objects, map_persistent) in maps {
 			for obj in objects.iter() {
-				let Ok(Spawned(obj_type)) = spawned.get(obj) else {
+				let Ok(SpawnedFrom(source)) = spawned.get(obj) else {
 					continue;
 				};
 
-				map.persistent.insert(*obj_type);
+				map.disabled_object_sources.insert(source.clone());
 				commands.try_apply_on(&obj, |mut e| {
 					e.try_insert(PersistentMapObject {
 						map: *map_persistent,
@@ -40,15 +40,12 @@ mod tests {
 	use super::*;
 	use crate::components::{
 		map::{
-			MapObjectType,
+			MapObjectSource,
 			objects::{MapObjectOf, PersistentMapObject},
 		},
-		spawned::Spawned,
+		spawned_from::SpawnedFrom,
 	};
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		traits::handles_map_generation::{AgentType, InteractiveType},
-	};
+	use common::components::persistent_entity::PersistentEntity;
 	use std::collections::HashSet;
 	use testing::{IsChanged, SingleThreadedApp};
 
@@ -57,7 +54,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			(Map::track_persistent, IsChanged::<Map>::detect).chain(),
+			(Map::apply_map_persistence, IsChanged::<Map>::detect).chain(),
 		);
 
 		app
@@ -69,12 +66,12 @@ mod tests {
 		let entity = app.world_mut().spawn(Map::default()).id();
 		app.world_mut().spawn((
 			PersistentEntity::default(),
-			Spawned(MapObjectType::Agent(AgentType::Player)),
+			SpawnedFrom(MapObjectSource(String::from("a"))),
 			MapObjectOf(entity),
 		));
 		app.world_mut().spawn((
 			PersistentEntity::default(),
-			Spawned(MapObjectType::InteractiveType(InteractiveType::Container)),
+			SpawnedFrom(MapObjectSource(String::from("b"))),
 			MapObjectOf(entity),
 		));
 
@@ -82,9 +79,9 @@ mod tests {
 
 		assert_eq!(
 			Some(&Map {
-				persistent: HashSet::from([
-					MapObjectType::Agent(AgentType::Player),
-					MapObjectType::InteractiveType(InteractiveType::Container)
+				disabled_object_sources: HashSet::from([
+					MapObjectSource(String::from("a")),
+					MapObjectSource(String::from("b")),
 				]),
 			}),
 			app.world().entity(entity).get::<Map>(),
@@ -100,14 +97,14 @@ mod tests {
 			app.world_mut()
 				.spawn((
 					PersistentEntity::default(),
-					Spawned(MapObjectType::Agent(AgentType::Player)),
+					SpawnedFrom(MapObjectSource(String::from("a"))),
 					MapObjectOf(map),
 				))
 				.id(),
 			app.world_mut()
 				.spawn((
 					PersistentEntity::default(),
-					Spawned(MapObjectType::InteractiveType(InteractiveType::Container)),
+					SpawnedFrom(MapObjectSource(String::from("b"))),
 					MapObjectOf(map),
 				))
 				.id(),
@@ -135,11 +132,11 @@ mod tests {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(Map::default()).id();
 		app.world_mut().spawn((
-			Spawned(MapObjectType::Agent(AgentType::Player)),
+			SpawnedFrom(MapObjectSource(String::from("a"))),
 			MapObjectOf(entity),
 		));
 		app.world_mut().spawn((
-			Spawned(MapObjectType::InteractiveType(InteractiveType::Container)),
+			SpawnedFrom(MapObjectSource(String::from("b"))),
 			MapObjectOf(entity),
 		));
 
@@ -147,7 +144,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&Map {
-				persistent: HashSet::from([]),
+				disabled_object_sources: HashSet::from([]),
 			}),
 			app.world().entity(entity).get::<Map>(),
 		);
@@ -161,13 +158,13 @@ mod tests {
 		let entities = [
 			app.world_mut()
 				.spawn((
-					Spawned(MapObjectType::Agent(AgentType::Player)),
+					SpawnedFrom(MapObjectSource(String::from("a"))),
 					MapObjectOf(map),
 				))
 				.id(),
 			app.world_mut()
 				.spawn((
-					Spawned(MapObjectType::InteractiveType(InteractiveType::Container)),
+					SpawnedFrom(MapObjectSource(String::from("b"))),
 					MapObjectOf(map),
 				))
 				.id(),
@@ -189,12 +186,12 @@ mod tests {
 		let entity = app.world_mut().spawn(Map::default()).id();
 		app.world_mut().spawn((
 			PersistentEntity::default(),
-			Spawned(MapObjectType::Agent(AgentType::Player)),
+			SpawnedFrom(MapObjectSource(String::from("a"))),
 			MapObjectOf(entity),
 		));
 		app.world_mut().spawn((
 			PersistentEntity::default(),
-			Spawned(MapObjectType::InteractiveType(InteractiveType::Container)),
+			SpawnedFrom(MapObjectSource(String::from("b"))),
 			MapObjectOf(entity),
 		));
 
@@ -213,23 +210,23 @@ mod tests {
 		let entity = app.world_mut().spawn(Map::default()).id();
 		app.world_mut().spawn((
 			PersistentEntity::default(),
-			Spawned(MapObjectType::Agent(AgentType::Player)),
+			SpawnedFrom(MapObjectSource(String::from("a"))),
 			MapObjectOf(entity),
 		));
 
 		app.update();
 		app.world_mut().spawn((
 			PersistentEntity::default(),
-			Spawned(MapObjectType::InteractiveType(InteractiveType::Container)),
+			SpawnedFrom(MapObjectSource(String::from("b"))),
 			MapObjectOf(entity),
 		));
 		app.update();
 
 		assert_eq!(
 			Some(&Map {
-				persistent: HashSet::from([
-					MapObjectType::Agent(AgentType::Player),
-					MapObjectType::InteractiveType(InteractiveType::Container)
+				disabled_object_sources: HashSet::from([
+					MapObjectSource(String::from("a")),
+					MapObjectSource(String::from("b")),
 				]),
 			}),
 			app.world().entity(entity).get::<Map>(),
