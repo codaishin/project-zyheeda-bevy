@@ -10,7 +10,7 @@ use common::{
 			ConfigureBody,
 			NoBodyConfigured,
 			TranslationOffsets,
-			physical_bodies::{BodyConfig, PhysicsType},
+			physical_bodies::{BodyConfig, InteractiveFrame},
 		},
 	},
 	zyheeda_commands::ZyheedaCommands,
@@ -39,8 +39,13 @@ impl ApplyDoorFrame {
 				continue;
 			};
 
-			let body = BodyConfig::from_shape(meta.interactive_detection_shape)
-				.with_physics_type(PhysicsType::InteractiveFrame);
+			let body = BodyConfig {
+				sub_frames: vec![InteractiveFrame {
+					shape: meta.interactive_detection_shape,
+					..default()
+				}],
+				..default()
+			};
 
 			ctx.configure_body(body, TranslationOffsets::ZERO);
 		}
@@ -53,10 +58,7 @@ mod tests {
 	use crate::{assets::door_meta::DoorMeta, components::door_meta_handle::DoorMetaHandle};
 	use common::{
 		tools::Units,
-		traits::handles_physics::{
-			TranslationOffsets,
-			physical_bodies::{PhysicsType, Shape, ShapeParameters},
-		},
+		traits::handles_physics::{TranslationOffsets, physical_bodies::ShapeParameters},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -119,11 +121,13 @@ mod tests {
 				.once()
 				.with(
 					eq(BodyConfig {
-						physics_type: PhysicsType::InteractiveFrame,
-						shape: Shape::Parameters(ShapeParameters::Sphere {
-							radius: Units::from(42.),
-						}),
-						sub_frames: vec![],
+						core: None,
+						sub_frames: vec![InteractiveFrame {
+							shape: ShapeParameters::Sphere {
+								radius: Units::from(42.),
+							},
+							forward_offset: Units::ZERO,
+						}],
 					}),
 					eq(TranslationOffsets::ZERO),
 				)

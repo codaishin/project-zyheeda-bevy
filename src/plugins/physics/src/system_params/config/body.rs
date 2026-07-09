@@ -33,9 +33,15 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{
-		accessors::get::TryGetContextMut,
-		handles_physics::{NoBodyConfigured, physical_bodies::Shape},
+	use common::{
+		tools::Units,
+		traits::{
+			accessors::get::TryGetContextMut,
+			handles_physics::{
+				NoBodyConfigured,
+				physical_bodies::{Core, Shape, ShapeParameters},
+			},
+		},
 	};
 	use testing::SingleThreadedApp;
 
@@ -53,13 +59,29 @@ mod tests {
 				let key = NoBodyConfigured { entity };
 				let mut ctx = ConfigParamMut::try_get_context_mut(&mut p, key).unwrap();
 				ctx.configure_body(
-					BodyConfig::from_shape(Shape::StaticGltfMesh3d),
+					BodyConfig {
+						core: Some(Core {
+							shape: Shape::Parameters(ShapeParameters::Sphere {
+								radius: Units::from(11.),
+							}),
+							..default()
+						}),
+						..default()
+					},
 					TranslationOffsets::ZERO,
 				);
 			})?;
 
 		assert_eq!(
-			Some(&Body(BodyConfig::from_shape(Shape::StaticGltfMesh3d))),
+			Some(&Body(BodyConfig {
+				core: Some(Core {
+					shape: Shape::Parameters(ShapeParameters::Sphere {
+						radius: Units::from(11.),
+					}),
+					..default()
+				}),
+				..default()
+			})),
 			app.world().entity(entity).get::<Body>(),
 		);
 		Ok(())
@@ -75,7 +97,7 @@ mod tests {
 				let key = NoBodyConfigured { entity };
 				let mut ctx = ConfigParamMut::try_get_context_mut(&mut p, key).unwrap();
 				ctx.configure_body(
-					BodyConfig::from_shape(Shape::StaticGltfMesh3d),
+					BodyConfig::default(),
 					TranslationOffsets {
 						aim: 11.,
 						center: 12.,
