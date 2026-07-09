@@ -5,37 +5,10 @@ use crate::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
 pub struct BodyConfig {
-	pub shape: Shape,
-	pub physics_type: PhysicsType,
+	pub core: Option<Core>,
 	pub sub_frames: Vec<InteractiveFrame>,
-}
-
-impl BodyConfig {
-	pub fn from_shape(shape: impl Into<Shape>) -> Self {
-		Self {
-			shape: shape.into(),
-			physics_type: PhysicsType::Terrain(HashSet::from([Blocker::Physical])),
-			sub_frames: vec![],
-		}
-	}
-
-	pub fn with_physics_type(mut self, physics_type: PhysicsType) -> Self {
-		self.physics_type = physics_type;
-		self
-	}
-
-	pub fn with_sub_frames(mut self, body_parts: impl Into<Vec<InteractiveFrame>>) -> Self {
-		self.sub_frames = body_parts.into();
-		self
-	}
-}
-
-impl From<Shape> for BodyConfig {
-	fn from(shape: Shape) -> Self {
-		Self::from_shape(shape)
-	}
 }
 
 #[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
@@ -61,6 +34,21 @@ impl InteractiveFrame {
 impl From<ShapeParameters> for InteractiveFrame {
 	fn from(shape: ShapeParameters) -> Self {
 		Self::from_shape(shape)
+	}
+}
+
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+pub struct Core {
+	pub shape: Shape,
+	pub physics_type: PhysicsType,
+}
+
+impl Default for Core {
+	fn default() -> Self {
+		Self {
+			shape: Shape::StaticGltfMesh3d,
+			physics_type: PhysicsType::Terrain(HashSet::new()),
+		}
 	}
 }
 
@@ -122,7 +110,6 @@ impl Default for ShapeParameters {
 pub enum PhysicsType {
 	Agent(HashSet<Blocker>),
 	Terrain(HashSet<Blocker>),
-	InteractiveFrame,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]

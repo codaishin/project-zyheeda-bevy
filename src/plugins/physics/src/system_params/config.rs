@@ -60,10 +60,7 @@ pub struct ConfigContextMut<'ctx> {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::handles_physics::{
-		PhysicalDefaultAttributes,
-		physical_bodies::{BodyConfig, Shape},
-	};
+	use common::traits::handles_physics::{PhysicalDefaultAttributes, physical_bodies::BodyConfig};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -134,10 +131,7 @@ mod tests {
 		#[test]
 		fn get_no_config_when_component_present() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			let entity = app
-				.world_mut()
-				.spawn(Body(BodyConfig::from_shape(Shape::StaticGltfMesh3d)))
-				.id();
+			let entity = app.world_mut().spawn(Body(BodyConfig::default())).id();
 
 			let ctx_entity = app
 				.world_mut()

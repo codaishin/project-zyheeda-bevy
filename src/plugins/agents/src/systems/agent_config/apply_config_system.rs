@@ -26,7 +26,7 @@ use common::{
 			NoBodyConfigured,
 			NoDefaultAttributes,
 			TranslationOffsets,
-			physical_bodies::{Blocker, BodyConfig, PhysicsType, Shape, ShapeParameters},
+			physical_bodies::{Blocker, BodyConfig, Core, PhysicsType, Shape, ShapeParameters},
 		},
 		handles_skill_physics::{Initialize, NotInitializedAgent},
 		loadout::ItemName,
@@ -112,8 +112,10 @@ impl ApplyAgentConfig {
 				let aim = config.height_levels.aim - *config.required_clearance.vertical;
 				ctx.configure_body(
 					BodyConfig {
-						shape: Shape::Parameters(ShapeParameters::Capsule { half_y, radius }),
-						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
+						core: Some(Core {
+							shape: Shape::Parameters(ShapeParameters::Capsule { half_y, radius }),
+							physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
+						}),
 						sub_frames: vec![config.interactive_detection_shape],
 					},
 					TranslationOffsets { center, aim },
@@ -763,11 +765,13 @@ mod tests {
 				AgentConfig { config_handle },
 				_Physics::new().with_mock(|mock| {
 					let expected_body = BodyConfig {
-						shape: Shape::Parameters(ShapeParameters::Capsule {
-							half_y: Units::from(1.5),
-							radius: Units::from(0.5),
+						core: Some(Core {
+							shape: Shape::Parameters(ShapeParameters::Capsule {
+								half_y: Units::from(1.5),
+								radius: Units::from(0.5),
+							}),
+							physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
 						}),
-						physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
 						sub_frames: vec![interactive_detection_shape],
 					};
 
