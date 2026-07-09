@@ -105,7 +105,7 @@ mod tests {
 				mock.expect_call()
 					.times(1)
 					.with(eq(start), eq(end))
-					.return_const(42.);
+					.return_const(42_f32);
 			}),
 		);
 
@@ -123,8 +123,8 @@ mod tests {
 			a,
 			end,
 			new_dist_f!(|mock: &mut Mock_DistF| {
-				mock.expect_call().with(eq(a), eq(end)).return_const(42.);
-				mock.expect_call().with(eq(b), eq(end)).return_const(11.);
+				mock.expect_call().with(eq(a), eq(end)).return_const(42_f32);
+				mock.expect_call().with(eq(b), eq(end)).return_const(11_f32);
 			}),
 		);
 		list.push(b, 0.);
@@ -143,8 +143,8 @@ mod tests {
 			a,
 			end,
 			new_dist_f!(|mock: &mut Mock_DistF| {
-				mock.expect_call().with(eq(a), eq(end)).return_const(12.);
-				mock.expect_call().with(eq(b), eq(end)).return_const(11.);
+				mock.expect_call().with(eq(a), eq(end)).return_const(12_f32);
+				mock.expect_call().with(eq(b), eq(end)).return_const(11_f32);
 			}),
 		);
 		list.push(b, 2.);
