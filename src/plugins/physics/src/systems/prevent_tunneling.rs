@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		RayCasterArgs,
 		RayFilter,
-		collider::{Colliders, GENERIC_COLLISION_GROUP, RAY_GROUP},
+		collider::{AGENTS_GROUP, Colliders, RAY_GROUP, TERRAIN_GROUP},
 		collision_domains::Physical,
 		prevent_tunneling::PreventTunneling,
 	},
@@ -95,7 +95,7 @@ where
 				exclude_rigid_body: Some(entity),
 				groups: Some(CollisionGroups {
 					memberships: RAY_GROUP,
-					filters: GENERIC_COLLISION_GROUP,
+					filters: TERRAIN_GROUP | AGENTS_GROUP,
 				}),
 				..default()
 			},
@@ -379,7 +379,7 @@ mod tests {
 									exclude_rigid_body: Some(entity),
 									groups: Some(CollisionGroups {
 										memberships: RAY_GROUP,
-										filters: GENERIC_COLLISION_GROUP,
+										filters: TERRAIN_GROUP | AGENTS_GROUP,
 									}),
 									..default()
 								},

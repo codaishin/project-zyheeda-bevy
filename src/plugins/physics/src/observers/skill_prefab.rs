@@ -1,6 +1,6 @@
 use crate::components::{
 	blockable::Blockable,
-	collider::{ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
+	collider::{AGENTS_GROUP, ColliderShape, RAY_GROUP, SKILLS_GROUP},
 	collision_domains::Physical,
 	effects::Effects,
 	persistent_root::PersistentRoot,
@@ -40,8 +40,8 @@ pub(crate) trait SkillPrefab:
 		let (obj, cont_model, cont_collider, cont_effects) = skill.get_contact_prefab();
 		let (proj_model, proj_collider, proj_effects) = skill.get_projection_prefab();
 		let collision_group = CollisionGroups {
-			memberships: GENERIC_COLLISION_GROUP,
-			filters: GENERIC_COLLISION_GROUP | RAY_GROUP,
+			memberships: SKILLS_GROUP,
+			filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
 		};
 
 		entity.try_insert((
@@ -408,8 +408,8 @@ mod tests {
 					))),
 					Some(&Transform::from_xyz(1., 2., 3.)),
 					Some(&CollisionGroups {
-						memberships: GENERIC_COLLISION_GROUP,
-						filters: GENERIC_COLLISION_GROUP | RAY_GROUP,
+						memberships: SKILLS_GROUP,
+						filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
 					})
 				),
 				(
@@ -552,8 +552,8 @@ mod tests {
 					))),
 					Some(&Transform::from_xyz(1., 2., 3.)),
 					Some(&CollisionGroups {
-						memberships: GENERIC_COLLISION_GROUP,
-						filters: GENERIC_COLLISION_GROUP | RAY_GROUP,
+						memberships: SKILLS_GROUP,
+						filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
 					})
 				),
 				(

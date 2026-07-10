@@ -4,7 +4,14 @@ use crate::{
 		RayFilter,
 		blockable::Blockable,
 		blocker_types::BlockerTypes,
-		collider::{ChildColliderOf, ColliderShape, GENERIC_COLLISION_GROUP, RAY_GROUP},
+		collider::{
+			AGENTS_GROUP,
+			ChildColliderOf,
+			ColliderShape,
+			RAY_GROUP,
+			SKILLS_GROUP,
+			TERRAIN_GROUP,
+		},
 		collision_domains::Physical,
 		skill_transform::SkillTransforms,
 	},
@@ -141,7 +148,7 @@ impl Blockable {
 			filter: RayFilter {
 				groups: Some(CollisionGroups {
 					memberships: RAY_GROUP,
-					filters: GENERIC_COLLISION_GROUP,
+					filters: TERRAIN_GROUP | AGENTS_GROUP | SKILLS_GROUP,
 				}),
 				..default()
 			},
@@ -303,7 +310,7 @@ mod tests {
 						filter: RayFilter {
 							groups: Some(CollisionGroups {
 								memberships: RAY_GROUP,
-								filters: GENERIC_COLLISION_GROUP,
+								filters: TERRAIN_GROUP | AGENTS_GROUP | SKILLS_GROUP,
 							}),
 							..default()
 						},

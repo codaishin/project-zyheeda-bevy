@@ -1,12 +1,13 @@
 use crate::components::{
 	blocker_types::BlockerTypes,
 	collider::{
+		AGENTS_GROUP,
 		ChildColliderOf,
 		ColliderShape,
-		GENERIC_COLLISION_GROUP,
 		INTERACTIVE_GROUP,
 		MOUSE_HOVERABLE_GROUP,
 		RAY_GROUP,
+		SKILLS_GROUP,
 		TERRAIN_GROUP,
 	},
 	collision_domains::{Interactive, Physical},
@@ -33,10 +34,10 @@ impl Body {
 			CollidingEntities::default(),
 			ActiveEvents::COLLISION_EVENTS,
 			ActiveCollisionTypes::all(),
-			KinematicCharacterController::default(),
+			KinematicCharacterController { ..default() },
 			CollisionGroups {
-				memberships: generic_and(MOUSE_HOVERABLE_GROUP),
-				filters: generic_and(RAY_GROUP),
+				memberships: AGENTS_GROUP | MOUSE_HOVERABLE_GROUP,
+				filters: SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP,
 			},
 		)
 	}
@@ -46,8 +47,8 @@ impl Body {
 			Physical::Contact,
 			RigidBody::Fixed,
 			CollisionGroups {
-				memberships: generic_and(TERRAIN_GROUP),
-				filters: generic_and(RAY_GROUP),
+				memberships: TERRAIN_GROUP,
+				filters: RAY_GROUP,
 			},
 		)
 	}
@@ -108,10 +109,6 @@ impl Prefab<()> for Body {
 
 		Ok(())
 	}
-}
-
-fn generic_and(group: Group) -> Group {
-	GENERIC_COLLISION_GROUP | group
 }
 
 #[cfg(test)]
@@ -250,8 +247,8 @@ mod tests {
 			);
 		}
 
-		#[test_case(PhysicsType::Terrain, generic_and(TERRAIN_GROUP) , generic_and(RAY_GROUP); "terrain")]
-		#[test_case(PhysicsType::Agent, generic_and(MOUSE_HOVERABLE_GROUP), generic_and(RAY_GROUP); "agent")]
+		#[test_case(PhysicsType::Terrain, TERRAIN_GROUP, RAY_GROUP; "terrain")]
+		#[test_case(PhysicsType::Agent, AGENTS_GROUP|MOUSE_HOVERABLE_GROUP, SKILLS_GROUP|TERRAIN_GROUP|RAY_GROUP; "agent")]
 		fn insert_collision_groups(
 			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
 			memberships: Group,

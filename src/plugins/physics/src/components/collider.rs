@@ -14,11 +14,12 @@ use common::{
 };
 use macros::asset_path;
 
-pub(crate) const GENERIC_COLLISION_GROUP: Group = Group::GROUP_1;
-pub(crate) const TERRAIN_GROUP: Group = Group::GROUP_2;
-pub(crate) const RAY_GROUP: Group = Group::GROUP_3;
-pub(crate) const MOUSE_HOVERABLE_GROUP: Group = Group::GROUP_4;
-pub(crate) const INTERACTIVE_GROUP: Group = Group::GROUP_5;
+pub(crate) const TERRAIN_GROUP: Group = Group::GROUP_1;
+pub(crate) const RAY_GROUP: Group = Group::GROUP_2;
+pub(crate) const MOUSE_HOVERABLE_GROUP: Group = Group::GROUP_3;
+pub(crate) const INTERACTIVE_GROUP: Group = Group::GROUP_4;
+pub(crate) const AGENTS_GROUP: Group = Group::GROUP_5;
+pub(crate) const SKILLS_GROUP: Group = Group::GROUP_6;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
