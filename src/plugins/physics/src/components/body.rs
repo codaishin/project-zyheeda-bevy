@@ -43,7 +43,7 @@ impl Body {
 			},
 			CollisionGroups {
 				memberships: AGENTS_GROUP | MOUSE_HOVERABLE_GROUP,
-				filters: SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP,
+				filters: AGENTS_GROUP | SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP,
 			},
 		)
 	}
@@ -254,7 +254,7 @@ mod tests {
 		}
 
 		#[test_case(PhysicsType::Terrain, TERRAIN_GROUP, SKILLS_GROUP|AGENTS_GROUP|RAY_GROUP; "terrain")]
-		#[test_case(PhysicsType::Agent, AGENTS_GROUP|MOUSE_HOVERABLE_GROUP, SKILLS_GROUP|TERRAIN_GROUP|RAY_GROUP; "agent")]
+		#[test_case(PhysicsType::Agent, AGENTS_GROUP|MOUSE_HOVERABLE_GROUP, AGENTS_GROUP|SKILLS_GROUP|TERRAIN_GROUP|RAY_GROUP; "agent")]
 		fn insert_collision_groups(
 			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
 			memberships: Group,
