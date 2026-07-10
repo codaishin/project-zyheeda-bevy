@@ -3,16 +3,18 @@ mod systems;
 mod traits;
 
 use bevy::{
-	app::{App, Plugin, Update},
+	app::{App, FixedUpdate, Plugin, Update},
 	ecs::{query::Without, schedule::IntoScheduleConfigs},
 };
 use common::{
 	attributes::health::Health,
 	traits::{
+		after_plugin::AfterPlugin,
 		handles_agents::HandlesAgents,
 		handles_graphics::HandlesCameras,
 		handles_physics::HandlesLife,
 		ownership_relation::OwnershipRelation,
+		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
 	},
 };
@@ -25,7 +27,7 @@ pub struct BarsPlugin<TDependencies>(PhantomData<TDependencies>);
 impl<TAgents, TPhysics, TGraphics> BarsPlugin<(TAgents, TPhysics, TGraphics)>
 where
 	TAgents: ThreadSafe + HandlesAgents,
-	TPhysics: ThreadSafe + HandlesLife,
+	TPhysics: ThreadSafe + SystemSetDefinition + HandlesLife,
 	TGraphics: ThreadSafe + HandlesCameras,
 {
 	pub fn from_plugins(_: &TAgents, _: &TPhysics, _: &TGraphics) -> Self {
@@ -36,7 +38,7 @@ where
 impl<TAgents, TPhysics, TGraphics> Plugin for BarsPlugin<(TAgents, TPhysics, TGraphics)>
 where
 	TAgents: ThreadSafe + HandlesAgents,
-	TPhysics: ThreadSafe + HandlesLife,
+	TPhysics: ThreadSafe + SystemSetDefinition + HandlesLife,
 	TGraphics: ThreadSafe + HandlesCameras,
 {
 	fn build(&self, app: &mut App) {
@@ -45,13 +47,14 @@ where
 
 		app.manage_ownership::<Bar>(Update);
 		app.add_systems(
-			Update,
+			FixedUpdate,
 			(
 				Bar::add_to::<TAgents::TAgent<Without<Bar>>>,
 				update_life_bars,
 				render_life_bars,
 			)
-				.chain(),
+				.chain()
+				.after_plugin(TPhysics::SYSTEMS),
 		);
 	}
 }

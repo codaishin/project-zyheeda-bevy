@@ -20,23 +20,31 @@ use std::marker::PhantomData;
 
 pub struct CameraControlPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TInput, TSavegame, TPlayers, TGraphics>
-	CameraControlPlugin<(TInput, TSavegame, TPlayers, TGraphics)>
+impl<TInput, TPhysics, TSavegame, TPlayers, TGraphics>
+	CameraControlPlugin<(TInput, TPhysics, TSavegame, TPlayers, TGraphics)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
+	TPhysics: ThreadSafe + SystemSetDefinition,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + SystemSetDefinition + HandlesCameras,
 {
-	pub fn from_plugins(_: &TInput, _: &TSavegame, _: &TPlayers, _: &TGraphics) -> Self {
+	pub fn from_plugins(
+		_: &TInput,
+		_: &TPhysics,
+		_: &TSavegame,
+		_: &TPlayers,
+		_: &TGraphics,
+	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TInput, TSavegame, TPlayers, TGraphics> Plugin
-	for CameraControlPlugin<(TInput, TSavegame, TPlayers, TGraphics)>
+impl<TInput, TPhysics, TSavegame, TPlayers, TGraphics> Plugin
+	for CameraControlPlugin<(TInput, TPhysics, TSavegame, TPlayers, TGraphics)>
 where
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
+	TPhysics: ThreadSafe + SystemSetDefinition,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TGraphics: ThreadSafe + SystemSetDefinition + HandlesCameras,
@@ -49,11 +57,17 @@ where
 			(
 				CameraArm::init_for::<TPlayers::TPlayer>,
 				CameraArm::move_arms::<TInput::TInput>,
-				CameraArm::apply_direction::<TGraphics::TCameraMut>,
 			)
 				.chain()
 				.after_plugin(TInput::SYSTEMS)
 				.after_plugin(TGraphics::SYSTEMS)
+				.run_if(in_state(GameState::Play)),
+		);
+
+		app.add_systems(
+			FixedUpdate,
+			CameraArm::apply_direction::<TGraphics::TCameraMut>
+				.after_plugin(TPhysics::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);
 	}
