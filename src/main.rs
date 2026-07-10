@@ -91,7 +91,8 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&loadout,
 	);
 	let bars = BarsPlugin::from_plugins(&agents, &physics, &graphics);
-	let camera_control = CameraControlPlugin::from_plugins(&input, &savegame, &agents, &graphics);
+	let camera_control =
+		CameraControlPlugin::from_plugins(&input, &physics, &savegame, &agents, &graphics);
 	let frame_limiter = FrameLimiterPlugin {
 		target_fps: TARGET_FPS,
 	};
