@@ -34,7 +34,13 @@ impl Body {
 			CollidingEntities::default(),
 			ActiveEvents::COLLISION_EVENTS,
 			ActiveCollisionTypes::all(),
-			KinematicCharacterController { ..default() },
+			KinematicCharacterController {
+				filter_groups: Some(CollisionGroups {
+					memberships: AGENTS_GROUP,
+					filters: SKILLS_GROUP | TERRAIN_GROUP,
+				}),
+				..default()
+			},
 			CollisionGroups {
 				memberships: AGENTS_GROUP | MOUSE_HOVERABLE_GROUP,
 				filters: SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP,
@@ -48,7 +54,7 @@ impl Body {
 			RigidBody::Fixed,
 			CollisionGroups {
 				memberships: TERRAIN_GROUP,
-				filters: RAY_GROUP,
+				filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
 			},
 		)
 	}
@@ -247,7 +253,7 @@ mod tests {
 			);
 		}
 
-		#[test_case(PhysicsType::Terrain, TERRAIN_GROUP, RAY_GROUP; "terrain")]
+		#[test_case(PhysicsType::Terrain, TERRAIN_GROUP, SKILLS_GROUP|AGENTS_GROUP|RAY_GROUP; "terrain")]
 		#[test_case(PhysicsType::Agent, AGENTS_GROUP|MOUSE_HOVERABLE_GROUP, SKILLS_GROUP|TERRAIN_GROUP|RAY_GROUP; "agent")]
 		fn insert_collision_groups(
 			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
