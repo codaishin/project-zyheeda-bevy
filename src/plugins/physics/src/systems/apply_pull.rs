@@ -1,4 +1,8 @@
-use crate::components::{affected::gravity_affected::GravityPull, immobilized::Immobilized};
+use crate::components::{
+	affected::gravity_affected::GravityPull,
+	collider::AGENTS_GROUP,
+	immobilized::Immobilized,
+};
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
@@ -27,11 +31,16 @@ pub(crate) trait ApplyPull:
 
 		for (entity, transform, mut gravity_affected, mut character) in agents {
 			if !gravity_affected.is_pulled() {
+				remove(&mut character, AGENTS_GROUP);
+
 				commands.try_apply_on(&entity, |mut e| {
 					e.try_remove::<Immobilized>();
 				});
+
 				continue;
 			}
+
+			add(&mut character, AGENTS_GROUP);
 
 			let get_pull_center = |pull: &GravityPull| {
 				let towards = commands.get(&pull.towards)?;
@@ -51,6 +60,22 @@ pub(crate) trait ApplyPull:
 			});
 		}
 	}
+}
+
+fn remove(character: &mut KinematicCharacterController, group: Group) {
+	let Some(filter) = &mut character.filter_groups else {
+		return;
+	};
+
+	filter.filters &= !group;
+}
+
+fn add(character: &mut KinematicCharacterController, group: Group) {
+	let Some(filter) = &mut character.filter_groups else {
+		return;
+	};
+
+	filter.filters |= group;
 }
 
 pub(crate) trait PullAbleByGravity {
@@ -93,6 +118,7 @@ fn predict(direction: Vec3, pull_strength: f32, delta_secs: f32) -> Predict {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::components::collider::TERRAIN_GROUP;
 	use bevy::{
 		app::App,
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -269,6 +295,48 @@ mod tests {
 	}
 
 	#[test]
+	fn add_agents_filter() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let towards = PersistentEntity::default();
+		app.world_mut().spawn((
+			towards,
+			GlobalTransform::from(Transform::from_translation(Vec3::new(0., 0., 3.))),
+		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(1., 0., 0.),
+				KinematicCharacterController {
+					filter_groups: Some(CollisionGroups {
+						memberships: AGENTS_GROUP,
+						filters: TERRAIN_GROUP,
+					}),
+					..default()
+				},
+				_GravityTarget::from([GravityPull {
+					strength: UnitsPerSecond::from(2.),
+					towards,
+				}]),
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_millis(100))?;
+
+		let agent = app.world().entity(agent);
+		assert_eq!(
+			Some(CollisionGroups {
+				memberships: AGENTS_GROUP,
+				filters: TERRAIN_GROUP | AGENTS_GROUP,
+			}),
+			agent
+				.get::<KinematicCharacterController>()
+				.and_then(|c| c.filter_groups),
+		);
+		Ok(())
+	}
+
+	#[test]
 	fn do_not_add_forced_movement_if_pulls_array_empty() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let agent = app
@@ -356,6 +424,41 @@ mod tests {
 
 		let agent = app.world().entity(agent);
 		assert_eq!(None, agent.get::<Immobilized>());
+		Ok(())
+	}
+
+	#[test]
+	fn remove_agents_filter_if_pulls_empty() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform::from_xyz(1., 0., 0.),
+				KinematicCharacterController {
+					filter_groups: Some(CollisionGroups {
+						memberships: AGENTS_GROUP,
+						filters: TERRAIN_GROUP | AGENTS_GROUP,
+					}),
+					..default()
+				},
+				Immobilized,
+				_GravityTarget::from([]),
+			))
+			.id();
+
+		app.world_mut()
+			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_secs(1))?;
+
+		let agent = app.world().entity(agent);
+		assert_eq!(
+			Some(CollisionGroups {
+				memberships: AGENTS_GROUP,
+				filters: TERRAIN_GROUP,
+			}),
+			agent
+				.get::<KinematicCharacterController>()
+				.and_then(|c| c.filter_groups)
+		);
 		Ok(())
 	}
 
