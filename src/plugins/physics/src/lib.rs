@@ -22,13 +22,14 @@ use crate::{
 		blockable::Blockable,
 		body::Body,
 		character_gravity::CharacterGravity,
-		character_motion::ApplyCharacterMotion,
+		character_motion::ApplyMotion,
 		collider::{ColliderRoot, ColliderShape},
 		collision_domains::{Interactive, Physical},
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
+		motion_controller::MotionControllerOf,
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::Target,
@@ -49,6 +50,7 @@ use crate::{
 		apply_pull::ApplyPull,
 		insert_affected::InsertAffected,
 		interactions::push_ongoing_collisions::PushOngoingCollisions,
+		interpolate_position::OverstepFraction,
 	},
 };
 use bevy::prelude::*;
@@ -108,7 +110,7 @@ where
 		#[cfg(debug_assertions)]
 		app.add_plugins(crate::debug::Debug);
 
-		TSaveGame::register_savable_component::<ApplyCharacterMotion>(app);
+		TSaveGame::register_savable_component::<ApplyMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
 		TSaveGame::register_savable_component::<Target>(app);
 		TSaveGame::register_savable_component::<LinearVelocity>(app);
@@ -149,15 +151,22 @@ where
 				WorldCamera::reset_camera.in_set(PhysicsSystems::Prep),
 			)
 			// Character Motion
-			.register_required_components::<KinematicCharacterController, CharacterGravity>()
+			.add_prefab_observer::<MotionControllerOf, ()>()
+			.add_observer(MotionControllerOf::spawn)
 			.add_systems(
 				FixedUpdate,
 				(
-					FixedUpdate::delta.pipe(ApplyCharacterMotion::execute),
-					FixedUpdate::delta.pipe(ApplyCharacterMotion::set_done),
-					FixedUpdate::delta.pipe(CharacterGravity::apply),
+					FixedUpdate::delta.pipe(MotionControllerOf::set_translation),
+					FixedUpdate::delta.pipe(MotionControllerOf::apply_gravity),
+					FixedUpdate::delta.pipe(ApplyMotion::set_done),
 				)
 					.chain()
+					.in_set(PhysicsSystems::Resolve),
+			)
+			.add_systems(
+				Update,
+				OverstepFraction::fixed
+					.pipe(MotionControllerOf::interpolate_position)
 					.in_set(PhysicsSystems::Resolve),
 			)
 			// Animations
@@ -292,7 +301,7 @@ impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
-	type TCharacterMotion = ApplyCharacterMotion;
+	type TCharacterMotion = ApplyMotion;
 }
 
 impl<TDependencies> HandlesPhysicalSkillAgent for PhysicsPlugin<TDependencies> {

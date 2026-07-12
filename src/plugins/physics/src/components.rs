@@ -13,6 +13,7 @@ pub(crate) mod effects;
 pub(crate) mod ground_target;
 pub(crate) mod immobilized;
 pub(crate) mod lifetime;
+pub(crate) mod motion_controller;
 pub(crate) mod mount_points;
 pub(crate) mod offset;
 pub(crate) mod ongoing_effects;

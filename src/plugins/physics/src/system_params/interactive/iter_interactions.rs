@@ -18,7 +18,7 @@ impl IterInteractions for InteractiveContext<'_> {
 mod tests {
 	use super::*;
 	use crate::{
-		components::{collider::ChildColliderOf, collision_domains::Interactive},
+		components::{collider::ColliderOf, collision_domains::Interactive},
 		resources::root_collisions::RootCollisions,
 		system_params::{
 			interactive::InteractiveParam,
@@ -96,7 +96,7 @@ mod tests {
 		let a = app.world_mut().spawn(RigidBody::Fixed).id();
 		let b = app.world_mut().spawn(RigidBody::Fixed).id();
 		app.world_mut().spawn((
-			ChildColliderOf(a),
+			ColliderOf(a),
 			Interactive,
 			RigidBody::Fixed,
 			Transform::from_xyz(-0.1, 0., 0.),
@@ -106,7 +106,7 @@ mod tests {
 			ActiveEvents::COLLISION_EVENTS,
 		));
 		app.world_mut().spawn((
-			ChildColliderOf(b),
+			ColliderOf(b),
 			Interactive,
 			RigidBody::Fixed,
 			Transform::from_xyz(0.1, 0., 0.),

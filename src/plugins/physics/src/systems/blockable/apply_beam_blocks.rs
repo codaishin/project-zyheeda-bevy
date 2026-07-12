@@ -6,7 +6,7 @@ use crate::{
 		blocker_types::BlockerTypes,
 		collider::{
 			AGENTS_GROUP,
-			ChildColliderOf,
+			ColliderOf,
 			ColliderShape,
 			RAY_GROUP,
 			SKILLS_GROUP,
@@ -46,7 +46,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		contacts: Query<(Option<&ChildColliderOf>, &Physical)>,
+		contacts: Query<(Option<&ColliderOf>, &Physical)>,
 		commands: ZyheedaCommands,
 	) -> Result<(), BeamError> {
 		Self::apply_beam_blocks_internal(
@@ -64,7 +64,7 @@ impl Blockable {
 		objects: Query<(Entity, &Self, &SkillTransforms, &GlobalTransform)>,
 		mut transforms_and_colliders: Query<(&mut Transform, Option<&ColliderShape>)>,
 		blockers: Query<&BlockerTypes>,
-		contacts: Query<(Option<&ChildColliderOf>, &Physical)>,
+		contacts: Query<(Option<&ColliderOf>, &Physical)>,
 		mut commands: ZyheedaCommands,
 	) -> Result<(), BeamError<TCasterError>>
 	where
@@ -159,10 +159,10 @@ impl Blockable {
 		hit: &RayHit,
 		blockers: Query<&BlockerTypes>,
 		blocked_by: &HashSet<Blocker>,
-		contacts: Query<(Option<&ChildColliderOf>, &Physical)>,
+		contacts: Query<(Option<&ColliderOf>, &Physical)>,
 	) -> bool {
 		let entity = match contacts.get(hit.entity) {
-			Ok((Some(ChildColliderOf(root)), Physical::Contact)) => *root,
+			Ok((Some(ColliderOf(root)), Physical::Contact)) => *root,
 			Ok((None, Physical::Contact)) => hit.entity,
 			_ => return false,
 		};
@@ -211,7 +211,7 @@ mod tests {
 	use crate::{
 		components::{
 			blocker_types::BlockerTypes,
-			collider::ChildColliderOf,
+			collider::ColliderOf,
 			collision_domains::Physical,
 			skill_transform::SkillTransformOf,
 		},
@@ -437,7 +437,7 @@ mod tests {
 						])))
 						.id();
 					let collider = world
-						.spawn((ChildColliderOf(blocker), Physical::Contact))
+						.spawn((ColliderOf(blocker), Physical::Contact))
 						.id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
@@ -594,7 +594,7 @@ mod tests {
 						])))
 						.id();
 					let collider = world
-						.spawn((ChildColliderOf(blocker), Physical::Projection))
+						.spawn((ColliderOf(blocker), Physical::Projection))
 						.id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([

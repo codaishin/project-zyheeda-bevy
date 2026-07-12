@@ -1,4 +1,4 @@
-use crate::components::collider::{ChildColliderOf, ColliderRoot};
+use crate::components::collider::{ColliderOf, ColliderRoot};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
@@ -21,7 +21,7 @@ impl ColliderRoot {
 			};
 
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(ChildColliderOf(target));
+				e.try_insert(ColliderOf(target));
 			});
 		}
 	}
@@ -39,7 +39,7 @@ mod tests {
 			Update,
 			(
 				ColliderRoot::link_children,
-				IsChanged::<ChildColliderOf>::detect,
+				IsChanged::<ColliderOf>::detect,
 			)
 				.chain(),
 		);
@@ -59,8 +59,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&ChildColliderOf(entity)),
-			app.world().entity(child).get::<ChildColliderOf>()
+			Some(&ColliderOf(entity)),
+			app.world().entity(child).get::<ColliderOf>()
 		);
 	}
 
@@ -77,8 +77,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&ChildColliderOf(entity)),
-			app.world().entity(child_child).get::<ChildColliderOf>()
+			Some(&ColliderOf(entity)),
+			app.world().entity(child_child).get::<ColliderOf>()
 		);
 	}
 
@@ -101,7 +101,7 @@ mod tests {
 			Some(&IsChanged::FALSE),
 			app.world()
 				.entity(child)
-				.get::<IsChanged<ChildColliderOf>>()
+				.get::<IsChanged<ColliderOf>>()
 		);
 	}
 }

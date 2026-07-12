@@ -2,54 +2,40 @@ use crate::components::{
 	blocker_types::BlockerTypes,
 	collider::{
 		AGENTS_GROUP,
-		ChildColliderOf,
+		ColliderOf,
 		ColliderShape,
 		INTERACTIVE_GROUP,
-		MOUSE_HOVERABLE_GROUP,
 		RAY_GROUP,
 		SKILLS_GROUP,
 		TERRAIN_GROUP,
 	},
 	collision_domains::{Interactive, Physical},
+	motion_controller::MotionControlParameters,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
 	errors::Unreachable,
 	traits::{
-		handles_physics::physical_bodies::{BodyConfig, PhysicsType},
+		handles_physics::physical_bodies::{Blocker, BodyConfig, PhysicsType, Shape},
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
+use std::collections::HashSet;
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 pub struct Body(pub(crate) BodyConfig);
 
 impl Body {
-	fn agent() -> impl Bundle {
-		(
-			Physical::Contact,
-			RigidBody::KinematicPositionBased,
-			CollidingEntities::default(),
-			ActiveEvents::COLLISION_EVENTS,
-			ActiveCollisionTypes::all(),
-			KinematicCharacterController {
-				filter_groups: Some(CollisionGroups {
-					memberships: AGENTS_GROUP,
-					filters: SKILLS_GROUP | TERRAIN_GROUP,
-				}),
-				..default()
-			},
-			CollisionGroups {
-				memberships: AGENTS_GROUP | MOUSE_HOVERABLE_GROUP,
-				filters: AGENTS_GROUP | SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP,
-			},
-		)
+	fn agent(shape: Shape, blockers: HashSet<Blocker>) -> impl Bundle {
+		MotionControlParameters { shape, blockers }
 	}
 
-	fn terrain() -> impl Bundle {
+	fn terrain(shape: Shape, blockers: HashSet<Blocker>) -> impl Bundle {
 		(
+			ColliderShape::from(shape),
+			BlockerTypes(blockers),
 			Physical::Contact,
 			RigidBody::Fixed,
 			CollisionGroups {
@@ -63,7 +49,7 @@ impl Body {
 		(
 			Interactive,
 			Sensor,
-			ChildColliderOf(entity),
+			ColliderOf(entity),
 			CollidingEntities::default(),
 			ActiveEvents::COLLISION_EVENTS,
 			ActiveCollisionTypes::all(),
@@ -95,14 +81,12 @@ impl Prefab<()> for Body {
 		if let Some(core) = core {
 			match core.physics_type {
 				PhysicsType::Agent(ref blockers) => {
-					entity.try_insert((Self::agent(), BlockerTypes(blockers.clone())));
+					entity.try_insert(Self::agent(core.shape, blockers.clone()));
 				}
 				PhysicsType::Terrain(ref blockers) => {
-					entity.try_insert((Self::terrain(), BlockerTypes(blockers.clone())));
+					entity.try_insert(Self::terrain(core.shape, blockers.clone()));
 				}
 			};
-
-			entity.try_insert(ColliderShape::from(core.shape));
 		}
 
 		for sub_frame in sub_frames {
@@ -142,173 +126,171 @@ mod tests {
 		use super::*;
 		use crate::components::collision_domains::Physical;
 		use common::traits::handles_physics::physical_bodies::Core;
-		use test_case::test_case;
 
-		#[test]
-		fn insert_collider() {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
+		mod agent {
+			use super::*;
 
-			let entity = app
-				.world_mut()
-				.spawn(Body(BodyConfig {
-					core: Some(Core { shape, ..default() }),
+			#[test]
+			fn insert_controlled() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(42.),
+				});
+
+				let entity = app
+					.world_mut()
+					.spawn(Body(BodyConfig {
+						core: Some(Core {
+							shape,
+							physics_type: PhysicsType::Agent(HashSet::from([
+								Blocker::Character,
+								Blocker::Force,
+							])),
+						}),
+						..default()
+					}))
+					.id();
+
+				assert_eq!(
+					Some(&MotionControlParameters {
+						shape: Shape::Parameters(ShapeParameters::Sphere {
+							radius: Units::from(42.),
+						}),
+						blockers: HashSet::from([Blocker::Character, Blocker::Force,]),
+					}),
+					app.world().entity(entity).get::<MotionControlParameters>(),
+				);
+			}
+		}
+
+		mod terrain {
+			use super::*;
+
+			#[test]
+			fn insert_collider() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(42.),
+				});
+
+				let entity = app
+					.world_mut()
+					.spawn(Body(BodyConfig {
+						core: Some(Core {
+							shape,
+							physics_type: PhysicsType::Terrain(HashSet::new()),
+						}),
+						..default()
+					}))
+					.id();
+
+				assert_eq!(
+					Some(&ColliderShape::from(shape)),
+					app.world().entity(entity).get::<ColliderShape>(),
+				);
+			}
+
+			#[test]
+			fn insert_physical_contact() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(42.),
+				});
+
+				let entity = app.world_mut().spawn(Body(BodyConfig {
+					core: Some(Core {
+						shape,
+						physics_type: PhysicsType::Terrain(HashSet::default()),
+					}),
 					..default()
-				}))
-				.id();
+				}));
 
-			assert_eq!(
-				Some(&ColliderShape::from(shape)),
-				app.world().entity(entity).get::<ColliderShape>(),
-			);
-		}
+				assert_eq!(Some(&Physical::Contact), entity.get::<Physical>());
+			}
 
-		#[test_case(PhysicsType::Terrain, |e| e.contains::<Physical>(); "terrain as physical")]
-		#[test_case(PhysicsType::Agent, |e| e.contains::<Physical>(); "agent as physical")]
-		fn mark(
-			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
-			marker: fn(EntityWorldMut) -> bool,
-		) {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
+			#[test]
+			fn insert_physics_constraints() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(42.),
+				});
 
-			let entity = app.world_mut().spawn(Body(BodyConfig {
-				core: Some(Core {
-					shape,
-					physics_type: physics_type(HashSet::default()),
-				}),
-				..default()
-			}));
+				let entity = app.world_mut().spawn(Body(BodyConfig {
+					core: Some(Core {
+						shape,
+						physics_type: PhysicsType::Terrain(HashSet::new()),
+					}),
+					..default()
+				}));
 
-			assert!(marker(entity));
-		}
+				assert_eq!(
+					(Some(&RigidBody::Fixed), false, false, None, None),
+					(
+						entity.get::<RigidBody>(),
+						entity.contains::<KinematicCharacterController>(),
+						entity.contains::<CollidingEntities>(),
+						entity.get::<ActiveEvents>(),
+						entity.get::<ActiveCollisionTypes>(),
+					)
+				);
+			}
 
-		#[test_case(PhysicsType::Terrain, RigidBody::Fixed, false, false, None, None; "terrain")]
-		#[test_case(PhysicsType::Agent, RigidBody::KinematicPositionBased, true, true, Some(&ActiveEvents::COLLISION_EVENTS), Some(&ActiveCollisionTypes::all()); "agent")]
-		fn insert_physics_constraints(
-			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
-			rigid_body: RigidBody,
-			has_character_controller: bool,
-			has_colliding_entities: bool,
-			active_events: Option<&ActiveEvents>,
-			collision_types: Option<&ActiveCollisionTypes>,
-		) {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
+			#[test]
+			fn insert_blocker_types() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(42.),
+				});
 
-			let entity = app.world_mut().spawn(Body(BodyConfig {
-				core: Some(Core {
-					shape,
-					physics_type: physics_type(HashSet::new()),
-				}),
-				..default()
-			}));
+				let entity = app.world_mut().spawn(Body(BodyConfig {
+					core: Some(Core {
+						shape,
+						physics_type: PhysicsType::Terrain(HashSet::from([
+							Blocker::Force,
+							Blocker::Physical,
+						])),
+					}),
+					..default()
+				}));
 
-			assert_eq!(
-				(
-					Some(&rigid_body),
-					has_character_controller,
-					has_colliding_entities,
-					active_events,
-					collision_types
-				),
-				(
-					entity.get::<RigidBody>(),
-					entity.contains::<KinematicCharacterController>(),
-					entity.contains::<CollidingEntities>(),
-					entity.get::<ActiveEvents>(),
-					entity.get::<ActiveCollisionTypes>(),
-				)
-			);
-		}
+				assert_eq!(
+					Some(BlockerTypes(HashSet::from([
+						Blocker::Force,
+						Blocker::Physical
+					]))),
+					entity.get::<BlockerTypes>().cloned(),
+				);
+			}
 
-		#[test_case(PhysicsType::Terrain, Some; "terrain")]
-		#[test_case(PhysicsType::Agent, Some; "agent")]
-		fn insert_blocker_types(
-			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
-			blocks: fn(HashSet<Blocker>) -> Option<HashSet<Blocker>>,
-		) {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
+			#[test]
+			fn insert_collision_groups() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(42.),
+				});
 
-			let entity = app.world_mut().spawn(Body(BodyConfig {
-				core: Some(Core {
-					shape,
-					physics_type: physics_type(HashSet::from([Blocker::Force, Blocker::Physical])),
-				}),
-				..default()
-			}));
+				let entity = app.world_mut().spawn(Body(BodyConfig {
+					core: Some(Core {
+						shape,
+						physics_type: PhysicsType::Terrain(HashSet::new()),
+					}),
+					..default()
+				}));
 
-			assert_eq!(
-				blocks(HashSet::from([Blocker::Force, Blocker::Physical])).map(BlockerTypes::from),
-				entity.get::<BlockerTypes>().cloned(),
-			);
-		}
-
-		#[test_case(PhysicsType::Terrain, TERRAIN_GROUP, SKILLS_GROUP|AGENTS_GROUP|RAY_GROUP; "terrain")]
-		#[test_case(PhysicsType::Agent, AGENTS_GROUP|MOUSE_HOVERABLE_GROUP, AGENTS_GROUP|SKILLS_GROUP|TERRAIN_GROUP|RAY_GROUP; "agent")]
-		fn insert_collision_groups(
-			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
-			memberships: Group,
-			filters: Group,
-		) {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
-
-			let entity = app.world_mut().spawn(Body(BodyConfig {
-				core: Some(Core {
-					shape,
-					physics_type: physics_type(HashSet::new()),
-				}),
-				..default()
-			}));
-
-			assert_eq!(
-				Some(&CollisionGroups {
-					memberships,
-					filters
-				}),
-				entity.get::<CollisionGroups>(),
-			);
-		}
-
-		#[test_case(PhysicsType::Terrain, None; "terrain")]
-		#[test_case(PhysicsType::Agent, None; "agent")]
-		fn insert_sensor(
-			physics_type: fn(HashSet<Blocker>) -> PhysicsType,
-			sensor: Option<&Sensor>,
-		) {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
-
-			let entity = app.world_mut().spawn(Body(BodyConfig {
-				core: Some(Core {
-					shape,
-					physics_type: physics_type(HashSet::new()),
-				}),
-				..default()
-			}));
-
-			assert_eq!(sensor, entity.get::<Sensor>());
+				assert_eq!(
+					Some(&CollisionGroups {
+						memberships: TERRAIN_GROUP,
+						filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP
+					}),
+					entity.get::<CollisionGroups>(),
+				);
+			}
 		}
 	}
 
 	mod sub_frames {
-		use crate::components::collider::ChildColliderOf;
-
 		use super::*;
+		use crate::components::collider::ColliderOf;
 		use common::traits::handles_physics::physical_bodies::InteractiveFrame;
 		use testing::assert_children_count;
 
@@ -426,10 +408,7 @@ mod tests {
 				.id();
 
 			let [child] = assert_children_count!(1, app, entity);
-			assert_eq!(
-				Some(&ChildColliderOf(entity)),
-				child.get::<ChildColliderOf>(),
-			);
+			assert_eq!(Some(&ColliderOf(entity)), child.get::<ColliderOf>(),);
 		}
 
 		#[test]

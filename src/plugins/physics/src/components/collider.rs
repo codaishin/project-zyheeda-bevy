@@ -164,10 +164,10 @@ pub(crate) struct ColliderRoot;
 #[derive(Component, PartialEq, Debug)]
 #[relationship(relationship_target = Colliders)]
 #[require(Collider, Transform, ActiveEvents, ActiveCollisionTypes)]
-pub(crate) struct ChildColliderOf(pub(crate) Entity);
+pub(crate) struct ColliderOf(pub(crate) Entity);
 
 #[derive(Component, PartialEq, Debug)]
-#[relationship_target(relationship = ChildColliderOf)]
+#[relationship_target(relationship = ColliderOf)]
 pub(crate) struct Colliders(EntityHashSet);
 
 #[cfg(test)]

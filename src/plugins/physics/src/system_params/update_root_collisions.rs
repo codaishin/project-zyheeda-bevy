@@ -1,5 +1,5 @@
 use crate::{
-	components::collider::ChildColliderOf,
+	components::collider::ColliderOf,
 	resources::root_collisions::RootCollisions,
 	traits::send_collision_interaction::PushInteractingColliders,
 };
@@ -11,7 +11,7 @@ where
 	T: Component,
 {
 	interactions: ResMut<'w, RootCollisions<T>>,
-	markers: Query<'w, 's, Option<&'static ChildColliderOf>, With<T>>,
+	markers: Query<'w, 's, Option<&'static ColliderOf>, With<T>>,
 }
 
 impl<T> UpdateRootCollisions<'_, '_, T>
@@ -20,7 +20,7 @@ where
 {
 	fn get_root(&self, entity: Entity) -> Option<Entity> {
 		match self.markers.get(entity) {
-			Ok(Some(ChildColliderOf(root))) => Some(*root),
+			Ok(Some(ColliderOf(root))) => Some(*root),
 			Ok(None) => Some(entity),
 			Err(_) => None,
 		}
@@ -112,10 +112,10 @@ mod tests {
 		];
 		let colliders = [
 			app.world_mut()
-				.spawn((ChildColliderOf(roots[0]), _Marker))
+				.spawn((ColliderOf(roots[0]), _Marker))
 				.id(),
 			app.world_mut()
-				.spawn((ChildColliderOf(roots[1]), _Marker))
+				.spawn((ColliderOf(roots[1]), _Marker))
 				.id(),
 		];
 

@@ -1,4 +1,4 @@
-use crate::components::character_motion::{ApplyCharacterMotion, IsInMotion};
+use crate::components::character_motion::{ApplyMotion, IsInMotion};
 use bevy::prelude::*;
 use common::{
 	traits::{accessors::get::TryApplyOn, handles_physics::CharacterMotion},
@@ -6,7 +6,7 @@ use common::{
 };
 use std::time::Duration;
 
-impl ApplyCharacterMotion {
+impl ApplyMotion {
 	pub(crate) fn set_done(
 		In(delta): In<Duration>,
 		mut commands: ZyheedaCommands,
@@ -66,8 +66,8 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				(move || delta).pipe(ApplyCharacterMotion::set_done),
-				IsChanged::<ApplyCharacterMotion>::detect,
+				(move || delta).pipe(ApplyMotion::set_done),
+				IsChanged::<ApplyMotion>::detect,
 			)
 				.chain(),
 		);
@@ -82,16 +82,16 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::default(),
-				ApplyCharacterMotion::from(CharacterMotion::Done),
+				ApplyMotion::from(CharacterMotion::Done),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
+			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<ApplyMotion>(),
 				app.world().entity(entity).get::<IsInMotion>(),
 			)
 		);
@@ -104,7 +104,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1., 2., 3.),
 				}),
@@ -114,9 +114,9 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
+			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<ApplyMotion>(),
 				app.world().entity(entity).get::<IsInMotion>(),
 			)
 		);
@@ -129,7 +129,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(10., 2., 3.),
 				}),
@@ -140,14 +140,14 @@ mod tests {
 
 		assert_eq!(
 			(
-				Some(&ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+				Some(&ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(10., 2., 3.),
 				})),
 				Some(&IsInMotion)
 			),
 			(
-				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<ApplyMotion>(),
 				app.world().entity(entity).get::<IsInMotion>()
 			)
 		);
@@ -160,7 +160,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1.099, 2., 3.),
 				}),
@@ -170,9 +170,9 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
+			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<ApplyMotion>(),
 				app.world().entity(entity).get::<IsInMotion>()
 			)
 		);
@@ -185,7 +185,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(2.)),
 					target: Vec3::new(1.199, 2., 3.),
 				}),
@@ -195,9 +195,9 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
+			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<ApplyMotion>(),
 				app.world().entity(entity).get::<IsInMotion>(),
 			)
 		);
@@ -210,7 +210,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE, 3.),
 				}),
@@ -220,9 +220,9 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(&ApplyCharacterMotion(CharacterMotion::Done)), None),
+			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<ApplyMotion>(),
 				app.world().entity(entity).get::<IsInMotion>()
 			)
 		);
@@ -235,7 +235,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE + 0.1, 3.),
 				}),
@@ -246,14 +246,14 @@ mod tests {
 
 		assert_eq!(
 			(
-				Some(&ApplyCharacterMotion(CharacterMotion::ToTarget {
+				Some(&ApplyMotion(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE + 0.1, 3.),
 				})),
 				Some(&IsInMotion)
 			),
 			(
-				app.world().entity(entity).get::<ApplyCharacterMotion>(),
+				app.world().entity(entity).get::<ApplyMotion>(),
 				app.world().entity(entity).get::<IsInMotion>()
 			)
 		);
@@ -266,7 +266,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::default(),
-				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::ZERO,
 				}),
@@ -280,7 +280,7 @@ mod tests {
 			Some(&IsChanged::FALSE),
 			app.world()
 				.entity(entity)
-				.get::<IsChanged<ApplyCharacterMotion>>(),
+				.get::<IsChanged<ApplyMotion>>(),
 		);
 	}
 
@@ -291,7 +291,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::default(),
-				ApplyCharacterMotion::from(CharacterMotion::ToTarget {
+				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::ZERO,
 				}),
@@ -306,7 +306,7 @@ mod tests {
 			Some(&IsChanged::TRUE),
 			app.world()
 				.entity(entity)
-				.get::<IsChanged<ApplyCharacterMotion>>(),
+				.get::<IsChanged<ApplyMotion>>(),
 		);
 	}
 }
