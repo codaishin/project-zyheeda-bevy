@@ -135,7 +135,7 @@ where
 
 		app
 			// Rapier
-			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default().in_schedule(FixedPostUpdate))
 			.register_required_components::<RigidBody, ColliderRoot>()
 			.add_systems(
 				Startup,
@@ -186,7 +186,7 @@ where
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers_observer)
 			.add_systems(
-				Update,
+				FixedUpdate,
 				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead)
 					.chain()
 					.in_set(PhysicsSystems::Resolve),
@@ -195,7 +195,7 @@ where
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_observer(GravityEffect::update_blockers_observer)
 			.add_systems(
-				Update,
+				FixedUpdate,
 				(
 					GravityAffected::insert_from::<DefaultAttributes>,
 					Update::delta.pipe(GravityAffected::apply_pull),
@@ -207,7 +207,7 @@ where
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
 			.add_observer(ForceEffect::update_blockers_observer)
 			.add_systems(
-				Update,
+				FixedUpdate,
 				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems::Resolve),
 			)
 			// General Lifetime relationship
@@ -228,11 +228,16 @@ where
 						SetVelocityForward::system,
 					)
 						.chain(),
+				),
+			)
+			.add_systems(
+				FixedUpdate,
+				(
 					// Collect physical collections
 					(
 						Blockable::apply_beam_blocks.pipe(OnError::log),
 						RootCollisions::<Physical>::clear,
-						Update::delta
+						FixedUpdate::delta
 							.pipe(UpdateRootCollisions::<Physical>::prevent_tunneling)
 							.pipe(OnError::log),
 						UpdateRootCollisions::<Physical>::push_ongoing_collisions,
@@ -248,15 +253,17 @@ where
 					.chain()
 					.in_set(PhysicsSystems::Collisions),
 			)
-			.add_systems(Update, apply_fragile_blocks.after(PhysicsSystems::Resolve));
+			.add_systems(
+				FixedUpdate,
+				apply_fragile_blocks.after(PhysicsSystems::Resolve),
+			);
 	}
 }
 
 fn set_rapier_time_step(time_per_frame: Duration) -> impl Fn(ResMut<TimestepMode>) {
 	move |mut time_step_mode: ResMut<TimestepMode>| {
-		*time_step_mode = TimestepMode::Variable {
-			max_dt: time_per_frame.as_secs_f32(),
-			time_scale: 1.,
+		*time_step_mode = TimestepMode::Fixed {
+			dt: time_per_frame.as_secs_f32(),
 			substeps: 1,
 		}
 	}

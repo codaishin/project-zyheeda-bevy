@@ -57,16 +57,13 @@ where
 			(
 				CameraArm::init_for::<TPlayers::TPlayer>,
 				CameraArm::move_arms::<TInput::TInput>,
+				CameraArm::apply_direction::<TGraphics::TCameraMut>
+					.after_plugin(TPhysics::SYSTEMS)
+					.run_if(in_state(GameState::Play)),
 			)
 				.chain()
 				.after_plugin(TInput::SYSTEMS)
 				.after_plugin(TGraphics::SYSTEMS)
-				.run_if(in_state(GameState::Play)),
-		);
-
-		app.add_systems(
-			FixedUpdate,
-			CameraArm::apply_direction::<TGraphics::TCameraMut>
 				.after_plugin(TPhysics::SYSTEMS)
 				.run_if(in_state(GameState::Play)),
 		);

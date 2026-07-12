@@ -2,10 +2,7 @@ pub mod components;
 mod systems;
 mod traits;
 
-use bevy::{
-	app::{App, FixedUpdate, Plugin, Update},
-	ecs::{query::Without, schedule::IntoScheduleConfigs},
-};
+use bevy::prelude::*;
 use common::{
 	attributes::health::Health,
 	traits::{
@@ -47,7 +44,7 @@ where
 
 		app.manage_ownership::<Bar>(Update);
 		app.add_systems(
-			FixedUpdate,
+			Update,
 			(
 				Bar::add_to::<TAgents::TAgent<Without<Bar>>>,
 				update_life_bars,
