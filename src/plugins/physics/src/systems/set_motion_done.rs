@@ -278,9 +278,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&IsChanged::FALSE),
-			app.world()
-				.entity(entity)
-				.get::<IsChanged<ApplyMotion>>(),
+			app.world().entity(entity).get::<IsChanged<ApplyMotion>>(),
 		);
 	}
 
@@ -304,9 +302,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&IsChanged::TRUE),
-			app.world()
-				.entity(entity)
-				.get::<IsChanged<ApplyMotion>>(),
+			app.world().entity(entity).get::<IsChanged<ApplyMotion>>(),
 		);
 	}
 }

@@ -111,12 +111,8 @@ mod tests {
 			app.world_mut().spawn_empty().id(),
 		];
 		let colliders = [
-			app.world_mut()
-				.spawn((ColliderOf(roots[0]), _Marker))
-				.id(),
-			app.world_mut()
-				.spawn((ColliderOf(roots[1]), _Marker))
-				.id(),
+			app.world_mut().spawn((ColliderOf(roots[0]), _Marker)).id(),
+			app.world_mut().spawn((ColliderOf(roots[1]), _Marker)).id(),
 		];
 
 		app.world_mut()

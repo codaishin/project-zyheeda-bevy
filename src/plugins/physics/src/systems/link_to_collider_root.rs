@@ -37,11 +37,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			(
-				ColliderRoot::link_children,
-				IsChanged::<ColliderOf>::detect,
-			)
-				.chain(),
+			(ColliderRoot::link_children, IsChanged::<ColliderOf>::detect).chain(),
 		);
 
 		app
@@ -99,9 +95,7 @@ mod tests {
 
 		assert_eq!(
 			Some(&IsChanged::FALSE),
-			app.world()
-				.entity(child)
-				.get::<IsChanged<ColliderOf>>()
+			app.world().entity(child).get::<IsChanged<ColliderOf>>()
 		);
 	}
 }

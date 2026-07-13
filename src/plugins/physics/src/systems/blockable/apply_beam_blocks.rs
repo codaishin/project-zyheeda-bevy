@@ -436,9 +436,7 @@ mod tests {
 							Blocker::Physical,
 						])))
 						.id();
-					let collider = world
-						.spawn((ColliderOf(blocker), Physical::Contact))
-						.id();
+					let collider = world.spawn((ColliderOf(blocker), Physical::Contact)).id();
 					mock.expect_cast_ray_continuously_sorted()
 						.return_const(Ok(Sorted::from([
 							RayHit {
