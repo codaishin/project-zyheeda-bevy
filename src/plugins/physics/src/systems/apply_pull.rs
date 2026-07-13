@@ -2,6 +2,7 @@ use crate::components::{
 	affected::gravity_affected::GravityPull,
 	collider::AGENTS_GROUP,
 	immobilized::Immobilized,
+	motion_controller::MotionController,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -19,19 +20,22 @@ pub(crate) trait ApplyPull:
 	fn apply_pull(
 		In(delta): In<Duration>,
 		mut commands: ZyheedaCommands,
-		agents: Query<(
-			Entity,
-			&Transform,
-			&mut Self,
-			&mut KinematicCharacterController,
-		)>,
+		mut controllers: Query<
+			(&mut KinematicCharacterController, &Transform),
+			Without<MotionController>,
+		>,
+		agents: Query<(Entity, &mut Transform, &mut Self, &MotionController)>,
 		transforms: Query<&GlobalTransform>,
 	) {
 		let delta_secs = delta.as_secs_f32();
 
-		for (entity, transform, mut gravity_affected, mut character) in agents {
+		for (entity, mut transform, mut gravity_affected, ctrl) in agents {
+			let Ok((mut ctrl, ctrl_transform)) = controllers.get_mut(ctrl.get()) else {
+				continue;
+			};
+
 			if !gravity_affected.is_pulled() {
-				remove(&mut character, AGENTS_GROUP);
+				remove(&mut ctrl, AGENTS_GROUP);
 
 				commands.try_apply_on(&entity, |mut e| {
 					e.try_remove::<Immobilized>();
@@ -40,21 +44,22 @@ pub(crate) trait ApplyPull:
 				continue;
 			}
 
-			add(&mut character, AGENTS_GROUP);
+			add(&mut ctrl, AGENTS_GROUP);
 
 			let get_pull_center = |pull: &GravityPull| {
 				let towards = commands.get(&pull.towards)?;
 				let translation = transforms.get(towards).ok()?.translation();
 				Some(translation.with_y(0.))
 			};
-			let position = transform.translation.with_y(0.);
+			let position = ctrl_transform.translation.with_y(0.);
 			let pull_sum = gravity_affected
 				.drain_pulls()
 				.filter_map(|pull| get_pull_center(&pull).map(|center| (pull, center)))
 				.filter_map(|(pull, center)| get_pull_vector(delta_secs, position, pull, center))
 				.sum::<Vec3>();
 
-			character.translation = Some(pull_sum);
+			transform.translation = ctrl_transform.translation;
+			ctrl.translation = Some(pull_sum);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(Immobilized);
 			});
@@ -118,7 +123,7 @@ fn predict(direction: Vec3, pull_strength: f32, delta_secs: f32) -> Predict {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::collider::TERRAIN_GROUP;
+	use crate::components::{collider::TERRAIN_GROUP, motion_controller::MotionControllerOf};
 	use bevy::{
 		app::App,
 		ecs::system::{RunSystemError, RunSystemOnce},
@@ -130,7 +135,7 @@ mod tests {
 		tools::UnitsPerSecond,
 		traits::register_persistent_entities::RegisterPersistentEntities,
 	};
-	use std::vec::Drain;
+	use std::{f32::consts::PI, vec::Drain};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -166,6 +171,48 @@ mod tests {
 	}
 
 	#[test]
+	fn set_motion_controller_translation() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let towards = PersistentEntity::default();
+		app.world_mut().spawn((
+			towards,
+			GlobalTransform::from(Transform::from_translation(Vec3::new(0., 0., 3.))),
+		));
+		let agent = app
+			.world_mut()
+			.spawn((
+				Transform {
+					translation: Vec3::ZERO,
+					rotation: Quat::from_rotation_y(-PI),
+					scale: Vec3::splat(0.1),
+				},
+				_GravityTarget::from([GravityPull {
+					strength: UnitsPerSecond::from(2.),
+					towards,
+				}]),
+			))
+			.id();
+		app.world_mut().spawn((
+			MotionControllerOf(agent),
+			Transform::from_xyz(1., 2., 3.),
+			KinematicCharacterController::default(),
+		));
+
+		app.world_mut()
+			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_millis(100))?;
+
+		assert_eq!(
+			Some(&Transform {
+				translation: Vec3::new(1., 2., 3.),
+				rotation: Quat::from_rotation_y(-PI),
+				scale: Vec3::splat(0.1),
+			}),
+			app.world().entity(agent).get::<Transform>()
+		);
+		Ok(())
+	}
+
+	#[test]
 	fn add_forced_movement_for_single_pull() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let towards = PersistentEntity::default();
@@ -176,29 +223,36 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(1., 0., 0.),
-				KinematicCharacterController::default(),
+				Transform::default(),
 				_GravityTarget::from([GravityPull {
 					strength: UnitsPerSecond::from(2.),
 					towards,
 				}]),
 			))
 			.id();
+		let ctrl = app
+			.world_mut()
+			.spawn((
+				MotionControllerOf(agent),
+				Transform::from_xyz(1., 0., 0.),
+				KinematicCharacterController::default(),
+			))
+			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_millis(100))?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			(
 				Some(Vec3::new(-1., 0., 3.).normalize() * 2. * 0.1),
 				Some(&Immobilized)
 			),
 			(
-				agent
+				app.world()
+					.entity(ctrl)
 					.get::<KinematicCharacterController>()
 					.and_then(|c| c.translation),
-				agent.get::<Immobilized>()
+				app.world().entity(agent).get::<Immobilized>()
 			)
 		);
 		Ok(())
@@ -216,26 +270,33 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(1., 0., 0.),
-				KinematicCharacterController::default(),
+				Transform::default(),
 				_GravityTarget::from([GravityPull {
 					strength: UnitsPerSecond::from(1.),
 					towards,
 				}]),
 			))
 			.id();
+		let ctrl = app
+			.world_mut()
+			.spawn((
+				MotionControllerOf(agent),
+				Transform::from_xyz(1., 0., 0.),
+				KinematicCharacterController::default(),
+			))
+			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_secs(1))?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			(Some(Vec3::new(-1., 0., 3.).normalize()), Some(&Immobilized)),
 			(
-				agent
+				app.world()
+					.entity(ctrl)
 					.get::<KinematicCharacterController>()
 					.and_then(|c| c.translation),
-				agent.get::<Immobilized>()
+				app.world().entity(agent).get::<Immobilized>()
 			)
 		);
 		Ok(())
@@ -257,8 +318,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(1., 0., 0.),
-				KinematicCharacterController::default(),
+				Transform::default(),
 				_GravityTarget::from([
 					GravityPull {
 						strength: UnitsPerSecond::from(2.),
@@ -271,11 +331,18 @@ mod tests {
 				]),
 			))
 			.id();
+		let ctrl = app
+			.world_mut()
+			.spawn((
+				MotionControllerOf(agent),
+				Transform::from_xyz(1., 0., 0.),
+				KinematicCharacterController::default(),
+			))
+			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_millis(100))?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			(
 				Some(
@@ -285,10 +352,11 @@ mod tests {
 				Some(&Immobilized)
 			),
 			(
-				agent
+				app.world()
+					.entity(ctrl)
 					.get::<KinematicCharacterController>()
 					.and_then(|c| c.translation),
-				agent.get::<Immobilized>()
+				app.world().entity(agent).get::<Immobilized>()
 			)
 		);
 		Ok(())
@@ -305,6 +373,17 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
+				Transform::default(),
+				_GravityTarget::from([GravityPull {
+					strength: UnitsPerSecond::from(2.),
+					towards,
+				}]),
+			))
+			.id();
+		let ctrl = app
+			.world_mut()
+			.spawn((
+				MotionControllerOf(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController {
 					filter_groups: Some(CollisionGroups {
@@ -313,23 +392,19 @@ mod tests {
 					}),
 					..default()
 				},
-				_GravityTarget::from([GravityPull {
-					strength: UnitsPerSecond::from(2.),
-					towards,
-				}]),
 			))
 			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_millis(100))?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			Some(CollisionGroups {
 				memberships: AGENTS_GROUP,
 				filters: TERRAIN_GROUP | AGENTS_GROUP,
 			}),
-			agent
+			app.world()
+				.entity(ctrl)
 				.get::<KinematicCharacterController>()
 				.and_then(|c| c.filter_groups),
 		);
@@ -341,24 +416,28 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
+			.spawn((Transform::default(), _GravityTarget::from([])))
+			.id();
+		let ctrl = app
+			.world_mut()
 			.spawn((
+				MotionControllerOf(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController::default(),
-				_GravityTarget::from([]),
 			))
 			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_secs(1))?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			(None, None),
 			(
-				agent
+				app.world()
+					.entity(ctrl)
 					.get::<KinematicCharacterController>()
 					.and_then(|c| c.translation),
-				agent.get::<Immobilized>()
+				app.world().entity(agent).get::<Immobilized>()
 			)
 		);
 		Ok(())
@@ -380,8 +459,7 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(1., 0., 0.),
-				KinematicCharacterController::default(),
+				Transform::default(),
 				_GravityTarget::from([
 					GravityPull {
 						strength: UnitsPerSecond::from(2.),
@@ -394,14 +472,18 @@ mod tests {
 				]),
 			))
 			.id();
+		app.world_mut().spawn((
+			MotionControllerOf(agent),
+			Transform::from_xyz(1., 0., 0.),
+			KinematicCharacterController::default(),
+		));
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_secs(1))?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			Some(&_GravityTarget::from([])),
-			agent.get::<_GravityTarget>()
+			app.world().entity(agent).get::<_GravityTarget>()
 		);
 		Ok(())
 	}
@@ -411,19 +493,18 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
-			.spawn((
-				Transform::from_xyz(1., 0., 0.),
-				KinematicCharacterController::default(),
-				Immobilized,
-				_GravityTarget::from([]),
-			))
+			.spawn((Transform::default(), Immobilized, _GravityTarget::from([])))
 			.id();
+		app.world_mut().spawn((
+			MotionControllerOf(agent),
+			Transform::from_xyz(1., 0., 0.),
+			KinematicCharacterController::default(),
+		));
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_secs(1))?;
 
-		let agent = app.world().entity(agent);
-		assert_eq!(None, agent.get::<Immobilized>());
+		assert_eq!(None, app.world().entity(agent).get::<Immobilized>());
 		Ok(())
 	}
 
@@ -432,7 +513,12 @@ mod tests {
 		let mut app = setup();
 		let agent = app
 			.world_mut()
+			.spawn((Transform::default(), Immobilized, _GravityTarget::from([])))
+			.id();
+		let ctrl = app
+			.world_mut()
 			.spawn((
+				MotionControllerOf(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController {
 					filter_groups: Some(CollisionGroups {
@@ -441,21 +527,19 @@ mod tests {
 					}),
 					..default()
 				},
-				Immobilized,
-				_GravityTarget::from([]),
 			))
 			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_secs(1))?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			Some(CollisionGroups {
 				memberships: AGENTS_GROUP,
 				filters: TERRAIN_GROUP,
 			}),
-			agent
+			app.world()
+				.entity(ctrl)
 				.get::<KinematicCharacterController>()
 				.and_then(|c| c.filter_groups)
 		);
@@ -475,26 +559,33 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(3., 0., 0.),
-				KinematicCharacterController::default(),
+				Transform::default(),
 				_GravityTarget::from([GravityPull {
 					strength: UnitsPerSecond::from(10.),
 					towards,
 				}]),
 			))
 			.id();
+		let ctrl = app
+			.world_mut()
+			.spawn((
+				MotionControllerOf(agent),
+				Transform::from_xyz(3., 0., 0.),
+				KinematicCharacterController::default(),
+			))
+			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, delta)?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			(Some(Vec3::new(-3., 0., 4.)), Some(&Immobilized)),
 			(
-				agent
+				app.world()
+					.entity(ctrl)
 					.get::<KinematicCharacterController>()
 					.and_then(|c| c.translation),
-				agent.get::<Immobilized>()
+				app.world().entity(agent).get::<Immobilized>()
 			)
 		);
 		Ok(())
@@ -511,26 +602,33 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(3., 1., 0.),
-				KinematicCharacterController::default(),
+				Transform::default(),
 				_GravityTarget::from([GravityPull {
 					strength: UnitsPerSecond::from(1.),
 					towards,
 				}]),
 			))
 			.id();
+		let ctrl = app
+			.world_mut()
+			.spawn((
+				MotionControllerOf(agent),
+				Transform::from_xyz(3., 1., 0.),
+				KinematicCharacterController::default(),
+			))
+			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_secs(1))?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			(Some(Vec3::new(-3., 0., 4.).normalize()), Some(&Immobilized)),
 			(
-				agent
+				app.world()
+					.entity(ctrl)
 					.get::<KinematicCharacterController>()
 					.and_then(|c| c.translation),
-				agent.get::<Immobilized>()
+				app.world().entity(agent).get::<Immobilized>()
 			)
 		);
 		Ok(())
@@ -547,26 +645,33 @@ mod tests {
 		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(3., 0., 0.),
-				KinematicCharacterController::default(),
+				Transform::default(),
 				_GravityTarget::from([GravityPull {
 					strength: UnitsPerSecond::from(10.),
 					towards,
 				}]),
 			))
 			.id();
+		let ctrl = app
+			.world_mut()
+			.spawn((
+				MotionControllerOf(agent),
+				Transform::from_xyz(3., 0., 0.),
+				KinematicCharacterController::default(),
+			))
+			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::ZERO)?;
 
-		let agent = app.world().entity(agent);
 		assert_eq!(
 			(Some(Vec3::ZERO), Some(&Immobilized)),
 			(
-				agent
+				app.world()
+					.entity(ctrl)
 					.get::<KinematicCharacterController>()
 					.and_then(|c| c.translation),
-				agent.get::<Immobilized>()
+				app.world().entity(agent).get::<Immobilized>()
 			)
 		);
 		Ok(())

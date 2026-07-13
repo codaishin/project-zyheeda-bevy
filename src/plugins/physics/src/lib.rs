@@ -122,6 +122,7 @@ where
 				PhysicsSystems::Prep,
 				PhysicsSystems::Collisions,
 				PhysicsSystems::Resolve,
+				PhysicsSystems::Interpolate,
 			)
 				.chain(),
 		);
@@ -131,6 +132,7 @@ where
 				PhysicsSystems::Prep,
 				PhysicsSystems::Collisions,
 				PhysicsSystems::Resolve,
+				PhysicsSystems::Interpolate,
 			)
 				.chain(),
 		);
@@ -168,7 +170,7 @@ where
 				Update,
 				OverstepFraction::fixed
 					.pipe(MotionControllerOf::interpolate_position)
-					.in_set(PhysicsSystems::Resolve),
+					.in_set(PhysicsSystems::Interpolate),
 			)
 			// Animations
 			.add_systems(
@@ -208,7 +210,7 @@ where
 				FixedUpdate,
 				(
 					GravityAffected::insert_from::<DefaultAttributes>,
-					Update::delta.pipe(GravityAffected::apply_pull),
+					FixedUpdate::delta.pipe(GravityAffected::apply_pull),
 				)
 					.chain()
 					.in_set(PhysicsSystems::Resolve),
@@ -284,6 +286,7 @@ pub enum PhysicsSystems {
 	Prep,
 	Collisions,
 	Resolve,
+	Interpolate,
 }
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
@@ -298,7 +301,7 @@ impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
 	type TSystemSet = PhysicsSystems;
 
 	const SYSTEMS: PluginSystemSet<Self::TSystemSet> =
-		PluginSystemSet::from_set(PhysicsSystems::Resolve);
+		PluginSystemSet::from_set(PhysicsSystems::Interpolate);
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
