@@ -5,7 +5,7 @@ mod terrain;
 mod update_target_ray;
 
 use crate::{
-	components::{collider::ChildColliderOf, offset::AimOffset},
+	components::{collider::ColliderOf, offset::AimOffset},
 	resources::world_camera::WorldCamera,
 };
 use bevy::{
@@ -21,7 +21,7 @@ where
 	T: SystemParam + 'static,
 {
 	context: StaticSystemParam<'w, 's, T>,
-	child_colliders: Query<'w, 's, &'static ChildColliderOf>,
+	colliders: Query<'w, 's, &'static ColliderOf>,
 	transforms: Query<'w, 's, (&'static GlobalTransform, Option<&'static AimOffset>)>,
 	world_camera: ResMut<'w, WorldCamera>,
 }

@@ -1,5 +1,5 @@
 use crate::{
-	components::collider::{ChildColliderOf, MOUSE_HOVERABLE_GROUP, RAY_GROUP},
+	components::collider::{ColliderOf, MOUSE_HOVERABLE_GROUP, RAY_GROUP},
 	system_params::ray_caster::RayCasterMut,
 };
 use bevy::prelude::*;
@@ -33,7 +33,7 @@ impl Raycast<SolidObjects> for RayCasterMut<'_, '_> {
 		let (entity, time_of_impact) =
 			ray_caster.cast_ray(ray.origin, *ray.direction, Real::MAX, true, filter)?;
 
-		if let Ok(ChildColliderOf(root)) = self.child_colliders.get(entity) {
+		if let Ok(ColliderOf(root)) = self.colliders.get(entity) {
 			return Some(RaycastHit {
 				entity: *root,
 				time_of_impact,
@@ -55,8 +55,8 @@ impl RayCasterMut<'_, '_> {
 			}
 
 			!matches!(
-				self.child_colliders.get(entity),
-				Ok(ChildColliderOf(root)) if exclude.contains(root),
+				self.colliders.get(entity),
+				Ok(ColliderOf(root)) if exclude.contains(root),
 			)
 		}
 	}

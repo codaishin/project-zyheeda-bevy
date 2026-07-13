@@ -22,13 +22,14 @@ use crate::{
 		blockable::Blockable,
 		body::Body,
 		character_gravity::CharacterGravity,
-		character_motion::ApplyCharacterMotion,
+		character_motion::ApplyMotion,
 		collider::{ColliderRoot, ColliderShape},
 		collision_domains::{Interactive, Physical},
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
+		motion_controller::{MotionController, MotionControllerOf},
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::Target,
@@ -49,6 +50,7 @@ use crate::{
 		apply_pull::ApplyPull,
 		insert_affected::InsertAffected,
 		interactions::push_ongoing_collisions::PushOngoingCollisions,
+		interpolate_position::OverstepFraction,
 	},
 };
 use bevy::prelude::*;
@@ -108,7 +110,7 @@ where
 		#[cfg(debug_assertions)]
 		app.add_plugins(crate::debug::Debug);
 
-		TSaveGame::register_savable_component::<ApplyCharacterMotion>(app);
+		TSaveGame::register_savable_component::<ApplyMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
 		TSaveGame::register_savable_component::<Target>(app);
 		TSaveGame::register_savable_component::<LinearVelocity>(app);
@@ -120,6 +122,7 @@ where
 				PhysicsSystems::Prep,
 				PhysicsSystems::Collisions,
 				PhysicsSystems::Resolve,
+				PhysicsSystems::Interpolate,
 			)
 				.chain(),
 		);
@@ -129,13 +132,14 @@ where
 				PhysicsSystems::Prep,
 				PhysicsSystems::Collisions,
 				PhysicsSystems::Resolve,
+				PhysicsSystems::Interpolate,
 			)
 				.chain(),
 		);
 
 		app
 			// Rapier
-			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
+			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default().in_schedule(FixedPostUpdate))
 			.register_required_components::<RigidBody, ColliderRoot>()
 			.add_systems(
 				Startup,
@@ -149,16 +153,23 @@ where
 				WorldCamera::reset_camera.in_set(PhysicsSystems::Prep),
 			)
 			// Character Motion
-			.register_required_components::<KinematicCharacterController, CharacterGravity>()
+			.add_prefab_observer::<MotionControllerOf, ()>()
+			.add_observer(MotionControllerOf::spawn)
 			.add_systems(
 				FixedUpdate,
 				(
-					FixedUpdate::delta.pipe(ApplyCharacterMotion::execute),
-					FixedUpdate::delta.pipe(ApplyCharacterMotion::set_done),
-					FixedUpdate::delta.pipe(CharacterGravity::apply),
+					FixedUpdate::delta.pipe(MotionController::set_translation),
+					FixedUpdate::delta.pipe(MotionController::apply_gravity),
+					FixedUpdate::delta.pipe(MotionController::set_done),
 				)
 					.chain()
 					.in_set(PhysicsSystems::Resolve),
+			)
+			.add_systems(
+				Update,
+				OverstepFraction::fixed
+					.pipe(MotionController::interpolate_position)
+					.in_set(PhysicsSystems::Interpolate),
 			)
 			// Animations
 			.add_systems(
@@ -186,7 +197,7 @@ where
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers_observer)
 			.add_systems(
-				Update,
+				FixedUpdate,
 				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead)
 					.chain()
 					.in_set(PhysicsSystems::Resolve),
@@ -195,10 +206,10 @@ where
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_observer(GravityEffect::update_blockers_observer)
 			.add_systems(
-				Update,
+				FixedUpdate,
 				(
 					GravityAffected::insert_from::<DefaultAttributes>,
-					Update::delta.pipe(GravityAffected::apply_pull),
+					FixedUpdate::delta.pipe(GravityAffected::apply_pull),
 				)
 					.chain()
 					.in_set(PhysicsSystems::Resolve),
@@ -207,7 +218,7 @@ where
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
 			.add_observer(ForceEffect::update_blockers_observer)
 			.add_systems(
-				Update,
+				FixedUpdate,
 				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems::Resolve),
 			)
 			// General Lifetime relationship
@@ -228,11 +239,16 @@ where
 						SetVelocityForward::system,
 					)
 						.chain(),
+				),
+			)
+			.add_systems(
+				FixedUpdate,
+				(
 					// Collect physical collections
 					(
 						Blockable::apply_beam_blocks.pipe(OnError::log),
 						RootCollisions::<Physical>::clear,
-						Update::delta
+						FixedUpdate::delta
 							.pipe(UpdateRootCollisions::<Physical>::prevent_tunneling)
 							.pipe(OnError::log),
 						UpdateRootCollisions::<Physical>::push_ongoing_collisions,
@@ -248,15 +264,17 @@ where
 					.chain()
 					.in_set(PhysicsSystems::Collisions),
 			)
-			.add_systems(Update, apply_fragile_blocks.after(PhysicsSystems::Resolve));
+			.add_systems(
+				FixedUpdate,
+				apply_fragile_blocks.after(PhysicsSystems::Resolve),
+			);
 	}
 }
 
 fn set_rapier_time_step(time_per_frame: Duration) -> impl Fn(ResMut<TimestepMode>) {
 	move |mut time_step_mode: ResMut<TimestepMode>| {
-		*time_step_mode = TimestepMode::Variable {
-			max_dt: time_per_frame.as_secs_f32(),
-			time_scale: 1.,
+		*time_step_mode = TimestepMode::Fixed {
+			dt: time_per_frame.as_secs_f32(),
 			substeps: 1,
 		}
 	}
@@ -267,6 +285,7 @@ pub enum PhysicsSystems {
 	Prep,
 	Collisions,
 	Resolve,
+	Interpolate,
 }
 
 impl<TDependencies> HandlesRaycast for PhysicsPlugin<TDependencies> {
@@ -281,11 +300,11 @@ impl<TDependencies> SystemSetDefinition for PhysicsPlugin<TDependencies> {
 	type TSystemSet = PhysicsSystems;
 
 	const SYSTEMS: PluginSystemSet<Self::TSystemSet> =
-		PluginSystemSet::from_set(PhysicsSystems::Resolve);
+		PluginSystemSet::from_set(PhysicsSystems::Interpolate);
 }
 
 impl<TDependencies> HandlesMotion for PhysicsPlugin<TDependencies> {
-	type TCharacterMotion = ApplyCharacterMotion;
+	type TCharacterMotion = ApplyMotion;
 }
 
 impl<TDependencies> HandlesPhysicalSkillAgent for PhysicsPlugin<TDependencies> {

@@ -9,23 +9,23 @@ use testing::ApproxEqual;
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
 #[component(immutable)]
 #[savable_component(id = "apply character motion")]
-#[require(IsInMotion)]
-pub struct ApplyCharacterMotion(pub(crate) CharacterMotion);
+#[require(IsInMotion, Transform)]
+pub struct ApplyMotion(pub(crate) CharacterMotion);
 
-impl From<CharacterMotion> for ApplyCharacterMotion {
+impl From<CharacterMotion> for ApplyMotion {
 	fn from(motion: CharacterMotion) -> Self {
 		Self(motion)
 	}
 }
 
-impl View<CharacterMotion> for ApplyCharacterMotion {
+impl View<CharacterMotion> for ApplyMotion {
 	fn view(&self) -> CharacterMotion {
 		self.0
 	}
 }
 
 #[cfg(test)]
-impl ApproxEqual<f32> for ApplyCharacterMotion {
+impl ApproxEqual<f32> for ApplyMotion {
 	fn approx_equal(&self, other: &Self, tolerance: &f32) -> bool {
 		approx_equal(&self.0, &other.0, tolerance)
 	}

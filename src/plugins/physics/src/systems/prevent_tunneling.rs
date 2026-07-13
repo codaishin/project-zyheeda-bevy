@@ -173,7 +173,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::collider::ChildColliderOf,
+		components::collider::ColliderOf,
 		traits::ray_cast::{InvalidIntersections, RayHit},
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
@@ -288,7 +288,7 @@ mod tests {
 			.id();
 		let collider = app
 			.world_mut()
-			.spawn((ChildColliderOf(entity), Physical::Contact))
+			.spawn((ColliderOf(entity), Physical::Contact))
 			.id();
 		app.insert_resource(_GetRayCaster {
 			mock: Some(Mock_RayCaster::new_mock(|mock| {
