@@ -29,7 +29,7 @@ use crate::{
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
-		motion_controller::{MotionControlParameters, MotionControllerOf},
+		motion_controller::{MotionController, MotionControllerOf},
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::Target,
@@ -153,14 +153,13 @@ where
 				WorldCamera::reset_camera.in_set(PhysicsSystems::Prep),
 			)
 			// Character Motion
-			.add_prefab_observer::<MotionControlParameters, ()>()
 			.add_prefab_observer::<MotionControllerOf, ()>()
 			.add_observer(MotionControllerOf::spawn)
 			.add_systems(
 				FixedUpdate,
 				(
-					FixedUpdate::delta.pipe(MotionControllerOf::set_translation),
-					FixedUpdate::delta.pipe(MotionControllerOf::apply_gravity),
+					FixedUpdate::delta.pipe(MotionController::set_translation),
+					FixedUpdate::delta.pipe(MotionController::apply_gravity),
 					FixedUpdate::delta.pipe(ApplyMotion::set_done),
 				)
 					.chain()

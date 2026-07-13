@@ -1,5 +1,4 @@
 use crate::components::{
-	blocker_types::BlockerTypes,
 	character_gravity::CharacterGravity,
 	collider::{
 		AGENTS_GROUP,
@@ -15,35 +14,19 @@ use crate::components::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
-	errors::{ErrorData, Level, Unreachable},
+	errors::{ErrorData, Level},
 	traits::{
-		handles_physics::physical_bodies::{Blocker, Shape},
+		handles_physics::physical_bodies::Shape,
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
-use std::{collections::HashSet, fmt::Display};
+use std::fmt::Display;
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 #[require(Transform, CharacterGravity)]
-pub(crate) struct MotionControlParameters {
+pub(crate) struct MotionCollider {
 	pub(crate) shape: Shape,
-	pub(crate) blockers: HashSet<Blocker>,
-}
-
-impl Prefab<()> for MotionControlParameters {
-	type TError = Unreachable;
-	type TSystemParam = ();
-
-	fn insert_prefab_components(
-		&self,
-		entity: &mut impl PrefabEntityCommands,
-		_: StaticSystemParam<()>,
-	) -> Result<(), Unreachable> {
-		entity.try_insert(BlockerTypes(self.blockers.clone()));
-
-		Ok(())
-	}
 }
 
 #[derive(Component, Debug, PartialEq)]
@@ -62,8 +45,7 @@ pub(crate) struct MotionControllerOf(pub(crate) Entity);
 
 impl Prefab<()> for MotionControllerOf {
 	type TError = MotionControlParametersMissing;
-	type TSystemParam =
-		Query<'static, 'static, (&'static MotionControlParameters, &'static Transform)>;
+	type TSystemParam = Query<'static, 'static, (&'static MotionCollider, &'static Transform)>;
 
 	fn insert_prefab_components(
 		&self,
@@ -135,191 +117,119 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
-	mod motion_control_parameters {
-		use crate::components::blocker_types::BlockerTypes;
+	fn setup() -> App {
+		let mut app = App::new().single_threaded(Update);
 
-		use super::*;
+		app.add_prefab_observer::<MotionControllerOf, ()>();
 
-		fn setup() -> App {
-			let mut app = App::new().single_threaded(Update);
-
-			app.add_prefab_observer::<MotionControlParameters, ()>();
-
-			app
-		}
-
-		#[test]
-		fn insert_blockers() {
-			let mut app = setup();
-
-			let entity = app.world_mut().spawn(MotionControlParameters {
-				shape: Shape::StaticGltfMesh3d,
-				blockers: HashSet::from([Blocker::Force, Blocker::Physical]),
-			});
-
-			assert_eq!(
-				Some(&BlockerTypes(HashSet::from([
-					Blocker::Force,
-					Blocker::Physical
-				]))),
-				entity.get::<BlockerTypes>(),
-			);
-		}
+		app
 	}
 
-	mod motion_controller {
-		use super::*;
+	#[test]
+	fn copy_transform() {
+		let mut app = setup();
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
+			radius: Units::from(42.),
+		});
+		let agent = app
+			.world_mut()
+			.spawn((Transform::from_xyz(1., 2., 3.), MotionCollider { shape }))
+			.id();
 
-		fn setup() -> App {
-			let mut app = App::new().single_threaded(Update);
+		let entity = app.world_mut().spawn(MotionControllerOf(agent));
 
-			app.add_prefab_observer::<MotionControllerOf, ()>();
+		assert_eq!(
+			Some(&Transform::from_xyz(1., 2., 3.)),
+			entity.get::<Transform>(),
+		);
+	}
 
-			app
-		}
+	#[test]
+	fn insert_relation() {
+		let mut app = setup();
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
+			radius: Units::from(42.),
+		});
+		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		#[test]
-		fn copy_transform() {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
-			let agent = app
-				.world_mut()
-				.spawn((
-					Transform::from_xyz(1., 2., 3.),
-					MotionControlParameters {
-						shape,
-						blockers: HashSet::new(),
-					},
-				))
-				.id();
+		let entity = app.world_mut().spawn(MotionControllerOf(agent));
 
-			let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		assert_eq!(Some(&ColliderOf(agent)), entity.get::<ColliderOf>());
+	}
 
-			assert_eq!(
-				Some(&Transform::from_xyz(1., 2., 3.)),
-				entity.get::<Transform>(),
-			);
-		}
+	#[test]
+	fn insert_collider() {
+		let mut app = setup();
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
+			radius: Units::from(42.),
+		});
+		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		#[test]
-		fn insert_relation() {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
-			let agent = app
-				.world_mut()
-				.spawn(MotionControlParameters {
-					shape,
-					blockers: HashSet::new(),
-				})
-				.id();
+		let entity = app.world_mut().spawn(MotionControllerOf(agent));
 
-			let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		assert_eq!(
+			Some(&ColliderShape::from(shape)),
+			entity.get::<ColliderShape>(),
+		);
+	}
 
-			assert_eq!(Some(&ColliderOf(agent)), entity.get::<ColliderOf>());
-		}
+	#[test]
+	fn insert_physical_contact() {
+		let mut app = setup();
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
+			radius: Units::from(42.),
+		});
+		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		#[test]
-		fn insert_collider() {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
-			let agent = app
-				.world_mut()
-				.spawn(MotionControlParameters {
-					shape,
-					blockers: HashSet::new(),
-				})
-				.id();
+		let entity = app.world_mut().spawn(MotionControllerOf(agent));
 
-			let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		assert_eq!(Some(&Physical::Contact), entity.get::<Physical>());
+	}
 
-			assert_eq!(
-				Some(&ColliderShape::from(shape)),
-				entity.get::<ColliderShape>(),
-			);
-		}
+	#[test]
+	fn insert_physics_constraints() {
+		let mut app = setup();
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
+			radius: Units::from(42.),
+		});
+		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		#[test]
-		fn insert_physical_contact() {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
-			let agent = app
-				.world_mut()
-				.spawn(MotionControlParameters {
-					shape,
-					blockers: HashSet::new(),
-				})
-				.id();
+		let entity = app.world_mut().spawn(MotionControllerOf(agent));
 
-			let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		assert_eq!(
+			(
+				Some(&RigidBody::KinematicPositionBased),
+				true,
+				true,
+				Some(&ActiveEvents::COLLISION_EVENTS),
+				Some(&ActiveCollisionTypes::all())
+			),
+			(
+				entity.get::<RigidBody>(),
+				entity.contains::<KinematicCharacterController>(),
+				entity.contains::<CollidingEntities>(),
+				entity.get::<ActiveEvents>(),
+				entity.get::<ActiveCollisionTypes>(),
+			)
+		);
+	}
 
-			assert_eq!(Some(&Physical::Contact), entity.get::<Physical>());
-		}
+	#[test]
+	fn insert_collision_groups() {
+		let mut app = setup();
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
+			radius: Units::from(42.),
+		});
+		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		#[test]
-		fn insert_physics_constraints() {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
-			let agent = app
-				.world_mut()
-				.spawn(MotionControlParameters {
-					shape,
-					blockers: HashSet::new(),
-				})
-				.id();
+		let entity = app.world_mut().spawn(MotionControllerOf(agent));
 
-			let entity = app.world_mut().spawn(MotionControllerOf(agent));
-
-			assert_eq!(
-				(
-					Some(&RigidBody::KinematicPositionBased),
-					true,
-					true,
-					Some(&ActiveEvents::COLLISION_EVENTS),
-					Some(&ActiveCollisionTypes::all())
-				),
-				(
-					entity.get::<RigidBody>(),
-					entity.contains::<KinematicCharacterController>(),
-					entity.contains::<CollidingEntities>(),
-					entity.get::<ActiveEvents>(),
-					entity.get::<ActiveCollisionTypes>(),
-				)
-			);
-		}
-
-		#[test]
-		fn insert_collision_groups() {
-			let mut app = setup();
-			let shape = Shape::Parameters(ShapeParameters::Sphere {
-				radius: Units::from(42.),
-			});
-			let agent = app
-				.world_mut()
-				.spawn(MotionControlParameters {
-					shape,
-					blockers: HashSet::new(),
-				})
-				.id();
-
-			let entity = app.world_mut().spawn(MotionControllerOf(agent));
-
-			assert_eq!(
-				Some(&CollisionGroups {
-					memberships: AGENTS_GROUP | MOUSE_HOVERABLE_GROUP,
-					filters: AGENTS_GROUP | SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP
-				}),
-				entity.get::<CollisionGroups>(),
-			);
-		}
+		assert_eq!(
+			Some(&CollisionGroups {
+				memberships: AGENTS_GROUP | MOUSE_HOVERABLE_GROUP,
+				filters: AGENTS_GROUP | SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP
+			}),
+			entity.get::<CollisionGroups>(),
+		);
 	}
 }

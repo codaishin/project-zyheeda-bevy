@@ -1,7 +1,4 @@
-use crate::components::{
-	character_gravity::CharacterGravity,
-	motion_controller::{MotionController, MotionControllerOf},
-};
+use crate::components::{character_gravity::CharacterGravity, motion_controller::MotionController};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use std::time::Duration;
@@ -9,10 +6,10 @@ use std::time::Duration;
 pub(crate) const GROUNDED_GRAVITY: f32 = 0.1;
 pub(crate) const FALL_GRAVITY: f32 = 1.;
 
-impl MotionControllerOf {
+impl MotionController {
 	pub(crate) fn apply_gravity(
 		delta: In<Duration>,
-		characters: Query<(&mut CharacterGravity, &MotionController)>,
+		characters: Query<(&mut CharacterGravity, &Self)>,
 		mut controllers: Query<(
 			&mut KinematicCharacterController,
 			&KinematicCharacterControllerOutput,
@@ -52,7 +49,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			(move || delta).pipe(MotionControllerOf::apply_gravity),
+			(move || delta).pipe(MotionController::apply_gravity),
 		);
 
 		app

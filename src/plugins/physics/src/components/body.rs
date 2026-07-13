@@ -10,7 +10,7 @@ use crate::components::{
 		TERRAIN_GROUP,
 	},
 	collision_domains::{Interactive, Physical},
-	motion_controller::MotionControlParameters,
+	motion_controller::MotionCollider,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -29,7 +29,7 @@ pub struct Body(pub(crate) BodyConfig);
 
 impl Body {
 	fn agent(shape: Shape, blockers: HashSet<Blocker>) -> impl Bundle {
-		MotionControlParameters { shape, blockers }
+		(MotionCollider { shape }, BlockerTypes(blockers))
 	}
 
 	fn terrain(shape: Shape, blockers: HashSet<Blocker>) -> impl Bundle {
@@ -131,7 +131,35 @@ mod tests {
 			use super::*;
 
 			#[test]
-			fn insert_controlled() {
+			fn insert_motion_collider() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(42.),
+				});
+
+				let entity = app
+					.world_mut()
+					.spawn(Body(BodyConfig {
+						core: Some(Core {
+							shape,
+							physics_type: PhysicsType::Agent(HashSet::from([])),
+						}),
+						..default()
+					}))
+					.id();
+
+				assert_eq!(
+					Some(&MotionCollider {
+						shape: Shape::Parameters(ShapeParameters::Sphere {
+							radius: Units::from(42.),
+						}),
+					}),
+					app.world().entity(entity).get::<MotionCollider>(),
+				);
+			}
+
+			#[test]
+			fn insert_control_blockers() {
 				let mut app = setup();
 				let shape = Shape::Parameters(ShapeParameters::Sphere {
 					radius: Units::from(42.),
@@ -152,13 +180,11 @@ mod tests {
 					.id();
 
 				assert_eq!(
-					Some(&MotionControlParameters {
-						shape: Shape::Parameters(ShapeParameters::Sphere {
-							radius: Units::from(42.),
-						}),
-						blockers: HashSet::from([Blocker::Character, Blocker::Force,]),
-					}),
-					app.world().entity(entity).get::<MotionControlParameters>(),
+					Some(&BlockerTypes(HashSet::from([
+						Blocker::Character,
+						Blocker::Force,
+					]))),
+					app.world().entity(entity).get::<BlockerTypes>(),
 				);
 			}
 		}

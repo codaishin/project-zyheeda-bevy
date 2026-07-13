@@ -1,25 +1,28 @@
 use crate::components::{
 	character_motion::{ApplyMotion, IsInMotion},
 	immobilized::Immobilized,
-	motion_controller::MotionControllerOf,
+	motion_controller::MotionController,
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::traits::handles_physics::CharacterMotion;
 use std::time::Duration;
 
-impl MotionControllerOf {
+impl MotionController {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn set_translation(
 		delta: In<Duration>,
-		mut agents: Query<(&ApplyMotion, &mut Transform), (Without<Immobilized>, With<IsInMotion>)>,
-		controllers: Query<
-			(&Self, &mut KinematicCharacterController, &Transform),
+		agents: Query<
+			(&ApplyMotion, &mut Transform, &Self),
+			(Without<Immobilized>, With<IsInMotion>),
+		>,
+		mut controllers: Query<
+			(&mut KinematicCharacterController, &Transform),
 			Without<ApplyMotion>,
 		>,
 	) {
-		for (MotionControllerOf(entity), mut ctrl, ctrl_transform) in controllers {
-			let Ok((ApplyMotion(motion), mut transform)) = agents.get_mut(*entity) else {
+		for (ApplyMotion(motion), mut transform, ctrl) in agents {
+			let Ok((mut ctrl, ctrl_transform)) = controllers.get_mut(ctrl.get()) else {
 				continue;
 			};
 
@@ -55,7 +58,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			(move || delta).pipe(MotionControllerOf::set_translation),
+			(move || delta).pipe(MotionController::set_translation),
 		);
 
 		app

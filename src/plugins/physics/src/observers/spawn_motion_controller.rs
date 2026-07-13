@@ -1,9 +1,9 @@
-use crate::components::motion_controller::{MotionControlParameters, MotionControllerOf};
+use crate::components::motion_controller::{MotionCollider, MotionControllerOf};
 use bevy::prelude::*;
 use common::zyheeda_commands::ZyheedaCommands;
 
 impl MotionControllerOf {
-	pub(crate) fn spawn(on_add: On<Add, MotionControlParameters>, mut commands: ZyheedaCommands) {
+	pub(crate) fn spawn(on_add: On<Add, MotionCollider>, mut commands: ZyheedaCommands) {
 		commands.spawn(MotionControllerOf(on_add.entity));
 	}
 }
@@ -15,7 +15,6 @@ mod tests {
 		tools::Units,
 		traits::handles_physics::physical_bodies::{Shape, ShapeParameters},
 	};
-	use std::collections::HashSet;
 	use testing::{SingleThreadedApp, assert_count};
 
 	fn setup() -> App {
@@ -26,12 +25,11 @@ mod tests {
 		app
 	}
 
-	fn params() -> MotionControlParameters {
-		MotionControlParameters {
+	fn params() -> MotionCollider {
+		MotionCollider {
 			shape: Shape::Parameters(ShapeParameters::Sphere {
 				radius: Units::from(11.),
 			}),
-			blockers: HashSet::new(),
 		}
 	}
 
