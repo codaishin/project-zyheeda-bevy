@@ -10,7 +10,7 @@ use crate::components::{
 		TERRAIN_GROUP,
 	},
 	collision_domains::{Interactive, Physical},
-	motion_controller::MotionCollider,
+	motion_controller::{MotionCollider, OldTranslation},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -28,8 +28,12 @@ use std::collections::HashSet;
 pub struct Body(pub(crate) BodyConfig);
 
 impl Body {
-	fn agent(shape: Shape, blockers: HashSet<Blocker>) -> impl Bundle {
-		(MotionCollider { shape }, BlockerTypes(blockers))
+	fn agent(shape: Shape, blockers: HashSet<Blocker>, old_translation: Vec3) -> impl Bundle {
+		(
+			MotionCollider { shape },
+			BlockerTypes(blockers),
+			OldTranslation(old_translation),
+		)
 	}
 
 	fn terrain(shape: Shape, blockers: HashSet<Blocker>) -> impl Bundle {
@@ -69,19 +73,23 @@ impl From<BodyConfig> for Body {
 
 impl Prefab<()> for Body {
 	type TError = Unreachable;
-	type TSystemParam = ();
+	type TSystemParam = Query<'static, 'static, &'static Transform>;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		_: StaticSystemParam<()>,
+		translations: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError> {
 		let Self(BodyConfig { core, sub_frames }) = self;
 
 		if let Some(core) = core {
 			match core.physics_type {
 				PhysicsType::Agent(ref blockers) => {
-					entity.try_insert(Self::agent(core.shape, blockers.clone()));
+					let old_translation = translations
+						.get(entity.entity_id())
+						.map(|t| t.translation)
+						.unwrap_or_default();
+					entity.try_insert(Self::agent(core.shape, blockers.clone(), old_translation));
 				}
 				PhysicsType::Terrain(ref blockers) => {
 					entity.try_insert(Self::terrain(core.shape, blockers.clone()));
@@ -128,6 +136,8 @@ mod tests {
 		use common::traits::handles_physics::physical_bodies::Core;
 
 		mod agent {
+			use crate::components::motion_controller::OldTranslation;
+
 			use super::*;
 
 			#[test]
@@ -185,6 +195,36 @@ mod tests {
 						Blocker::Force,
 					]))),
 					app.world().entity(entity).get::<BlockerTypes>(),
+				);
+			}
+
+			#[test]
+			fn insert_old_translation() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(42.),
+				});
+
+				let entity = app
+					.world_mut()
+					.spawn((
+						Transform::from_xyz(1., 2., 3.),
+						Body(BodyConfig {
+							core: Some(Core {
+								shape,
+								physics_type: PhysicsType::Agent(HashSet::from([
+									Blocker::Character,
+									Blocker::Force,
+								])),
+							}),
+							..default()
+						}),
+					))
+					.id();
+
+				assert_eq!(
+					Some(&OldTranslation(Vec3::new(1., 2., 3.))),
+					app.world().entity(entity).get::<OldTranslation>(),
 				);
 			}
 		}

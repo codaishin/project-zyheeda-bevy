@@ -29,8 +29,13 @@ pub(crate) struct MotionCollider {
 	pub(crate) shape: Shape,
 }
 
+#[derive(Component, Debug, PartialEq, Default)]
+#[require(Transform)]
+pub(crate) struct OldTranslation(pub(crate) Vec3);
+
 #[derive(Component, Debug, PartialEq)]
 #[relationship_target(relationship = MotionControllerOf, linked_spawn)]
+#[require(OldTranslation)]
 pub(crate) struct MotionController(Entity);
 
 impl MotionController {

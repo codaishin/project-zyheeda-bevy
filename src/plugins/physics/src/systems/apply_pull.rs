@@ -2,7 +2,7 @@ use crate::components::{
 	affected::gravity_affected::GravityPull,
 	collider::AGENTS_GROUP,
 	immobilized::Immobilized,
-	motion_controller::MotionController,
+	motion_controller::{MotionController, OldTranslation},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -24,12 +24,12 @@ pub(crate) trait ApplyPull:
 			(&mut KinematicCharacterController, &Transform),
 			Without<MotionController>,
 		>,
-		agents: Query<(Entity, &mut Transform, &mut Self, &MotionController)>,
+		controlled: Query<(Entity, &mut OldTranslation, &mut Self, &MotionController)>,
 		transforms: Query<&GlobalTransform>,
 	) {
 		let delta_secs = delta.as_secs_f32();
 
-		for (entity, mut transform, mut gravity_affected, ctrl) in agents {
+		for (entity, mut old_translation, mut gravity_affected, ctrl) in controlled {
 			let Ok((mut ctrl, ctrl_transform)) = controllers.get_mut(ctrl.get()) else {
 				continue;
 			};
@@ -58,7 +58,7 @@ pub(crate) trait ApplyPull:
 				.filter_map(|(pull, center)| get_pull_vector(delta_secs, position, pull, center))
 				.sum::<Vec3>();
 
-			transform.translation = ctrl_transform.translation;
+			*old_translation = OldTranslation(ctrl_transform.translation);
 			ctrl.translation = Some(pull_sum);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(Immobilized);
@@ -135,7 +135,7 @@ mod tests {
 		tools::UnitsPerSecond,
 		traits::register_persistent_entities::RegisterPersistentEntities,
 	};
-	use std::{f32::consts::PI, vec::Drain};
+	use std::vec::Drain;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
@@ -171,7 +171,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_motion_controller_translation() -> Result<(), RunSystemError> {
+	fn set_motion_controller_old_translation() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let towards = PersistentEntity::default();
 		app.world_mut().spawn((
@@ -180,17 +180,10 @@ mod tests {
 		));
 		let agent = app
 			.world_mut()
-			.spawn((
-				Transform {
-					translation: Vec3::ZERO,
-					rotation: Quat::from_rotation_y(-PI),
-					scale: Vec3::splat(0.1),
-				},
-				_GravityTarget::from([GravityPull {
-					strength: UnitsPerSecond::from(2.),
-					towards,
-				}]),
-			))
+			.spawn((_GravityTarget::from([GravityPull {
+				strength: UnitsPerSecond::from(2.),
+				towards,
+			}]),))
 			.id();
 		app.world_mut().spawn((
 			MotionControllerOf(agent),
@@ -202,12 +195,8 @@ mod tests {
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_millis(100))?;
 
 		assert_eq!(
-			Some(&Transform {
-				translation: Vec3::new(1., 2., 3.),
-				rotation: Quat::from_rotation_y(-PI),
-				scale: Vec3::splat(0.1),
-			}),
-			app.world().entity(agent).get::<Transform>()
+			Some(&OldTranslation(Vec3::new(1., 2., 3.))),
+			app.world().entity(agent).get::<OldTranslation>()
 		);
 		Ok(())
 	}

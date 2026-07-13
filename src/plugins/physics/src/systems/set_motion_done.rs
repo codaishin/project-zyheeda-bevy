@@ -1,4 +1,7 @@
-use crate::components::character_motion::{ApplyMotion, IsInMotion};
+use crate::components::{
+	character_motion::{ApplyMotion, IsInMotion},
+	motion_controller::{MotionController, OldTranslation},
+};
 use bevy::prelude::*;
 use common::{
 	traits::{accessors::get::TryApplyOn, handles_physics::CharacterMotion},
@@ -6,19 +9,30 @@ use common::{
 };
 use std::time::Duration;
 
-impl ApplyMotion {
+impl MotionController {
 	pub(crate) fn set_done(
 		In(delta): In<Duration>,
 		mut commands: ZyheedaCommands,
-		motions: Query<(Entity, &Self, &Transform), With<IsInMotion>>,
+		controlled: Query<(Entity, &ApplyMotion, &Self, &mut OldTranslation), With<IsInMotion>>,
+		mut transforms: Query<&mut Transform>,
 	) {
-		for (entity, apply, transform) in motions {
-			if !is_done(&apply.0, transform, delta) {
+		for (entity, apply, ctrl, mut old_translation) in controlled {
+			let Ok(ctrl_transform) = transforms.get(ctrl.get()) else {
+				continue;
+			};
+
+			if !is_done(&apply.0, ctrl_transform, delta) {
 				continue;
 			}
 
+			let ctrl_translation = ctrl_transform.translation;
+			*old_translation = OldTranslation(ctrl_translation);
+			if let Ok(mut transform) = transforms.get_mut(entity) {
+				transform.translation = ctrl_translation;
+			}
+
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(Self(CharacterMotion::Done));
+				e.try_insert(ApplyMotion(CharacterMotion::Done));
 				e.try_remove::<IsInMotion>();
 			});
 		}
@@ -51,9 +65,10 @@ fn is_done(motion: &CharacterMotion, transform: &Transform, delta: Duration) -> 
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
-	use crate::components::character_motion::IsInMotion;
+	use std::f32::consts::PI;
 
 	use super::*;
+	use crate::components::{character_motion::IsInMotion, motion_controller::MotionControllerOf};
 	use common::{
 		tools::{UnitsPerSecond, speed::Speed},
 		traits::handles_physics::CharacterMotion,
@@ -66,7 +81,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				(move || delta).pipe(ApplyMotion::set_done),
+				(move || delta).pipe(MotionController::set_done),
 				IsChanged::<ApplyMotion>::detect,
 			)
 				.chain(),
@@ -78,21 +93,20 @@ mod tests {
 	#[test]
 	fn remain_done_when_done() {
 		let mut app = setup(Duration::default());
-		let entity = app
+		let agent = app
 			.world_mut()
-			.spawn((
-				Transform::default(),
-				ApplyMotion::from(CharacterMotion::Done),
-			))
+			.spawn(ApplyMotion::from(CharacterMotion::Done))
 			.id();
+		app.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::default()));
 
 		app.update();
 
 		assert_eq!(
 			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyMotion>(),
-				app.world().entity(entity).get::<IsInMotion>(),
+				app.world().entity(agent).get::<ApplyMotion>(),
+				app.world().entity(agent).get::<IsInMotion>(),
 			)
 		);
 	}
@@ -100,24 +114,41 @@ mod tests {
 	#[test]
 	fn set_done_when_translation_matches_target() {
 		let mut app = setup(Duration::default());
-		let entity = app
+		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(1., 2., 3.),
+				Transform {
+					translation: Vec3::ZERO,
+					scale: Vec3::splat(42.),
+					rotation: Quat::from_rotation_y(PI),
+				},
 				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1., 2., 3.),
 				}),
 			))
 			.id();
+		app.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
 
 		app.update();
 
 		assert_eq!(
-			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyMotion>(),
-				app.world().entity(entity).get::<IsInMotion>(),
+				Some(&ApplyMotion(CharacterMotion::Done)),
+				None,
+				Some(&Transform {
+					translation: Vec3::new(1., 2., 3.),
+					scale: Vec3::splat(42.),
+					rotation: Quat::from_rotation_y(PI),
+				}),
+				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
+			),
+			(
+				app.world().entity(agent).get::<ApplyMotion>(),
+				app.world().entity(agent).get::<IsInMotion>(),
+				app.world().entity(agent).get::<Transform>(),
+				app.world().entity(agent).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -125,30 +156,36 @@ mod tests {
 	#[test]
 	fn do_not_set_done_when_translation_does_not_match_target() {
 		let mut app = setup(Duration::default());
-		let entity = app
+		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(1., 2., 3.),
+				Transform::default(),
 				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(10., 2., 3.),
 				}),
 			))
 			.id();
+		app.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
 
 		app.update();
 
 		assert_eq!(
 			(
-				Some(&ApplyMotion::from(CharacterMotion::ToTarget {
+				Some(&ApplyMotion(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(10., 2., 3.),
 				})),
-				Some(&IsInMotion)
+				Some(&IsInMotion),
+				Some(&Transform::default()),
+				Some(&OldTranslation::default()),
 			),
 			(
-				app.world().entity(entity).get::<ApplyMotion>(),
-				app.world().entity(entity).get::<IsInMotion>()
+				app.world().entity(agent).get::<ApplyMotion>(),
+				app.world().entity(agent).get::<IsInMotion>(),
+				app.world().entity(agent).get::<Transform>(),
+				app.world().entity(agent).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -156,24 +193,41 @@ mod tests {
 	#[test]
 	fn set_done_when_one_delta_away_from_target() {
 		let mut app = setup(Duration::from_millis(100));
-		let entity = app
+		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(1., 2., 3.),
+				Transform {
+					translation: Vec3::ZERO,
+					scale: Vec3::splat(42.),
+					rotation: Quat::from_rotation_y(PI),
+				},
 				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1.099, 2., 3.),
 				}),
 			))
 			.id();
+		app.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
 
 		app.update();
 
 		assert_eq!(
-			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyMotion>(),
-				app.world().entity(entity).get::<IsInMotion>()
+				Some(&ApplyMotion(CharacterMotion::Done)),
+				None,
+				Some(&Transform {
+					translation: Vec3::new(1., 2., 3.),
+					scale: Vec3::splat(42.),
+					rotation: Quat::from_rotation_y(PI),
+				}),
+				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
+			),
+			(
+				app.world().entity(agent).get::<ApplyMotion>(),
+				app.world().entity(agent).get::<IsInMotion>(),
+				app.world().entity(agent).get::<Transform>(),
+				app.world().entity(agent).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -181,24 +235,41 @@ mod tests {
 	#[test]
 	fn set_done_when_one_delta_away_from_target_accounting_for_speed() {
 		let mut app = setup(Duration::from_millis(100));
-		let entity = app
+		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(1., 2., 3.),
+				Transform {
+					translation: Vec3::ZERO,
+					scale: Vec3::splat(42.),
+					rotation: Quat::from_rotation_y(PI),
+				},
 				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(2.)),
 					target: Vec3::new(1.199, 2., 3.),
 				}),
 			))
 			.id();
+		app.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
 
 		app.update();
 
 		assert_eq!(
-			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyMotion>(),
-				app.world().entity(entity).get::<IsInMotion>(),
+				Some(&ApplyMotion(CharacterMotion::Done)),
+				None,
+				Some(&Transform {
+					translation: Vec3::new(1., 2., 3.),
+					scale: Vec3::splat(42.),
+					rotation: Quat::from_rotation_y(PI),
+				}),
+				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
+			),
+			(
+				app.world().entity(agent).get::<ApplyMotion>(),
+				app.world().entity(agent).get::<IsInMotion>(),
+				app.world().entity(agent).get::<Transform>(),
+				app.world().entity(agent).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -206,24 +277,41 @@ mod tests {
 	#[test]
 	fn set_done_when_one_delta_away_from_target_on_different_height() {
 		let mut app = setup(Duration::from_millis(100));
-		let entity = app
+		let agent = app
 			.world_mut()
 			.spawn((
-				Transform::from_xyz(1., 2., 3.),
+				Transform {
+					translation: Vec3::ZERO,
+					scale: Vec3::splat(42.),
+					rotation: Quat::from_rotation_y(PI),
+				},
 				ApplyMotion::from(CharacterMotion::ToTarget {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE, 3.),
 				}),
 			))
 			.id();
+		app.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
 
 		app.update();
 
 		assert_eq!(
-			(Some(&ApplyMotion(CharacterMotion::Done)), None),
 			(
-				app.world().entity(entity).get::<ApplyMotion>(),
-				app.world().entity(entity).get::<IsInMotion>()
+				Some(&ApplyMotion(CharacterMotion::Done)),
+				None,
+				Some(&Transform {
+					translation: Vec3::new(1., 2., 3.),
+					scale: Vec3::splat(42.),
+					rotation: Quat::from_rotation_y(PI),
+				}),
+				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
+			),
+			(
+				app.world().entity(agent).get::<ApplyMotion>(),
+				app.world().entity(agent).get::<IsInMotion>(),
+				app.world().entity(agent).get::<Transform>(),
+				app.world().entity(agent).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -231,16 +319,15 @@ mod tests {
 	#[test]
 	fn do_not_set_done_when_one_delta_away_from_target_on_large_different_height() {
 		let mut app = setup(Duration::from_millis(100));
-		let entity = app
+		let agent = app
 			.world_mut()
-			.spawn((
-				Transform::from_xyz(1., 2., 3.),
-				ApplyMotion::from(CharacterMotion::ToTarget {
-					speed: Speed(UnitsPerSecond::from(1.)),
-					target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE + 0.1, 3.),
-				}),
-			))
+			.spawn(ApplyMotion::from(CharacterMotion::ToTarget {
+				speed: Speed(UnitsPerSecond::from(1.)),
+				target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE + 0.1, 3.),
+			}))
 			.id();
+		app.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
 
 		app.update();
 
@@ -250,11 +337,15 @@ mod tests {
 					speed: Speed(UnitsPerSecond::from(1.)),
 					target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE + 0.1, 3.),
 				})),
-				Some(&IsInMotion)
+				Some(&IsInMotion),
+				Some(&Transform::default()),
+				Some(&OldTranslation::default()),
 			),
 			(
-				app.world().entity(entity).get::<ApplyMotion>(),
-				app.world().entity(entity).get::<IsInMotion>()
+				app.world().entity(agent).get::<ApplyMotion>(),
+				app.world().entity(agent).get::<IsInMotion>(),
+				app.world().entity(agent).get::<Transform>(),
+				app.world().entity(agent).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -262,47 +353,45 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let mut app = setup(Duration::from_millis(100));
-		let entity = app
+		let agent = app
 			.world_mut()
-			.spawn((
-				Transform::default(),
-				ApplyMotion::from(CharacterMotion::ToTarget {
-					speed: Speed(UnitsPerSecond::from(1.)),
-					target: Vec3::ZERO,
-				}),
-			))
+			.spawn(ApplyMotion::from(CharacterMotion::ToTarget {
+				speed: Speed(UnitsPerSecond::from(1.)),
+				target: Vec3::ZERO,
+			}))
 			.id();
+		app.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::default()));
 
 		app.update();
 		app.update();
 
 		assert_eq!(
 			Some(&IsChanged::FALSE),
-			app.world().entity(entity).get::<IsChanged<ApplyMotion>>(),
+			app.world().entity(agent).get::<IsChanged<ApplyMotion>>(),
 		);
 	}
 
 	#[test]
 	fn act_again_when_is_in_motion_present() {
 		let mut app = setup(Duration::from_millis(100));
-		let entity = app
+		let agent = app
 			.world_mut()
-			.spawn((
-				Transform::default(),
-				ApplyMotion::from(CharacterMotion::ToTarget {
-					speed: Speed(UnitsPerSecond::from(1.)),
-					target: Vec3::ZERO,
-				}),
-			))
+			.spawn(ApplyMotion::from(CharacterMotion::ToTarget {
+				speed: Speed(UnitsPerSecond::from(1.)),
+				target: Vec3::ZERO,
+			}))
 			.id();
+		app.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::default()));
 
 		app.update();
-		app.world_mut().entity_mut(entity).insert(IsInMotion);
+		app.world_mut().entity_mut(agent).insert(IsInMotion);
 		app.update();
 
 		assert_eq!(
 			Some(&IsChanged::TRUE),
-			app.world().entity(entity).get::<IsChanged<ApplyMotion>>(),
+			app.world().entity(agent).get::<IsChanged<ApplyMotion>>(),
 		);
 	}
 }

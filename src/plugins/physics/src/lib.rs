@@ -160,7 +160,7 @@ where
 				(
 					FixedUpdate::delta.pipe(MotionController::set_translation),
 					FixedUpdate::delta.pipe(MotionController::apply_gravity),
-					FixedUpdate::delta.pipe(ApplyMotion::set_done),
+					FixedUpdate::delta.pipe(MotionController::set_done),
 				)
 					.chain()
 					.in_set(PhysicsSystems::Resolve),
@@ -168,7 +168,7 @@ where
 			.add_systems(
 				Update,
 				OverstepFraction::fixed
-					.pipe(MotionControllerOf::interpolate_position)
+					.pipe(MotionController::interpolate_position)
 					.in_set(PhysicsSystems::Interpolate),
 			)
 			// Animations

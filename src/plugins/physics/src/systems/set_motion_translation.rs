@@ -1,7 +1,7 @@
 use crate::components::{
 	character_motion::{ApplyMotion, IsInMotion},
 	immobilized::Immobilized,
-	motion_controller::MotionController,
+	motion_controller::{MotionController, OldTranslation},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
@@ -12,16 +12,13 @@ impl MotionController {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn set_translation(
 		delta: In<Duration>,
-		agents: Query<
-			(&ApplyMotion, &mut Transform, &Self),
+		controlled: Query<
+			(&ApplyMotion, &mut OldTranslation, &Self),
 			(Without<Immobilized>, With<IsInMotion>),
 		>,
-		mut controllers: Query<
-			(&mut KinematicCharacterController, &Transform),
-			Without<ApplyMotion>,
-		>,
+		mut controllers: Query<(&mut KinematicCharacterController, &Transform)>,
 	) {
-		for (ApplyMotion(motion), mut transform, ctrl) in agents {
+		for (ApplyMotion(motion), mut old_transform, ctrl) in controlled {
 			let Ok((mut ctrl, ctrl_transform)) = controllers.get_mut(ctrl.get()) else {
 				continue;
 			};
@@ -39,7 +36,7 @@ impl MotionController {
 				CharacterMotion::Done => continue,
 			};
 
-			transform.translation = ctrl_transform.translation;
+			*old_transform = OldTranslation(ctrl_transform.translation);
 			ctrl.translation = Some(target_translation);
 		}
 	}
@@ -50,7 +47,6 @@ mod tests {
 	use super::*;
 	use crate::components::motion_controller::MotionControllerOf;
 	use common::tools::{UnitsPerSecond, speed::Speed};
-	use std::f32::consts::PI;
 	use testing::SingleThreadedApp;
 
 	fn setup(delta: Duration) -> App {
@@ -68,7 +64,7 @@ mod tests {
 		use super::*;
 
 		#[test]
-		fn set_agent_translation() {
+		fn set_agent_old_translation() {
 			let delta = Duration::from_millis(100);
 			let mut app = setup(delta);
 			let agent = app
@@ -87,44 +83,8 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&Transform::from_xyz(1., 2., 3.)),
-				app.world().entity(agent).get::<Transform>(),
-			);
-		}
-
-		#[test]
-		fn set_only_agent_translation() {
-			let delta = Duration::from_millis(100);
-			let mut app = setup(delta);
-			let agent = app
-				.world_mut()
-				.spawn((
-					Transform {
-						translation: Vec3::ZERO,
-						rotation: Quat::from_rotation_y(PI),
-						scale: Vec3::splat(10.),
-					},
-					ApplyMotion::from(CharacterMotion::ToTarget {
-						speed: Speed(UnitsPerSecond::from(1.)),
-						target: Vec3::new(3., -1., 11.),
-					}),
-				))
-				.id();
-			app.world_mut().spawn((
-				MotionControllerOf(agent),
-				Transform::from_xyz(1., 2., 3.),
-				KinematicCharacterController::default(),
-			));
-
-			app.update();
-
-			assert_eq!(
-				Some(&Transform {
-					translation: Vec3::new(1., 2., 3.),
-					rotation: Quat::from_rotation_y(PI),
-					scale: Vec3::splat(10.),
-				}),
-				app.world().entity(agent).get::<Transform>(),
+				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
+				app.world().entity(agent).get::<OldTranslation>(),
 			);
 		}
 
@@ -195,7 +155,7 @@ mod tests {
 		use super::*;
 
 		#[test]
-		fn set_agent_translation() {
+		fn set_agent_old_translation() {
 			let delta = Duration::from_millis(100);
 			let mut app = setup(delta);
 			let agent = app
@@ -214,44 +174,8 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(&Transform::from_xyz(1., 2., 3.)),
-				app.world().entity(agent).get::<Transform>(),
-			);
-		}
-
-		#[test]
-		fn set_only_agent_translation() {
-			let delta = Duration::from_millis(100);
-			let mut app = setup(delta);
-			let agent = app
-				.world_mut()
-				.spawn((
-					Transform {
-						translation: Vec3::ZERO,
-						rotation: Quat::from_rotation_y(PI),
-						scale: Vec3::splat(10.),
-					},
-					ApplyMotion::from(CharacterMotion::Direction {
-						speed: Speed(UnitsPerSecond::from(1.)),
-						direction: Dir3::NEG_Y,
-					}),
-				))
-				.id();
-			app.world_mut().spawn((
-				MotionControllerOf(agent),
-				Transform::from_xyz(1., 2., 3.),
-				KinematicCharacterController::default(),
-			));
-
-			app.update();
-
-			assert_eq!(
-				Some(&Transform {
-					translation: Vec3::new(1., 2., 3.),
-					rotation: Quat::from_rotation_y(PI),
-					scale: Vec3::splat(10.),
-				}),
-				app.world().entity(agent).get::<Transform>(),
+				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
+				app.world().entity(agent).get::<OldTranslation>(),
 			);
 		}
 
