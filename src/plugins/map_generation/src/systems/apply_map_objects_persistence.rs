@@ -13,7 +13,7 @@ use common::{
 };
 
 impl Map {
-	pub(crate) fn apply_map_persistence(
+	pub(crate) fn apply_map_objects_persistence(
 		mut commands: ZyheedaCommands,
 		maps: Query<(&mut Map, &MapObjects, &PersistentEntity)>,
 		spawned: Query<&SpawnedFrom, (With<PersistentEntity>, Added<SpawnedFrom>)>,
@@ -54,7 +54,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			(Map::apply_map_persistence, IsChanged::<Map>::detect).chain(),
+			(Map::apply_map_objects_persistence, IsChanged::<Map>::detect).chain(),
 		);
 
 		app

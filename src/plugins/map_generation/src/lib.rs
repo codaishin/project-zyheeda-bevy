@@ -92,7 +92,7 @@ where
 		TSavegame::register_savable_component::<GridAgent>(app);
 		TSavegame::register_savable_component::<Level<0>>(app);
 
-		TSavegame::on_before_save(app, Map::apply_map_persistence);
+		TSavegame::on_before_save(app, Map::apply_map_objects_persistence);
 
 		#[cfg(debug_assertions)]
 		crate::mesh_grid_graph::debug::draw(app);
@@ -101,6 +101,7 @@ where
 			.init_resource::<PrefabRegister<InteractiveType>>()
 			.add_systems(OnEnter(GameState::NewGame), Level::<0>::spawn)
 			.add_prefab_observer::<MeshCollider, TPhysics::TConfigMut>()
+			.add_observer(Map::apply_despawned_map_objects_persistence)
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
 			.add_observer(MeshCollider::identify_by_prefix(Self::MESH_COLLIDER_PREFIX))
 			.add_observer(Spawner::<AgentType>::identify(Self::AGENT_SPAWNERS))
