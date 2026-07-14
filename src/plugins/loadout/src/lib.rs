@@ -30,7 +30,6 @@ use common::{
 	states::game_state::{GameState, LoadingGame},
 	traits::{
 		after_plugin::AfterPlugin,
-		handles_animations::HandlesAnimations,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
@@ -63,23 +62,16 @@ use systems::{
 
 pub struct LoadoutPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement>
-	LoadoutPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
+impl<TSaveGame, TPhysics, TLoading, TMovement>
+	LoadoutPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAnimations: ThreadSafe + HandlesAnimations,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn from_plugins(
-		_: &TSaveGame,
-		_: &TAnimations,
-		_: &TPhysics,
-		_: &TLoading,
-		_: &TMovement,
-	) -> Self {
+	pub fn from_plugins(_: &TSaveGame, _: &TPhysics, _: &TLoading, _: &TMovement) -> Self {
 		Self(PhantomData)
 	}
 
@@ -133,12 +125,11 @@ where
 	}
 }
 
-impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement> Plugin
-	for LoadoutPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
+impl<TSaveGame, TPhysics, TLoading, TMovement> Plugin
+	for LoadoutPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
-	TAnimations: ThreadSafe + HandlesAnimations,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
