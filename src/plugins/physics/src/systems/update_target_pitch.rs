@@ -1,6 +1,6 @@
 use crate::components::{
 	offset::{AimOffset, CenterOffset, ComputeOffsetTranslation},
-	target::Target,
+	target::{OldTargetPitch, Target},
 };
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
@@ -8,7 +8,7 @@ use bevy::{
 };
 use common::{
 	traits::{
-		accessors::get::{Get, TryGetContextMut},
+		accessors::get::{Get, TryApplyOn, TryGetContextMut},
 		handles_animations::{Animations, DirForwardPitch, ForwardPitch, GetForwardPitchMut},
 		handles_physics::{MouseHover, MouseHoversOver, Raycast},
 		handles_skill_physics::{Cursor, SkillTarget},
@@ -18,22 +18,25 @@ use common::{
 use std::f32::consts::FRAC_PI_2;
 
 impl Target {
+	#[allow(clippy::type_complexity)]
 	pub(crate) fn update_pitch<TRayCast, TAnimations>(
+		mut commands: ZyheedaCommands,
 		mut animations: StaticSystemParam<TAnimations>,
 		mut ray_caster: StaticSystemParam<TRayCast>,
-		targets: Query<(Entity, &Self, &GlobalTransform, Option<&AimOffset>)>,
 		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
-		commands: ZyheedaCommands,
+		targets: Query<(
+			Entity,
+			&Self,
+			&GlobalTransform,
+			Option<&AimOffset>,
+			Option<&OldTargetPitch>,
+		)>,
 	) where
 		for<'w, 's> TRayCast: SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 		for<'c> TAnimations:
 			SystemParam + TryGetContextMut<Animations, TContext<'c>: GetForwardPitchMut>,
 	{
-		for (entity, target, transform, offset) in targets {
-			let key = Animations { entity };
-			let Some(mut ctx) = TAnimations::try_get_context_mut(&mut animations, key) else {
-				continue;
-			};
+		for (entity, target, transform, offset, old_pitch) in targets {
 			let pitch = target.get_pitch(
 				entity,
 				transform,
@@ -43,7 +46,19 @@ impl Target {
 				&mut ray_caster,
 			);
 
+			if matches!(old_pitch, Some(old_pitch) if pitch == **old_pitch) {
+				continue;
+			}
+
+			let key = Animations { entity };
+			let Some(mut ctx) = TAnimations::try_get_context_mut(&mut animations, key) else {
+				continue;
+			};
+
 			*ctx.get_forward_pitch_mut() = pitch;
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(OldTargetPitch(pitch));
+			});
 		}
 	}
 
@@ -97,9 +112,11 @@ fn get_pitch(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
+	use crate::components::target::OldTargetPitch;
 	use common::{
 		CommonPlugin,
 		components::persistent_entity::PersistentEntity,
+		forward_pitch,
 		traits::{
 			handles_animations::{ForwardPitch, GetForwardPitch},
 			handles_skill_physics::{Cursor, SkillTarget},
@@ -588,5 +605,80 @@ mod tests {
 		}));
 
 		app.update();
+	}
+
+	#[test_case(0., None; "0 degrees")]
+	#[test_case(45., ForwardPitch::try_from(0.5).ok().map(DirForwardPitch::Up); "45 degrees up")]
+	#[test_case(-45., ForwardPitch::try_from(0.5).ok().map(DirForwardPitch::Down); "45 degrees down")]
+	#[test_case(90., DirForwardPitch::Up(ForwardPitch::MAX); "90 degrees up")]
+	#[test_case(-90., DirForwardPitch::Down(ForwardPitch::MAX); "90 degrees down")]
+	fn set_old_pitch(angle: f32, forward_pitch: impl Into<Option<DirForwardPitch>>) {
+		let mut app = setup();
+		let translation = Vec3::new(10., 2., 0.);
+		let offset = Quat::from_rotation_x(angle.to_radians()).mul_vec3(Vec3::new(0., 0., -30.));
+		let target_entity = PersistentEntity::default();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Target(Some(SkillTarget::Entity(target_entity))),
+				GlobalTransform::from_translation(translation),
+				_Animations {
+					forward_pitch: None,
+				},
+			))
+			.id();
+
+		app.world_mut().spawn((
+			target_entity,
+			GlobalTransform::from_translation(translation + offset),
+		));
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(&OldTargetPitch(forward_pitch.into())),
+			app.world().entity(entity).get::<OldTargetPitch>(),
+			1e-5,
+		);
+	}
+
+	#[test_case(0., None; "0 degrees")]
+	#[test_case(90., DirForwardPitch::Up(ForwardPitch::MAX); "90 degrees up")]
+	#[test_case(-90., DirForwardPitch::Down(ForwardPitch::MAX); "90 degrees down")]
+	fn do_nothing_if_old_pitch_is_current_pitch(
+		angle: f32,
+		forward_pitch: impl Into<Option<DirForwardPitch>>,
+	) {
+		let mut app = setup();
+		let forward_pitch = forward_pitch.into();
+		let translation = Vec3::new(10., 2., 0.);
+		let offset = Quat::from_rotation_x(angle.to_radians()).mul_vec3(Vec3::new(0., 0., -30.));
+		let target_entity = PersistentEntity::default();
+		let entity = app
+			.world_mut()
+			.spawn((
+				OldTargetPitch(forward_pitch),
+				Target(Some(SkillTarget::Entity(target_entity))),
+				GlobalTransform::from_translation(translation),
+				_Animations {
+					forward_pitch: Some(DirForwardPitch::Down(forward_pitch!(0.42))),
+				},
+			))
+			.id();
+
+		app.world_mut().spawn((
+			target_entity,
+			GlobalTransform::from_translation(translation + offset),
+		));
+
+		app.update();
+
+		assert_eq_approx!(
+			Some(&_Animations {
+				forward_pitch: Some(DirForwardPitch::Down(forward_pitch!(0.42))),
+			}),
+			app.world().entity(entity).get::<_Animations>(),
+			1e-5,
+		);
 	}
 }
