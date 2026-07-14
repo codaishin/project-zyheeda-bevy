@@ -39,7 +39,7 @@ where
 				&AnimationLookup,
 				&AnimationGraphHandle,
 			),
-			Changed<AnimationDispatch>,
+			Or<(Changed<AnimationDispatch>, Changed<AnimationPlayers>)>,
 		>,
 		graphs: ResMut<Assets<AnimationGraph>>,
 	) where
@@ -61,7 +61,7 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TClips>(
 			&AnimationLookup<TClips>,
 			&TGraph::TComponent,
 		),
-		Changed<TDispatch>,
+		Or<(Changed<TDispatch>, Changed<AnimationPlayers>)>,
 	>,
 	mut graphs: ResMut<Assets<TGraph>>,
 ) where
@@ -881,6 +881,57 @@ mod tests {
 		app.world_mut()
 			.entity_mut(agent)
 			.get_mut::<_AnimationDispatch>()
+			.unwrap()
+			.deref_mut();
+		app.update();
+
+		fn assert_repeat_twice(mock: &mut Mock_AnimationPlayer) {
+			mock.expect_is_playing().return_const(false);
+			mock.expect_update_animation()
+				.with(eq(AnimationNodeIndex::new(1)), eq(SetTo::Repeat))
+				.times(2)
+				.return_const(());
+		}
+	}
+
+	#[test]
+	fn play_animation_again_after_players_mutably_dereferenced() {
+		let handle = new_handle();
+		let lookup = AnimationLookup {
+			animations: HashMap::from([(
+				AnimationKey::Walk,
+				Animation {
+					clips: _Animations::from_indices([1]),
+					play_mode: PlayMode::Repeat,
+					..default()
+				},
+			)]),
+			..default()
+		};
+		let mut app = setup!(&lookup, &handle);
+		let agent = app
+			.world_mut()
+			.spawn((
+				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
+					mock.expect_youngest_to_oldest_active_animations()
+						.with(eq(AnimationPriority::High))
+						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
+						.return_const(leak_iterator(vec![]));
+				}),
+				lookup,
+				_GraphComponent(handle),
+			))
+			.id();
+		app.world_mut().spawn((
+			_AnimationPlayer::new().with_mock(assert_repeat_twice),
+			AnimationPlayerOf(agent),
+		));
+
+		app.update();
+		app.world_mut()
+			.entity_mut(agent)
+			.get_mut::<AnimationPlayers>()
 			.unwrap()
 			.deref_mut();
 		app.update();
