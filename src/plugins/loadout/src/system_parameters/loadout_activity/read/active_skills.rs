@@ -12,7 +12,7 @@ impl ActiveSkills for LoadoutActivityReadContext<'_> {
 		Self: 'a;
 
 	fn active_skills(&self) -> Self::TIter<'_> {
-		let queue = Some(self.queue.as_ref().iterate());
+		let queue = Some(self.queue.iterate());
 
 		ActiveSkillsIter { queue }
 	}
@@ -68,10 +68,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Queue::from([QueuedSkill::new(
-				Skill::default(),
-				SlotKey(42),
-			)]))
+			.spawn(Queue::default().with_skills([QueuedSkill::new(Skill::default(), SlotKey(42))]))
 			.id();
 
 		let active_skills = app
@@ -96,7 +93,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Queue::from([
+			.spawn(Queue::default().with_skills([
 				QueuedSkill::new(Skill::default(), SlotKey(42)),
 				QueuedSkill::new(Skill::default(), SlotKey(11)),
 			]))
@@ -124,7 +121,7 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Queue::from([QueuedSkill::new(
+			.spawn(Queue::default().with_skills([QueuedSkill::new(
 				Skill {
 					animation: Some(SkillAnimation::Aim),
 					..default()

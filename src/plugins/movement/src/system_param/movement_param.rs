@@ -5,14 +5,17 @@ mod stop_movement;
 mod toggle_speed;
 
 use crate::{
-	components::config::{Config, SpeedIndex},
+	components::{
+		config::{Config, SpeedIndex},
+		movement::Movement,
+	},
 	system_param::movement_param::context_changed::JustRemovedMovements,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::{
 	traits::{
 		accessors::get::{GetMut, TryGetContext, TryGetContextMut},
-		handles_movement::{ConfiguredMovement, Movement},
+		handles_movement::{ConfiguredMovement, Movement as MovementKey},
 	},
 	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
 };
@@ -27,7 +30,7 @@ where
 	just_removed_movements: Res<'w, JustRemovedMovements>,
 }
 
-impl<TMotion> TryGetContext<Movement> for MovementParam<'static, 'static, TMotion>
+impl<TMotion> TryGetContext<MovementKey> for MovementParam<'static, 'static, TMotion>
 where
 	TMotion: Component,
 {
@@ -35,7 +38,7 @@ where
 
 	fn try_get_context<'ctx>(
 		param: &'ctx MovementParam<TMotion>,
-		Movement { entity }: Movement,
+		MovementKey { entity }: MovementKey,
 	) -> Option<Self::TContext<'ctx>> {
 		let motion = match param.movements.get(entity) {
 			Ok(movement) => MotionState::Movement(movement),
@@ -62,6 +65,7 @@ where
 		's,
 		(
 			Option<&'static TMotion>,
+			Option<&'static Movement>,
 			&'static Config,
 			&'static mut SpeedIndex,
 		),
@@ -78,12 +82,13 @@ where
 		param: &'ctx mut MovementParamMut<TMotion>,
 		ConfiguredMovement { entity }: ConfiguredMovement,
 	) -> Option<Self::TContext<'ctx>> {
-		let (motion, config, current_speed) = param.motions.get_mut(entity).ok()?;
+		let (motion, movement, config, current_speed) = param.motions.get_mut(entity).ok()?;
 		let entity = param.commands.get_mut(&entity)?;
 
 		Some(MovementContextMut {
 			entity,
 			motion,
+			movement,
 			config,
 			current_speed,
 		})
@@ -113,6 +118,7 @@ where
 {
 	entity: ZyheedaEntityCommands<'ctx>,
 	motion: Option<&'ctx TMotion>,
+	movement: Option<&'ctx Movement>,
 	config: &'ctx Config,
 	current_speed: Mut<'ctx, SpeedIndex>,
 }

@@ -4,12 +4,13 @@ use bevy::{
 	prelude::Query,
 };
 
-pub(crate) fn flush<TFlush>(mut agents: Query<&mut TFlush>)
-where
-	TFlush: Flush + Component<Mutability = Mutable>,
-{
-	for mut queue in &mut agents {
-		queue.flush();
+impl<T> FlushSystem for T where T: Flush + Component<Mutability = Mutable> {}
+
+pub(crate) trait FlushSystem: Flush + Component<Mutability = Mutable> + Sized {
+	fn flush_system(mut agents: Query<&mut Self>) {
+		for mut queue in &mut agents {
+			queue.flush();
+		}
 	}
 }
 
@@ -35,7 +36,7 @@ mod tests {
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, flush::<_Dequeue>);
+		app.add_systems(Update, _Dequeue::flush_system);
 
 		app
 	}

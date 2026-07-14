@@ -25,6 +25,22 @@ impl HeldSlots {
 			current: self.current.iter(),
 		}
 	}
+
+	#[cfg(test)]
+	pub(crate) fn with_current<const N: usize>(mut self, slots: [SlotKey; N]) -> Self {
+		self.current = HashSet::from(slots);
+		self
+	}
+
+	#[cfg(test)]
+	pub(crate) fn with_previous<const N: usize>(mut self, slots: [SlotKey; N]) -> Self {
+		self.previous = HashSet::from(slots);
+		self
+	}
+
+	pub(crate) fn changed_this_frame(&self) -> bool {
+		self.iter_new().next().is_some()
+	}
 }
 
 impl<const N: usize> From<[SlotKey; N]> for HeldSlots {

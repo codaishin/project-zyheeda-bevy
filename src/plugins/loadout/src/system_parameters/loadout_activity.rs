@@ -11,8 +11,7 @@ use zyheeda_core::prelude::*;
 
 #[derive(SystemParam)]
 pub struct LoadoutActivityReader<'w, 's> {
-	#[allow(clippy::type_complexity)]
-	loadout: Query<'w, 's, (Ref<'static, Queue>, Ref<'static, HeldSlots>)>,
+	loadout: Query<'w, 's, (&'static Queue, &'static HeldSlots)>,
 }
 
 impl TryGetContext<Skills> for LoadoutActivityReader<'static, 'static> {
@@ -29,13 +28,13 @@ impl TryGetContext<Skills> for LoadoutActivityReader<'static, 'static> {
 }
 
 pub struct LoadoutActivityReadContext<'a> {
-	queue: Ref<'a, Queue>,
-	held_slots: Ref<'a, HeldSlots>,
+	queue: &'a Queue,
+	held_slots: &'a HeldSlots,
 }
 
 impl ContextChanged for LoadoutActivityReadContext<'_> {
 	fn context_changed(&self) -> bool {
-		any!(is_changed(self.queue, self.held_slots))
+		any!(changed_this_frame(self.queue, self.held_slots))
 	}
 }
 
@@ -59,4 +58,79 @@ impl TryGetContextMut<Skills> for LoadoutActivityWriter<'static, 'static> {
 
 pub struct LoadoutActivityWriteContext<'a> {
 	held_slots: Mut<'a, HeldSlots>,
+}
+
+#[cfg(test)]
+mod tests {
+	#![allow(clippy::unwrap_used)]
+	use super::*;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use common::tools::action_key::slot::SlotKey;
+	use testing::SingleThreadedApp;
+
+	fn setup() -> App {
+		App::new().single_threaded(Update)
+	}
+
+	#[test]
+	fn ctx_not_changed() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((Queue::default(), HeldSlots::default()))
+			.id();
+
+		let changed = app
+			.world_mut()
+			.run_system_once(move |r: LoadoutActivityReader| {
+				let ctx = LoadoutActivityReader::try_get_context(&r, Skills { entity }).unwrap();
+				ctx.context_changed()
+			})?;
+
+		assert!(!changed);
+		Ok(())
+	}
+
+	#[test]
+	fn ctx_changed_when_queue_changed() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((Queue::default().changed(), HeldSlots::default()))
+			.id();
+
+		let changed = app
+			.world_mut()
+			.run_system_once(move |r: LoadoutActivityReader| {
+				let ctx = LoadoutActivityReader::try_get_context(&r, Skills { entity }).unwrap();
+				ctx.context_changed()
+			})?;
+
+		assert!(changed);
+		Ok(())
+	}
+
+	#[test]
+	fn ctx_changed_when_held_slots_changed() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				Queue::default(),
+				HeldSlots::default()
+					.with_previous([SlotKey(11)])
+					.with_current([SlotKey(11), SlotKey(22)]),
+			))
+			.id();
+
+		let changed = app
+			.world_mut()
+			.run_system_once(move |r: LoadoutActivityReader| {
+				let ctx = LoadoutActivityReader::try_get_context(&r, Skills { entity }).unwrap();
+				ctx.context_changed()
+			})?;
+
+		assert!(changed);
+		Ok(())
+	}
 }

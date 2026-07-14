@@ -23,14 +23,13 @@ use crate::{
 		},
 		loadout_activity::{LoadoutActivityReader, LoadoutActivityWriter},
 	},
-	systems::enqueue::EnqueueSystem,
+	systems::{enqueue::EnqueueSystem, flush::FlushSystem},
 };
 use bevy::prelude::*;
 use common::{
 	states::game_state::{GameState, LoadingGame},
 	traits::{
 		after_plugin::AfterPlugin,
-		handles_animations::HandlesAnimations,
 		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
 		handles_load_tracking::HandlesLoadTracking,
 		handles_loadout::HandlesLoadout,
@@ -56,30 +55,22 @@ use skills::{Skill, dto::SkillDto};
 use std::marker::PhantomData;
 use systems::{
 	combos::queue_update::ComboQueueUpdate,
-	flush::flush,
 	flush_skill_combos::flush_skill_combos,
 	schedule_active_skill::schedule_active_skill,
 };
 
 pub struct LoadoutPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement>
-	LoadoutPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
+impl<TSaveGame, TPhysics, TLoading, TMovement>
+	LoadoutPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
-	TAnimations: ThreadSafe + HandlesAnimations,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn from_plugins(
-		_: &TSaveGame,
-		_: &TAnimations,
-		_: &TPhysics,
-		_: &TLoading,
-		_: &TMovement,
-	) -> Self {
+	pub fn from_plugins(_: &TSaveGame, _: &TPhysics, _: &TLoading, _: &TMovement) -> Self {
 		Self(PhantomData)
 	}
 
@@ -124,7 +115,7 @@ where
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				schedule_active_skill::<Queue, TMovement::TFaceSystemParam, ActiveSkill, Virtual>,
 				ActiveSkill::<SkillBehaviorConfig>::execute::<TPhysics::TSkillSpawnerMut>,
-				flush::<Queue>,
+				Queue::flush_system,
 			)
 				.chain()
 				.after_plugin(TMovement::SYSTEMS)
@@ -133,12 +124,11 @@ where
 	}
 }
 
-impl<TSaveGame, TAnimations, TPhysics, TLoading, TMovement> Plugin
-	for LoadoutPlugin<(TSaveGame, TAnimations, TPhysics, TLoading, TMovement)>
+impl<TSaveGame, TPhysics, TLoading, TMovement> Plugin
+	for LoadoutPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
 where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
-	TAnimations: ThreadSafe + HandlesAnimations,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
