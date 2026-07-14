@@ -9,7 +9,7 @@ use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use common::traits::handles_animations::{AnimationKey, AnimationPriority};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, iter::Rev};
+use std::{collections::HashMap, fmt::Debug, iter::Rev};
 use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -21,6 +21,8 @@ pub struct AnimationDispatch {
 		OrderedSet<AnimationKey>,
 		OrderedSet<AnimationKey>,
 	),
+	#[serde(with = "as_vec")]
+	pub(crate) states: HashMap<AnimationKey, AnimationState>,
 }
 
 impl AnimationDispatch {
@@ -51,6 +53,7 @@ impl Default for AnimationDispatch {
 	fn default() -> Self {
 		Self {
 			priorities: default(),
+			states: default(),
 		}
 	}
 }
@@ -109,6 +112,11 @@ impl<'a> Iterator for IterAllAnimations<'a> {
 
 		None
 	}
+}
+
+#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+pub(crate) struct AnimationState {
+	pub(crate) seek: f32,
 }
 
 #[derive(Component, Debug, PartialEq)]

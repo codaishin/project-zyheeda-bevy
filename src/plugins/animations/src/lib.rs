@@ -53,6 +53,8 @@ where
 		type UnlinkedGraph = (Added<AnimationGraphHandle>, Without<AnimationGraphOf>);
 
 		TSavegame::register_savable_component::<AnimationDispatch>(app);
+		TSavegame::on_before_save(app, AnimationDispatch::write_animation_seek_state);
+
 		app.add_observer(SetupAnimations::insert_when::<SceneInstanceReady>);
 		app.add_systems(
 			Update,

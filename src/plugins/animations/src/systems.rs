@@ -3,3 +3,4 @@ pub(crate) mod play_animation_clip;
 pub(crate) mod set_directional_animation_weights;
 pub(crate) mod set_pitch_animation_weights;
 pub(crate) mod setup_animations;
+pub(crate) mod write_animation_seek_state;
