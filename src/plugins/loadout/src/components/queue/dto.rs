@@ -26,6 +26,7 @@ impl From<Queue> for QueueDto {
 			queue,
 			active: elapsed,
 			state,
+			..
 		}: Queue,
 	) -> Self {
 		Self {
@@ -66,6 +67,7 @@ impl TryLoadFrom<QueueDto> for Queue {
 				released: released.map(Duration::from),
 			}),
 			state,
+			changed: true,
 		})
 	}
 }

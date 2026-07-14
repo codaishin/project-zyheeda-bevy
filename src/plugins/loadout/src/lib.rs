@@ -23,7 +23,7 @@ use crate::{
 		},
 		loadout_activity::{LoadoutActivityReader, LoadoutActivityWriter},
 	},
-	systems::enqueue::EnqueueSystem,
+	systems::{enqueue::EnqueueSystem, flush::FlushSystem},
 };
 use bevy::prelude::*;
 use common::{
@@ -55,7 +55,6 @@ use skills::{Skill, dto::SkillDto};
 use std::marker::PhantomData;
 use systems::{
 	combos::queue_update::ComboQueueUpdate,
-	flush::flush,
 	flush_skill_combos::flush_skill_combos,
 	schedule_active_skill::schedule_active_skill,
 };
@@ -116,7 +115,7 @@ where
 				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
 				schedule_active_skill::<Queue, TMovement::TFaceSystemParam, ActiveSkill, Virtual>,
 				ActiveSkill::<SkillBehaviorConfig>::execute::<TPhysics::TSkillSpawnerMut>,
-				flush::<Queue>,
+				Queue::flush_system,
 			)
 				.chain()
 				.after_plugin(TMovement::SYSTEMS)

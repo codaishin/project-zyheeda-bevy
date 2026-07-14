@@ -32,6 +32,7 @@ pub struct Queue {
 	queue: VecDeque<QueuedSkill>,
 	active: Option<SkillElapsed<Duration>>,
 	state: State,
+	changed: bool,
 }
 
 impl Queue {
@@ -42,6 +43,22 @@ impl Queue {
 			State::Changed { len_before_change } => *len_before_change,
 		}
 	}
+
+	pub(crate) fn changed_this_frame(&self) -> bool {
+		self.changed
+	}
+
+	#[cfg(test)]
+	pub(crate) fn changed(mut self) -> Self {
+		self.changed = true;
+		self
+	}
+
+	#[cfg(test)]
+	pub(crate) fn with_skills<const N: usize>(mut self, skills: [QueuedSkill; N]) -> Self {
+		self.queue = VecDeque::from(skills);
+		self
+	}
 }
 
 impl Default for Queue {
@@ -50,20 +67,7 @@ impl Default for Queue {
 			queue: VecDeque::from([]),
 			active: None,
 			state: State::Flushed,
-		}
-	}
-}
-
-#[cfg(test)]
-impl<T> From<T> for Queue
-where
-	T: IntoIterator<Item = QueuedSkill>,
-{
-	fn from(skills: T) -> Self {
-		Self {
-			queue: VecDeque::from_iter(skills),
-			active: None,
-			state: State::Flushed,
+			changed: false,
 		}
 	}
 }
@@ -92,13 +96,17 @@ impl Enqueue<(Skill, SlotKey)> for Queue {
 
 impl Flush for Queue {
 	fn flush(&mut self) {
+		self.changed = match self.state {
+			State::Flushed => false,
+			State::Changed { .. } => true,
+		};
 		self.state = State::Flushed;
 
 		if self.active.is_some() {
 			return;
 		}
 
-		self.queue.pop_front();
+		self.changed |= self.queue.pop_front().is_some();
 	}
 }
 
@@ -208,7 +216,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn enqueue_one_skill() {
-		let mut queue = Queue::from([]);
+		let mut queue = Queue::default();
 		queue.enqueue((
 			Skill {
 				token: Token::from("my skill"),
@@ -232,7 +240,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn enqueue_two_skills() {
-		let mut queue = Queue::from([]);
+		let mut queue = Queue::default();
 		queue.enqueue((
 			Skill {
 				token: Token::from("skill a"),
@@ -272,8 +280,23 @@ mod test_queue_collection {
 	}
 
 	#[test]
+	fn flush_with_no_skill() {
+		let mut queue = Queue::default();
+
+		queue.flush();
+
+		assert_eq!(
+			Queue {
+				changed: false,
+				..default()
+			},
+			queue
+		);
+	}
+
+	#[test]
 	fn flush_with_one_skill() {
-		let mut queue = Queue::from([QueuedSkill {
+		let mut queue = Queue::default().with_skills([QueuedSkill {
 			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("my skill"),
@@ -284,12 +307,18 @@ mod test_queue_collection {
 
 		queue.flush();
 
-		assert_eq!(Queue::from([]), queue);
+		assert_eq!(
+			Queue {
+				changed: true,
+				..default()
+			},
+			queue
+		);
 	}
 
 	#[test]
 	fn flush_with_two_skill() {
-		let mut queue = Queue::from([
+		let mut queue = Queue::default().with_skills([
 			QueuedSkill {
 				key: SlotKey(42),
 				skill: Skill {
@@ -310,23 +339,19 @@ mod test_queue_collection {
 
 		queue.flush();
 
-		let queue_after_1_flush = Queue {
-			queue: queue.queue.clone(),
-			active: queue.active,
-			state: queue.state.clone(),
-		};
+		let queue_after_1_flush = queue.clone();
 
 		queue.flush();
 
-		let queue_after_2_flushes = Queue {
-			queue: queue.queue.clone(),
-			active: queue.active,
-			state: queue.state.clone(),
-		};
+		let queue_after_2_flushes = queue.clone();
 
 		assert_eq!(
 			(
-				Queue::from([QueuedSkill {
+				Queue {
+					changed: true,
+					..default()
+				}
+				.with_skills([QueuedSkill {
 					key: SlotKey(11),
 					skill: Skill {
 						token: Token::from("skill b"),
@@ -334,15 +359,83 @@ mod test_queue_collection {
 					},
 					..default()
 				}]),
-				Queue::from([])
+				Queue {
+					changed: true,
+					..default()
+				}
 			),
 			(queue_after_1_flush, queue_after_2_flushes)
 		);
 	}
 
 	#[test]
+	fn flush_with_added_to_active_skill() {
+		let mut queue = Queue {
+			active: Some(SkillElapsed::default()),
+			..default()
+		};
+
+		queue.enqueue((Skill::default(), SlotKey::default()));
+		queue.flush();
+
+		assert_eq!(
+			Queue {
+				active: Some(SkillElapsed::default()),
+				changed: true,
+				..default()
+			}
+			.with_skills([QueuedSkill {
+				skill: Skill::default(),
+				..default()
+			}]),
+			queue
+		);
+	}
+
+	#[test]
+	fn flush_empty_changed() {
+		// Only sound when loading an empty queue from a save state
+
+		let mut queue = Queue {
+			state: State::Changed {
+				len_before_change: 11,
+			},
+			..default()
+		};
+
+		queue.flush();
+
+		assert_eq!(
+			Queue {
+				changed: true,
+				..default()
+			},
+			queue
+		);
+	}
+
+	#[test]
+	fn flush_with_only_active_skill() {
+		let mut queue = Queue {
+			active: Some(SkillElapsed::default()),
+			..default()
+		};
+
+		queue.flush();
+
+		assert_eq!(
+			Queue {
+				active: Some(SkillElapsed::default()),
+				changed: false,
+				..default()
+			},
+			queue
+		);
+	}
+
+	#[test]
 	fn iter() {
-		let queue = Queue::from([
+		let queue = Queue::default().with_skills([
 			QueuedSkill {
 				key: SlotKey(42),
 				skill: Skill {
@@ -386,7 +479,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut() {
-		let mut queue = Queue::from([]);
+		let mut queue = Queue::default();
 		queue.enqueue((
 			Skill {
 				token: Token::from("a"),
@@ -434,7 +527,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut_only_new() {
-		let mut queue = Queue::from([QueuedSkill {
+		let mut queue = Queue::default().with_skills([QueuedSkill {
 			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("a"),
@@ -490,7 +583,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut_empty_after_flush() {
-		let mut queue = Queue::from([QueuedSkill {
+		let mut queue = Queue::default().with_skills([QueuedSkill {
 			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("a"),
@@ -528,7 +621,7 @@ mod test_queue_collection {
 
 	#[test]
 	fn iter_recent_mut_empty_after_flush_with_active_duration() {
-		let mut queue = Queue::from([QueuedSkill {
+		let mut queue = Queue::default().with_skills([QueuedSkill {
 			key: SlotKey(11),
 			skill: Skill {
 				token: Token::from("a"),
@@ -585,7 +678,7 @@ mod test_queue_collection {
 				skill_mode: SkillMode::Release,
 			},
 		];
-		let mut queue = Queue::from(skills.clone());
+		let mut queue = Queue::default().with_skills(skills.clone());
 
 		assert_eq!(
 			vec![&skills[0]],

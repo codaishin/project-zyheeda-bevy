@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 impl HeldSkills for LoadoutActivityReadContext<'_> {
 	fn held_skills(&self) -> &HashSet<SlotKey> {
-		&self.held_slots
+		self.held_slots
 	}
 }
 

@@ -281,7 +281,7 @@ mod tests {
 					Inventory::default(),
 					Slots::from([(SlotKey(11), Some(item_handle))]),
 					Combos::default(),
-					Queue::from([
+					Queue::default().with_skills([
 						QueuedSkill {
 							key: SlotKey(42),
 							skill: Skill { ..default() },
@@ -337,7 +337,7 @@ mod tests {
 					Inventory::default(),
 					Slots::from([(SlotKey(11), Some(item_handle))]),
 					Combos::default(),
-					Queue::from([QueuedSkill {
+					Queue::default().with_skills([QueuedSkill {
 						key: SlotKey(11),
 						skill: Skill {
 							token: Token::from("my active skill"),
@@ -386,7 +386,7 @@ mod tests {
 					Inventory::default(),
 					Slots::from([(SlotKey(11), Some(item_handle))]),
 					Combos::default(),
-					Queue::from([
+					Queue::default().with_skills([
 						QueuedSkill {
 							key: SlotKey(11),
 							skill: Skill {
