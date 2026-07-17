@@ -24,6 +24,7 @@ use common::{
 		handles_interactive::HandlesInteractive,
 		handles_map_generation::HandlesMapGeneration,
 		handles_physics::{HandlesInteractiveDetection, HandlesPhysicsConfig},
+		handles_saving::HandlesSaving,
 		prefab::AddPrefabObserver,
 		system_set_definition::SystemSetDefinition,
 		thread_safe::ThreadSafe,
@@ -33,29 +34,39 @@ use std::marker::PhantomData;
 
 pub struct InteractivePlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TPhysics, TMaps, TAnimations>
-	InteractivePlugin<(TLoading, TPhysics, TMaps, TAnimations)>
+impl<TLoading, TSavegame, TPhysics, TMaps, TAnimations>
+	InteractivePlugin<(TLoading, TSavegame, TPhysics, TMaps, TAnimations)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicsConfig + HandlesInteractiveDetection + SystemSetDefinition,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
-	pub fn from_plugin(_: &TLoading, _: &TPhysics, _: &TMaps, _: &TAnimations) -> Self {
+	pub fn from_plugin(
+		_: &TLoading,
+		_: &TSavegame,
+		_: &TPhysics,
+		_: &TMaps,
+		_: &TAnimations,
+	) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TPhysics, TMaps, TAnimations> Plugin
-	for InteractivePlugin<(TLoading, TPhysics, TMaps, TAnimations)>
+impl<TLoading, TSavegame, TPhysics, TMaps, TAnimations> Plugin
+	for InteractivePlugin<(TLoading, TSavegame, TPhysics, TMaps, TAnimations)>
 where
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
+	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesPhysicsConfig + HandlesInteractiveDetection + SystemSetDefinition,
 	TMaps: ThreadSafe + HandlesMapGeneration,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
 	fn build(&self, app: &mut App) {
 		TLoading::register_custom_folder_assets::<DoorMeta, DoorMeta, LoadingEssentialAssets>(app);
+
+		TSavegame::register_savable_component::<Door>(app);
 
 		app.init_asset::<DoorMeta>()
 			.add_prefab_observer::<Door, ()>()

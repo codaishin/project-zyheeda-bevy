@@ -26,10 +26,7 @@ impl Interactive {
 		translation: Vec3,
 		interactive_type: InteractiveType,
 	) {
-		entity.try_insert((
-			Transform::from_translation(translation),
-			Self { interactive_type },
-		));
+		entity.try_insert(Transform::from_translation(translation));
 
 		match interactive_type {
 			InteractiveType::Door => entity.try_insert(Door),

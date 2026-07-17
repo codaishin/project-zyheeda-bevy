@@ -67,7 +67,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 
 	let loadout = LoadoutPlugin::from_plugins(&savegame, &physics, &loading, &movement);
 	let interactive =
-		InteractivePlugin::from_plugin(&loading, &physics, &map_generation, &animations);
+		InteractivePlugin::from_plugin(&loading, &savegame, &physics, &map_generation, &animations);
 	let agents = AgentsPlugin::from_plugins(
 		&loading,
 		&input,
