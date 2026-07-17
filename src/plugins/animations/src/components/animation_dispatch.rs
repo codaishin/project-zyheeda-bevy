@@ -26,6 +26,14 @@ pub struct AnimationDispatch {
 }
 
 impl AnimationDispatch {
+	#[cfg(test)]
+	pub(crate) fn with_states<const N: usize>(states: [(AnimationKey, AnimationState); N]) -> Self {
+		Self {
+			states: HashMap::from(states),
+			..default()
+		}
+	}
+
 	pub(crate) fn slot_mut<TLayer>(&mut self, layer: TLayer) -> &mut OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,

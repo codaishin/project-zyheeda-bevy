@@ -70,6 +70,7 @@ where
 				UnlinkedGraph::link_to::<AnimationDispatch, AnimationGraphOf>,
 				AnimationDispatch::distribute_player_components,
 				AnimationDispatch::play_animation_clip::<&mut AnimationPlayer>,
+				AnimationDispatch::apply_seek_times,
 				AnimationDispatch::set_directional_animation_weights,
 				AnimationDispatch::set_pitch_animation_weights,
 			)

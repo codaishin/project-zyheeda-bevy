@@ -54,18 +54,20 @@ impl AnimationDispatch {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
 	use super::*;
-	use crate::components::{
-		animation_dispatch::{AnimationPlayerOf, AnimationState},
-		animation_lookup::AnimationLookup,
-	};
-	use common::traits::handles_animations::{Animation, AnimationKey};
-	use std::collections::HashMap;
+	use crate::components::animation_dispatch::{AnimationPlayerOf, AnimationState};
+	use common::traits::handles_animations::AnimationKey;
 	use testing::SingleThreadedApp;
 
 	#[derive(Default)]
-	struct _Clips(Vec<AnimationNodeIndex>);
+	pub(crate) struct _Clips(Vec<AnimationNodeIndex>);
+
+	impl From<Vec<AnimationNodeIndex>> for _Clips {
+		fn from(clips: Vec<AnimationNodeIndex>) -> Self {
+			Self(clips)
+		}
+	}
 
 	impl<'a> Iterate<'a> for _Clips {
 		type TItem = &'a AnimationNodeIndex;
@@ -89,35 +91,6 @@ mod tests {
 		player
 	}
 
-	fn lookup_with_clips<const N: usize>(
-		clips: [(AnimationKey, Vec<AnimationNodeIndex>); N],
-	) -> AnimationLookup<_Clips> {
-		AnimationLookup {
-			animations: clips
-				.into_iter()
-				.map(|(key, clips)| {
-					(
-						key,
-						Animation {
-							clips: _Clips(clips),
-							..default()
-						},
-					)
-				})
-				.collect(),
-			..default()
-		}
-	}
-
-	fn dispatch_with_states<const N: usize>(
-		states: [(AnimationKey, AnimationState); N],
-	) -> AnimationDispatch {
-		let mut dispatch = AnimationDispatch::default();
-		dispatch.states = HashMap::from(states);
-
-		dispatch
-	}
-
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
@@ -135,8 +108,11 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				dispatch_with_states([]),
-				lookup_with_clips([(AnimationKey::Walk, vec![AnimationNodeIndex::new(11)])]),
+				AnimationDispatch::with_states([]),
+				AnimationLookup::<_Clips>::with_clips([(
+					AnimationKey::Walk,
+					vec![AnimationNodeIndex::new(11)],
+				)]),
 			))
 			.id();
 		app.world_mut().spawn((
@@ -147,7 +123,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&dispatch_with_states([(
+			Some(&AnimationDispatch::with_states([(
 				AnimationKey::Walk,
 				AnimationState { seek: 11. }
 			)])),
@@ -161,8 +137,11 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				dispatch_with_states([(AnimationKey::Run, AnimationState { seek: 44. })]),
-				lookup_with_clips([(AnimationKey::Walk, vec![AnimationNodeIndex::new(11)])]),
+				AnimationDispatch::with_states([(AnimationKey::Run, AnimationState { seek: 44. })]),
+				AnimationLookup::<_Clips>::with_clips([(
+					AnimationKey::Walk,
+					vec![AnimationNodeIndex::new(11)],
+				)]),
 			))
 			.id();
 		app.world_mut().spawn((
@@ -173,7 +152,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&dispatch_with_states([(
+			Some(&AnimationDispatch::with_states([(
 				AnimationKey::Walk,
 				AnimationState { seek: 11. }
 			)])),
@@ -187,8 +166,11 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				dispatch_with_states([]),
-				lookup_with_clips([(AnimationKey::Walk, vec![AnimationNodeIndex::new(11)])]),
+				AnimationDispatch::with_states([]),
+				AnimationLookup::<_Clips>::with_clips([(
+					AnimationKey::Walk,
+					vec![AnimationNodeIndex::new(11)],
+				)]),
 			))
 			.id();
 		app.world_mut().spawn((
@@ -202,7 +184,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&dispatch_with_states([])),
+			Some(&AnimationDispatch::with_states([])),
 			app.world().entity(entity).get::<AnimationDispatch>(),
 		);
 	}
@@ -213,8 +195,8 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				dispatch_with_states([]),
-				lookup_with_clips([(
+				AnimationDispatch::with_states([]),
+				AnimationLookup::<_Clips>::with_clips([(
 					AnimationKey::Walk,
 					vec![AnimationNodeIndex::new(11), AnimationNodeIndex::new(22)],
 				)]),
@@ -231,7 +213,7 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&dispatch_with_states([(
+			Some(&AnimationDispatch::with_states([(
 				AnimationKey::Walk,
 				AnimationState { seek: 11. }
 			)])),
