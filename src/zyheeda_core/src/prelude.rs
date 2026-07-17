@@ -8,7 +8,10 @@ pub use crate::{
 	},
 	errors::*,
 	macros::{all::*, any::*, none::*, write_iter::*},
-	math::f32_not_nan::{F32NotNan, f32_not_nan},
+	math::{
+		f32_finite::{F32Finite, NotFinite, f32_finite},
+		f32_not_nan::{F32NotNan, IsNaN, f32_not_nan},
+	},
 	serialization::*,
 	strings::normalized_name::NormalizedName,
 	yields::*,
