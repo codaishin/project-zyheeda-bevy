@@ -1,16 +1,34 @@
-use crate::{assets::door_meta::DoorMeta, components::door_meta_handle::DoorMetaHandle};
+use crate::{
+	assets::door_meta::DoorMeta,
+	components::{door_meta_handle::DoorMetaHandle, interactive::Interactive},
+};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
-	components::model::{Model, SceneId, UseGltfLookup},
+	components::{
+		model::{Model, SceneId, UseGltfLookup},
+		persistent_entity::PersistentEntity,
+	},
 	errors::Unreachable,
 	systems::register_animations::AnimationsMarker,
-	traits::prefab::{Prefab, PrefabEntityCommands},
+	traits::{
+		handles_map_generation::InteractiveType,
+		prefab::{Prefab, PrefabEntityCommands},
+	},
 };
-use macros::asset_path;
+use macros::{SavableComponent, asset_path};
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[savable_component(id = "door")]
 #[component(immutable)]
-#[require(DoorMetaHandle, Transform, ApplyDoorAnimations, ApplyDoorFrame)]
+#[require(
+	PersistentEntity,
+	Interactive { interactive_type: InteractiveType::Door },
+	DoorMetaHandle,
+	Transform,
+	ApplyDoorAnimations,
+	ApplyDoorFrame
+)]
 pub(crate) struct Door;
 
 impl Prefab<()> for Door {
