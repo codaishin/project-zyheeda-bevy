@@ -9,7 +9,7 @@ use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use common::traits::handles_animations::{AnimationKey, AnimationPriority};
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
-use std::{fmt::Debug, iter::Rev};
+use std::{collections::HashMap, fmt::Debug, iter::Rev};
 use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
@@ -21,9 +21,19 @@ pub struct AnimationDispatch {
 		OrderedSet<AnimationKey>,
 		OrderedSet<AnimationKey>,
 	),
+	#[serde(with = "as_vec")]
+	pub(crate) states: HashMap<AnimationKey, AnimationState>,
 }
 
 impl AnimationDispatch {
+	#[cfg(test)]
+	pub(crate) fn with_states<const N: usize>(states: [(AnimationKey, AnimationState); N]) -> Self {
+		Self {
+			states: HashMap::from(states),
+			..default()
+		}
+	}
+
 	pub(crate) fn slot_mut<TLayer>(&mut self, layer: TLayer) -> &mut OrderedSet<AnimationKey>
 	where
 		TLayer: Into<AnimationPriority>,
@@ -51,6 +61,7 @@ impl Default for AnimationDispatch {
 	fn default() -> Self {
 		Self {
 			priorities: default(),
+			states: default(),
 		}
 	}
 }
@@ -109,6 +120,11 @@ impl<'a> Iterator for IterAllAnimations<'a> {
 
 		None
 	}
+}
+
+#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+pub(crate) struct AnimationState {
+	pub(crate) seek: F32Finite,
 }
 
 #[derive(Component, Debug, PartialEq)]

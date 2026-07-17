@@ -16,6 +16,33 @@ pub(crate) struct AnimationLookup<TClips = AnimationClips<AnimationNodeIndex>> {
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 }
 
+#[cfg(test)]
+impl<TClips> AnimationLookup<TClips> {
+	pub(crate) fn with_clips<const N: usize, T>(clips: [(AnimationKey, T); N]) -> Self
+	where
+		T: Into<TClips>,
+	{
+		use common::traits::handles_animations::PlayMode;
+
+		Self {
+			animations: clips
+				.into_iter()
+				.map(|(key, clips)| {
+					(
+						key,
+						Animation {
+							clips: clips.into(),
+							play_mode: PlayMode::default(),
+							mask_groups: AnimationMaskBits::default(),
+						},
+					)
+				})
+				.collect(),
+			..default()
+		}
+	}
+}
+
 impl<TClips> Default for AnimationLookup<TClips> {
 	fn default() -> Self {
 		Self {
