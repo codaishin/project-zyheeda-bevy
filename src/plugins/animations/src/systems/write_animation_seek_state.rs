@@ -4,7 +4,7 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use common::traits::thread_safe::ThreadSafe;
-use zyheeda_core::collections::iterate::Iterate;
+use zyheeda_core::prelude::*;
 
 impl AnimationDispatch {
 	pub(crate) fn write_animation_seek_state(
@@ -41,10 +41,9 @@ impl AnimationDispatch {
 						continue;
 					};
 
-					let seek = animation.seek_time();
-					if seek.is_nan() {
+					let Ok(seek) = F32Finite::try_from_f32(animation.seek_time()) else {
 						continue;
-					}
+					};
 
 					dispatch.states.insert(*key, AnimationState { seek });
 				}
@@ -85,7 +84,7 @@ pub(crate) mod tests {
 
 		for (clip, AnimationState { seek }) in clips {
 			let clip = player.play(clip);
-			clip.set_seek_time(seek);
+			clip.set_seek_time(*seek);
 		}
 
 		player
@@ -117,7 +116,12 @@ pub(crate) mod tests {
 			.id();
 		app.world_mut().spawn((
 			AnimationPlayerOf(entity),
-			player_with_clips([(AnimationNodeIndex::new(11), AnimationState { seek: 11. })]),
+			player_with_clips([(
+				AnimationNodeIndex::new(11),
+				AnimationState {
+					seek: f32_finite!(11.),
+				},
+			)]),
 		));
 
 		app.update();
@@ -125,7 +129,9 @@ pub(crate) mod tests {
 		assert_eq!(
 			Some(&AnimationDispatch::with_states([(
 				AnimationKey::Walk,
-				AnimationState { seek: 11. }
+				AnimationState {
+					seek: f32_finite!(11.)
+				}
 			)])),
 			app.world().entity(entity).get::<AnimationDispatch>(),
 		);
@@ -137,36 +143,12 @@ pub(crate) mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				AnimationDispatch::with_states([(AnimationKey::Run, AnimationState { seek: 44. })]),
-				AnimationLookup::<_Clips>::with_clips([(
-					AnimationKey::Walk,
-					vec![AnimationNodeIndex::new(11)],
+				AnimationDispatch::with_states([(
+					AnimationKey::Run,
+					AnimationState {
+						seek: f32_finite!(44.),
+					},
 				)]),
-			))
-			.id();
-		app.world_mut().spawn((
-			AnimationPlayerOf(entity),
-			player_with_clips([(AnimationNodeIndex::new(11), AnimationState { seek: 11. })]),
-		));
-
-		app.update();
-
-		assert_eq!(
-			Some(&AnimationDispatch::with_states([(
-				AnimationKey::Walk,
-				AnimationState { seek: 11. }
-			)])),
-			app.world().entity(entity).get::<AnimationDispatch>(),
-		);
-	}
-
-	#[test]
-	fn ignore_nan_values() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				AnimationDispatch::with_states([]),
 				AnimationLookup::<_Clips>::with_clips([(
 					AnimationKey::Walk,
 					vec![AnimationNodeIndex::new(11)],
@@ -177,14 +159,21 @@ pub(crate) mod tests {
 			AnimationPlayerOf(entity),
 			player_with_clips([(
 				AnimationNodeIndex::new(11),
-				AnimationState { seek: f32::NAN },
+				AnimationState {
+					seek: f32_finite!(11.),
+				},
 			)]),
 		));
 
 		app.update();
 
 		assert_eq!(
-			Some(&AnimationDispatch::with_states([])),
+			Some(&AnimationDispatch::with_states([(
+				AnimationKey::Walk,
+				AnimationState {
+					seek: f32_finite!(11.)
+				}
+			)])),
 			app.world().entity(entity).get::<AnimationDispatch>(),
 		);
 	}
@@ -205,8 +194,18 @@ pub(crate) mod tests {
 		app.world_mut().spawn((
 			AnimationPlayerOf(entity),
 			player_with_clips([
-				(AnimationNodeIndex::new(11), AnimationState { seek: 11. }),
-				(AnimationNodeIndex::new(22), AnimationState { seek: 22. }),
+				(
+					AnimationNodeIndex::new(11),
+					AnimationState {
+						seek: f32_finite!(11.),
+					},
+				),
+				(
+					AnimationNodeIndex::new(22),
+					AnimationState {
+						seek: f32_finite!(22.),
+					},
+				),
 			]),
 		));
 
@@ -215,7 +214,9 @@ pub(crate) mod tests {
 		assert_eq!(
 			Some(&AnimationDispatch::with_states([(
 				AnimationKey::Walk,
-				AnimationState { seek: 11. }
+				AnimationState {
+					seek: f32_finite!(11.)
+				}
 			)])),
 			app.world().entity(entity).get::<AnimationDispatch>(),
 		);

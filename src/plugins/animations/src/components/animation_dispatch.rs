@@ -124,7 +124,7 @@ impl<'a> Iterator for IterAllAnimations<'a> {
 
 #[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
 pub(crate) struct AnimationState {
-	pub(crate) seek: f32,
+	pub(crate) seek: F32Finite,
 }
 
 #[derive(Component, Debug, PartialEq)]

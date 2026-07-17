@@ -32,7 +32,7 @@ impl AnimationDispatch {
 				};
 
 				for id in data.clips.iterate() {
-					player.set_animation_seek_time(*id, state.seek);
+					player.set_animation_seek_time(*id, *state.seek);
 				}
 			}
 		}
@@ -63,6 +63,7 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
+	use zyheeda_core::prelude::*;
 
 	#[derive(Component, NestedMocks)]
 	struct _AnimationPlayer {
@@ -95,7 +96,9 @@ mod tests {
 			.spawn((
 				AnimationDispatch::with_states([(
 					AnimationKey::Walk,
-					AnimationState { seek: 11. },
+					AnimationState {
+						seek: f32_finite!(11.),
+					},
 				)]),
 				AnimationLookup::<_Clips>::with_clips([(
 					AnimationKey::Walk,
@@ -125,7 +128,9 @@ mod tests {
 			.spawn((
 				AnimationDispatch::with_states([(
 					AnimationKey::Walk,
-					AnimationState { seek: 11. },
+					AnimationState {
+						seek: f32_finite!(11.),
+					},
 				)]),
 				AnimationLookup::<_Clips>::with_clips([(
 					AnimationKey::Walk,
