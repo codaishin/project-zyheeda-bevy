@@ -9,6 +9,7 @@ use crate::{
 	components::{
 		door::{ApplyDoorAnimations, ApplyDoorFrame, Door},
 		interactive::Interactive,
+		interactive_state::IsActive,
 	},
 	system_params::interactive_param::{InteractiveParam, InteractiveParamMut},
 };
@@ -67,6 +68,7 @@ where
 		TLoading::register_custom_folder_assets::<DoorMeta, DoorMeta, LoadingEssentialAssets>(app);
 
 		TSavegame::register_savable_component::<Door>(app);
+		TSavegame::register_savable_component::<IsActive>(app);
 
 		app.init_asset::<DoorMeta>()
 			.add_prefab_observer::<Door, ()>()
