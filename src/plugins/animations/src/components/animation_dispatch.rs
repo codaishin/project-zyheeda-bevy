@@ -1,5 +1,6 @@
 use crate::{
 	components::{
+		changed_animations::ChangedAnimations,
 		current_forward_pitch::CurrentForwardPitch,
 		current_movement_direction::CurrentMovementDirection,
 	},
@@ -13,7 +14,7 @@ use std::{collections::HashMap, fmt::Debug, iter::Rev};
 use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[require(CurrentMovementDirection, CurrentForwardPitch)]
+#[require(CurrentMovementDirection, CurrentForwardPitch, ChangedAnimations)]
 #[savable_component(id = "animation dispatch")]
 pub struct AnimationDispatch {
 	priorities: (

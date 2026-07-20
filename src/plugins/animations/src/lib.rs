@@ -4,12 +4,10 @@ mod system_params;
 mod systems;
 mod traits;
 
-#[cfg(test)]
-pub(crate) mod test_tools;
-
 use crate::{
 	components::{
 		animation_dispatch::{AnimationGraphOf, AnimationPlayerOf},
+		changed_animations::ChangedAnimations,
 		setup_animations::SetupAnimations,
 	},
 	system_params::animations::AnimationsParamMut,
@@ -73,6 +71,7 @@ where
 				AnimationDispatch::apply_seek_times,
 				AnimationDispatch::set_directional_animation_weights,
 				AnimationDispatch::set_pitch_animation_weights,
+				ChangedAnimations::sync_seek_times,
 			)
 				.chain()
 				.in_set(AnimationSystems),

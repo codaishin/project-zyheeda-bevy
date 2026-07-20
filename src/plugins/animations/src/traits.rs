@@ -3,7 +3,10 @@ pub(crate) mod animation_player;
 pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
 
+use crate::components::animation_dispatch::AnimationState;
 use common::traits::handles_animations::{AnimationClips, AnimationKey, AnimationPriority};
+use serde::{Deserialize, Serialize};
+use zyheeda_core::math::f32_finite::F32Finite;
 
 pub(crate) trait InsertClips<TIndex>: Sized {
 	type TBuffer;
@@ -39,7 +42,7 @@ pub(crate) trait IsPlaying<TIndex> {
 }
 
 pub(crate) trait UpdateAnimation<TIndex> {
-	fn update_animation(&mut self, index: TIndex, set_to: SetTo);
+	fn update_animation(&mut self, index: TIndex, set_to: SetTo) -> Option<OldAnimationState>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -48,4 +51,8 @@ pub(crate) enum SetTo {
 	Replay,
 	Repeat,
 	Stop,
+	SeekTime(F32Finite),
 }
+
+#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+pub(crate) struct OldAnimationState(pub(crate) AnimationState);
