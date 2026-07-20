@@ -1,6 +1,10 @@
-use crate::traits::{IsPlaying, UpdateAnimation};
+use crate::{
+	components::animation_dispatch::AnimationState,
+	traits::{IsPlaying, OldAnimationState, UpdateAnimation},
+};
 use bevy::prelude::*;
 use std::time::Duration;
+use zyheeda_core::prelude::*;
 
 type AnimationPlayerComponents<'a> = (Mut<'a, AnimationPlayer>, Mut<'a, AnimationTransitions>);
 
@@ -11,11 +15,20 @@ impl IsPlaying<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
 	}
 }
 
-impl UpdateAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
-	fn update_animation(&mut self, index: AnimationNodeIndex, seek: super::SetTo) {
-		const TRANSITION: Duration = Duration::from_millis(100);
+const TRANSITION: Duration = Duration::from_millis(100);
 
+impl UpdateAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
+	fn update_animation(
+		&mut self,
+		index: AnimationNodeIndex,
+		seek: super::SetTo,
+	) -> Option<OldAnimationState> {
 		let (player, transitions) = self;
+
+		let old = player
+			.animation(index)
+			.and_then(|active| F32Finite::try_from(active.seek_time()).ok())
+			.map(|seek| OldAnimationState(AnimationState { seek }));
 
 		match seek {
 			super::SetTo::Play => {
@@ -30,6 +43,8 @@ impl UpdateAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
 			super::SetTo::Stop => {
 				player.update_animation(index, super::SetTo::Stop);
 			}
-		}
+		};
+
+		old
 	}
 }

@@ -2,6 +2,7 @@ use crate::{
 	components::{
 		current_forward_pitch::CurrentForwardPitch,
 		current_movement_direction::CurrentMovementDirection,
+		just_stopped_animations::JustStoppedAnimations,
 	},
 	traits::{GetAllActiveAnimations, YoungestToOldestActiveAnimations},
 };
@@ -13,7 +14,7 @@ use std::{collections::HashMap, fmt::Debug, iter::Rev};
 use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[require(CurrentMovementDirection, CurrentForwardPitch)]
+#[require(CurrentMovementDirection, CurrentForwardPitch, JustStoppedAnimations)]
 #[savable_component(id = "animation dispatch")]
 pub struct AnimationDispatch {
 	priorities: (
