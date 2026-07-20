@@ -8,11 +8,7 @@ use crate::{
 	resources::{camera_render_target::CameraRenderTarget, window_size::WindowSize},
 };
 use bevy::{
-	core_pipeline::{
-		FullscreenShader,
-		core_3d::graph::{Core3d, Node3d},
-	},
-	ecs::query::QueryItem,
+	core_pipeline::{Core3d, Core3dSystems, FullscreenShader},
 	prelude::*,
 	render::{
 		RenderApp,
@@ -25,15 +21,8 @@ use bevy::{
 		},
 		extract_resource::ExtractResourcePlugin,
 		render_asset::RenderAssets,
-		render_graph::{
-			NodeRunError,
-			RenderGraphContext,
-			RenderGraphExt,
-			RenderLabel,
-			ViewNode,
-			ViewNodeRunner,
-		},
 		render_resource::{
+			BindGroup,
 			BindGroupEntries,
 			BindGroupLayoutDescriptor,
 			BindGroupLayoutEntries,
@@ -52,16 +41,17 @@ use bevy::{
 			ShaderStages,
 			TextureFormat,
 			TextureSampleType,
+			TextureViewId,
 			binding_types::{sampler, texture_2d, uniform_buffer},
 		},
-		renderer::{RenderContext, RenderDevice},
+		renderer::{RenderContext, RenderDevice, ViewQuery},
 		texture::GpuImage,
 		view::ViewTarget,
 	},
 };
 use common::{
-	error_logger::{GlobalErrorLogger, Log},
 	errors::{ErrorData, Level},
+	systems::log::OnError,
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::{fmt::Display, time::Duration};
@@ -139,13 +129,6 @@ pub(crate) trait SetupPostProcessPipeline {
 
 impl SetupPostProcessPipeline for App {
 	fn setup_post_process_pipeline(&mut self) -> &mut Self {
-		let label = PostProcessLabel;
-		let edges = (
-			Node3d::Tonemapping,
-			label,
-			Node3d::EndMainPassPostProcessing,
-		);
-
 		self.add_plugins((
 			ExtractComponentPlugin::<PostProcessCamera>::default(),
 			UniformComponentPlugin::<PostProcessCamera>::default(),
@@ -174,165 +157,133 @@ impl SetupPostProcessPipeline for App {
 		);
 
 		self.sub_app_mut(RenderApp)
-			.add_render_graph_node::<ViewNodeRunner<PostProcessNode>>(Core3d, label)
-			.add_render_graph_edges(Core3d, edges)
-			.add_systems(RenderStartup, PostProcessPipeline::init);
+			.add_systems(RenderStartup, PostProcessPipeline::init)
+			.add_systems(
+				Core3d,
+				post_process_system
+					.pipe(OnError::log)
+					.in_set(Core3dSystems::PostProcess),
+			);
 
 		self
 	}
 }
 
-#[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub(crate) struct PostProcessLabel;
-
-#[derive(Default, Debug, PartialEq)]
-pub(crate) struct PostProcessNode;
-
-impl PostProcessNode {
-	fn log(error: impl Into<PostProcessError>) {
-		GlobalErrorLogger::INSTANCE.log(error.into());
-	}
+#[derive(Default)]
+struct PostProcessBindGroupCache {
+	cached: Option<(TextureViewId, BindGroup)>,
 }
 
-impl ViewNode for PostProcessNode {
-	type ViewQuery = (
-		&'static ViewTarget,
-		&'static DynamicUniformIndex<PostProcessCamera>,
-	);
+#[allow(clippy::too_many_arguments)]
+fn post_process_system(
+	view: ViewQuery<(&ViewTarget, &DynamicUniformIndex<PostProcessCamera>)>,
+	pipeline: Option<Res<PostProcessPipeline>>,
+	pipeline_cache: Res<PipelineCache>,
+	settings: Res<ComponentUniforms<PostProcessCamera>>,
+	gpu_images: Res<RenderAssets<GpuImage>>,
+	world_depth: Res<DepthTexture<WorldPass>>,
+	visibility: Res<CameraRenderTarget<VisibilityPass>>,
+	effect_light: Res<CameraRenderTarget<EffectLightPass>>,
+	agents_depth: Res<DepthTexture<AgentsPass>>,
+	outline_depth: Res<DepthTexture<OutlinePass>>,
+	mut cache: Local<PostProcessBindGroupCache>,
+	mut render_context: RenderContext,
+) -> Result<(), PostProcessError> {
+	use RenderPass::*;
+	use RenderPipeline::*;
 
-	fn run(
-		&self,
-		_: &mut RenderGraphContext,
-		render_context: &mut RenderContext,
-		(view_target, settings_index, ..): QueryItem<Self::ViewQuery>,
-		world: &World,
-	) -> Result<(), NodeRunError> {
-		use RenderPass::*;
+	let (view_target, settings_index) = view.into_inner();
 
-		// Get render pipeline
-		let Some(post_process_pipeline) = world.get_resource::<PostProcessPipeline>() else {
-			Self::log(MissingResource::PostProcessPipeline);
-			return Ok(());
-		};
-		let Some(cache) = world.get_resource::<PipelineCache>() else {
-			Self::log(MissingResource::PipeLineCache);
-			return Ok(());
-		};
-		let Some(pipeline) = cache.get_render_pipeline(post_process_pipeline.pipeline_id) else {
-			Self::log(MissingDerived::RenderPipeline);
-			return Ok(());
-		};
+	// Get render pipeline
+	let Some(pipeline) = pipeline else {
+		return Err(PostProcessError::RenderPipeline(ResourceMissing));
+	};
+	let Some(render_pipeline) = pipeline_cache.get_render_pipeline(pipeline.pipeline_id) else {
+		return Err(PostProcessError::RenderPipeline(CacheMissing));
+	};
 
-		// get post process setting
-		let Some(settings) = world.get_resource::<ComponentUniforms<PostProcessCamera>>() else {
-			Self::log(MissingResource::PostProcessUniforms);
-			return Ok(());
-		};
-		let Some(settings_binding) = settings.uniforms().binding() else {
-			Self::log(MissingDerived::UniformBindings);
-			return Ok(());
-		};
+	// get post process setting
+	let Some(settings_binding) = settings.uniforms().binding() else {
+		return Err(PostProcessError::UniformBindings);
+	};
 
-		// get target textures
-		let Some(gpu_images) = world.get_resource::<RenderAssets<GpuImage>>() else {
-			Self::log(MissingResource::RenderAssets);
-			return Ok(());
-		};
-		let Some(world_depth) = world.get_resource::<DepthTexture<WorldPass>>() else {
-			Self::log(MissingResource::RenderTargets(WorldDepth));
-			return Ok(());
-		};
-		let Some(world_depth_gpu) = gpu_images.get(&world_depth.handle) else {
-			Self::log(MissingDerived::GPUImage(WorldDepth));
-			return Ok(());
-		};
-		let Some(visibility) = world.get_resource::<CameraRenderTarget<VisibilityPass>>() else {
-			Self::log(MissingResource::RenderTargets(VisibilityRender));
-			return Ok(());
-		};
-		let Some(visibility_gpu) = gpu_images.get(&visibility.handle) else {
-			Self::log(MissingDerived::GPUImage(VisibilityRender));
-			return Ok(());
-		};
-		let Some(effect_light) = world.get_resource::<CameraRenderTarget<EffectLightPass>>() else {
-			Self::log(MissingResource::RenderTargets(EffectLightRender));
-			return Ok(());
-		};
-		let Some(effect_light_gpu) = gpu_images.get(&effect_light.handle) else {
-			Self::log(MissingDerived::GPUImage(EffectLightRender));
-			return Ok(());
-		};
-		let Some(agents_depth) = world.get_resource::<DepthTexture<AgentsPass>>() else {
-			Self::log(MissingResource::RenderTargets(AgentsDepth));
-			return Ok(());
-		};
-		let Some(agents_depth_gpu) = gpu_images.get(&agents_depth.handle) else {
-			Self::log(MissingDerived::GPUImage(AgentsDepth));
-			return Ok(());
-		};
-		let Some(outline_depth) = world.get_resource::<DepthTexture<OutlinePass>>() else {
-			Self::log(MissingResource::RenderTargets(OutlineDepth));
-			return Ok(());
-		};
-		let Some(outline_depth_gpu) = gpu_images.get(&outline_depth.handle) else {
-			Self::log(MissingDerived::GPUImage(OutlineDepth));
-			return Ok(());
-		};
+	// get target textures
+	let Some(world_depth_gpu) = gpu_images.get(&world_depth.handle) else {
+		return Err(PostProcessError::GPUImage(WorldDepth));
+	};
+	let Some(visibility_gpu) = gpu_images.get(&visibility.handle) else {
+		return Err(PostProcessError::GPUImage(VisibilityRender));
+	};
+	let Some(effect_light_gpu) = gpu_images.get(&effect_light.handle) else {
+		return Err(PostProcessError::GPUImage(EffectLightRender));
+	};
+	let Some(agents_depth_gpu) = gpu_images.get(&agents_depth.handle) else {
+		return Err(PostProcessError::GPUImage(AgentsDepth));
+	};
+	let Some(outline_depth_gpu) = gpu_images.get(&outline_depth.handle) else {
+		return Err(PostProcessError::GPUImage(OutlineDepth));
+	};
 
-		let post_process = view_target.post_process_write();
-		let bind_group = render_context.render_device().create_bind_group(
-			"post_process_bind_group",
-			&cache.get_bind_group_layout(&post_process_pipeline.layout),
-			&BindGroupEntries::sequential((
-				&world_depth_gpu.texture_view,
-				&world_depth_gpu.sampler,
-				&agents_depth_gpu.texture_view,
-				&agents_depth_gpu.sampler,
-				&outline_depth_gpu.texture_view,
-				&outline_depth_gpu.sampler,
-				post_process.source,
-				&post_process_pipeline.sampler,
-				&visibility_gpu.texture_view,
-				&visibility_gpu.sampler,
-				&effect_light_gpu.texture_view,
-				&effect_light_gpu.sampler,
-				settings_binding.clone(),
-			)),
-		);
+	let post_process = view_target.post_process_write();
+	let bind_group = match &mut cache.cached {
+		Some((texture_id, bind_group)) if post_process.source.id() == *texture_id => bind_group,
+		cached => {
+			let bind_group = render_context.render_device().create_bind_group(
+				"post_process_bind_group",
+				&pipeline_cache.get_bind_group_layout(&pipeline.layout),
+				&BindGroupEntries::sequential((
+					&world_depth_gpu.texture_view,
+					&world_depth_gpu.sampler,
+					&agents_depth_gpu.texture_view,
+					&agents_depth_gpu.sampler,
+					&outline_depth_gpu.texture_view,
+					&outline_depth_gpu.sampler,
+					post_process.source,
+					&pipeline.sampler,
+					&visibility_gpu.texture_view,
+					&visibility_gpu.sampler,
+					&effect_light_gpu.texture_view,
+					&effect_light_gpu.sampler,
+					settings_binding.clone(),
+				)),
+			);
 
-		let mut render_pass = render_context.begin_tracked_render_pass(RenderPassDescriptor {
-			label: Some("post_process_pass"),
-			color_attachments: &[Some(RenderPassColorAttachment {
-				view: post_process.destination,
-				depth_slice: None,
-				resolve_target: None,
-				ops: Operations::default(),
-			})],
-			depth_stencil_attachment: None,
-			timestamp_writes: None,
-			occlusion_query_set: None,
-		});
+			let (_, bind_group) = cached.insert((post_process.source.id(), bind_group));
+			bind_group
+		}
+	};
 
-		render_pass.set_render_pipeline(pipeline);
-		render_pass.set_bind_group(0, &bind_group, &[settings_index.index()]);
-		render_pass.draw(0..3, 0..1);
+	let mut render_pass =
+		render_context
+			.command_encoder()
+			.begin_render_pass(&RenderPassDescriptor {
+				label: Some("post_process_pass"),
+				color_attachments: &[Some(RenderPassColorAttachment {
+					view: post_process.destination,
+					depth_slice: None,
+					resolve_target: None,
+					ops: Operations::default(),
+				})],
+				..default()
+			});
 
-		Ok(())
-	}
+	render_pass.set_pipeline(render_pipeline);
+	render_pass.set_bind_group(0, bind_group, &[settings_index.index()]);
+	render_pass.draw(0..3, 0..1);
+
+	Ok(())
 }
 
 #[derive(Debug, PartialEq)]
 enum PostProcessError {
-	MissingResource(MissingResource),
-	MissingDerived(MissingDerived),
+	RenderPipeline(RenderPipeline),
+	UniformBindings,
+	GPUImage(RenderPass),
 }
 
 impl Display for PostProcessError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		match self {
-			PostProcessError::MissingResource(r) => write!(f, "missing resource {r:?}"),
-			PostProcessError::MissingDerived(d) => write!(f, "could not obtain {d:?}"),
-		}
+		write!(f, "could not obtain {self:?}")
 	}
 }
 
@@ -355,31 +306,9 @@ impl ErrorData for PostProcessError {
 }
 
 #[derive(Debug, PartialEq)]
-enum MissingResource {
-	PostProcessPipeline,
-	PipeLineCache,
-	PostProcessUniforms,
-	RenderAssets,
-	RenderTargets(RenderPass),
-}
-
-impl From<MissingResource> for PostProcessError {
-	fn from(value: MissingResource) -> Self {
-		Self::MissingResource(value)
-	}
-}
-
-impl From<MissingDerived> for PostProcessError {
-	fn from(value: MissingDerived) -> Self {
-		Self::MissingDerived(value)
-	}
-}
-
-#[derive(Debug, PartialEq)]
-enum MissingDerived {
-	RenderPipeline,
-	UniformBindings,
-	GPUImage(RenderPass),
+enum RenderPipeline {
+	ResourceMissing,
+	CacheMissing,
 }
 
 #[derive(Debug, PartialEq)]

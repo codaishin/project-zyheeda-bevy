@@ -2,7 +2,7 @@ use crate::{
 	components::material_override::MaterialOverride,
 	materials::essence_material::EssenceMaterial,
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	traits::{accessors::get::TryApplyOn, add_asset::AddAsset},
 	zyheeda_commands::ZyheedaCommands,
@@ -35,7 +35,7 @@ impl MaterialOverride {
 		with_active_standard_material: Query<&MeshMaterial3d<StandardMaterial>>,
 		with_inactive_standard_material: Query<&inactive::Material>,
 	) where
-		TAssets: AddAsset<EssenceMaterial> + Resource,
+		TAssets: AddAsset<EssenceMaterial> + Resource<Mutability = Mutable>,
 	{
 		let entity = on_insert.entity;
 
@@ -83,7 +83,7 @@ fn set_essence_material<TAssets>(
 	entity: Entity,
 	essence_material: &EssenceMaterial,
 ) where
-	TAssets: Resource + AddAsset<EssenceMaterial>,
+	TAssets: Resource<Mutability = Mutable> + AddAsset<EssenceMaterial>,
 {
 	commands.try_apply_on(&entity, |mut e| {
 		e.try_insert(MeshMaterial3d(assets.add_asset(essence_material.clone())));

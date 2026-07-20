@@ -1,5 +1,5 @@
 use crate::system_params::input::Input;
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::traits::handles_input::InputSetupChanged;
 
 impl<'w, 's, TKeyMap> InputSetupChanged for Input<'w, 's, Res<'static, TKeyMap>>
@@ -13,7 +13,7 @@ where
 
 impl<'w, 's, TKeyMap> InputSetupChanged for Input<'w, 's, ResMut<'static, TKeyMap>>
 where
-	TKeyMap: Resource,
+	TKeyMap: Resource<Mutability = Mutable>,
 {
 	fn input_setup_changed(&self) -> bool {
 		self.key_map.is_changed()

@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{tools::path::Path, traits::load_asset::LoadAsset};
 
 impl<T> BeginLoadingResource for T where T: Asset {}
@@ -12,7 +12,7 @@ pub(crate) trait BeginLoadingResource: Asset + Sized {
 fn begin_loading<TAsset, TServer>(path: Path) -> impl Fn(Commands, ResMut<TServer>)
 where
 	TAsset: Asset,
-	TServer: LoadAsset + Resource,
+	TServer: LoadAsset + Resource<Mutability = Mutable>,
 {
 	move |mut commands, mut server| {
 		let handle: Handle<TAsset> = server.load_asset(&path);

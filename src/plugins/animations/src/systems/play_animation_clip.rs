@@ -18,7 +18,10 @@ use common::traits::{
 	thread_safe::ThreadSafe,
 	wrap_handle::{GetHandle, WrapHandle},
 };
-use std::collections::{HashSet, hash_map::Entry};
+use std::{
+	collections::{HashSet, hash_map::Entry},
+	ops::DerefMut,
+};
 use zyheeda_core::prelude::*;
 
 impl<TDispatch> PlayAnimationClip for TDispatch where
@@ -83,9 +86,10 @@ fn play_animation_clip<TAnimationPlayer, TDispatch, TGraph, TClips>(
 			let Ok(mut player) = players.get_mut(entity) else {
 				continue;
 			};
-			let Some(graph) = graphs.get_mut(graph_component.get_handle()) else {
+			let Some(mut graph) = graphs.get_mut(graph_component.get_handle()) else {
 				continue;
 			};
+			let graph = graph.deref_mut();
 			let active_animations = play(graph, &mut player, lookup, dispatcher, &mut changes);
 			let inactive_animations = lookup.animations.iter().filter_map(
 				|(key, data): (&AnimationKey, &Animation<TClips>)| {

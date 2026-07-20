@@ -103,7 +103,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 			parent.spawn((
 				Text::from(title),
 				TextFont {
-					font_size: 40.0,
+					font_size: FontSize::Px(40.0),
 					..default()
 				},
 				TextColor(InventoryPanel::PANEL_COLORS.filled.text),
@@ -131,7 +131,7 @@ fn add_grid<TKey>(
 				if let Some(token) = &grid_label {
 					parent.spawn((
 						TextFont {
-							font_size: 20.0,
+							font_size: FontSize::Px(20.0),
 							..default()
 						},
 						TextColor(InventoryPanel::PANEL_COLORS.filled.text),
@@ -158,7 +158,7 @@ fn add_grid<TKey>(
 							parent.spawn((
 								UILabelText,
 								TextFont {
-									font_size: 15.0,
+									font_size: FontSize::Px(15.0),
 									..default()
 								},
 							));

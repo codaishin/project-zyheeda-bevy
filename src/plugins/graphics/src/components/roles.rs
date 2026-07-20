@@ -33,7 +33,8 @@ impl Prefab<()> for Player {
 				PointLight {
 					intensity: 1e30, // Set high to guarantee fully lighting all non occluded areas
 					range: 20.,
-					shadows_enabled: true,
+					shadow_maps_enabled: true,
+					contact_shadows_enabled: true,
 					..default()
 				},
 			));

@@ -28,14 +28,14 @@ unsafe impl<T> SystemParam for MarkUnique<T> {
 	) {
 		// Conceptually copied from unique access implementation for resources.
 		let combined_access = component_access_set.combined_access();
-		if combined_access.has_resource_write(*state) {
+		if combined_access.has_write(*state) {
 			panic!(
 				"{} in system {} can only be accessed once",
 				type_name::<T>(),
 				system_meta.name(),
 			);
 		}
-		component_access_set.add_unfiltered_resource_write(*state);
+		component_access_set.add_resource_write(*state);
 	}
 
 	unsafe fn get_param<'world, 'state>(
@@ -43,8 +43,11 @@ unsafe impl<T> SystemParam for MarkUnique<T> {
 		_: &bevy::ecs::system::SystemMeta,
 		_: bevy::ecs::world::unsafe_world_cell::UnsafeWorldCell<'world>,
 		_: bevy::ecs::change_detection::Tick,
-	) -> Self::Item<'world, 'state> {
-		MarkUnique(PhantomData)
+	) -> std::prelude::v1::Result<
+		Self::Item<'world, 'state>,
+		bevy::ecs::system::SystemParamValidationError,
+	> {
+		Ok(MarkUnique(PhantomData))
 	}
 }
 

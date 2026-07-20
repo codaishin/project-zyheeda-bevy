@@ -1,5 +1,5 @@
 use crate::system_params::input::Input;
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::handles_input::UpdateKey,
@@ -7,7 +7,7 @@ use common::{
 
 impl<'w, 's, TKeyMap> UpdateKey for Input<'w, 's, ResMut<'static, TKeyMap>>
 where
-	TKeyMap: Resource + UpdateKey,
+	TKeyMap: Resource<Mutability = Mutable> + UpdateKey,
 {
 	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
 	where

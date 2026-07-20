@@ -8,7 +8,7 @@ pub struct InputLabel {
 }
 
 impl InputLabel {
-	pub(crate) const FONT_SIZE: f32 = 15.;
+	pub(crate) const FONT_SIZE: FontSize = FontSize::Px(15.);
 
 	fn node() -> Node {
 		Node {

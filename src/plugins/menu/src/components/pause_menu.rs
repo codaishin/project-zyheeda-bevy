@@ -26,7 +26,7 @@ impl InsertUiContent for PauseMenu {
 		parent.spawn((
 			Text::from(localization.localize_token("paused").or_token()),
 			TextFont {
-				font_size: 40.0,
+				font_size: FontSize::Px(40.0),
 				..default()
 			},
 		));

@@ -1,15 +1,15 @@
 use crate::{
-	components::load_scene::{GltfSceneError, LoadScene},
+	components::load_world_asset::{GltfSceneError, LoadWorldAsset},
 	traits::accessors::get::GetMut,
 	zyheeda_commands::ZyheedaCommands,
 };
 use bevy::prelude::*;
 
-impl LoadScene {
+impl LoadWorldAsset {
 	pub(crate) fn execute(
-		trigger: On<Add, LoadScene>,
+		trigger: On<Add, LoadWorldAsset>,
 		mut commands: ZyheedaCommands,
-		scenes: Query<&LoadScene>,
+		scenes: Query<&LoadWorldAsset>,
 	) -> Result<(), GltfSceneError> {
 		let entity = trigger.entity;
 
@@ -22,8 +22,8 @@ impl LoadScene {
 		};
 
 		match scene {
-			LoadScene::GltfError(err) => return Err(*err),
-			LoadScene::Scene(handle) => entity.try_insert(SceneRoot(handle.clone())),
+			LoadWorldAsset::GltfError(err) => return Err(*err),
+			LoadWorldAsset::Scene(handle) => entity.try_insert(WorldAssetRoot(handle.clone())),
 		};
 
 		Ok(())
@@ -41,7 +41,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new();
 
-		app.add_observer(LoadScene::execute.pipe(|In(r), mut c: Commands| {
+		app.add_observer(LoadWorldAsset::execute.pipe(|In(r), mut c: Commands| {
 			c.insert_resource(_Result(r));
 		}));
 
@@ -53,16 +53,16 @@ mod tests {
 		let handle = new_handle();
 		let mut app = setup();
 
-		let model = app.world_mut().spawn(LoadScene::Scene(handle.clone()));
+		let model = app.world_mut().spawn(LoadWorldAsset::Scene(handle.clone()));
 
-		assert_eq!(Some(&SceneRoot(handle)), model.get::<SceneRoot>());
+		assert_eq!(Some(&WorldAssetRoot(handle)), model.get::<WorldAssetRoot>());
 	}
 
 	#[test]
 	fn return_ok() {
 		let mut app = setup();
 
-		app.world_mut().spawn(LoadScene::Scene(new_handle()));
+		app.world_mut().spawn(LoadWorldAsset::Scene(new_handle()));
 
 		assert_eq!(&_Result(Ok(())), app.world().resource::<_Result>(),);
 	}
@@ -71,10 +71,11 @@ mod tests {
 	fn return_error() {
 		let mut app = setup();
 
-		app.world_mut().spawn(LoadScene::GltfError(GltfSceneError {
-			scene_count: 10,
-			requested_id: 100,
-		}));
+		app.world_mut()
+			.spawn(LoadWorldAsset::GltfError(GltfSceneError {
+				scene_count: 10,
+				requested_id: 100,
+			}));
 
 		assert_eq!(
 			&_Result(Err(GltfSceneError {
@@ -90,9 +91,9 @@ mod tests {
 		let handle = new_handle();
 		let mut app = setup();
 
-		let mut model = app.world_mut().spawn(LoadScene::Scene(handle.clone()));
-		model.insert(LoadScene::Scene(new_handle()));
+		let mut model = app.world_mut().spawn(LoadWorldAsset::Scene(handle.clone()));
+		model.insert(LoadWorldAsset::Scene(new_handle()));
 
-		assert_eq!(Some(&SceneRoot(handle)), model.get::<SceneRoot>());
+		assert_eq!(Some(&WorldAssetRoot(handle)), model.get::<WorldAssetRoot>());
 	}
 }

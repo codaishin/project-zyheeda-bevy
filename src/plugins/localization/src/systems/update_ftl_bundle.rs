@@ -89,11 +89,14 @@ fn removed_handle_id(
 	};
 
 	let folder = locale.folder.as_ref()?;
-	let LoadedFolder { handles } = folders.get_mut(folder)?;
-	let i = handles.iter().position(|handle| handle.id() == id)?;
-	let removed = handles.remove(i).id().typed();
+	let mut loaded_folder = folders.get_mut(folder)?;
+	let i = loaded_folder
+		.handles
+		.iter()
+		.position(|handle| handle.id() == id)?;
+	let removed = loaded_folder.handles.remove(i).id().typed();
 
-	if handles.is_empty() {
+	if loaded_folder.handles.is_empty() {
 		locale.folder = None;
 	}
 

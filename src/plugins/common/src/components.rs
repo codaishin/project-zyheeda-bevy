@@ -9,4 +9,4 @@ pub mod persistent_entity;
 pub mod protected;
 pub mod ui_node_for;
 
-pub(crate) mod load_scene;
+pub(crate) mod load_world_asset;

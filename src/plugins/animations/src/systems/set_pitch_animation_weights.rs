@@ -74,7 +74,7 @@ fn set_pitch_animation_weights<TDispatch, TGraph>(
 			let Ok(player) = players.get(entity) else {
 				continue;
 			};
-			let Some(graph) = graphs.get_mut(player.get_handle()) else {
+			let Some(mut graph) = graphs.get_mut(player.get_handle()) else {
 				continue;
 			};
 

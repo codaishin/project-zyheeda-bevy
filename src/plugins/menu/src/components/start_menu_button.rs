@@ -67,7 +67,7 @@ impl Prefab<()> for StartMenuButton {
 		entity.with_child((
 			Text::from(&self.label),
 			TextFont {
-				font_size: 32.0,
+				font_size: FontSize::Px(32.0),
 				..default()
 			},
 		));

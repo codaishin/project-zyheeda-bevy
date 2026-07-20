@@ -70,7 +70,7 @@ impl InsertUiContent for LoadingScreen<AssetsProgress> {
 		parent.spawn((
 			Text::from(label),
 			TextFont {
-				font_size: 32.,
+				font_size: FontSize::Px(32.),
 				..default()
 			},
 		));
@@ -90,7 +90,7 @@ impl InsertUiContent for LoadingScreen<DependenciesProgress> {
 		parent.spawn((
 			Text::from(label),
 			TextFont {
-				font_size: 32.,
+				font_size: FontSize::Px(32.),
 				..default()
 			},
 		));

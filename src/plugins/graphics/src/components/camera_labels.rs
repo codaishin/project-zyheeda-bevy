@@ -7,13 +7,16 @@ use crate::{
 	},
 };
 use bevy::{
-	camera::visibility::{Layer, RenderLayers},
+	camera::{
+		Hdr,
+		visibility::{Layer, RenderLayers},
+	},
 	color::palettes::tailwind,
 	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
 	ecs::system::StaticSystemParam,
 	post_process::bloom::Bloom,
 	prelude::*,
-	render::{extract_component::ExtractComponent, view::Hdr},
+	render::extract_component::ExtractComponent,
 };
 use common::{
 	errors::Unreachable,

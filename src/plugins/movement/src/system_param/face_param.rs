@@ -1,6 +1,6 @@
 mod override_face;
 
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::ecs::system::SystemParam;
 use common::{
 	traits::{
 		accessors::get::{GetMut, TryGetContextMut},

@@ -46,7 +46,7 @@ impl SettingsScreen {
 		parent.spawn((
 			Text::from(localize.localize_token(title).or_token()),
 			TextFont {
-				font_size: 40.0,
+				font_size: FontSize::Px(40.0),
 				..default()
 			},
 		));
@@ -65,7 +65,7 @@ impl SettingsScreen {
 			.with_child((
 				Text::from(localize.localize_token(title).or_token()),
 				TextFont {
-					font_size: 20.0,
+					font_size: FontSize::Px(20.0),
 					..default()
 				},
 			));

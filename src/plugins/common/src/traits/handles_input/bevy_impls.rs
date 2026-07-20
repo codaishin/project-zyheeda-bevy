@@ -9,7 +9,7 @@ use crate::{
 		iteration::IterFinite,
 	},
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use std::ops::{Deref, DerefMut};
 
 impl<T> GetInput for Res<'_, T>
@@ -26,7 +26,7 @@ where
 
 impl<T> GetInput for ResMut<'_, T>
 where
-	T: GetInput + Resource,
+	T: GetInput + Resource<Mutability = Mutable>,
 {
 	fn get_input<TAction>(&self, action: TAction) -> UserInput
 	where
@@ -47,7 +47,7 @@ where
 
 impl<T> GetAllInputs for ResMut<'_, T>
 where
-	T: GetAllInputs + Resource,
+	T: GetAllInputs + Resource<Mutability = Mutable>,
 {
 	fn get_all_inputs(&self) -> impl Iterator<Item = (ActionKey, UserInput)> {
 		self.deref().get_all_inputs()
@@ -65,7 +65,7 @@ where
 
 impl<T> GetRawUserInput for ResMut<'_, T>
 where
-	T: GetRawUserInput + Resource,
+	T: GetRawUserInput + Resource<Mutability = Mutable>,
 {
 	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput> {
 		self.deref().get_raw_user_input(state)
@@ -86,7 +86,7 @@ where
 
 impl<T> GetInputState for ResMut<'_, T>
 where
-	T: GetInputState + Resource,
+	T: GetInputState + Resource<Mutability = Mutable>,
 {
 	fn get_input_state<TAction>(&self, action: TAction) -> super::InputState
 	where
@@ -110,7 +110,7 @@ where
 
 impl<T> GetAllInputStates for ResMut<'_, T>
 where
-	T: GetAllInputStates + Resource,
+	T: GetAllInputStates + Resource<Mutability = Mutable>,
 {
 	fn get_all_input_states<TAction>(&self) -> impl Iterator<Item = (TAction, super::InputState)>
 	where
@@ -122,7 +122,7 @@ where
 
 impl<T> UpdateKey for ResMut<'_, T>
 where
-	T: UpdateKey + Resource,
+	T: UpdateKey + Resource<Mutability = Mutable>,
 {
 	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
 	where

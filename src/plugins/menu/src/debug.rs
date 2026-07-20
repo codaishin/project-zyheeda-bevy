@@ -74,7 +74,7 @@ where
 				self.0.subsec_millis()
 			)),
 			TextFont {
-				font_size: 20.,
+				font_size: FontSize::Px(20.),
 				..default()
 			},
 		));
@@ -131,7 +131,7 @@ impl DropdownButton {
 	fn text_style() -> (TextFont, TextColor) {
 		(
 			TextFont {
-				font_size: 30.,
+				font_size: FontSize::Px(30.),
 				..default()
 			},
 			TextColor(Color::BLACK),

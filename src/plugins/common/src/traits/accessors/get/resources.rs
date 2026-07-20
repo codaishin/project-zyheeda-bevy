@@ -1,5 +1,8 @@
 use crate::traits::accessors::get::{ContextChanged, GetContext, GetContextMut};
-use bevy::{ecs::system::SystemParamItem, prelude::*};
+use bevy::{
+	ecs::{component::Mutable, system::SystemParamItem},
+	prelude::*,
+};
 use std::ops::DerefMut;
 
 impl<T> ContextChanged for &'_ Res<'_, T>
@@ -24,7 +27,7 @@ where
 
 impl<T, TKey> GetContextMut<TKey> for ResMut<'static, T>
 where
-	T: Resource,
+	T: Resource<Mutability = Mutable>,
 {
 	type TContext<'ctx> = &'ctx mut T;
 

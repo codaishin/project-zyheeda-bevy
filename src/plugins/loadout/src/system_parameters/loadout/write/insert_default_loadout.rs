@@ -2,7 +2,7 @@ use crate::{
 	components::{inventory::Inventory, loadout::Loadout, slots::Slots},
 	system_parameters::loadout::LoadoutPrep,
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	tools::inventory_key::InventoryKey,
 	traits::{
@@ -42,7 +42,7 @@ impl DefaultLoadout<'_> {
 		mut commands: ZyheedaCommands,
 		mut server: ResMut<TAssetServer>,
 	) where
-		TAssetServer: Resource + LoadAsset,
+		TAssetServer: Resource<Mutability = Mutable> + LoadAsset,
 	{
 		let mut slots = Slots::default();
 		let mut inventory = Inventory::default();

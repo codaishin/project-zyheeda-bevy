@@ -5,7 +5,7 @@ use crate::{
 	},
 	traits::drain_invalid_inputs::DrainInvalidInputs,
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::{
 	errors::{ErrorData, Level},
 	tools::{
@@ -20,12 +20,17 @@ use std::{
 };
 
 impl<T> SaveChanges for T where
-	T: Resource + Clone + DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>
+	T: Resource<Mutability = Mutable>
+		+ Clone
+		+ DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>
 {
 }
 
 pub(crate) trait SaveChanges:
-	Resource + Clone + Sized + DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>
+	Resource<Mutability = Mutable>
+	+ Clone
+	+ Sized
+	+ DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>
 {
 	fn save_changes<TDto>(
 		path: Path,
@@ -41,7 +46,9 @@ fn save_changes<TAsset, TDto, TWriter>(
 	path: Path,
 ) -> impl Fn(ResMut<TAsset>, Res<TWriter>) -> Result<(), SaveError<TWriter::TError>>
 where
-	TAsset: Resource + Clone + DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>,
+	TAsset: Resource<Mutability = Mutable>
+		+ Clone
+		+ DrainInvalidInputs<TInvalidInput = (ActionKey, HashSet<UserInput>)>,
 	TDto: Serialize + From<TAsset> + 'static,
 	TWriter: WriteAsset + Resource,
 {

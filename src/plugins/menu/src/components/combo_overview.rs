@@ -75,7 +75,7 @@ where
 }
 
 impl ComboOverview<()> {
-	pub const BUTTON_FONT_SIZE: f32 = 15.;
+	pub const BUTTON_FONT_SIZE: FontSize = FontSize::Px(15.);
 	pub const SKILL_ICON_MARGIN: Pixel = Pixel(15.);
 	pub const MODIFY_BUTTON_OFFSET: Pixel = Pixel(-12.0);
 	pub const SYMBOL_WIDTH: Pixel = Pixel(5.);
@@ -374,7 +374,7 @@ fn add_title(parent: &mut RelatedSpawnerCommands<ChildOf>, title: Localized) {
 			parent.spawn((
 				Text::from(title),
 				TextFont {
-					font_size: 40.,
+					font_size: FontSize::Px(40.),
 					..default()
 				},
 				TextColor(PanelColors::DEFAULT.filled.text),

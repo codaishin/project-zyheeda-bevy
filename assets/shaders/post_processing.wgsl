@@ -52,7 +52,7 @@ const OUTLINED: Kind = 2;
 
 @fragment
 fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
-    let info = info(in.uv);
+    let info = get_info(in.uv);
 
     if info.order[0].kind == OUTLINED {
         return screen(in.uv, info);
@@ -61,7 +61,7 @@ fn fragment(in: FullscreenVertexOutput) -> @location(0) vec4<f32> {
     let offset = settings.outline_width / vec2<f32>(textureDimensions(outline_depth));
     for (var i = 0; i < 4; i++) {
         let probe_uv = in.uv + OFFSETS[i] * offset;
-        let info = info(probe_uv);
+        let info = get_info(probe_uv);
 
         if info.order[0].depth == NO_DEPTH || info.order[0].kind != OUTLINED {
             continue;
@@ -83,7 +83,7 @@ fn load_depths(uv: vec2<f32>) -> Depths {
     );
 }
 
-fn info(uv: vec2<f32>) -> ScreenInfo {
+fn get_info(uv: vec2<f32>) -> ScreenInfo {
     let depth = load_depths(uv);
     var order = array(
         LayerInfo(WORLD, depth.world),

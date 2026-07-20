@@ -66,7 +66,7 @@ where
 			return;
 		}
 
-		let Some(image) = images.get_mut(&first_pass_image.handle) else {
+		let Some(mut image) = images.get_mut(&first_pass_image.handle) else {
 			return;
 		};
 
