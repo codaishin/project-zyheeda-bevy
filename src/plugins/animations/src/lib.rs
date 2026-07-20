@@ -4,9 +4,6 @@ mod system_params;
 mod systems;
 mod traits;
 
-#[cfg(test)]
-pub(crate) mod test_tools;
-
 use crate::{
 	components::{
 		animation_dispatch::{AnimationGraphOf, AnimationPlayerOf},

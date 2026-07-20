@@ -191,7 +191,6 @@ mod tests {
 			animation_dispatch::{AnimationPlayerOf, AnimationState},
 			just_stopped_animations::JustStoppedAnimations,
 		},
-		test_tools::leak_iterator,
 		traits::OldAnimationState,
 	};
 	use common::{
@@ -205,8 +204,18 @@ mod tests {
 		collections::{HashMap, VecDeque},
 		ops::DerefMut,
 		slice::Iter,
+		vec::IntoIter,
 	};
 	use testing::{NestedMocks, SingleThreadedApp, new_handle};
+
+	macro_rules! iter {
+		() => {
+			vec![].into_iter()
+		};
+		($($value:expr),+ $(,)?) => {
+			vec![$(&$value,)+].into_iter()
+		};
+	}
 
 	#[derive(Component)]
 	struct _Agent;
@@ -218,7 +227,7 @@ mod tests {
 
 	impl YoungestToOldestActiveAnimations for _AnimationDispatch {
 		type TIter<'a>
-			= Iter<'a, AnimationKey>
+			= IntoIter<&'a AnimationKey>
 		where
 			Self: 'a;
 
@@ -237,11 +246,11 @@ mod tests {
 		_AnimationDispatch {}
 		impl YoungestToOldestActiveAnimations for _AnimationDispatch {
 			type TIter<'a>
-				= Iter<'a, AnimationKey>
+				= IntoIter<&'a AnimationKey>
 			where
 				Self: 'a;
 
-			fn youngest_to_oldest_active_animations<TPriority>(&self, priority: TPriority) -> Iter<'static, AnimationKey>
+			fn youngest_to_oldest_active_animations<TPriority>(&self, priority: TPriority) -> IntoIter<&'static AnimationKey>
 			where
 				TPriority: Into<AnimationPriority> + 'static;
 		}
@@ -454,9 +463,9 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+						.return_const(iter![AnimationKey::Walk]);
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -505,9 +514,9 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+						.return_const(iter![AnimationKey::Walk]);
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -556,9 +565,9 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+						.return_const(iter![AnimationKey::Walk]);
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -667,7 +676,7 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![
+						.return_const(iter![
 							AnimationKey::Skill {
 								slot: SlotKey(11),
 								animation: SkillAnimation::Aim,
@@ -676,10 +685,10 @@ mod tests {
 								slot: SlotKey(12),
 								animation: SkillAnimation::Aim,
 							},
-						]));
+						]);
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Medium))
-						.return_const(leak_iterator(vec![
+						.return_const(iter![
 							AnimationKey::Skill {
 								slot: SlotKey(21),
 								animation: SkillAnimation::Aim,
@@ -688,10 +697,10 @@ mod tests {
 								slot: SlotKey(22),
 								animation: SkillAnimation::Aim,
 							},
-						]));
+						]);
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Low))
-						.return_const(leak_iterator(vec![
+						.return_const(iter![
 							AnimationKey::Skill {
 								slot: SlotKey(31),
 								animation: SkillAnimation::Aim,
@@ -700,7 +709,7 @@ mod tests {
 								slot: SlotKey(32),
 								animation: SkillAnimation::Aim,
 							},
-						]));
+						]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -749,9 +758,9 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+						.return_const(iter![AnimationKey::Walk]);
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -799,7 +808,7 @@ mod tests {
 			.spawn((
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -852,7 +861,7 @@ mod tests {
 				)]),
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -909,7 +918,7 @@ mod tests {
 				)]),
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -968,9 +977,9 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+						.return_const(iter![AnimationKey::Walk]);
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -1014,9 +1023,9 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+						.return_const(iter![AnimationKey::Walk]);
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -1065,9 +1074,9 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![AnimationKey::Walk]));
+						.return_const(iter![AnimationKey::Walk]);
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle),
@@ -1176,7 +1185,7 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![
+						.return_const(iter![
 							AnimationKey::Skill {
 								slot: SlotKey(11),
 								animation: SkillAnimation::Aim,
@@ -1185,10 +1194,10 @@ mod tests {
 								slot: SlotKey(12),
 								animation: SkillAnimation::Aim,
 							},
-						]));
+						]);
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Medium))
-						.return_const(leak_iterator(vec![
+						.return_const(iter![
 							AnimationKey::Skill {
 								slot: SlotKey(21),
 								animation: SkillAnimation::Aim,
@@ -1197,10 +1206,10 @@ mod tests {
 								slot: SlotKey(22),
 								animation: SkillAnimation::Aim,
 							},
-						]));
+						]);
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Low))
-						.return_const(leak_iterator(vec![
+						.return_const(iter![
 							AnimationKey::Skill {
 								slot: SlotKey(31),
 								animation: SkillAnimation::Aim,
@@ -1209,7 +1218,7 @@ mod tests {
 								slot: SlotKey(32),
 								animation: SkillAnimation::Aim,
 							},
-						]));
+						]);
 				}),
 				lookup,
 				_GraphComponent(handle.clone()),
@@ -1326,7 +1335,7 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![
+						.return_const(iter![
 							AnimationKey::Skill {
 								slot: SlotKey(11),
 								animation: SkillAnimation::Aim,
@@ -1335,10 +1344,10 @@ mod tests {
 								slot: SlotKey(12),
 								animation: SkillAnimation::Aim,
 							},
-						]));
+						]);
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Medium))
-						.return_const(leak_iterator(vec![
+						.return_const(iter![
 							AnimationKey::Skill {
 								slot: SlotKey(21),
 								animation: SkillAnimation::Aim,
@@ -1347,10 +1356,10 @@ mod tests {
 								slot: SlotKey(22),
 								animation: SkillAnimation::Aim,
 							},
-						]));
+						]);
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Low))
-						.return_const(leak_iterator(vec![
+						.return_const(iter![
 							AnimationKey::Skill {
 								slot: SlotKey(31),
 								animation: SkillAnimation::Aim,
@@ -1359,7 +1368,7 @@ mod tests {
 								slot: SlotKey(32),
 								animation: SkillAnimation::Aim,
 							},
-						]));
+						]);
 				}),
 				lookup,
 				_GraphComponent(handle.clone()),
@@ -1433,19 +1442,19 @@ mod tests {
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::High))
-						.return_const(leak_iterator(vec![AnimationKey::Skill {
+						.return_const(iter![AnimationKey::Skill {
 							slot: SlotKey(1),
 							animation: SkillAnimation::Aim,
-						}]));
+						}]);
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Medium))
-						.return_const(leak_iterator(vec![AnimationKey::Skill {
+						.return_const(iter![AnimationKey::Skill {
 							slot: SlotKey(2),
 							animation: SkillAnimation::Aim,
-						}]));
+						}]);
 					mock.expect_youngest_to_oldest_active_animations()
 						.with(eq(AnimationPriority::Low))
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle.clone()),
@@ -1505,7 +1514,7 @@ mod tests {
 			.spawn((
 				_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
 					mock.expect_youngest_to_oldest_active_animations::<AnimationPriority>()
-						.return_const(leak_iterator(vec![]));
+						.return_const(iter![]);
 				}),
 				lookup,
 				_GraphComponent(handle.clone()),
