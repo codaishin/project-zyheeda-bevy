@@ -21,7 +21,7 @@ impl UpdateAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
 	fn update_animation(
 		&mut self,
 		index: AnimationNodeIndex,
-		seek: super::SetTo,
+		set_to: super::SetTo,
 	) -> Option<OldAnimationState> {
 		let (player, transitions) = self;
 
@@ -30,7 +30,7 @@ impl UpdateAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
 			.and_then(|active| F32Finite::try_from(active.seek_time()).ok())
 			.map(|seek| OldAnimationState(AnimationState { seek }));
 
-		match seek {
+		match set_to {
 			super::SetTo::Play => {
 				transitions.play(player, index, TRANSITION);
 			}
@@ -42,6 +42,11 @@ impl UpdateAnimation<AnimationNodeIndex> for AnimationPlayerComponents<'_> {
 			}
 			super::SetTo::Stop => {
 				player.update_animation(index, super::SetTo::Stop);
+			}
+			super::SetTo::SeekTime(seek_time) => {
+				player
+					.animation_mut(index)
+					.map(|a| a.set_seek_time(*seek_time));
 			}
 		};
 

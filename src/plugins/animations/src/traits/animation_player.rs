@@ -1,3 +1,5 @@
+use std::ops::DerefMut;
+
 use super::UpdateAnimation;
 use crate::{
 	components::animation_dispatch::AnimationState,
@@ -16,14 +18,24 @@ impl UpdateAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
 	fn update_animation(
 		&mut self,
 		index: AnimationNodeIndex,
-		seek: super::SetTo,
+		set_to: super::SetTo,
+	) -> Option<OldAnimationState> {
+		self.deref_mut().update_animation(index, set_to)
+	}
+}
+
+impl UpdateAnimation<AnimationNodeIndex> for AnimationPlayer {
+	fn update_animation(
+		&mut self,
+		index: AnimationNodeIndex,
+		set_to: super::SetTo,
 	) -> Option<OldAnimationState> {
 		let old = self
 			.animation(index)
 			.and_then(|active| F32Finite::try_from(active.seek_time()).ok())
 			.map(|seek| OldAnimationState(AnimationState { seek }));
 
-		match seek {
+		match set_to {
 			super::SetTo::Play => {
 				self.play(index);
 			}
@@ -36,6 +48,10 @@ impl UpdateAnimation<AnimationNodeIndex> for Mut<'_, AnimationPlayer> {
 
 			super::SetTo::Stop => {
 				self.stop(index);
+			}
+			super::SetTo::SeekTime(seek_time) => {
+				self.animation_mut(index)
+					.map(|a| a.set_seek_time(*seek_time));
 			}
 		};
 

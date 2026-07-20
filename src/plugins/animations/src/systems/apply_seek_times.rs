@@ -1,7 +1,10 @@
-use crate::components::{
-	animation_dispatch::{AnimationDispatch, AnimationPlayerOf},
-	animation_lookup::AnimationLookup,
-	changed_animations::ChangedAnimations,
+use crate::{
+	components::{
+		animation_dispatch::{AnimationDispatch, AnimationPlayerOf},
+		animation_lookup::AnimationLookup,
+		changed_animations::ChangedAnimations,
+	},
+	traits::{SetTo, UpdateAnimation},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use common::traits::thread_safe::ThreadSafe;
@@ -24,7 +27,7 @@ impl AnimationDispatch {
 		players: Query<(&mut TPlayer, &AnimationPlayerOf), Added<AnimationPlayerOf>>,
 	) where
 		TClips: ThreadSafe + for<'a> Iterate<'a, TItem = &'a AnimationNodeIndex>,
-		TPlayer: Component<Mutability = Mutable> + SetAnimationSeekTime,
+		TPlayer: Component<Mutability = Mutable> + UpdateAnimation<AnimationNodeIndex>,
 	{
 		for (mut player, AnimationPlayerOf(dispatch)) in players {
 			let Ok((dispatch, lookup, mut changes)) = dispatchers.get_mut(*dispatch) else {
@@ -41,20 +44,10 @@ impl AnimationDispatch {
 				};
 
 				for id in data.clips.iterate() {
-					player.set_animation_seek_time(*id, *state.seek);
+					player.update_animation(*id, SetTo::SeekTime(state.seek));
 				}
 			}
 		}
-	}
-}
-
-trait SetAnimationSeekTime {
-	fn set_animation_seek_time(&mut self, id: AnimationNodeIndex, seek_time: f32);
-}
-
-impl SetAnimationSeekTime for AnimationPlayer {
-	fn set_animation_seek_time(&mut self, id: AnimationNodeIndex, seek_time: f32) {
-		self.animation_mut(id).map(|a| a.set_seek_time(seek_time));
 	}
 }
 
@@ -80,9 +73,13 @@ mod tests {
 	}
 
 	#[automock]
-	impl SetAnimationSeekTime for _AnimationPlayer {
-		fn set_animation_seek_time(&mut self, id: AnimationNodeIndex, seek_time: f32) {
-			self.mock.set_animation_seek_time(id, seek_time);
+	impl UpdateAnimation<AnimationNodeIndex> for _AnimationPlayer {
+		fn update_animation(
+			&mut self,
+			index: AnimationNodeIndex,
+			set_to: SetTo,
+		) -> Option<crate::traits::OldAnimationState> {
+			self.mock.update_animation(index, set_to)
 		}
 	}
 
@@ -123,9 +120,12 @@ mod tests {
 		app.update();
 
 		fn assert_set_seek_time(mock: &mut Mock_AnimationPlayer) {
-			mock.expect_set_animation_seek_time()
-				.with(eq(AnimationNodeIndex::new(42)), eq(11.))
-				.return_const(());
+			mock.expect_update_animation()
+				.with(
+					eq(AnimationNodeIndex::new(42)),
+					eq(SetTo::SeekTime(f32_finite!(11.))),
+				)
+				.return_const(None);
 		}
 	}
 
@@ -152,7 +152,7 @@ mod tests {
 		app.world_mut().spawn((
 			AnimationPlayerOf(dispatch),
 			_AnimationPlayer::new().with_mock(|mock| {
-				mock.expect_set_animation_seek_time().return_const(());
+				mock.expect_update_animation().return_const(None);
 			}),
 		));
 
@@ -187,7 +187,7 @@ mod tests {
 		app.world_mut().spawn((
 			AnimationPlayerOf(dispatch),
 			_AnimationPlayer::new().with_mock(|mock| {
-				mock.expect_set_animation_seek_time().return_const(());
+				mock.expect_update_animation().return_const(None);
 			}),
 		));
 
@@ -229,10 +229,13 @@ mod tests {
 		app.update();
 
 		fn assert_set_seek_time(mock: &mut Mock_AnimationPlayer) {
-			mock.expect_set_animation_seek_time()
-				.with(eq(AnimationNodeIndex::new(42)), eq(11.))
+			mock.expect_update_animation()
+				.with(
+					eq(AnimationNodeIndex::new(42)),
+					eq(SetTo::SeekTime(f32_finite!(11.))),
+				)
 				.once()
-				.return_const(());
+				.return_const(None);
 		}
 	}
 }

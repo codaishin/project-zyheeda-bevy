@@ -6,6 +6,7 @@ pub(crate) mod tuple_animation_player_transitions;
 use crate::components::animation_dispatch::AnimationState;
 use common::traits::handles_animations::{AnimationClips, AnimationKey, AnimationPriority};
 use serde::{Deserialize, Serialize};
+use zyheeda_core::math::f32_finite::F32Finite;
 
 pub(crate) trait InsertClips<TIndex>: Sized {
 	type TBuffer;
@@ -50,6 +51,7 @@ pub(crate) enum SetTo {
 	Replay,
 	Repeat,
 	Stop,
+	SeekTime(F32Finite),
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
