@@ -12,14 +12,15 @@ impl MotionController {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn set_translation(
 		delta: In<Duration>,
-		controlled: Query<
-			(&ApplyMotion, &mut OldTranslation, &Self),
-			(Without<Immobilized>, With<IsInMotion>),
-		>,
-		mut controllers: Query<(&mut KinematicCharacterController, &Transform)>,
+		controlled: Query<(&ApplyMotion, &Self), (Without<Immobilized>, With<IsInMotion>)>,
+		mut controllers: Query<(
+			&mut KinematicCharacterController,
+			&Transform,
+			&mut OldTranslation,
+		)>,
 	) {
-		for (ApplyMotion(motion), mut old_transform, ctrl) in controlled {
-			let Ok((mut ctrl, ctrl_transform)) = controllers.get_mut(ctrl.get()) else {
+		for (ApplyMotion(motion), ctrl) in controlled {
+			let Ok((mut ctrl, ctrl_transform, mut old)) = controllers.get_mut(ctrl.id()) else {
 				continue;
 			};
 
@@ -36,7 +37,7 @@ impl MotionController {
 				CharacterMotion::Done => continue,
 			};
 
-			*old_transform = OldTranslation(ctrl_transform.translation);
+			*old = OldTranslation(ctrl_transform.translation);
 			ctrl.translation = Some(target_translation);
 		}
 	}
@@ -74,17 +75,20 @@ mod tests {
 					target: Vec3::new(3., -1., 11.),
 				}))
 				.id();
-			app.world_mut().spawn((
-				MotionControllerOf(agent),
-				Transform::from_xyz(1., 2., 3.),
-				KinematicCharacterController::default(),
-			));
+			let entity = app
+				.world_mut()
+				.spawn((
+					MotionControllerOf(agent),
+					Transform::from_xyz(1., 2., 3.),
+					KinematicCharacterController::default(),
+				))
+				.id();
 
 			app.update();
 
 			assert_eq!(
 				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
-				app.world().entity(agent).get::<OldTranslation>(),
+				app.world().entity(entity).get::<OldTranslation>(),
 			);
 		}
 
@@ -155,7 +159,7 @@ mod tests {
 		use super::*;
 
 		#[test]
-		fn set_agent_old_translation() {
+		fn set_old_translation() {
 			let delta = Duration::from_millis(100);
 			let mut app = setup(delta);
 			let agent = app
@@ -165,17 +169,20 @@ mod tests {
 					direction: Dir3::NEG_Y,
 				}))
 				.id();
-			app.world_mut().spawn((
-				MotionControllerOf(agent),
-				Transform::from_xyz(1., 2., 3.),
-				KinematicCharacterController::default(),
-			));
+			let entity = app
+				.world_mut()
+				.spawn((
+					MotionControllerOf(agent),
+					Transform::from_xyz(1., 2., 3.),
+					KinematicCharacterController::default(),
+				))
+				.id();
 
 			app.update();
 
 			assert_eq!(
 				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
-				app.world().entity(agent).get::<OldTranslation>(),
+				app.world().entity(entity).get::<OldTranslation>(),
 			);
 		}
 

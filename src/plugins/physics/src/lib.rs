@@ -198,17 +198,17 @@ where
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers_observer)
 			.add_systems(
-				FixedPostUpdate,
+				FixedPreUpdate,
 				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead).chain(),
 			)
 			// Apply gravity effect
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_observer(GravityEffect::update_blockers_observer)
 			.add_systems(
-				FixedPostUpdate,
+				FixedPreUpdate,
 				(
 					GravityAffected::insert_from::<DefaultAttributes>,
-					FixedPostUpdate::delta.pipe(GravityAffected::apply_pull),
+					FixedPreUpdate::delta.pipe(GravityAffected::apply_pull),
 				)
 					.chain(),
 			)
@@ -216,7 +216,7 @@ where
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
 			.add_observer(ForceEffect::update_blockers_observer)
 			.add_systems(
-				FixedPostUpdate,
+				FixedPreUpdate,
 				ForceAffected::insert_from::<DefaultAttributes>,
 			)
 			// General Lifetime relationship

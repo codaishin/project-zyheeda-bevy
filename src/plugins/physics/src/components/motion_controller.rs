@@ -35,17 +35,17 @@ pub(crate) struct OldTranslation(pub(crate) Vec3);
 
 #[derive(Component, Debug, PartialEq)]
 #[relationship_target(relationship = MotionControllerOf, linked_spawn)]
-#[require(OldTranslation)]
 pub(crate) struct MotionController(Entity);
 
 impl MotionController {
-	pub(crate) fn get(&self) -> Entity {
+	pub(crate) fn id(&self) -> Entity {
 		self.0
 	}
 }
 
 #[derive(Component, Debug, PartialEq)]
 #[relationship(relationship_target = MotionController)]
+#[require(OldTranslation)]
 pub(crate) struct MotionControllerOf(pub(crate) Entity);
 
 impl Prefab<()> for MotionControllerOf {
