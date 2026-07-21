@@ -38,7 +38,12 @@ opt-level = 1
 opt-level = 3
 
 [features]
-debug-utils = ["graphics/debug-utils", "bevy/debug", "dep:bevy-inspector-egui"]
+debug-utils = [
+	"graphics/debug-utils",
+	"bevy/debug",
+	"bevy/bevy_dev_tools",
+	"dep:bevy-inspector-egui",
+]
 
 [package]
 name = "project-zyheeda"

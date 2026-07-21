@@ -1,6 +1,3 @@
-#[cfg(debug_assertions)]
-mod debug;
-
 use bevy::{
 	prelude::*,
 	render::{Render, RenderApp, RenderSystems},
@@ -27,9 +24,6 @@ pub struct FrameLimiterPlugin {
 
 impl Plugin for FrameLimiterPlugin {
 	fn build(&self, app: &mut App) {
-		#[cfg(debug_assertions)]
-		debug::init(app);
-
 		let time_per_frame = match self.target_fps {
 			0 => {
 				error!("Target FPS was set to 0, using 1 FPS instead");
@@ -41,8 +35,6 @@ impl Plugin for FrameLimiterPlugin {
 			}
 			target_fps => Duration::from_secs(1) / target_fps,
 		};
-
-		app.insert_resource(Time::<Fixed>::from_duration(time_per_frame));
 
 		app.sub_app_mut(RenderApp)
 			.insert_resource(Sleep(time_per_frame))

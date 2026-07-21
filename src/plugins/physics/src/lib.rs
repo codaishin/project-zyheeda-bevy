@@ -120,17 +120,15 @@ where
 			Update,
 			(
 				PhysicsSystems::Prep,
-				PhysicsSystems::Collisions,
 				PhysicsSystems::Resolve,
 				PhysicsSystems::Interpolate,
 			)
 				.chain(),
 		);
 		app.configure_sets(
-			FixedUpdate,
+			FixedPostUpdate,
 			(
 				PhysicsSystems::Prep,
-				PhysicsSystems::Collisions,
 				PhysicsSystems::Resolve,
 				PhysicsSystems::Interpolate,
 			)
@@ -139,12 +137,13 @@ where
 
 		app
 			// Rapier
-			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default().in_schedule(FixedPostUpdate))
+			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default().in_schedule(FixedUpdate))
 			.register_required_components::<RigidBody, ColliderRoot>()
 			.add_systems(
 				Startup,
 				set_rapier_time_step(Duration::from_secs(1) / self.target_fps),
 			)
+			.insert_resource(Time::<Fixed>::from_hz(self.target_fps as f64))
 			.add_observer(LinearVelocity::apply)
 			// World camera
 			.init_resource::<WorldCamera>()
@@ -156,14 +155,16 @@ where
 			.add_prefab_observer::<MotionControllerOf, ()>()
 			.add_observer(MotionControllerOf::spawn)
 			.add_systems(
-				FixedUpdate,
+				FixedPreUpdate,
 				(
-					FixedUpdate::delta.pipe(MotionController::set_translation),
-					FixedUpdate::delta.pipe(MotionController::apply_gravity),
-					FixedUpdate::delta.pipe(MotionController::set_done),
+					FixedPreUpdate::delta.pipe(MotionController::set_translation),
+					FixedPreUpdate::delta.pipe(MotionController::apply_gravity),
 				)
-					.chain()
-					.in_set(PhysicsSystems::Resolve),
+					.chain(),
+			)
+			.add_systems(
+				FixedPostUpdate,
+				FixedPostUpdate::delta.pipe(MotionController::set_done),
 			)
 			.add_systems(
 				Update,
@@ -197,29 +198,26 @@ where
 			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers_observer)
 			.add_systems(
-				FixedUpdate,
-				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead)
-					.chain()
-					.in_set(PhysicsSystems::Resolve),
+				FixedPostUpdate,
+				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead).chain(),
 			)
 			// Apply gravity effect
 			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
 			.add_observer(GravityEffect::update_blockers_observer)
 			.add_systems(
-				FixedUpdate,
+				FixedPostUpdate,
 				(
 					GravityAffected::insert_from::<DefaultAttributes>,
-					FixedUpdate::delta.pipe(GravityAffected::apply_pull),
+					FixedPostUpdate::delta.pipe(GravityAffected::apply_pull),
 				)
-					.chain()
-					.in_set(PhysicsSystems::Resolve),
+					.chain(),
 			)
 			// Apply force effect
 			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
 			.add_observer(ForceEffect::update_blockers_observer)
 			.add_systems(
-				FixedUpdate,
-				ForceAffected::insert_from::<DefaultAttributes>.in_set(PhysicsSystems::Resolve),
+				FixedPostUpdate,
+				ForceAffected::insert_from::<DefaultAttributes>,
 			)
 			// General Lifetime relationship
 			.add_observer(LifetimeTiedTo::insert_on::<Anchor>)
@@ -242,13 +240,13 @@ where
 				),
 			)
 			.add_systems(
-				FixedUpdate,
+				FixedPostUpdate,
 				(
 					// Collect physical collections
 					(
 						Blockable::apply_beam_blocks.pipe(OnError::log),
 						RootCollisions::<Physical>::clear,
-						FixedUpdate::delta
+						FixedPostUpdate::delta
 							.pipe(UpdateRootCollisions::<Physical>::prevent_tunneling)
 							.pipe(OnError::log),
 						UpdateRootCollisions::<Physical>::push_ongoing_collisions,
@@ -262,10 +260,10 @@ where
 						.chain(),
 				)
 					.chain()
-					.in_set(PhysicsSystems::Collisions),
+					.in_set(PhysicsSystems::Prep),
 			)
 			.add_systems(
-				FixedUpdate,
+				FixedPostUpdate,
 				apply_fragile_blocks.after(PhysicsSystems::Resolve),
 			);
 	}
@@ -283,7 +281,6 @@ fn set_rapier_time_step(time_per_frame: Duration) -> impl Fn(ResMut<TimestepMode
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone)]
 pub enum PhysicsSystems {
 	Prep,
-	Collisions,
 	Resolve,
 	Interpolate,
 }
