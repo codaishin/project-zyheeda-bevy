@@ -8,7 +8,8 @@ use crate::{
 	resources::{camera_render_target::CameraRenderTarget, window_size::WindowSize},
 };
 use bevy::{
-	core_pipeline::{Core3d, Core3dSystems, FullscreenShader},
+	core_pipeline::{Core3d, Core3dSystems, FullscreenShader, tonemapping::tonemapping},
+	ecs::system::SystemParam,
 	prelude::*,
 	render::{
 		RenderApp,
@@ -55,6 +56,53 @@ use common::{
 	zyheeda_commands::ZyheedaCommands,
 };
 use std::{fmt::Display, time::Duration};
+
+pub(crate) trait SetupPostProcessPipeline {
+	fn setup_post_process_pipeline(&mut self) -> &mut Self;
+}
+
+impl SetupPostProcessPipeline for App {
+	fn setup_post_process_pipeline(&mut self) -> &mut Self {
+		self.add_plugins((
+			ExtractComponentPlugin::<PostProcessCamera>::default(),
+			UniformComponentPlugin::<PostProcessCamera>::default(),
+			ExtractResourcePlugin::<CameraRenderTarget<VisibilityPass>>::default(),
+			ExtractResourcePlugin::<CameraRenderTarget<EffectLightPass>>::default(),
+		))
+		.add_observer(WorldPass::insert_render_target)
+		.add_observer(VisibilityPass::insert_render_target)
+		.add_observer(EffectLightPass::insert_render_target)
+		.add_systems(
+			Startup,
+			(
+				CameraRenderTarget::<WorldPass>::instantiate,
+				CameraRenderTarget::<VisibilityPass>::instantiate,
+				CameraRenderTarget::<EffectLightPass>::instantiate,
+			),
+		)
+		.add_systems(
+			First,
+			(
+				CameraRenderTarget::<WorldPass>::update_size,
+				CameraRenderTarget::<VisibilityPass>::update_size,
+				CameraRenderTarget::<EffectLightPass>::update_size,
+			)
+				.after(WindowSize::update),
+		);
+
+		self.sub_app_mut(RenderApp)
+			.add_systems(RenderStartup, PostProcessPipeline::init)
+			.add_systems(
+				Core3d,
+				post_process_system
+					.pipe(OnError::log)
+					.after(tonemapping)
+					.in_set(Core3dSystems::PostProcess),
+			);
+
+		self
+	}
+}
 
 #[derive(Resource, Debug)]
 pub(crate) struct PostProcessPipeline {
@@ -123,81 +171,44 @@ impl PostProcessPipeline {
 	}
 }
 
-pub(crate) trait SetupPostProcessPipeline {
-	fn setup_post_process_pipeline(&mut self) -> &mut Self;
-}
-
-impl SetupPostProcessPipeline for App {
-	fn setup_post_process_pipeline(&mut self) -> &mut Self {
-		self.add_plugins((
-			ExtractComponentPlugin::<PostProcessCamera>::default(),
-			UniformComponentPlugin::<PostProcessCamera>::default(),
-			ExtractResourcePlugin::<CameraRenderTarget<VisibilityPass>>::default(),
-			ExtractResourcePlugin::<CameraRenderTarget<EffectLightPass>>::default(),
-		))
-		.add_observer(WorldPass::insert_render_target)
-		.add_observer(VisibilityPass::insert_render_target)
-		.add_observer(EffectLightPass::insert_render_target)
-		.add_systems(
-			Startup,
-			(
-				CameraRenderTarget::<WorldPass>::instantiate,
-				CameraRenderTarget::<VisibilityPass>::instantiate,
-				CameraRenderTarget::<EffectLightPass>::instantiate,
-			),
-		)
-		.add_systems(
-			First,
-			(
-				CameraRenderTarget::<WorldPass>::update_size,
-				CameraRenderTarget::<VisibilityPass>::update_size,
-				CameraRenderTarget::<EffectLightPass>::update_size,
-			)
-				.after(WindowSize::update),
-		);
-
-		self.sub_app_mut(RenderApp)
-			.add_systems(RenderStartup, PostProcessPipeline::init)
-			.add_systems(
-				Core3d,
-				post_process_system
-					.pipe(OnError::log)
-					.in_set(Core3dSystems::PostProcess),
-			);
-
-		self
-	}
+#[derive(SystemParam)]
+struct ImageHandles<'w> {
+	visibility: Res<'w, CameraRenderTarget<VisibilityPass>>,
+	effect_light: Res<'w, CameraRenderTarget<EffectLightPass>>,
+	world_depth: Res<'w, DepthTexture<WorldPass>>,
+	agents_depth: Res<'w, DepthTexture<AgentsPass>>,
+	outline_depth: Res<'w, DepthTexture<OutlinePass>>,
 }
 
 #[derive(Default)]
-struct PostProcessBindGroupCache {
+struct BindGroupCache {
 	cached: Option<(TextureViewId, BindGroup)>,
 }
 
 #[allow(clippy::too_many_arguments)]
 fn post_process_system(
-	view: ViewQuery<(&ViewTarget, &DynamicUniformIndex<PostProcessCamera>)>,
+	view: ViewQuery<
+		(&ViewTarget, &DynamicUniformIndex<PostProcessCamera>),
+		With<PostProcessCamera>,
+	>,
 	pipeline: Option<Res<PostProcessPipeline>>,
 	pipeline_cache: Res<PipelineCache>,
 	settings: Res<ComponentUniforms<PostProcessCamera>>,
 	gpu_images: Res<RenderAssets<GpuImage>>,
-	world_depth: Res<DepthTexture<WorldPass>>,
-	visibility: Res<CameraRenderTarget<VisibilityPass>>,
-	effect_light: Res<CameraRenderTarget<EffectLightPass>>,
-	agents_depth: Res<DepthTexture<AgentsPass>>,
-	outline_depth: Res<DepthTexture<OutlinePass>>,
-	mut cache: Local<PostProcessBindGroupCache>,
+	image_handles: ImageHandles,
+	mut cache: Local<BindGroupCache>,
 	mut render_context: RenderContext,
 ) -> Result<(), PostProcessError> {
 	use RenderPass::*;
 	use RenderPipeline::*;
 
-	let (view_target, settings_index) = view.into_inner();
-
-	// Get render pipeline
 	let Some(pipeline) = pipeline else {
 		return Err(PostProcessError::RenderPipeline(ResourceMissing));
 	};
+
+	let (view_target, settings_index) = view.into_inner();
+
+	// Get render pipeline
 	let Some(render_pipeline) = pipeline_cache.get_render_pipeline(pipeline.pipeline_id) else {
 		return Err(PostProcessError::RenderPipeline(CacheMissing));
 	};
@@ -208,19 +219,19 @@ fn post_process_system(
 	};
 
 	// get target textures
-	let Some(world_depth_gpu) = gpu_images.get(&world_depth.handle) else {
+	let Some(world_depth_gpu) = gpu_images.get(&*image_handles.world_depth) else {
 		return Err(PostProcessError::GPUImage(WorldDepth));
 	};
-	let Some(visibility_gpu) = gpu_images.get(&visibility.handle) else {
+	let Some(visibility_gpu) = gpu_images.get(&*image_handles.visibility) else {
 		return Err(PostProcessError::GPUImage(VisibilityRender));
 	};
-	let Some(effect_light_gpu) = gpu_images.get(&effect_light.handle) else {
+	let Some(effect_light_gpu) = gpu_images.get(&*image_handles.effect_light) else {
 		return Err(PostProcessError::GPUImage(EffectLightRender));
 	};
-	let Some(agents_depth_gpu) = gpu_images.get(&agents_depth.handle) else {
+	let Some(agents_depth_gpu) = gpu_images.get(&*image_handles.agents_depth) else {
 		return Err(PostProcessError::GPUImage(AgentsDepth));
 	};
-	let Some(outline_depth_gpu) = gpu_images.get(&outline_depth.handle) else {
+	let Some(outline_depth_gpu) = gpu_images.get(&*image_handles.outline_depth) else {
 		return Err(PostProcessError::GPUImage(OutlineDepth));
 	};
 

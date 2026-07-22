@@ -97,6 +97,15 @@ where
 	}
 }
 
+impl<TPass> From<&DepthTexture<TPass>> for AssetId<Image>
+where
+	TPass: ThreadSafe,
+{
+	fn from(depth: &DepthTexture<TPass>) -> Self {
+		depth.handle.id()
+	}
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 struct TextureDimensions(UVec2);
 

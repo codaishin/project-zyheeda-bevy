@@ -133,7 +133,8 @@ impl From<OutlinePass> for Tonemapping {
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
 	DepthPrepass,
-	Msaa::Off
+	Msaa::Off,
+	Hdr
 )]
 #[cfg_attr(debug_assertions, require(Name::from("Agents Camera")))]
 pub(crate) struct AgentsPass;
@@ -172,8 +173,7 @@ impl From<AgentsPass> for Tonemapping {
 	MovableCamera,
 	Camera::from(Self),
 	RenderLayers::from(Self),
-	Tonemapping::from(Self),
-	Hdr
+	Tonemapping::from(Self)
 )]
 #[cfg_attr(debug_assertions, require(Name::from("Visibility Camera")))]
 pub(crate) struct VisibilityPass;
@@ -213,8 +213,7 @@ impl From<VisibilityPass> for Tonemapping {
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
-	Bloom,
-	Hdr
+	Bloom
 )]
 #[cfg_attr(debug_assertions, require(Name::from("Effect Light Camera")))]
 pub(crate) struct EffectLightPass;

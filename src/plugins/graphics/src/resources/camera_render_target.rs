@@ -91,6 +91,16 @@ where
 	}
 }
 
+impl<T, TImage> From<&CameraRenderTarget<T, TImage>> for AssetId<TImage>
+where
+	T: ThreadSafe,
+	TImage: Asset + Resize,
+{
+	fn from(target: &CameraRenderTarget<T, TImage>) -> Self {
+		target.handle.id()
+	}
+}
+
 #[cfg(test)]
 mod test {
 	#![allow(clippy::unwrap_used)]
