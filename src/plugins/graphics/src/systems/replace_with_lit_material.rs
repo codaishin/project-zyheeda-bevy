@@ -1,4 +1,5 @@
 use crate::{
+	components::roles::Player,
 	materials::lit_material::{LitMaterial, StandardLitMaterial},
 	resources::standard_materials::StandardMaterials,
 };
@@ -8,6 +9,7 @@ use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaComman
 impl StandardMaterials {
 	pub(crate) fn replace_with_lit_material(
 		mut materials: ResMut<Self>,
+		players: Query<&Transform, With<Player>>,
 		standard_materials: Res<Assets<StandardMaterial>>,
 		mut lit_materials: ResMut<Assets<StandardLitMaterial>>,
 		mut commands: ZyheedaCommands,
@@ -17,9 +19,10 @@ impl StandardMaterials {
 				return true;
 			};
 
+			let player_position = players.single().map_or(Vec3::ZERO, |t| t.translation);
 			let lit_material = lit_materials.add(StandardLitMaterial {
 				base,
-				extension: LitMaterial::default(),
+				extension: LitMaterial::from_player_position(player_position),
 			});
 
 			for entity in entities.iter() {
@@ -37,7 +40,7 @@ impl StandardMaterials {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::materials::lit_material::StandardLitMaterial;
+	use crate::{components::roles::Player, materials::lit_material::StandardLitMaterial};
 	use std::collections::{HashMap, HashSet};
 	use testing::{SingleThreadedApp, new_handle};
 
@@ -96,6 +99,38 @@ mod tests {
 					.entity(entity)
 					.get::<MeshMaterial3d<StandardMaterial>>()
 			)
+		);
+	}
+
+	#[test]
+	fn replace_with_player_position() {
+		let handle = new_handle();
+		let mut app = setup([(
+			&handle,
+			StandardMaterial {
+				base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
+				..default()
+			},
+		)]);
+		let entity = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
+		app.world_mut()
+			.spawn((Player, Transform::from_xyz(1., 2., 3.)));
+		app.insert_resource(StandardMaterials {
+			entities: HashMap::from([(handle.id(), HashSet::from([entity]))]),
+		});
+
+		app.update();
+
+		assert_eq!(
+			Some(LitMaterial::from_player_position(Vec3::new(1., 2., 3.))),
+			app.world()
+				.entity(entity)
+				.get::<MeshMaterial3d<StandardLitMaterial>>()
+				.and_then(|MeshMaterial3d(handle)| app
+					.world()
+					.resource::<Assets<StandardLitMaterial>>()
+					.get(handle))
+				.map(|m| m.extension),
 		);
 	}
 

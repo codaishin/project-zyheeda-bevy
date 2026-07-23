@@ -22,6 +22,13 @@ impl LitMaterial {
 	const SHADER: &str = asset_path!("shaders/lit_shader.wgsl");
 	const DEFAULT_FALLOFF: f32 = 0.1;
 	const DEFAULT_MIN_LIGHT: f32 = 0.01;
+
+	pub(crate) fn from_player_position(player_position: Vec3) -> Self {
+		Self {
+			player_position,
+			..default()
+		}
+	}
 }
 
 impl Default for LitMaterial {
