@@ -14,7 +14,10 @@ use crate::{
 		post_process_camera::PostProcessCamera,
 		roles::{Enemy, Player},
 	},
-	materials::{effect_material::EffectMaterial, lit_material::StandardLitMaterial},
+	materials::{
+		effect_material::EffectMaterial,
+		lit_material::{LitMaterial, StandardLitMaterial},
+	},
 	resources::{
 		camera_parameters::CameraParameters,
 		depth_texture::{CopyDepthTexture, DepthTexture},
@@ -132,6 +135,7 @@ where
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
 					StandardMaterials::replace_with_lit_material,
+					LitMaterial::set_player_position,
 				)
 					.chain()
 					.in_set(GraphicSystems)
