@@ -76,7 +76,10 @@ mod tests {
 		assert_eq!(
 			(
 				&StandardMaterials::default(),
-				Some(Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.))),
+				Some((
+					Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
+					LitMaterial::default()
+				)),
 				None
 			),
 			(
@@ -88,7 +91,7 @@ mod tests {
 						.world()
 						.resource::<Assets<StandardLitMaterial>>()
 						.get(handle))
-					.map(|m| m.base.base_color),
+					.map(|m| (m.base.base_color, m.extension)),
 				app.world()
 					.entity(entity)
 					.get::<MeshMaterial3d<StandardMaterial>>()
