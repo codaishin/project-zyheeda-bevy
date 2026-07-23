@@ -29,11 +29,9 @@ use serde::{Deserialize, Serialize};
 
 const WORLD_PASS: Layer = 0;
 const AGENTS_PASS: Layer = 1;
-const VISIBILITY_PASS: Layer = 2;
-const EFFECT_LIGHT_PASS: Layer = 3;
-const OUTLINE_PASS: Layer = 4;
-const COMPOSITE_PASS: Layer = 5;
-const UI_PASS: Layer = 6;
+const OUTLINE_PASS: Layer = 2;
+const COMPOSITE_PASS: Layer = 3;
+const UI_PASS: Layer = 4;
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub struct MovableCamera;
@@ -76,7 +74,7 @@ impl From<WorldPass> for Tonemapping {
 
 impl From<WorldPass> for ModelRenderLayers {
 	fn from(_: WorldPass) -> Self {
-		const WORLD_LAYERS: &[Layer] = &[WORLD_PASS, VISIBILITY_PASS];
+		const WORLD_LAYERS: &[Layer] = &[WORLD_PASS];
 		ModelRenderLayers::from(WORLD_LAYERS)
 	}
 }
@@ -132,7 +130,7 @@ impl From<OutlinePass> for Tonemapping {
 	Camera::from(Self),
 	RenderLayers::from(Self),
 	Tonemapping::from(Self),
-	DepthPrepass,
+	OnlyDepthPrepass,
 	Msaa::Off,
 	Hdr
 )]
@@ -163,85 +161,6 @@ impl From<AgentsPass> for ModelRenderLayers {
 
 impl From<AgentsPass> for Tonemapping {
 	fn from(_: AgentsPass) -> Self {
-		Tonemapping::None
-	}
-}
-
-#[derive(Component, ExtractComponent, Debug, PartialEq, Default, Clone)]
-#[require(
-	Camera3d,
-	MovableCamera,
-	Camera::from(Self),
-	RenderLayers::from(Self),
-	Tonemapping::from(Self)
-)]
-#[cfg_attr(debug_assertions, require(Name::from("Visibility Camera")))]
-pub(crate) struct VisibilityPass;
-
-impl From<VisibilityPass> for Camera {
-	fn from(_: VisibilityPass) -> Self {
-		Camera {
-			order: VISIBILITY_PASS as isize,
-			clear_color: Color::NONE.into(),
-			..default()
-		}
-	}
-}
-
-impl From<VisibilityPass> for RenderLayers {
-	fn from(_: VisibilityPass) -> Self {
-		RenderLayers::layer(VISIBILITY_PASS)
-	}
-}
-
-impl From<VisibilityPass> for ModelRenderLayers {
-	fn from(_: VisibilityPass) -> Self {
-		ModelRenderLayers::from(VISIBILITY_PASS)
-	}
-}
-
-impl From<VisibilityPass> for Tonemapping {
-	fn from(_: VisibilityPass) -> Self {
-		Tonemapping::None
-	}
-}
-
-#[derive(Component, ExtractComponent, Debug, PartialEq, Default, Clone)]
-#[require(
-	Camera3d,
-	MovableCamera,
-	Camera::from(Self),
-	RenderLayers::from(Self),
-	Tonemapping::from(Self),
-	Bloom
-)]
-#[cfg_attr(debug_assertions, require(Name::from("Effect Light Camera")))]
-pub(crate) struct EffectLightPass;
-
-impl From<EffectLightPass> for Camera {
-	fn from(_: EffectLightPass) -> Self {
-		Camera {
-			order: EFFECT_LIGHT_PASS as isize,
-			clear_color: Color::NONE.into(),
-			..default()
-		}
-	}
-}
-
-impl From<EffectLightPass> for RenderLayers {
-	fn from(_: EffectLightPass) -> Self {
-		RenderLayers::layer(EFFECT_LIGHT_PASS)
-	}
-}
-
-impl From<EffectLightPass> for ModelRenderLayers {
-	fn from(_: EffectLightPass) -> Self {
-		ModelRenderLayers::from(EFFECT_LIGHT_PASS)
-	}
-}
-
-impl From<EffectLightPass> for Tonemapping {
-	fn from(_: EffectLightPass) -> Self {
 		Tonemapping::None
 	}
 }
@@ -283,7 +202,7 @@ impl From<CompositePass> for RenderLayers {
 
 impl From<CompositePass> for ModelRenderLayers {
 	fn from(_: CompositePass) -> Self {
-		const COMPOSITE_LAYERS: &[Layer] = &[EFFECT_LIGHT_PASS, COMPOSITE_PASS];
+		const COMPOSITE_LAYERS: &[Layer] = &[COMPOSITE_PASS];
 		ModelRenderLayers::from(COMPOSITE_LAYERS)
 	}
 }

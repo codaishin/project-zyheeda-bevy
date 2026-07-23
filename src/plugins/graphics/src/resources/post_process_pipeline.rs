@@ -1,7 +1,7 @@
 use crate::{
 	DepthTexture,
 	components::{
-		camera_labels::{AgentsPass, EffectLightPass, OutlinePass, VisibilityPass, WorldPass},
+		camera_labels::{AgentsPass, OutlinePass, WorldPass},
 		post_process_camera::PostProcessCamera,
 	},
 	observers::insert_render_target::InsertRenderTarget,
@@ -20,7 +20,6 @@ use bevy::{
 			ExtractComponentPlugin,
 			UniformComponentPlugin,
 		},
-		extract_resource::ExtractResourcePlugin,
 		render_asset::RenderAssets,
 		render_resource::{
 			BindGroup,
@@ -66,28 +65,12 @@ impl SetupPostProcessPipeline for App {
 		self.add_plugins((
 			ExtractComponentPlugin::<PostProcessCamera>::default(),
 			UniformComponentPlugin::<PostProcessCamera>::default(),
-			ExtractResourcePlugin::<CameraRenderTarget<VisibilityPass>>::default(),
-			ExtractResourcePlugin::<CameraRenderTarget<EffectLightPass>>::default(),
 		))
 		.add_observer(WorldPass::insert_render_target)
-		.add_observer(VisibilityPass::insert_render_target)
-		.add_observer(EffectLightPass::insert_render_target)
-		.add_systems(
-			Startup,
-			(
-				CameraRenderTarget::<WorldPass>::instantiate,
-				CameraRenderTarget::<VisibilityPass>::instantiate,
-				CameraRenderTarget::<EffectLightPass>::instantiate,
-			),
-		)
+		.add_systems(Startup, CameraRenderTarget::<WorldPass>::instantiate)
 		.add_systems(
 			First,
-			(
-				CameraRenderTarget::<WorldPass>::update_size,
-				CameraRenderTarget::<VisibilityPass>::update_size,
-				CameraRenderTarget::<EffectLightPass>::update_size,
-			)
-				.after(WindowSize::update),
+			CameraRenderTarget::<WorldPass>::update_size.after(WindowSize::update),
 		);
 
 		self.sub_app_mut(RenderApp)
@@ -136,12 +119,6 @@ impl PostProcessPipeline {
 					// screen (post process camera output)
 					texture_2d(TextureSampleType::Float { filterable: true }),
 					sampler(SamplerBindingType::Filtering),
-					// visibility
-					texture_2d(TextureSampleType::Float { filterable: true }),
-					sampler(SamplerBindingType::Filtering),
-					// effect light
-					texture_2d(TextureSampleType::Float { filterable: true }),
-					sampler(SamplerBindingType::Filtering),
 					// shader settings
 					uniform_buffer::<PostProcessCamera>(true),
 				),
@@ -173,8 +150,6 @@ impl PostProcessPipeline {
 
 #[derive(SystemParam)]
 struct ImageHandles<'w> {
-	visibility: Res<'w, CameraRenderTarget<VisibilityPass>>,
-	effect_light: Res<'w, CameraRenderTarget<EffectLightPass>>,
 	world_depth: Res<'w, DepthTexture<WorldPass>>,
 	agents_depth: Res<'w, DepthTexture<AgentsPass>>,
 	outline_depth: Res<'w, DepthTexture<OutlinePass>>,
@@ -198,41 +173,35 @@ fn post_process_system(
 	image_handles: ImageHandles,
 	mut cache: Local<BindGroupCache>,
 	mut render_context: RenderContext,
-) -> Result<(), PostProcessError> {
-	use RenderPass::*;
-	use RenderPipeline::*;
+) -> Result<(), MissingPostProcessComponent> {
+	use DepthImage::*;
+	use Pipeline::*;
 
 	let Some(pipeline) = pipeline else {
-		return Err(PostProcessError::RenderPipeline(ResourceMissing));
+		return Err(MissingPostProcessComponent::RenderPipeline(Resource));
 	};
 
 	let (view_target, settings_index) = view.into_inner();
 
 	// Get render pipeline
 	let Some(render_pipeline) = pipeline_cache.get_render_pipeline(pipeline.pipeline_id) else {
-		return Err(PostProcessError::RenderPipeline(CacheMissing));
+		return Err(MissingPostProcessComponent::RenderPipeline(Cache));
 	};
 
 	// get post process setting
 	let Some(settings_binding) = settings.uniforms().binding() else {
-		return Err(PostProcessError::UniformBindings);
+		return Err(MissingPostProcessComponent::UniformBindings);
 	};
 
 	// get target textures
 	let Some(world_depth_gpu) = gpu_images.get(&*image_handles.world_depth) else {
-		return Err(PostProcessError::GPUImage(WorldDepth));
-	};
-	let Some(visibility_gpu) = gpu_images.get(&*image_handles.visibility) else {
-		return Err(PostProcessError::GPUImage(VisibilityRender));
-	};
-	let Some(effect_light_gpu) = gpu_images.get(&*image_handles.effect_light) else {
-		return Err(PostProcessError::GPUImage(EffectLightRender));
+		return Err(MissingPostProcessComponent::DepthImage(World));
 	};
 	let Some(agents_depth_gpu) = gpu_images.get(&*image_handles.agents_depth) else {
-		return Err(PostProcessError::GPUImage(AgentsDepth));
+		return Err(MissingPostProcessComponent::DepthImage(Agents));
 	};
 	let Some(outline_depth_gpu) = gpu_images.get(&*image_handles.outline_depth) else {
-		return Err(PostProcessError::GPUImage(OutlineDepth));
+		return Err(MissingPostProcessComponent::DepthImage(Outline));
 	};
 
 	let post_process = view_target.post_process_write();
@@ -251,10 +220,6 @@ fn post_process_system(
 					&outline_depth_gpu.sampler,
 					post_process.source,
 					&pipeline.sampler,
-					&visibility_gpu.texture_view,
-					&visibility_gpu.sampler,
-					&effect_light_gpu.texture_view,
-					&effect_light_gpu.sampler,
 					settings_binding.clone(),
 				)),
 			);
@@ -286,19 +251,19 @@ fn post_process_system(
 }
 
 #[derive(Debug, PartialEq)]
-enum PostProcessError {
-	RenderPipeline(RenderPipeline),
+enum MissingPostProcessComponent {
+	RenderPipeline(Pipeline),
 	UniformBindings,
-	GPUImage(RenderPass),
+	DepthImage(DepthImage),
 }
 
-impl Display for PostProcessError {
+impl Display for MissingPostProcessComponent {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "could not obtain {self:?}")
 	}
 }
 
-impl ErrorData for PostProcessError {
+impl ErrorData for MissingPostProcessComponent {
 	fn rate_limit() -> Option<Duration> {
 		Some(Duration::from_secs(2))
 	}
@@ -308,7 +273,7 @@ impl ErrorData for PostProcessError {
 	}
 
 	fn label() -> impl std::fmt::Display {
-		"Post Process Error"
+		"Missing Post Process Component"
 	}
 
 	fn into_details(self) -> impl std::fmt::Display {
@@ -317,16 +282,14 @@ impl ErrorData for PostProcessError {
 }
 
 #[derive(Debug, PartialEq)]
-enum RenderPipeline {
-	ResourceMissing,
-	CacheMissing,
+enum Pipeline {
+	Resource,
+	Cache,
 }
 
 #[derive(Debug, PartialEq)]
-enum RenderPass {
-	WorldDepth,
-	AgentsDepth,
-	OutlineDepth,
-	VisibilityRender,
-	EffectLightRender,
+enum DepthImage {
+	World,
+	Agents,
+	Outline,
 }

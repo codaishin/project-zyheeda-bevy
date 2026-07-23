@@ -2,10 +2,8 @@ use crate::{
 	components::camera_labels::{
 		AgentsPass,
 		CompositePass,
-		EffectLightPass,
 		OutlinePass,
 		UiPass,
-		VisibilityPass,
 		WorldLight,
 		WorldPass,
 	},
@@ -44,8 +42,6 @@ impl UiPass {
 
 					commands.spawn((BondedTo(entity), WorldPass, *transform));
 					commands.spawn((BondedTo(entity), AgentsPass, *transform));
-					commands.spawn((BondedTo(entity), VisibilityPass, *transform));
-					commands.spawn((BondedTo(entity), EffectLightPass, *transform));
 					commands.spawn((BondedTo(entity), OutlinePass, *transform));
 					commands.spawn((BondedTo(entity), CompositePass, *transform));
 					commands.spawn((BondedTo(entity), WorldLight, *transform));
@@ -166,9 +162,7 @@ mod tests {
 	#[test_case(WorldPass; "world")]
 	#[test_case(AgentsPass; "agents")]
 	#[test_case(CompositePass; "composite")]
-	#[test_case(EffectLightPass; "effect light")]
 	#[test_case(OutlinePass; "outline")]
-	#[test_case(VisibilityPass; "visibility")]
 	#[test_case(WorldLight; "world light")]
 	fn spawn_other_camera<T>(other_camera: T)
 	where
@@ -195,9 +189,7 @@ mod tests {
 	#[test_case(WorldPass; "world")]
 	#[test_case(AgentsPass; "agents")]
 	#[test_case(CompositePass; "composite")]
-	#[test_case(EffectLightPass; "effect light")]
 	#[test_case(OutlinePass; "outline")]
-	#[test_case(VisibilityPass; "visibility")]
 	#[test_case(WorldLight; "world light")]
 	fn despawn_other_camera<T>(_: T)
 	where
