@@ -170,7 +170,7 @@ where
 	fn state_control(&self, app: &mut App) {
 		let changeable = in_state(MenusChangeable(true));
 		let loading_essentials = in_state(GameState::LoadingEssentialAssets);
-		let changeable_and_not_loading = changeable.and(not(loading_essentials));
+		let changeable_and_not_loading = changeable.and_then(not(loading_essentials));
 
 		app.insert_state(MenusChangeable(true));
 		app.add_systems(

@@ -1,5 +1,5 @@
 use bevy::{
-	ecs::schedule::{ExecutorKind, ScheduleLabel},
+	ecs::schedule::{ScheduleLabel, SingleThreadedExecutor},
 	prelude::*,
 };
 use std::{
@@ -325,7 +325,7 @@ pub trait SingleThreadedApp {
 impl SingleThreadedApp for App {
 	fn single_threaded(mut self, label: impl ScheduleLabel) -> Self {
 		self.edit_schedule(label, |schedule| {
-			schedule.set_executor_kind(ExecutorKind::SingleThreaded);
+			schedule.set_executor(SingleThreadedExecutor::new());
 		});
 
 		self

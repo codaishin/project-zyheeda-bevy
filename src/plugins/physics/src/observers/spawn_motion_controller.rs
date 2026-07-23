@@ -1,10 +1,21 @@
-use crate::components::motion_controller::{MotionCollider, MotionControllerOf};
+use crate::components::motion_controller::{MotionCollider, MotionControllerOf, OldTranslation};
 use bevy::prelude::*;
 use common::zyheeda_commands::ZyheedaCommands;
 
 impl MotionControllerOf {
-	pub(crate) fn spawn(on_add: On<Add, MotionCollider>, mut commands: ZyheedaCommands) {
-		commands.spawn(MotionControllerOf(on_add.entity));
+	pub(crate) fn spawn(
+		on_add: On<Add, MotionCollider>,
+		mut commands: ZyheedaCommands,
+		transforms: Query<&Transform>,
+	) {
+		let translation = transforms
+			.get(on_add.entity)
+			.map_or(Vec3::ZERO, |t| t.translation);
+
+		commands.spawn((
+			MotionControllerOf(on_add.entity),
+			OldTranslation(translation),
+		));
 	}
 }
 

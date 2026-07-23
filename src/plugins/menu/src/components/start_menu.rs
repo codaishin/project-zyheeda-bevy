@@ -56,7 +56,7 @@ impl InsertUiContent for StartMenu {
 				parent.spawn((
 					Text::from(title),
 					TextFont {
-						font_size: 64.0,
+						font_size: FontSize::Px(64.0),
 						..default()
 					},
 					TextColor(PanelColors::DEFAULT.filled.text),

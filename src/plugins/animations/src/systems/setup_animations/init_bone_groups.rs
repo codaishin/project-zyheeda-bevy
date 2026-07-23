@@ -21,13 +21,13 @@ impl SetupAnimations {
 		children: Query<&Children>,
 	) {
 		for (entity, lookup, handle_component) in &lookups {
-			let Some(graph) = graphs.get_mut(handle_component.get_handle()) else {
+			let Some(mut graph) = graphs.get_mut(handle_component.get_handle()) else {
 				continue;
 			};
 			let chains =
 				all_animation_bone_chains(entity, &children, &bones, &lookup.animation_mask_groups);
 
-			update_graph(graph, chains);
+			update_graph(&mut graph, chains);
 		}
 	}
 }

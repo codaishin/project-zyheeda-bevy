@@ -30,7 +30,7 @@ impl InsertUiContent for Tooltip<Token> {
 		parent.spawn((
 			Text::from(localized),
 			TextFont {
-				font_size: 20.0,
+				font_size: FontSize::Px(20.0),
 				..default()
 			},
 			TextColor(PanelColors::DEFAULT.filled.background),
@@ -61,7 +61,7 @@ impl InsertUiContent for Tooltip<Localized> {
 		parent.spawn((
 			Text::from(self.0.clone()),
 			TextFont {
-				font_size: 20.0,
+				font_size: FontSize::Px(20.0),
 				..default()
 			},
 			TextColor(PanelColors::DEFAULT.filled.background),

@@ -25,11 +25,11 @@ impl EffectMaterialHandle {
 		TEffect: ModifyMaterial + 'static,
 	{
 		for EffectMaterialHandle { material } in shaders {
-			let Some(material) = materials.get_mut(material) else {
+			let Some(mut material) = materials.get_mut(material) else {
 				continue;
 			};
 
-			TEffect::modify_material(material);
+			TEffect::modify_material(&mut material);
 		}
 	}
 }

@@ -13,11 +13,15 @@ impl MotionController {
 	pub(crate) fn set_done(
 		In(delta): In<Duration>,
 		mut commands: ZyheedaCommands,
-		controlled: Query<(Entity, &ApplyMotion, &Self, &mut OldTranslation), With<IsInMotion>>,
+		controlled: Query<(Entity, &ApplyMotion, &Self), With<IsInMotion>>,
 		mut transforms: Query<&mut Transform>,
+		mut old_translation: Query<&mut OldTranslation>,
 	) {
-		for (entity, apply, ctrl, mut old_translation) in controlled {
-			let Ok(ctrl_transform) = transforms.get(ctrl.get()) else {
+		for (entity, apply, ctrl) in controlled {
+			let Ok(ctrl_transform) = transforms.get(ctrl.id()) else {
+				continue;
+			};
+			let Ok(mut old_translation) = old_translation.get_mut(ctrl.id()) else {
 				continue;
 			};
 
@@ -128,8 +132,10 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
+		let ctrl = app
+			.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.id();
 
 		app.update();
 
@@ -148,7 +154,7 @@ mod tests {
 				app.world().entity(agent).get::<ApplyMotion>(),
 				app.world().entity(agent).get::<IsInMotion>(),
 				app.world().entity(agent).get::<Transform>(),
-				app.world().entity(agent).get::<OldTranslation>(),
+				app.world().entity(ctrl).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -166,8 +172,10 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
+		let ctrl = app
+			.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.id();
 
 		app.update();
 
@@ -185,7 +193,7 @@ mod tests {
 				app.world().entity(agent).get::<ApplyMotion>(),
 				app.world().entity(agent).get::<IsInMotion>(),
 				app.world().entity(agent).get::<Transform>(),
-				app.world().entity(agent).get::<OldTranslation>(),
+				app.world().entity(ctrl).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -207,8 +215,10 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
+		let ctrl = app
+			.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.id();
 
 		app.update();
 
@@ -227,7 +237,7 @@ mod tests {
 				app.world().entity(agent).get::<ApplyMotion>(),
 				app.world().entity(agent).get::<IsInMotion>(),
 				app.world().entity(agent).get::<Transform>(),
-				app.world().entity(agent).get::<OldTranslation>(),
+				app.world().entity(ctrl).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -249,8 +259,10 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
+		let ctrl = app
+			.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.id();
 
 		app.update();
 
@@ -269,7 +281,7 @@ mod tests {
 				app.world().entity(agent).get::<ApplyMotion>(),
 				app.world().entity(agent).get::<IsInMotion>(),
 				app.world().entity(agent).get::<Transform>(),
-				app.world().entity(agent).get::<OldTranslation>(),
+				app.world().entity(ctrl).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -291,8 +303,10 @@ mod tests {
 				}),
 			))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
+		let ctrl = app
+			.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.id();
 
 		app.update();
 
@@ -311,7 +325,7 @@ mod tests {
 				app.world().entity(agent).get::<ApplyMotion>(),
 				app.world().entity(agent).get::<IsInMotion>(),
 				app.world().entity(agent).get::<Transform>(),
-				app.world().entity(agent).get::<OldTranslation>(),
+				app.world().entity(ctrl).get::<OldTranslation>(),
 			)
 		);
 	}
@@ -326,8 +340,10 @@ mod tests {
 				target: Vec3::new(1.099, 2. + ALLOWED_HEIGHT_DIFFERENCE + 0.1, 3.),
 			}))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)));
+		let ctrl = app
+			.world_mut()
+			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.id();
 
 		app.update();
 
@@ -345,7 +361,7 @@ mod tests {
 				app.world().entity(agent).get::<ApplyMotion>(),
 				app.world().entity(agent).get::<IsInMotion>(),
 				app.world().entity(agent).get::<Transform>(),
-				app.world().entity(agent).get::<OldTranslation>(),
+				app.world().entity(ctrl).get::<OldTranslation>(),
 			)
 		);
 	}

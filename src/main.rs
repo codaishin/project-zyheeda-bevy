@@ -166,12 +166,24 @@ impl From<ZyheedaAppError> for ExitCode {
 #[cfg(feature = "debug-utils")]
 pub mod debug_utils {
 	use super::*;
+	use bevy::{
+		dev_tools::diagnostics_overlay::{DiagnosticsOverlay, DiagnosticsOverlayPlugin},
+		diagnostic::FrameTimeDiagnosticsPlugin,
+	};
 	use bevy_inspector_egui::{bevy_egui, bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
 	use std::ops::Not;
 
 	const FORWARD_GIZMO_COLOR: Color = Color::srgb(0., 0., 1.);
 
 	pub fn prepare_debug(app: &mut App) {
+		app.add_plugins((
+			DiagnosticsOverlayPlugin,
+			FrameTimeDiagnosticsPlugin::default(),
+		))
+		.add_systems(PostStartup, |mut commands: Commands| {
+			commands.spawn(DiagnosticsOverlay::fps());
+		});
+
 		app.insert_resource(ShowGizmos::No)
 			.insert_resource(bevy_egui::EguiGlobalSettings {
 				auto_create_primary_context: false,

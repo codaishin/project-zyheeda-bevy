@@ -1,10 +1,10 @@
 use crate::components::map::Map;
-use bevy::{prelude::*, scene::SceneInstance};
+use bevy::{prelude::*, world_serialization::WorldInstance};
 use common::{components::model::Model, traits::handles_load_tracking::Loaded};
 
 impl Map {
 	pub(crate) fn is_loaded(
-		maps: Query<Option<&SceneInstance>, (With<Self>, With<Model>)>,
+		maps: Query<Option<&WorldInstance>, (With<Self>, With<Model>)>,
 	) -> Loaded {
 		Self::is_loaded_internal(maps)
 	}

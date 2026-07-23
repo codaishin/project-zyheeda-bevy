@@ -1,7 +1,4 @@
-use crate::components::{
-	camera_labels::{AgentsPass, VisibilityPass},
-	model_render_layers::ModelRenderLayers,
-};
+use crate::components::{camera_labels::AgentsPass, model_render_layers::ModelRenderLayers};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Unreachable,
@@ -26,17 +23,7 @@ impl Prefab<()> for Player {
 		entity: &mut impl PrefabEntityCommands,
 		_: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError> {
-		entity
-			.try_insert(ModelRenderLayers::from(AgentsPass))
-			.with_child((
-				ModelRenderLayers::from(VisibilityPass),
-				PointLight {
-					intensity: 1e30, // Set high to guarantee fully lighting all non occluded areas
-					range: 20.,
-					shadows_enabled: true,
-					..default()
-				},
-			));
+		entity.try_insert(ModelRenderLayers::from(AgentsPass));
 
 		Ok(())
 	}

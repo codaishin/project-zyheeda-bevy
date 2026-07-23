@@ -4,7 +4,7 @@ use crate::{
 	file_io::FileIO,
 	traits::insert_entity_component::InsertEntityComponent,
 };
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use common::traits::load_asset::LoadAsset;
 use std::{
 	collections::HashSet,
@@ -16,7 +16,7 @@ impl<T, TComponent> SaveContext<FileIO, T, TComponent> {
 		context: Arc<Mutex<Self>>,
 	) -> impl Fn(Commands, ResMut<TLoadAsset>) -> Result<(), DeserializationOrLockError<T::TError>>
 	where
-		TLoadAsset: Resource + LoadAsset,
+		TLoadAsset: Resource<Mutability = Mutable> + LoadAsset,
 		T: InsertEntityComponent<TLoadAsset, TComponent = TComponent>,
 	{
 		move |commands, asset_server| {
@@ -50,7 +50,7 @@ fn new_entities<'a, TAssetServer, TComponent, TNoInsert>(
 	asset_server: ResMut<'a, TAssetServer>,
 ) -> EntitiesBuffer<'a, TAssetServer, TComponent, TNoInsert>
 where
-	TAssetServer: Resource,
+	TAssetServer: Resource<Mutability = Mutable>,
 {
 	let entities = buffer
 		.drain(..)
@@ -69,7 +69,7 @@ fn remaining_components<TLoadAsset, TComponent, TError>(
 	entities: &EntitiesBuffer<TLoadAsset, TComponent, TError>,
 ) -> Option<HashSet<String>>
 where
-	TLoadAsset: Resource,
+	TLoadAsset: Resource<Mutability = Mutable>,
 {
 	let remaining = HashSet::from_iter(
 		entities
@@ -88,7 +88,7 @@ where
 
 struct EntitiesBuffer<'a, TAssetServer, TComponent, TNoInsert>
 where
-	TAssetServer: Resource,
+	TAssetServer: Resource<Mutability = Mutable>,
 {
 	entities: Vec<(Entity, EntityLoadBuffer<TComponent>)>,
 	commands: Commands<'a, 'a>,
@@ -99,7 +99,7 @@ where
 impl<'a, TAssetServer, TComponent, TNoInsert>
 	EntitiesBuffer<'a, TAssetServer, TComponent, TNoInsert>
 where
-	TAssetServer: Resource + LoadAsset,
+	TAssetServer: Resource<Mutability = Mutable> + LoadAsset,
 {
 	fn with_components<TComponentHandler>(mut self, handlers: &[TComponentHandler]) -> Self
 	where
@@ -246,14 +246,11 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let mut entities = app
-			.world_mut()
-			.query_filtered::<EntityRef, Without<Observer>>();
-		let [entity] = assert_count!(1, entities.iter(app.world()));
-		assert_eq!(
-			(Some(&_A(Value::Null)), None),
-			(entity.get::<_A>(), entity.get::<_B>())
-		);
+		let mut components_a = app.world_mut().query::<&_A>();
+		let mut components_b = app.world_mut().query::<&_B>();
+		let [a] = assert_count!(1, components_a.iter(app.world()));
+		assert_count!(0, components_b.iter(app.world()));
+		assert_eq!(&_A(Value::Null), a);
 		Ok(())
 	}
 
@@ -271,14 +268,11 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let mut entities = app
-			.world_mut()
-			.query_filtered::<EntityRef, Without<Observer>>();
-		let [entity] = assert_count!(1, entities.iter(app.world()));
-		assert_eq!(
-			(Some(&_A(json!(null))), None),
-			(entity.get::<_A>(), entity.get::<_B>())
-		);
+		let mut components_a = app.world_mut().query::<&_A>();
+		let mut components_b = app.world_mut().query::<&_B>();
+		let [a] = assert_count!(1, components_a.iter(app.world()));
+		assert_count!(0, components_b.iter(app.world()));
+		assert_eq!(&_A(json!(null)), a);
 		Ok(())
 	}
 
@@ -300,14 +294,9 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let mut entities = app
-			.world_mut()
-			.query_filtered::<EntityRef, Without<Observer>>();
-		let [one, two] = assert_count!(2, entities.iter(app.world()));
-		assert_eq!(
-			(Some(&_A(json!([1]))), Some(&_A(json!([2]))),),
-			(one.get::<_A>(), two.get::<_A>())
-		);
+		let mut components = app.world_mut().query::<&_A>();
+		let components = assert_count!(2, components.iter(app.world()));
+		assert_eq!([&_A(json!([1])), &_A(json!([2]))], components);
 		Ok(())
 	}
 
@@ -333,14 +322,9 @@ mod tests {
 			.world_mut()
 			.run_system_once(SaveContext::read_buffer_system(context))?;
 
-		let mut entities = app
-			.world_mut()
-			.query_filtered::<EntityRef, Without<Observer>>();
-		let [one, two] = assert_count!(2, entities.iter(app.world()));
-		assert_eq!(
-			(Some(&_CountA { a_count: 2 }), Some(&_CountA { a_count: 2 })),
-			(one.get::<_CountA>(), two.get::<_CountA>())
-		);
+		let mut counts = app.world_mut().query::<&_CountA>();
+		let counts = assert_count!(2, counts.iter(app.world()));
+		assert_eq!([&_CountA { a_count: 2 }, &_CountA { a_count: 2 }], counts);
 		Ok(())
 	}
 

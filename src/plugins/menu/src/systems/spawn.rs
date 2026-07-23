@@ -1,5 +1,8 @@
 use crate::traits::LoadUi;
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::{component::Mutable, system::StaticSystemParam},
+	prelude::*,
+};
 use common::{
 	traits::{
 		accessors::get::GetContextMut,
@@ -15,7 +18,7 @@ pub fn spawn<TComponent, TServer, TCamera>(
 	mut cameras: StaticSystemParam<TCamera>,
 ) where
 	TComponent: LoadUi<TServer> + Component,
-	TServer: Resource + LoadAsset,
+	TServer: Resource<Mutability = Mutable> + LoadAsset,
 	TCamera: for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi>,
 {
 	let ui = TComponent::load_ui(images.as_mut());
@@ -31,7 +34,7 @@ mod tests {
 	use bevy::asset::AssetPath;
 	use testing::{SingleThreadedApp, assert_count};
 
-	#[derive(Component, Resource, Default)]
+	#[derive(Resource, Default)]
 	struct _Server;
 
 	impl LoadAsset for _Server {

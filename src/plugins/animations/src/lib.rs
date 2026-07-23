@@ -17,7 +17,7 @@ use crate::{
 		set_pitch_animation_weights::SetPitchAnimationWeights,
 	},
 };
-use bevy::{prelude::*, scene::SceneInstanceReady};
+use bevy::{prelude::*, world_serialization::WorldInstanceReady};
 use common::{
 	systems::link::to_target::LinkToTarget,
 	tools::plugin_system_set::PluginSystemSet,
@@ -53,7 +53,7 @@ where
 		TSavegame::register_savable_component::<AnimationDispatch>(app);
 		TSavegame::on_before_save(app, AnimationDispatch::write_animation_seek_state);
 
-		app.add_observer(SetupAnimations::insert_when::<SceneInstanceReady>);
+		app.add_observer(SetupAnimations::insert_when::<WorldInstanceReady>);
 		app.add_systems(
 			Update,
 			(

@@ -66,7 +66,7 @@ where
 			return;
 		}
 
-		let Some(image) = images.get_mut(&first_pass_image.handle) else {
+		let Some(mut image) = images.get_mut(&first_pass_image.handle) else {
 			return;
 		};
 
@@ -88,6 +88,16 @@ where
 			handle,
 			_p: PhantomData,
 		}
+	}
+}
+
+impl<T, TImage> From<&CameraRenderTarget<T, TImage>> for AssetId<TImage>
+where
+	T: ThreadSafe,
+	TImage: Asset + Resize,
+{
+	fn from(target: &CameraRenderTarget<T, TImage>) -> Self {
+		target.handle.id()
 	}
 }
 

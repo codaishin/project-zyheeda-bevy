@@ -1,5 +1,5 @@
 use crate::components::icon::Icon;
-use bevy::{asset::LoadState, prelude::*};
+use bevy::{asset::LoadState, ecs::component::Mutable, prelude::*};
 use common::traits::{get_asset_load_state::GetAssetLoadState, load_asset::LoadAsset};
 use std::path::PathBuf;
 
@@ -11,7 +11,7 @@ impl Icon {
 
 fn load_icon_image<TAssetServer>(mut server: ResMut<TAssetServer>, mut icons: Query<&mut Icon>)
 where
-	TAssetServer: LoadAsset + GetAssetLoadState + Resource,
+	TAssetServer: LoadAsset + GetAssetLoadState + Resource<Mutability = Mutable>,
 {
 	for mut icon in &mut icons {
 		match icon.as_ref() {

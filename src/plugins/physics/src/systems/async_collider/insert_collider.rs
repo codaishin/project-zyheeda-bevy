@@ -1,5 +1,5 @@
 use crate::components::async_collider::{AsyncCollider, ColliderType, Source};
-use bevy::prelude::*;
+use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::{
 	errors::{ErrorData, Level},
@@ -28,7 +28,7 @@ impl AsyncCollider {
 		meshes: Res<Assets<Mesh>>,
 	) -> Result<(), Vec<InsertColliderError>>
 	where
-		TAssetServer: Resource + LoadAsset,
+		TAssetServer: Resource<Mutability = Mutable> + LoadAsset,
 		TCollider: Component + ConvexMeshCollider + ConcaveMeshCollider,
 	{
 		let mut errors = vec![];

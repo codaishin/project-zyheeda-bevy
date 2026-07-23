@@ -47,7 +47,7 @@ where
 		parent.spawn((
 			Text::from(localization.localize_token(self.0).or_token()),
 			TextFont {
-				font_size: 15.0,
+				font_size: FontSize::Px(15.0),
 				..default()
 			},
 			TextColor::from(PanelColors::DEFAULT.filled.text),

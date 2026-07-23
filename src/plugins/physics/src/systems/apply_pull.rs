@@ -21,16 +21,20 @@ pub(crate) trait ApplyPull:
 		In(delta): In<Duration>,
 		mut commands: ZyheedaCommands,
 		mut controllers: Query<
-			(&mut KinematicCharacterController, &Transform),
+			(
+				&mut KinematicCharacterController,
+				&Transform,
+				&mut OldTranslation,
+			),
 			Without<MotionController>,
 		>,
-		controlled: Query<(Entity, &mut OldTranslation, &mut Self, &MotionController)>,
+		controlled: Query<(Entity, &mut Self, &MotionController)>,
 		transforms: Query<&GlobalTransform>,
 	) {
 		let delta_secs = delta.as_secs_f32();
 
-		for (entity, mut old_translation, mut gravity_affected, ctrl) in controlled {
-			let Ok((mut ctrl, ctrl_transform)) = controllers.get_mut(ctrl.get()) else {
+		for (entity, mut gravity_affected, ctrl) in controlled {
+			let Ok((mut ctrl, current, mut old)) = controllers.get_mut(ctrl.id()) else {
 				continue;
 			};
 
@@ -51,14 +55,14 @@ pub(crate) trait ApplyPull:
 				let translation = transforms.get(towards).ok()?.translation();
 				Some(translation.with_y(0.))
 			};
-			let position = ctrl_transform.translation.with_y(0.);
+			let position = current.translation.with_y(0.);
 			let pull_sum = gravity_affected
 				.drain_pulls()
 				.filter_map(|pull| get_pull_center(&pull).map(|center| (pull, center)))
 				.filter_map(|(pull, center)| get_pull_vector(delta_secs, position, pull, center))
 				.sum::<Vec3>();
 
-			*old_translation = OldTranslation(ctrl_transform.translation);
+			*old = OldTranslation(current.translation);
 			ctrl.translation = Some(pull_sum);
 			commands.try_apply_on(&entity, |mut e| {
 				e.try_insert(Immobilized);
@@ -185,18 +189,21 @@ mod tests {
 				towards,
 			}]),))
 			.id();
-		app.world_mut().spawn((
-			MotionControllerOf(agent),
-			Transform::from_xyz(1., 2., 3.),
-			KinematicCharacterController::default(),
-		));
+		let ctrl = app
+			.world_mut()
+			.spawn((
+				MotionControllerOf(agent),
+				Transform::from_xyz(1., 2., 3.),
+				KinematicCharacterController::default(),
+			))
+			.id();
 
 		app.world_mut()
 			.run_system_once_with(_GravityTarget::apply_pull, Duration::from_millis(100))?;
 
 		assert_eq!(
 			Some(&OldTranslation(Vec3::new(1., 2., 3.))),
-			app.world().entity(agent).get::<OldTranslation>()
+			app.world().entity(ctrl).get::<OldTranslation>()
 		);
 		Ok(())
 	}

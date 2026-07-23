@@ -1,8 +1,7 @@
 use crate::resources::window_size::WindowSize;
 use bevy::{
 	asset::RenderAssetUsages,
-	core_pipeline::core_3d::graph::{Core3d, Node3d},
-	ecs::query::QueryItem,
+	core_pipeline::{Core3d, Core3dSystems},
 	image::{ImageCompareFunction, ImageSampler, ImageSamplerDescriptor},
 	prelude::*,
 	render::{
@@ -10,16 +9,7 @@ use bevy::{
 		extract_component::{ExtractComponent, ExtractComponentPlugin},
 		extract_resource::{ExtractResource, ExtractResourcePlugin},
 		render_asset::RenderAssets,
-		render_graph::{
-			NodeRunError,
-			RenderGraphContext,
-			RenderGraphExt,
-			RenderLabel,
-			ViewNode,
-			ViewNodeRunner,
-		},
 		render_resource::{
-			CommandEncoderDescriptor,
 			Extent3d,
 			Origin3d,
 			TexelCopyTextureInfo,
@@ -28,14 +18,14 @@ use bevy::{
 			TextureFormat,
 			TextureUsages,
 		},
-		renderer::RenderContext,
+		renderer::{RenderContext, ViewQuery},
 		texture::GpuImage,
 		view::ViewDepthTexture,
 	},
 };
 use common::{
-	error_logger::{GlobalErrorLogger, Log},
 	errors::{ErrorData, Level},
+	systems::log::OnError,
 	traits::thread_safe::ThreadSafe,
 };
 use std::{
@@ -95,7 +85,7 @@ where
 			return;
 		}
 
-		let Some(image) = images.get_mut(&depth.handle) else {
+		let Some(mut image) = images.get_mut(&depth.handle) else {
 			return;
 		};
 
@@ -107,58 +97,17 @@ where
 	}
 }
 
-#[derive(RenderLabel, Debug, PartialEq, Eq, Hash, Default)]
-pub(crate) struct DepthTextureLabel<TPass>(PhantomData<TPass>);
-
-impl<TPass> Clone for DepthTextureLabel<TPass> {
-	fn clone(&self) -> Self {
-		*self
-	}
-}
-
-impl<TPass> Copy for DepthTextureLabel<TPass> {}
-
-impl<TPass> DepthTextureLabel<TPass> {
-	pub(crate) const fn new() -> Self {
-		Self(PhantomData)
-	}
-}
-
-#[derive(Default)]
-pub(crate) struct CopyDepthTextureNode<T>(PhantomData<T>);
-
-impl<T> CopyDepthTextureNode<T> {
-	fn log(error: CopyDepthTextureError) {
-		GlobalErrorLogger::INSTANCE.log(error);
-	}
-
-	fn dimensions_ok(
-		src: &ViewDepthTexture,
-		dst: &GpuImage,
-	) -> Result<(), (TextureDimensions, TextureDimensions)> {
-		let src_extend = TextureDimensions {
-			width: src.texture.width(),
-			height: src.texture.height(),
-		};
-
-		let dst_extend = TextureDimensions {
-			width: dst.size.width,
-			height: dst.size.height,
-		};
-
-		if src_extend != dst_extend {
-			return Err((src_extend, dst_extend));
-		}
-
-		Ok(())
+impl<TPass> From<&DepthTexture<TPass>> for AssetId<Image>
+where
+	TPass: ThreadSafe,
+{
+	fn from(depth: &DepthTexture<TPass>) -> Self {
+		depth.handle.id()
 	}
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-struct TextureDimensions {
-	width: u32,
-	height: u32,
-}
+struct TextureDimensions(UVec2);
 
 pub(crate) trait CopyDepthTexture {
 	fn copy_depth_texture<TCamera>(&mut self) -> &mut Self
@@ -171,9 +120,6 @@ impl CopyDepthTexture for App {
 	where
 		TCamera: Component + ExtractComponent + Debug + Default + Clone + Eq + Hash,
 	{
-		let label = DepthTextureLabel::<TCamera>::new();
-		let edges = (Node3d::EndPrepasses, label, Node3d::MainOpaquePass);
-
 		self.add_plugins((
 			ExtractResourcePlugin::<DepthTexture<TCamera>>::default(),
 			ExtractComponentPlugin::<TCamera>::default(),
@@ -184,77 +130,80 @@ impl CopyDepthTexture for App {
 			DepthTexture::<TCamera>::update_size.after(WindowSize::update),
 		);
 
-		self.sub_app_mut(RenderApp)
-			.add_render_graph_node::<ViewNodeRunner<CopyDepthTextureNode<TCamera>>>(Core3d, label)
-			.add_render_graph_edges(Core3d, edges);
+		self.sub_app_mut(RenderApp).add_systems(
+			Core3d,
+			copy_texture_system::<TCamera>
+				.pipe(OnError::log)
+				.after(Core3dSystems::Prepass)
+				.before(Core3dSystems::MainPass),
+		);
 
 		self
 	}
 }
 
-impl<T> ViewNode for CopyDepthTextureNode<T>
+fn dimensions_ok(
+	src: &ViewDepthTexture,
+	dst: &GpuImage,
+) -> Result<(), (TextureDimensions, TextureDimensions)> {
+	let src_extend = TextureDimensions(UVec2 {
+		x: src.texture.width(),
+		y: src.texture.height(),
+	});
+	let dst_extend = TextureDimensions(dst.size_2d());
+
+	if src_extend != dst_extend {
+		return Err((src_extend, dst_extend));
+	}
+
+	Ok(())
+}
+
+fn copy_texture_system<T>(
+	view: ViewQuery<&ViewDepthTexture, With<T>>,
+	depth_image: Option<Res<DepthTexture<T>>>,
+	images: Res<RenderAssets<GpuImage>>,
+	mut render_context: RenderContext,
+) -> Result<(), CopyDepthTextureError>
 where
 	T: Component,
 {
-	type ViewQuery = (&'static ViewDepthTexture, &'static T);
+	let src = view.into_inner();
 
-	fn run<'w>(
-		&self,
-		_: &mut RenderGraphContext,
-		render_context: &mut RenderContext<'w>,
-		(src, ..): QueryItem<'w, '_, Self::ViewQuery>,
-		world: &'w World,
-	) -> Result<(), NodeRunError> {
-		let Some(depth_image) = world.get_resource::<DepthTexture<T>>() else {
-			Self::log(CopyDepthTextureError::NoSourceImage);
-			return Ok(());
-		};
-		let Some(images) = world.get_resource::<RenderAssets<GpuImage>>() else {
-			Self::log(CopyDepthTextureError::NoGpuImages);
-			return Ok(());
-		};
-		let Some(dst) = images.get(&depth_image.handle) else {
-			Self::log(CopyDepthTextureError::NoDestinationImage);
-			return Ok(());
-		};
+	let Some(depth_image) = depth_image else {
+		return Err(CopyDepthTextureError::NoSourceImage);
+	};
+	let Some(dst) = images.get(&depth_image.handle) else {
+		return Err(CopyDepthTextureError::NoDestinationImage);
+	};
 
-		if let Err((src, dst)) = Self::dimensions_ok(src, dst) {
-			Self::log(CopyDepthTextureError::DimensionMismatch { src, dst });
-			return Ok(());
-		}
+	if let Err((src, dst)) = dimensions_ok(src, dst) {
+		return Err(CopyDepthTextureError::DimensionMismatch { src, dst });
+	};
 
-		render_context.add_command_buffer_generation_task(move |render_device| {
-			let mut command_encoder =
-				render_device.create_command_encoder(&CommandEncoderDescriptor {
-					label: Some("Copy Depth Texture"),
-				});
-			command_encoder.copy_texture_to_texture(
-				TexelCopyTextureInfo {
-					texture: &src.texture,
-					mip_level: 0,
-					origin: Origin3d::default(),
-					aspect: TextureAspect::DepthOnly,
-				},
-				TexelCopyTextureInfo {
-					texture: &dst.texture,
-					mip_level: 0,
-					origin: Origin3d::default(),
-					aspect: TextureAspect::DepthOnly,
-				},
-				dst.size,
-			);
-			command_encoder.finish()
-		});
+	render_context.command_encoder().copy_texture_to_texture(
+		TexelCopyTextureInfo {
+			texture: &src.texture,
+			mip_level: 0,
+			origin: Origin3d::default(),
+			aspect: TextureAspect::DepthOnly,
+		},
+		TexelCopyTextureInfo {
+			texture: &dst.texture,
+			mip_level: 0,
+			origin: Origin3d::default(),
+			aspect: TextureAspect::DepthOnly,
+		},
+		src.texture.size(),
+	);
 
-		Ok(())
-	}
+	Ok(())
 }
 
 #[derive(Debug, PartialEq)]
 enum CopyDepthTextureError {
 	NoSourceImage,
 	NoDestinationImage,
-	NoGpuImages,
 	DimensionMismatch {
 		src: TextureDimensions,
 		dst: TextureDimensions,
@@ -269,9 +218,6 @@ impl Display for CopyDepthTextureError {
 			}
 			CopyDepthTextureError::NoDestinationImage => {
 				write!(f, "no destination image")
-			}
-			CopyDepthTextureError::NoGpuImages => {
-				write!(f, "gpu images missing")
 			}
 			CopyDepthTextureError::DimensionMismatch { src, dst } => {
 				write!(f, "dimensions differ: src: {src:?}, dst: {dst:?}")

@@ -51,7 +51,7 @@ fn add_quickbar(parent: &mut RelatedSpawnerCommands<ChildOf>) {
 }
 
 fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: HandSlot) {
-	let slot_desc_text_size = 22.;
+	let slot_desc_text_size = FontSize::Px(22.);
 	let slot_desc_size = 30.;
 	let slot_desc_border = 2.;
 	let slot_desc_offset = -slot_desc_size / 2. - slot_desc_border;

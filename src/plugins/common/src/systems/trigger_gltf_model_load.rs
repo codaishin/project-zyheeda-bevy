@@ -1,7 +1,7 @@
 use crate::{
 	components::{
 		gltf::{GltfLookup, GltfScene},
-		load_scene::{GltfSceneError, LoadScene},
+		load_world_asset::{GltfSceneError, LoadWorldAsset},
 	},
 	traits::accessors::get::TryApplyOn,
 	zyheeda_commands::ZyheedaCommands,
@@ -12,7 +12,7 @@ impl GltfLookup {
 	pub(crate) fn trigger_model_load(
 		mut commands: ZyheedaCommands,
 		assets: Res<Assets<Gltf>>,
-		scenes: Query<(Entity, &GltfLookup, &GltfScene), Without<LoadScene>>,
+		scenes: Query<(Entity, &GltfLookup, &GltfScene), Without<LoadWorldAsset>>,
 	) {
 		for (entity, GltfLookup(gltf), GltfScene(id)) in scenes {
 			let Some(gltf) = assets.get(gltf) else {
@@ -20,8 +20,8 @@ impl GltfLookup {
 			};
 
 			let load = match gltf.scenes.get(**id) {
-				Some(scene) => LoadScene::Scene(scene.clone()),
-				None => LoadScene::GltfError(GltfSceneError {
+				Some(scene) => LoadWorldAsset::Scene(scene.clone()),
+				None => LoadWorldAsset::GltfError(GltfSceneError {
 					scene_count: gltf.scenes.len(),
 					requested_id: **id,
 				}),
@@ -41,7 +41,7 @@ mod tests {
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
 
-	fn gltf(scenes: impl Into<Vec<Handle<Scene>>>) -> Gltf {
+	fn gltf(scenes: impl Into<Vec<Handle<WorldAsset>>>) -> Gltf {
 		Gltf {
 			scenes: scenes.into(),
 			named_scenes: [].into(),
@@ -89,8 +89,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&LoadScene::Scene(scenes[*id].clone())),
-			app.world().entity(entity).get::<LoadScene>()
+			Some(&LoadWorldAsset::Scene(scenes[*id].clone())),
+			app.world().entity(entity).get::<LoadWorldAsset>()
 		)
 	}
 
@@ -108,11 +108,11 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&LoadScene::GltfError(GltfSceneError {
+			Some(&LoadWorldAsset::GltfError(GltfSceneError {
 				scene_count: 3,
 				requested_id: 3,
 			})),
-			app.world().entity(entity).get::<LoadScene>()
+			app.world().entity(entity).get::<LoadWorldAsset>()
 		)
 	}
 
@@ -128,15 +128,15 @@ mod tests {
 			.spawn((
 				GltfLookup(handle),
 				GltfScene(SceneId(0)),
-				LoadScene::Scene(current_scene.clone()),
+				LoadWorldAsset::Scene(current_scene.clone()),
 			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&LoadScene::Scene(current_scene)),
-			app.world().entity(entity).get::<LoadScene>()
+			Some(&LoadWorldAsset::Scene(current_scene)),
+			app.world().entity(entity).get::<LoadWorldAsset>()
 		)
 	}
 }

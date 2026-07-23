@@ -4,19 +4,19 @@ use bevy::prelude::*;
 impl MotionController {
 	pub(crate) fn interpolate_position(
 		In(OverstepFraction(overstep)): In<OverstepFraction>,
-		controlled: Query<(&mut Transform, &OldTranslation, &Self)>,
-		controllers: Query<&Transform, Without<Self>>,
+		controlled: Query<(&mut Transform, &Self)>,
+		controllers: Query<(&Transform, &OldTranslation), Without<Self>>,
 	) {
-		for (mut transform, OldTranslation(old_translation), ctrl) in controlled {
-			let Ok(ctrl_transform) = controllers.get(ctrl.get()) else {
+		for (mut controlled, controller) in controlled {
+			let Ok((current, OldTranslation(old))) = controllers.get(controller.id()) else {
 				continue;
 			};
 
-			if &transform.translation == old_translation {
+			if controlled.translation == *old {
 				continue;
 			}
 
-			transform.translation = old_translation.lerp(ctrl_transform.translation, overstep);
+			controlled.translation = old.lerp(current.translation, overstep);
 		}
 	}
 }
@@ -54,12 +54,12 @@ mod tests {
 	#[test]
 	fn overstep_one() {
 		let mut app = setup(OverstepFraction(1.));
-		let entity = app
-			.world_mut()
-			.spawn(OldTranslation(Vec3::new(1., 2., 3.)))
-			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(entity), Transform::from_xyz(1., 2., 5.)));
+		let entity = app.world_mut().spawn(Transform::default()).id();
+		app.world_mut().spawn((
+			MotionControllerOf(entity),
+			OldTranslation(Vec3::new(1., 2., 3.)),
+			Transform::from_xyz(1., 2., 5.),
+		));
 
 		app.update();
 
@@ -72,12 +72,12 @@ mod tests {
 	#[test]
 	fn overstep_zero() {
 		let mut app = setup(OverstepFraction(0.));
-		let entity = app
-			.world_mut()
-			.spawn(OldTranslation(Vec3::new(1., 2., 3.)))
-			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(entity), Transform::from_xyz(1., 2., 5.)));
+		let entity = app.world_mut().spawn(Transform::default()).id();
+		app.world_mut().spawn((
+			MotionControllerOf(entity),
+			OldTranslation(Vec3::new(1., 2., 3.)),
+			Transform::from_xyz(1., 2., 5.),
+		));
 
 		app.update();
 
@@ -90,12 +90,12 @@ mod tests {
 	#[test]
 	fn overstep_interpolate_half() {
 		let mut app = setup(OverstepFraction(0.5));
-		let entity = app
-			.world_mut()
-			.spawn(OldTranslation(Vec3::new(1., 2., 3.)))
-			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(entity), Transform::from_xyz(1., 2., 5.)));
+		let entity = app.world_mut().spawn(Transform::default()).id();
+		app.world_mut().spawn((
+			MotionControllerOf(entity),
+			OldTranslation(Vec3::new(1., 2., 3.)),
+			Transform::from_xyz(1., 2., 5.),
+		));
 
 		app.update();
 
@@ -108,16 +108,19 @@ mod tests {
 	#[test]
 	fn do_nothing_if_old_translation_is_new_translation() {
 		let mut app = setup(OverstepFraction(1.));
-		let entity = app
+		let entity = app.world_mut().spawn(Transform::default()).id();
+		let ctrl = app
 			.world_mut()
-			.spawn(OldTranslation(Vec3::new(1., 2., 3.)))
+			.spawn((
+				MotionControllerOf(entity),
+				OldTranslation(Vec3::new(1., 2., 3.)),
+				Transform::from_xyz(1., 2., 5.),
+			))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf(entity), Transform::from_xyz(1., 2., 5.)));
 
 		app.update();
 		app.world_mut()
-			.entity_mut(entity)
+			.entity_mut(ctrl)
 			.insert(OldTranslation(Vec3::new(1., 2., 5.)));
 		app.update();
 

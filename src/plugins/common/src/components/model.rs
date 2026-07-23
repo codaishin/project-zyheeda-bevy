@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		gltf::{GltfLookup, GltfScene},
 		insert_asset::InsertAsset,
-		load_scene::LoadScene,
+		load_world_asset::LoadWorldAsset,
 	},
 	errors::Unreachable,
 	traits::{
@@ -10,7 +10,10 @@ use crate::{
 		prefab::{Prefab, PrefabEntityCommands},
 	},
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::{component::Mutable, system::StaticSystemParam},
+	prelude::*,
+};
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
@@ -35,7 +38,7 @@ impl Model {
 
 impl<TAssetServer> Prefab<TAssetServer> for Model
 where
-	TAssetServer: Resource + LoadAsset,
+	TAssetServer: Resource<Mutability = Mutable> + LoadAsset,
 {
 	type TError = Unreachable;
 
@@ -55,10 +58,10 @@ where
 				let root = asset_server.load_asset(
 					GltfAssetLabel::Scene(*scene.id).from_asset(scene.asset_path.clone()),
 				);
-				entity.try_insert(LoadScene::Scene(root));
+				entity.try_insert(LoadWorldAsset::Scene(root));
 			}
 			Self::None => {
-				entity.try_insert(LoadScene::Scene(Handle::default()));
+				entity.try_insert(LoadWorldAsset::Scene(Handle::default()));
 			}
 			Self::Mesh(insert_mesh) => {
 				entity.try_insert(insert_mesh.clone());
@@ -190,8 +193,8 @@ mod tests {
 		let model = app.world_mut().spawn(Model::scene((asset_path, id))).id();
 
 		assert_eq!(
-			Some(&LoadScene::Scene(handle)),
-			app.world().entity(model).get::<LoadScene>(),
+			Some(&LoadWorldAsset::Scene(handle)),
+			app.world().entity(model).get::<LoadWorldAsset>(),
 		);
 	}
 
@@ -227,8 +230,8 @@ mod tests {
 		let model = app.world_mut().spawn(Model::None).id();
 
 		assert_eq!(
-			Some(&LoadScene::Scene(Handle::default())),
-			app.world().entity(model).get::<LoadScene>(),
+			Some(&LoadWorldAsset::Scene(Handle::default())),
+			app.world().entity(model).get::<LoadWorldAsset>(),
 		);
 	}
 

@@ -169,14 +169,17 @@ mod test {
 
 	#[test]
 	fn spawn() -> Result<(), RunSystemError> {
+		#[derive(Component)]
+		struct _C;
+
 		let mut app = setup();
 
 		app.world_mut()
 			.run_system_once(|mut commands: ZyheedaCommands| {
-				commands.spawn(());
+				commands.spawn(_C);
 			})?;
 
-		let mut entities = app.world_mut().query::<()>();
+		let mut entities = app.world_mut().query::<&_C>();
 		assert_count!(1, entities.iter(app.world()));
 		Ok(())
 	}

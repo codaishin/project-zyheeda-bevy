@@ -16,7 +16,7 @@ impl SetupAnimations {
 	{
 		for (graph, lookup) in &graphs {
 			let handle = graph.get_handle();
-			let Some(graph) = assets.get_mut(handle) else {
+			let Some(mut graph) = assets.get_mut(handle) else {
 				continue;
 			};
 

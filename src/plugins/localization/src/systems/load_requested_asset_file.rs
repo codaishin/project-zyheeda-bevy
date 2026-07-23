@@ -3,7 +3,10 @@ use crate::traits::{
 	update_current_locale::UpdateCurrentLocaleFromFile,
 };
 use bevy::{
-	ecs::system::{StaticSystemParam, SystemParam},
+	ecs::{
+		component::Mutable,
+		system::{StaticSystemParam, SystemParam},
+	},
 	prelude::*,
 };
 use common::{tools::path::Path, traits::load_asset::LoadAsset};
@@ -30,7 +33,7 @@ fn load_requested_asset_file<TFtlServer, TAssetServer>(
 where
 	TFtlServer:
 		for<'w, 's> SystemParam<Item<'w, 's>: UpdateCurrentLocaleFromFile + CurrentLocaleMut>,
-	TAssetServer: LoadAsset + Resource,
+	TAssetServer: LoadAsset + Resource<Mutability = Mutable>,
 {
 	move |mut ftl_server, mut asset_server| {
 		if !*ftl_server.update_current_locale_from_file() {

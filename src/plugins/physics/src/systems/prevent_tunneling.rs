@@ -70,7 +70,7 @@ where
 	let mut invalid_rays = vec![];
 
 	for (entity, PreventTunneling { leading_edge }, velocity, transform, colliders) in entities {
-		let max_toi = velocity.linvel.length() * delta_secs;
+		let max_toi = velocity.linear.length() * delta_secs;
 		let Ok(max_toi) = TimeOfImpact::try_from_f32(max_toi) else {
 			invalid_rays.push(InvalidRay {
 				entity,
@@ -82,7 +82,7 @@ where
 			});
 			continue;
 		};
-		let Ok(direction) = Dir3::try_from(velocity.linvel) else {
+		let Ok(direction) = Dir3::try_from(velocity.linear) else {
 			continue;
 		};
 		let origin = transform.translation() + direction * **leading_edge;
@@ -190,7 +190,7 @@ mod tests {
 			let deltas_match = self.delta_secs == other.delta_secs
 				|| self.delta_secs.is_nan() && other.delta_secs.is_nan();
 			let velocities_match = self.velocity == other.velocity
-				|| self.velocity.linvel.is_nan() && other.velocity.linvel.is_nan();
+				|| self.velocity.linear.is_nan() && other.velocity.linear.is_nan();
 
 			deltas_match && velocities_match
 		}

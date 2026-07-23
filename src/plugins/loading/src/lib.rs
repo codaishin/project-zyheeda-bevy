@@ -270,7 +270,7 @@ impl HandlesAssetResourceLoading for LoadingPlugin {
 		let loading = TLoadGroup::LOAD_STATE;
 		let loading_done = resource_exists::<TResource>;
 		let on_begin_load = OnEnter(loading);
-		let loading_incomplete = in_state(loading).and(not(loading_done));
+		let loading_incomplete = in_state(loading).and_then(not(loading_done));
 
 		LoadingPlugin::register_custom_assets::<TResource, TDto>(app);
 		LoadingPlugin::register_load_tracking::<TResource, TLoadGroup, AssetsProgress>()
