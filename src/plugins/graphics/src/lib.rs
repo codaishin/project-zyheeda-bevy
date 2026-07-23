@@ -14,7 +14,7 @@ use crate::{
 		post_process_camera::PostProcessCamera,
 		roles::{Enemy, Player},
 	},
-	materials::effect_material::EffectMaterial,
+	materials::{effect_material::EffectMaterial, lit_material::StandardLitMaterial},
 	resources::{
 		camera_parameters::CameraParameters,
 		depth_texture::{CopyDepthTexture, DepthTexture},
@@ -113,6 +113,7 @@ where
 
 	fn shading(app: &mut App) {
 		app.add_plugins(MaterialPlugin::<EffectMaterial>::default())
+			.add_plugins(MaterialPlugin::<StandardLitMaterial>::default())
 			.register_derived_component::<Essence, MaterialOverride>()
 			.register_shader::<EssenceMaterial>()
 			.add_observer(MaterialOverride::update_essence_shader)
