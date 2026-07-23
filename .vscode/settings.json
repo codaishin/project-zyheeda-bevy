@@ -73,6 +73,7 @@
 		"Hasher",
 		"hoverable",
 		"Icosphere",
+		"ifdef",
 		"impls",
 		"ingame",
 		"interruptable",

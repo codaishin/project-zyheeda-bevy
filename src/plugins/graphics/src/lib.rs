@@ -14,11 +14,15 @@ use crate::{
 		post_process_camera::PostProcessCamera,
 		roles::{Enemy, Player},
 	},
-	materials::effect_material::EffectMaterial,
+	materials::{
+		effect_material::EffectMaterial,
+		lit_material::{LitMaterial, StandardLitMaterial},
+	},
 	resources::{
 		camera_parameters::CameraParameters,
 		depth_texture::{CopyDepthTexture, DepthTexture},
 		post_process_pipeline::SetupPostProcessPipeline,
+		standard_materials::StandardMaterials,
 	},
 	system_params::{
 		camera::{CameraParam, CameraParamMut},
@@ -112,12 +116,16 @@ where
 	}
 
 	fn shading(app: &mut App) {
-		app.add_plugins(MaterialPlugin::<EffectMaterial>::default())
+		app.init_resource::<StandardMaterials>()
+			.add_plugins(MaterialPlugin::<EffectMaterial>::default())
+			.add_plugins(MaterialPlugin::<StandardLitMaterial>::default())
 			.register_derived_component::<Essence, MaterialOverride>()
 			.register_shader::<EssenceMaterial>()
 			.add_observer(MaterialOverride::update_essence_shader)
 			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillContact>)
 			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillProjection>)
+			.add_observer(StandardMaterials::track_inserted)
+			.add_observer(StandardMaterials::track_discarded)
 			.add_systems(
 				Update,
 				(
@@ -126,6 +134,8 @@ where
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
+					StandardMaterials::replace_with_lit_material,
+					LitMaterial::set_player_position,
 				)
 					.chain()
 					.in_set(GraphicSystems)

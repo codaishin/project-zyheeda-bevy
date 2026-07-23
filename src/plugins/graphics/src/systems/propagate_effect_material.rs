@@ -1,4 +1,7 @@
-use crate::components::{child_meshes::ChildMeshes, effect_material_handle::EffectMaterialHandle};
+use crate::{
+	components::{child_meshes::ChildMeshes, effect_material_handle::EffectMaterialHandle},
+	materials::lit_material::StandardLitMaterial,
+};
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
 
@@ -11,6 +14,7 @@ impl EffectMaterialHandle {
 			for entity in child_meshes.iter() {
 				commands.try_apply_on(&entity, |mut e| {
 					e.try_remove::<MeshMaterial3d<StandardMaterial>>();
+					e.try_remove::<MeshMaterial3d<StandardLitMaterial>>();
 					e.try_insert(MeshMaterial3d(material.clone()));
 				});
 			}
@@ -77,6 +81,28 @@ mod tests {
 			app.world()
 				.entity(child)
 				.get::<MeshMaterial3d<StandardMaterial>>(),
+		);
+	}
+
+	#[test]
+	fn remove_standard_lit_material() {
+		let mut app = setup();
+		let entity = app.world_mut().spawn(EffectMaterialHandle::default()).id();
+		let child = app
+			.world_mut()
+			.spawn((
+				ChildMeshOf(entity),
+				MeshMaterial3d(new_handle::<StandardLitMaterial>()),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			None,
+			app.world()
+				.entity(child)
+				.get::<MeshMaterial3d<StandardLitMaterial>>(),
 		);
 	}
 
