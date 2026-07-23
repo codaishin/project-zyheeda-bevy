@@ -131,6 +131,7 @@ where
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
+					StandardMaterials::replace_with_lit_material,
 				)
 					.chain()
 					.in_set(GraphicSystems)
