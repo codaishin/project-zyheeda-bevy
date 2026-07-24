@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::{
 	camera::{ImageRenderTarget, RenderTarget, Viewport, visibility::RenderLayers},
-	ecs::system::StaticSystemParam,
+	ecs::{entity::EntityHashSet, system::StaticSystemParam},
 	prelude::*,
 	render::render_resource::TextureFormat,
 };
@@ -14,6 +14,16 @@ use common::{
 	traits::prefab::{Prefab, PrefabEntityCommands},
 	zyheeda_commands::ZyheedaCommands,
 };
+
+#[derive(Component, Debug, PartialEq, Default)]
+#[relationship_target(relationship = LoSCameraOf, linked_spawn)]
+#[require(Transform)]
+pub(crate) struct LoSCameras(EntityHashSet);
+
+#[derive(Component, Debug, PartialEq)]
+#[relationship(relationship_target = LoSCameras)]
+#[require(Transform)]
+pub(crate) struct LoSCameraOf(pub(crate) Entity);
 
 /// Basis for LoS cubemap using the following layout
 /// ```css

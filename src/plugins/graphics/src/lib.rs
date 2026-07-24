@@ -9,7 +9,7 @@ mod traits;
 use crate::{
 	components::{
 		camera_labels::{AgentsPass, OutlinePass, WorldLight},
-		los::LoS,
+		los::{LoS, LoSCameras},
 		model_render_layers::ModelRenderLayers,
 		only_depth_prepass::OnlyDepthPrepass,
 		post_process_camera::PostProcessCamera,
@@ -137,6 +137,7 @@ where
 					EffectMaterialHandle::propagate_material,
 					StandardMaterials::replace_with_lit_material,
 					LitMaterial::set_player_position,
+					LoSCameras::update_positions,
 				)
 					.chain()
 					.in_set(GraphicSystems)

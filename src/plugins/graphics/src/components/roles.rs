@@ -1,4 +1,8 @@
-use crate::components::{camera_labels::AgentsPass, model_render_layers::ModelRenderLayers};
+use crate::components::{
+	camera_labels::AgentsPass,
+	los::{LoS, LoSCameras},
+	model_render_layers::ModelRenderLayers,
+};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{
 	errors::Unreachable,
@@ -23,7 +27,17 @@ impl Prefab<()> for Player {
 		entity: &mut impl PrefabEntityCommands,
 		_: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError> {
-		entity.try_insert(ModelRenderLayers::from(AgentsPass));
+		entity.try_insert((
+			ModelRenderLayers::from(AgentsPass),
+			related!(LoSCameras[
+				LoS::Right,
+				LoS::Left,
+				LoS::Up,
+				LoS::Down,
+				LoS::Forward,
+				LoS::Backward,
+			]),
+		));
 
 		Ok(())
 	}

@@ -6,5 +6,6 @@ pub(crate) mod process_new_ui_pass;
 pub(crate) mod propagate_effect_material;
 pub(crate) mod replace_with_lit_material;
 pub(crate) mod set_player_position;
+pub(crate) mod update_los_camera_positions;
 pub(crate) mod update_only_depth_prepass_render_target;
 pub(crate) mod update_target_ray;
