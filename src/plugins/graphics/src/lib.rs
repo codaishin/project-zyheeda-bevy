@@ -9,6 +9,7 @@ mod traits;
 use crate::{
 	components::{
 		camera_labels::{AgentsPass, OutlinePass, WorldLight},
+		los::LoS,
 		model_render_layers::ModelRenderLayers,
 		only_depth_prepass::OnlyDepthPrepass,
 		post_process_camera::PostProcessCamera,
@@ -157,7 +158,8 @@ where
 			.add_prefab_observer::<Player, ()>()
 			.add_prefab_observer::<Enemy, ()>()
 			.add_prefab_observer::<WorldLight, ()>()
-			.add_systems(PostStartup, UiPass::spawn)
+			.add_prefab_observer::<LoS, ()>()
+			.add_systems(PostStartup, (UiPass::spawn, LoS::init_image))
 			.add_systems(
 				Update,
 				(

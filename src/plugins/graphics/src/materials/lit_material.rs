@@ -13,15 +13,17 @@ pub(crate) struct LitMaterial {
 	#[uniform(100)]
 	pub(crate) player_position: Vec3,
 	#[uniform(101)]
-	pub(crate) falloff: f32,
+	falloff: f32,
 	#[uniform(102)]
-	pub(crate) min_light: f32,
+	min_light: f32,
 }
 
 impl LitMaterial {
 	const SHADER: &str = asset_path!("shaders/lit_shader.wgsl");
-	const DEFAULT_FALLOFF: f32 = 0.1;
-	const DEFAULT_MIN_LIGHT: f32 = 0.01;
+	const LINEAR_FALLOFF: f32 = 0.1;
+	const MIN_LIGHT: f32 = 0.01;
+
+	pub const MAX_LIGHT_DISTANCE: f32 = 1. / Self::LINEAR_FALLOFF;
 
 	pub(crate) fn from_player_position(player_position: Vec3) -> Self {
 		Self {
@@ -35,8 +37,8 @@ impl Default for LitMaterial {
 	fn default() -> Self {
 		Self {
 			player_position: Vec3::ZERO,
-			falloff: Self::DEFAULT_FALLOFF,
-			min_light: Self::DEFAULT_MIN_LIGHT,
+			falloff: Self::LINEAR_FALLOFF,
+			min_light: Self::MIN_LIGHT,
 		}
 	}
 }
