@@ -22,6 +22,8 @@ use crate::{
 	resources::{
 		camera_parameters::CameraParameters,
 		depth_texture::{CopyDepthTexture, DepthTexture},
+		distance_pipeline::{DistancePipelineData, SetupDistancePipeline},
+		los_image::LoSImage,
 		post_process_pipeline::SetupPostProcessPipeline,
 		standard_materials::StandardMaterials,
 	},
@@ -122,6 +124,8 @@ where
 			.add_plugins(MaterialPlugin::<StandardLitMaterial>::default())
 			.register_derived_component::<Essence, MaterialOverride>()
 			.register_shader::<EssenceMaterial>()
+			.setup_post_process_pipeline()
+			.setup_distance_pipeline()
 			.add_observer(MaterialOverride::update_essence_shader)
 			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillContact>)
 			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillProjection>)
@@ -137,6 +141,7 @@ where
 					EffectMaterialHandle::propagate_material,
 					StandardMaterials::replace_with_lit_material,
 					LitMaterial::set_player_position,
+					DistancePipelineData::set_player_position,
 					LoSCameras::update_positions,
 				)
 					.chain()
@@ -155,12 +160,24 @@ where
 			.copy_depth_texture::<WorldPass>()
 			.copy_depth_texture::<AgentsPass>()
 			.copy_depth_texture::<OutlinePass>()
-			.setup_post_process_pipeline()
 			.add_prefab_observer::<Player, ()>()
 			.add_prefab_observer::<Enemy, ()>()
 			.add_prefab_observer::<WorldLight, ()>()
 			.add_prefab_observer::<LoS, ()>()
-			.add_systems(PostStartup, (UiPass::spawn, LoS::init_image))
+			.add_systems(
+				PostStartup,
+				(
+					UiPass::spawn,
+					LoS::init_image,
+					|mut commands: Commands, img: Res<LoSImage>| {
+						commands.spawn(ImageNode {
+							image: img.handle.clone(),
+							..default()
+						});
+					},
+				)
+					.chain(),
+			)
 			.add_systems(
 				Update,
 				(

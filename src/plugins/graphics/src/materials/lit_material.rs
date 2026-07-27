@@ -19,11 +19,10 @@ pub(crate) struct LitMaterial {
 }
 
 impl LitMaterial {
-	const SHADER: &str = asset_path!("shaders/lit_shader.wgsl");
-	const LINEAR_FALLOFF: f32 = 0.1;
-	const MIN_LIGHT: f32 = 0.01;
-
-	pub const MAX_LIGHT_DISTANCE: f32 = 1. / Self::LINEAR_FALLOFF;
+	pub(crate) const SHADER: &str = asset_path!("shaders/lit_shader.wgsl");
+	pub(crate) const LINEAR_FALLOFF: f32 = 0.1;
+	pub(crate) const MIN_LIGHT: f32 = 0.01;
+	pub(crate) const MAX_LIGHT_DISTANCE: f32 = 1. / Self::LINEAR_FALLOFF;
 
 	pub(crate) fn from_player_position(player_position: Vec3) -> Self {
 		Self {

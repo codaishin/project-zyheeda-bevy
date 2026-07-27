@@ -52,6 +52,7 @@
 		}
 	},
 	"cSpell.words": [
+		"aabb",
 		"angvel",
 		"automock",
 		"beamer",
@@ -80,6 +81,7 @@
 		"Jpan",
 		"langid",
 		"lerp",
+		"lightmap",
 		"Loadout",
 		"Mapface",
 		"metarig",
@@ -87,6 +89,7 @@
 		"mockall",
 		"msaa",
 		"nanos",
+		"nonmax",
 		"Numpad",
 		"Pathing",
 		"peekable",
@@ -97,6 +100,7 @@
 		"savegame",
 		"schedulable",
 		"serde",
+		"specializer",
 		"srgb",
 		"srgba",
 		"struct",

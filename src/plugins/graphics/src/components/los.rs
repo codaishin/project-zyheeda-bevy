@@ -7,7 +7,7 @@ use bevy::{
 	camera::{ImageRenderTarget, RenderTarget, Viewport, visibility::RenderLayers},
 	ecs::{entity::EntityHashSet, system::StaticSystemParam},
 	prelude::*,
-	render::render_resource::TextureFormat,
+	render::{extract_component::ExtractComponent, render_resource::TextureFormat},
 };
 use common::{
 	errors::Unreachable,
@@ -35,10 +35,11 @@ pub(crate) struct LoSCameraOf(pub(crate) Entity);
 ///     │ D │
 ///     └───┘
 /// ```
-#[derive(Component, Debug, PartialEq)]
+#[derive(Component, ExtractComponent, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
 #[require(
 	Camera3d,
+	Msaa::Off,
 	Projection::Perspective(PerspectiveProjection {
 		aspect_ratio: 1.,
 		fov: 90_f32.to_radians(),
