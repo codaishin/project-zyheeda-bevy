@@ -8,7 +8,7 @@ use macros::asset_path;
 
 pub(crate) type StandardLitMaterial = ExtendedMaterial<StandardMaterial, LitMaterial>;
 
-#[derive(Asset, AsBindGroup, Reflect, Debug, PartialEq, Clone, Copy)]
+#[derive(Asset, AsBindGroup, Reflect, Debug, PartialEq, Clone)]
 pub(crate) struct LitMaterial {
 	#[uniform(100)]
 	pub(crate) player_position: Vec3,
@@ -16,6 +16,9 @@ pub(crate) struct LitMaterial {
 	falloff: f32,
 	#[uniform(102)]
 	min_light: f32,
+	#[texture(103, dimension = "cube")]
+	#[sampler(104)]
+	pub(crate) los: Handle<Image>,
 }
 
 impl LitMaterial {
@@ -30,6 +33,11 @@ impl LitMaterial {
 			..default()
 		}
 	}
+
+	pub(crate) fn with_los_cubemap(mut self, los: Handle<Image>) -> Self {
+		self.los = los;
+		self
+	}
 }
 
 impl Default for LitMaterial {
@@ -38,6 +46,7 @@ impl Default for LitMaterial {
 			player_position: Vec3::ZERO,
 			falloff: Self::LINEAR_FALLOFF,
 			min_light: Self::MIN_LIGHT,
+			los: Handle::default(),
 		}
 	}
 }

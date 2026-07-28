@@ -23,7 +23,7 @@ use crate::{
 		camera_parameters::CameraParameters,
 		depth_texture::{CopyDepthTexture, DepthTexture},
 		distance_pipeline::{DistancePipelineData, SetupDistancePipeline},
-		los_image::LoSImage,
+		los_image::LoSImageAtlas,
 		post_process_pipeline::SetupPostProcessPipeline,
 		standard_materials::StandardMaterials,
 	},
@@ -168,8 +168,9 @@ where
 				PostStartup,
 				(
 					UiPass::spawn,
-					LoS::init_image,
-					|mut commands: Commands, img: Res<LoSImage>| {
+					LoS::init_atlas,
+					LoS::init_cubemap,
+					|mut commands: Commands, img: Res<LoSImageAtlas>| {
 						commands.spawn(ImageNode {
 							image: img.handle.clone(),
 							..default()

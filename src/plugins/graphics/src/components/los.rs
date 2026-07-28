@@ -1,13 +1,26 @@
 use crate::{
 	components::camera_labels::WorldPass,
 	materials::lit_material::LitMaterial,
-	resources::los_image::LoSImage,
+	resources::los_image::{LoSImageAtlas, LoSImageCubemap},
 };
 use bevy::{
+	asset::RenderAssetUsages,
 	camera::{ImageRenderTarget, RenderTarget, Viewport, visibility::RenderLayers},
 	ecs::{entity::EntityHashSet, system::StaticSystemParam},
+	image::TextureFormatPixelInfo,
 	prelude::*,
-	render::{extract_component::ExtractComponent, render_resource::TextureFormat},
+	render::{
+		extract_component::ExtractComponent,
+		render_resource::{
+			Extent3d,
+			TextureDescriptor,
+			TextureDimension,
+			TextureFormat,
+			TextureUsages,
+			TextureViewDescriptor,
+			TextureViewDimension,
+		},
+	},
 };
 use common::{
 	errors::Unreachable,
@@ -25,7 +38,7 @@ pub(crate) struct LoSCameras(EntityHashSet);
 #[require(Transform)]
 pub(crate) struct LoSCameraOf(pub(crate) Entity);
 
-/// Basis for LoS cubemap using the following layout
+/// Basis for LoS cubemap using the following atlas layout
 /// ```css
 ///     ┌───┐
 ///     │ U │
@@ -120,7 +133,7 @@ impl LoS {
 		}
 	}
 
-	pub(crate) fn init_image(mut commands: ZyheedaCommands, mut images: ResMut<Assets<Image>>) {
+	pub(crate) fn init_atlas(mut commands: ZyheedaCommands, mut images: ResMut<Assets<Image>>) {
 		let image = Image::new_target_texture(
 			FULL_WIDTH,
 			FULL_HEIGHT,
@@ -128,8 +141,54 @@ impl LoS {
 			Some(TextureFormat::Rgba8UnormSrgb),
 		);
 
-		commands.insert_resource(LoSImage {
+		commands.insert_resource(LoSImageAtlas {
 			handle: images.add(image),
+		});
+	}
+
+	pub(crate) fn init_cubemap(mut commands: ZyheedaCommands, mut images: ResMut<Assets<Image>>) {
+		let format = TextureFormat::Rgba8Unorm;
+		let usage = TextureUsages::TEXTURE_BINDING
+			| TextureUsages::COPY_DST
+			| TextureUsages::RENDER_ATTACHMENT;
+		let size = Extent3d {
+			width: SUB_VIEW,
+			height: SUB_VIEW,
+			depth_or_array_layers: 6,
+		};
+		let data = match format.pixel_size() {
+			Ok(pixel_size) => Some(vec![
+				0;
+				pixel_size
+					* (size.width * size.height * size.depth_or_array_layers)
+						as usize
+			]),
+			Err(_) => None,
+		};
+
+		commands.insert_resource(LoSImageCubemap {
+			handle: images.add(Image {
+				data,
+				texture_descriptor: TextureDescriptor {
+					size,
+					format,
+					dimension: TextureDimension::D2,
+					label: None,
+					mip_level_count: 1,
+					sample_count: 1,
+					usage,
+					view_formats: &[],
+				},
+				texture_view_descriptor: Some(TextureViewDescriptor {
+					dimension: Some(TextureViewDimension::Cube),
+					base_array_layer: 0,
+					array_layer_count: Some(6),
+					..default()
+				}),
+				asset_usage: RenderAssetUsages::default(),
+				copy_on_resize: true,
+				..default()
+			}),
 		});
 	}
 }
@@ -140,7 +199,7 @@ const FULL_HEIGHT: u32 = SUB_VIEW * 3;
 
 impl Prefab<()> for LoS {
 	type TError = Unreachable;
-	type TSystemParam = Res<'static, LoSImage>;
+	type TSystemParam = Res<'static, LoSImageAtlas>;
 
 	fn insert_prefab_components(
 		&self,
