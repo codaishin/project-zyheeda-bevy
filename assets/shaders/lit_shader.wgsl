@@ -16,8 +16,13 @@
 #endif
 
 @group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> player_position: vec3<f32>;
-@group(#{MATERIAL_BIND_GROUP}) @binding(101) var<uniform> falloff: f32;
+@group(#{MATERIAL_BIND_GROUP}) @binding(101) var<uniform> range: f32;
 @group(#{MATERIAL_BIND_GROUP}) @binding(102) var<uniform> min_light: f32;
+@group(#{MATERIAL_BIND_GROUP}) @binding(103) var los_texture: texture_cube<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(104) var los_sampler: sampler;
+
+// corrects for the right/left handed coordinate systems mismatch between bevy and wgsl
+const CUBEMAP_SAMPLE_CORRECTION: vec3<f32> = vec3(1.0, 1.0, -1.0);
 
 @fragment
 fn fragment(
@@ -35,11 +40,21 @@ fn fragment(
     out.color = apply_pbr_lighting(pbr_input);
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
 
-    let distance = length(player_position - in.world_position.xyz);
-    out.color = vec4(
-        out.color.rgb * max(1. - distance * falloff, min_light),
-        out.color.a,
-    );
+    let direction = in.world_position.xyz - player_position;
+    let vertex_distance = length(direction) / range;
+    var los_distance = textureSample(
+        los_texture,
+        los_sampler,
+        normalize(direction) * CUBEMAP_SAMPLE_CORRECTION
+    ).r;
+
+    if vertex_distance <= los_distance {
+        out.color = vec4(out.color.rgb * max(1. - vertex_distance, min_light), out.color.a);
+
+    } else {
+        out.color = vec4(out.color.rgb * min_light, out.color.a);
+    }
+
 #endif
 
     return out;

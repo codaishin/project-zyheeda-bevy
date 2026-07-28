@@ -171,10 +171,17 @@ where
 					LoS::init_atlas,
 					LoS::init_cubemap,
 					|mut commands: Commands, img: Res<LoSImageAtlas>| {
-						commands.spawn(ImageNode {
-							image: img.handle.clone(),
-							..default()
-						});
+						commands.spawn((
+							Node {
+								width: Val::Px(400.0),
+								height: Val::Px(300.0),
+								..default()
+							},
+							ImageNode {
+								image: img.handle.clone(),
+								..default()
+							},
+						));
 					},
 				)
 					.chain(),

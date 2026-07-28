@@ -4,6 +4,7 @@ use bevy::{
 	render::render_resource::AsBindGroup,
 	shader::ShaderRef,
 };
+use common::tools::Units;
 use macros::asset_path;
 
 pub(crate) type StandardLitMaterial = ExtendedMaterial<StandardMaterial, LitMaterial>;
@@ -13,7 +14,7 @@ pub(crate) struct LitMaterial {
 	#[uniform(100)]
 	pub(crate) player_position: Vec3,
 	#[uniform(101)]
-	falloff: f32,
+	range: f32,
 	#[uniform(102)]
 	min_light: f32,
 	#[texture(103, dimension = "cube")]
@@ -23,9 +24,8 @@ pub(crate) struct LitMaterial {
 
 impl LitMaterial {
 	pub(crate) const SHADER: &str = asset_path!("shaders/lit_shader.wgsl");
-	pub(crate) const LINEAR_FALLOFF: f32 = 0.1;
+	pub(crate) const RANGE: Units = Units::from_u8(10);
 	pub(crate) const MIN_LIGHT: f32 = 0.01;
-	pub(crate) const MAX_LIGHT_DISTANCE: f32 = 1. / Self::LINEAR_FALLOFF;
 
 	pub(crate) fn from_player_position(player_position: Vec3) -> Self {
 		Self {
@@ -44,7 +44,7 @@ impl Default for LitMaterial {
 	fn default() -> Self {
 		Self {
 			player_position: Vec3::ZERO,
-			falloff: Self::LINEAR_FALLOFF,
+			range: *Self::RANGE,
 			min_light: Self::MIN_LIGHT,
 			los: Handle::default(),
 		}

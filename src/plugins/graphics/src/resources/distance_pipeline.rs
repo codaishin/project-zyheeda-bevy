@@ -69,6 +69,7 @@ use bevy::{
 			CachedRenderPipelineId,
 			ColorTargetState,
 			ColorWrites,
+			CommandEncoderDescriptor,
 			Extent3d,
 			Face,
 			FragmentState,
@@ -85,7 +86,7 @@ use bevy::{
 			TexelCopyTextureInfo,
 			TextureAspect,
 		},
-		renderer::{RenderContext, RenderDevice, ViewQuery},
+		renderer::{RenderContext, RenderDevice, RenderQueue, ViewQuery},
 		sync_world::MainEntity,
 		texture::GpuImage,
 		view::{
@@ -148,6 +149,7 @@ impl SetupDistancePipeline for App {
 					DistancePipeline::draw.pipe(OnError::log),
 					copy_atlas_to_cubemap,
 				)
+					.chain()
 					.after(main_opaque_pass_3d)
 					.in_set(Core3dSystems::MainPass),
 			);
@@ -161,7 +163,8 @@ fn copy_atlas_to_cubemap(
 	atlas: Res<LoSImageAtlas>,
 	cubemap: Res<LoSImageCubemap>,
 	images: Res<RenderAssets<GpuImage>>,
-	mut render_context: RenderContext,
+	render_device: Res<RenderDevice>,
+	pending: Res<RenderQueue>,
 ) {
 	let los = view.into_inner();
 
@@ -176,7 +179,15 @@ fn copy_atlas_to_cubemap(
 	let offset = los.atlas_offset();
 	let depth = los.cubemap_depth();
 
-	render_context.command_encoder().copy_texture_to_texture(
+	// Immediately copy this texture sub view, otherwise it might not be ready for
+	// cameras rendering `LitMaterial`.
+	// TODO: Find a better way to ensure this.
+
+	let mut commands = render_device.create_command_encoder(&CommandEncoderDescriptor {
+		label: Some("copy_los_atlas_to_cubemap"),
+	});
+
+	commands.copy_texture_to_texture(
 		TexelCopyTextureInfo {
 			texture: &src.texture,
 			mip_level: 0,
@@ -203,6 +214,8 @@ fn copy_atlas_to_cubemap(
 			depth_or_array_layers: 1,
 		},
 	);
+
+	pending.submit([commands.finish()]);
 }
 
 #[derive(Resource)]
@@ -661,7 +674,7 @@ impl DistancePipelineData {
 		let mut param = param.into_inner();
 		let mat = DistanceMaterial {
 			player_position: data.player_position,
-			falloff: LitMaterial::LINEAR_FALLOFF,
+			range: *LitMaterial::RANGE,
 		};
 
 		data.bind_group = mat
@@ -681,7 +694,7 @@ struct DistanceMaterial {
 	#[uniform(0)]
 	player_position: Vec3,
 	#[uniform(1)]
-	falloff: f32,
+	range: f32,
 }
 
 #[derive(Default, Deref, DerefMut, Resource)]

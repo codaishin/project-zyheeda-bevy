@@ -56,7 +56,7 @@ pub(crate) struct LoSCameraOf(pub(crate) Entity);
 	Projection::Perspective(PerspectiveProjection {
 		aspect_ratio: 1.,
 		fov: 90_f32.to_radians(),
-		far: LitMaterial::MAX_LIGHT_DISTANCE,
+		far: *LitMaterial::RANGE,
 		..default()
 	})
 )]
@@ -70,7 +70,7 @@ pub(crate) enum LoS {
 }
 
 impl LoS {
-	pub(crate) const SUB_VIEW: u32 = 64;
+	pub(crate) const SUB_VIEW: u32 = 1024;
 	pub(crate) const FULL_WIDTH: u32 = LoS::SUB_VIEW * 4;
 	pub(crate) const FULL_HEIGHT: u32 = LoS::SUB_VIEW * 3;
 
@@ -167,6 +167,7 @@ impl LoS {
 			Image::new_target_texture(LoS::FULL_WIDTH, LoS::FULL_HEIGHT, LoS::FMT, None);
 
 		image.texture_descriptor.usage |= TextureUsages::COPY_SRC;
+		image.texture_descriptor.usage &= !TextureUsages::COPY_DST;
 
 		commands.insert_resource(LoSImageAtlas {
 			handle: images.add(image),
@@ -174,9 +175,7 @@ impl LoS {
 	}
 
 	pub(crate) fn init_cubemap(mut commands: ZyheedaCommands, mut images: ResMut<Assets<Image>>) {
-		let usage = TextureUsages::TEXTURE_BINDING
-			| TextureUsages::COPY_DST
-			| TextureUsages::RENDER_ATTACHMENT;
+		let usage = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
 		let size = Extent3d {
 			width: LoS::SUB_VIEW,
 			height: LoS::SUB_VIEW,
@@ -239,6 +238,7 @@ impl Prefab<()> for LoS {
 					},
 					..default()
 				}),
+				clear_color: ClearColorConfig::Custom(Color::WHITE),
 				..default()
 			},
 			Transform::default().looking_to(direction, up),
