@@ -1,4 +1,8 @@
-use crate::{components::los::LoS, materials::lit_material::LitMaterial};
+use crate::{
+	components::los::LoS,
+	materials::lit_material::LitMaterial,
+	resources::los_image::{LoSImageAtlas, LoSImageCubemap},
+};
 use bevy::{
 	asset::UntypedAssetId,
 	camera::{MainPassResolutionOverride, Viewport},
@@ -65,8 +69,10 @@ use bevy::{
 			CachedRenderPipelineId,
 			ColorTargetState,
 			ColorWrites,
+			Extent3d,
 			Face,
 			FragmentState,
+			Origin3d,
 			PipelineCache,
 			PreparedBindGroup,
 			PrimitiveState,
@@ -76,9 +82,12 @@ use bevy::{
 			SpecializedMeshPipelineError,
 			SpecializedMeshPipelines,
 			StoreOp,
+			TexelCopyTextureInfo,
+			TextureAspect,
 		},
 		renderer::{RenderContext, RenderDevice, ViewQuery},
 		sync_world::MainEntity,
+		texture::GpuImage,
 		view::{
 			ExtractedView,
 			NoIndirectDrawing,
@@ -107,6 +116,8 @@ impl SetupDistancePipeline for App {
 	fn setup_distance_pipeline(&mut self) -> &mut Self {
 		self.add_plugins((
 			ExtractResourcePlugin::<DistancePipelineData>::default(),
+			ExtractResourcePlugin::<LoSImageAtlas>::default(),
+			ExtractResourcePlugin::<LoSImageCubemap>::default(),
 			ExtractComponentPlugin::<LoS>::default(),
 			BinnedRenderPhasePlugin::<Distance, DistancePipeline>::new(RenderDebugFlags::default()),
 		))
@@ -133,14 +144,65 @@ impl SetupDistancePipeline for App {
 			)
 			.add_systems(
 				Core3d,
-				DistancePipeline::draw
-					.pipe(OnError::log)
+				(
+					DistancePipeline::draw.pipe(OnError::log),
+					copy_atlas_to_cubemap,
+				)
 					.after(main_opaque_pass_3d)
 					.in_set(Core3dSystems::MainPass),
 			);
 
 		self
 	}
+}
+
+fn copy_atlas_to_cubemap(
+	view: ViewQuery<&LoS>,
+	atlas: Res<LoSImageAtlas>,
+	cubemap: Res<LoSImageCubemap>,
+	images: Res<RenderAssets<GpuImage>>,
+	mut render_context: RenderContext,
+) {
+	let los = view.into_inner();
+
+	let Some(src) = images.get(&atlas.handle) else {
+		return;
+	};
+
+	let Some(dst) = images.get(&cubemap.handle) else {
+		return;
+	};
+
+	let offset = los.atlas_offset();
+	let depth = los.cubemap_depth();
+
+	render_context.command_encoder().copy_texture_to_texture(
+		TexelCopyTextureInfo {
+			texture: &src.texture,
+			mip_level: 0,
+			origin: Origin3d {
+				x: offset.x,
+				y: offset.y,
+				z: 0,
+			},
+			aspect: TextureAspect::All,
+		},
+		TexelCopyTextureInfo {
+			texture: &dst.texture,
+			mip_level: 0,
+			origin: Origin3d {
+				x: 0,
+				y: 0,
+				z: depth,
+			},
+			aspect: TextureAspect::All,
+		},
+		Extent3d {
+			width: LoS::SUB_VIEW,
+			height: LoS::SUB_VIEW,
+			depth_or_array_layers: 1,
+		},
+	);
 }
 
 #[derive(Resource)]

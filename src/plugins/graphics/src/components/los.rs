@@ -70,6 +70,12 @@ pub(crate) enum LoS {
 }
 
 impl LoS {
+	pub(crate) const SUB_VIEW: u32 = 64;
+	pub(crate) const FULL_WIDTH: u32 = LoS::SUB_VIEW * 4;
+	pub(crate) const FULL_HEIGHT: u32 = LoS::SUB_VIEW * 3;
+
+	const FMT: TextureFormat = TextureFormat::Rgba8Unorm;
+
 	fn looking_to(&self) -> LookingTo {
 		match self {
 			LoS::Right => LookingTo {
@@ -99,47 +105,68 @@ impl LoS {
 		}
 	}
 
-	fn offset(&self) -> UVec2 {
+	pub(crate) fn atlas_offset(&self) -> UVec2 {
 		match self {
 			LoS::Right => UVec2 {
-				x: SUB_VIEW * 2,
-				y: SUB_VIEW,
+				x: LoS::SUB_VIEW * 2,
+				y: LoS::SUB_VIEW,
 			},
-			LoS::Left => UVec2 { x: 0, y: SUB_VIEW },
-			LoS::Up => UVec2 { x: SUB_VIEW, y: 0 },
+			LoS::Left => UVec2 {
+				x: 0,
+				y: LoS::SUB_VIEW,
+			},
+			LoS::Up => UVec2 {
+				x: LoS::SUB_VIEW,
+				y: 0,
+			},
 			LoS::Down => UVec2 {
-				x: SUB_VIEW,
-				y: SUB_VIEW * 2,
+				x: LoS::SUB_VIEW,
+				y: LoS::SUB_VIEW * 2,
 			},
 			LoS::Forward => UVec2 {
-				x: SUB_VIEW,
-				y: SUB_VIEW,
+				x: LoS::SUB_VIEW,
+				y: LoS::SUB_VIEW,
 			},
 			LoS::Backward => UVec2 {
-				x: SUB_VIEW * 3,
-				y: SUB_VIEW,
+				x: LoS::SUB_VIEW * 3,
+				y: LoS::SUB_VIEW,
 			},
+		}
+	}
+
+	pub(crate) fn cubemap_depth(&self) -> u32 {
+		match self {
+			LoS::Right => 0,
+			LoS::Left => 1,
+			LoS::Up => 2,
+			LoS::Down => 3,
+			LoS::Forward => 4,
+			LoS::Backward => 5,
 		}
 	}
 
 	fn order(&self) -> isize {
 		match self {
-			LoS::Right => 101,
-			LoS::Left => 102,
-			LoS::Up => 103,
-			LoS::Down => 104,
-			LoS::Forward => 105,
-			LoS::Backward => 106,
+			LoS::Right => -6,
+			LoS::Left => -5,
+			LoS::Up => -4,
+			LoS::Down => -3,
+			LoS::Forward => -2,
+			LoS::Backward => -1,
 		}
 	}
 
+	pub(crate) fn sub_view_data_size() -> Option<usize> {
+		let pixel_size = LoS::FMT.pixel_size().ok()?;
+
+		Some(pixel_size * (LoS::SUB_VIEW * LoS::SUB_VIEW) as usize)
+	}
+
 	pub(crate) fn init_atlas(mut commands: ZyheedaCommands, mut images: ResMut<Assets<Image>>) {
-		let image = Image::new_target_texture(
-			FULL_WIDTH,
-			FULL_HEIGHT,
-			TextureFormat::Rgba8Unorm,
-			Some(TextureFormat::Rgba8UnormSrgb),
-		);
+		let mut image =
+			Image::new_target_texture(LoS::FULL_WIDTH, LoS::FULL_HEIGHT, LoS::FMT, None);
+
+		image.texture_descriptor.usage |= TextureUsages::COPY_SRC;
 
 		commands.insert_resource(LoSImageAtlas {
 			handle: images.add(image),
@@ -147,31 +174,23 @@ impl LoS {
 	}
 
 	pub(crate) fn init_cubemap(mut commands: ZyheedaCommands, mut images: ResMut<Assets<Image>>) {
-		let format = TextureFormat::Rgba8Unorm;
 		let usage = TextureUsages::TEXTURE_BINDING
 			| TextureUsages::COPY_DST
 			| TextureUsages::RENDER_ATTACHMENT;
 		let size = Extent3d {
-			width: SUB_VIEW,
-			height: SUB_VIEW,
+			width: LoS::SUB_VIEW,
+			height: LoS::SUB_VIEW,
 			depth_or_array_layers: 6,
 		};
-		let data = match format.pixel_size() {
-			Ok(pixel_size) => Some(vec![
-				0;
-				pixel_size
-					* (size.width * size.height * size.depth_or_array_layers)
-						as usize
-			]),
-			Err(_) => None,
-		};
+		let data = LoS::sub_view_data_size()
+			.map(|view_size| vec![0; view_size * size.depth_or_array_layers as usize]);
 
 		commands.insert_resource(LoSImageCubemap {
 			handle: images.add(Image {
 				data,
 				texture_descriptor: TextureDescriptor {
 					size,
-					format,
+					format: LoS::FMT,
 					dimension: TextureDimension::D2,
 					label: None,
 					mip_level_count: 1,
@@ -193,10 +212,6 @@ impl LoS {
 	}
 }
 
-const SUB_VIEW: u32 = 64;
-const FULL_WIDTH: u32 = SUB_VIEW * 4;
-const FULL_HEIGHT: u32 = SUB_VIEW * 3;
-
 impl Prefab<()> for LoS {
 	type TError = Unreachable;
 	type TSystemParam = Res<'static, LoSImageAtlas>;
@@ -217,10 +232,10 @@ impl Prefab<()> for LoS {
 			Camera {
 				order: self.order(),
 				viewport: Some(Viewport {
-					physical_position: self.offset(),
+					physical_position: self.atlas_offset(),
 					physical_size: UVec2 {
-						x: SUB_VIEW,
-						y: SUB_VIEW,
+						x: LoS::SUB_VIEW,
+						y: LoS::SUB_VIEW,
 					},
 					..default()
 				}),
