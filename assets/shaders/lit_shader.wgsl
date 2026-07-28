@@ -48,9 +48,8 @@ fn fragment(
         normalize(direction) * CUBEMAP_SAMPLE_CORRECTION
     ).r;
 
-    if vertex_distance <= los_distance {
+    if vertex_distance <= los_distance + 0.01 {
         out.color = vec4(out.color.rgb * max(1. - vertex_distance, min_light), out.color.a);
-
     } else {
         out.color = vec4(out.color.rgb * min_light, out.color.a);
     }

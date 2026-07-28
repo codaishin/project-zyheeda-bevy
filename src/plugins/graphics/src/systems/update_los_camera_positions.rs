@@ -3,8 +3,8 @@ use bevy::prelude::*;
 
 impl LoSCameras {
 	pub(crate) fn update_positions(
-		cameras: Query<(&Transform, &Self), Changed<Transform>>,
-		mut cameras_of: Query<&mut Transform, Without<Self>>,
+		cameras: Query<(&GlobalTransform, &Self), Changed<GlobalTransform>>,
+		mut cameras_of: Query<&mut GlobalTransform, Without<Self>>,
 	) {
 		for (src, cameras) in cameras {
 			for camera in cameras.iter() {
@@ -12,7 +12,13 @@ impl LoSCameras {
 					continue;
 				};
 
-				dst.translation = src.translation;
+				let transform = Transform {
+					translation: src.translation(),
+					rotation: dst.rotation(),
+					..default()
+				};
+
+				*dst = GlobalTransform::from(transform);
 			}
 		}
 	}
@@ -37,7 +43,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y))
+			.spawn(GlobalTransform::from_xyz(1., 2., 3.))
 			.id();
 		let children = [
 			app.world_mut().spawn(LoSCameraOf(parent)).id(),
@@ -47,8 +53,44 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			[Some(&Transform::from_xyz(1., 2., 3.)); 2],
-			app.world().entity(children).map(|e| e.get::<Transform>())
+			[Some(&GlobalTransform::from_xyz(1., 2., 3.)); 2],
+			app.world()
+				.entity(children)
+				.map(|e| e.get::<GlobalTransform>())
+		);
+	}
+
+	#[test]
+	fn preserve_camera_rotation() {
+		let mut app = setup();
+		let parent = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 2., 3.))
+			.id();
+		let children = [
+			app.world_mut()
+				.spawn((
+					LoSCameraOf(parent),
+					GlobalTransform::from(Transform::default().looking_to(Dir3::Y, Dir3::NEG_X)),
+				))
+				.id(),
+			app.world_mut()
+				.spawn((
+					LoSCameraOf(parent),
+					GlobalTransform::from(Transform::default().looking_to(Dir3::Y, Dir3::NEG_X)),
+				))
+				.id(),
+		];
+
+		app.update();
+
+		assert_eq!(
+			[Some(&GlobalTransform::from(
+				Transform::from_xyz(1., 2., 3.).looking_to(Dir3::Y, Dir3::NEG_X)
+			)); 2],
+			app.world()
+				.entity(children)
+				.map(|e| e.get::<GlobalTransform>())
 		);
 	}
 
@@ -57,7 +99,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y))
+			.spawn(GlobalTransform::from_xyz(1., 2., 3.))
 			.id();
 		let children = [
 			app.world_mut().spawn(LoSCameraOf(parent)).id(),
@@ -66,14 +108,16 @@ mod tests {
 
 		app.update();
 		_ = app.world_mut().entity_mut(children).map(|mut e| {
-			e.get_mut::<Transform>()
-				.map(|mut t| t.translation = Vec3::ZERO)
+			e.get_mut::<GlobalTransform>()
+				.map(|mut t| *t = GlobalTransform::default())
 		});
 		app.update();
 
 		assert_eq!(
-			[Some(&Transform::default()); 2],
-			app.world().entity(children).map(|e| e.get::<Transform>())
+			[Some(&GlobalTransform::default()); 2],
+			app.world()
+				.entity(children)
+				.map(|e| e.get::<GlobalTransform>())
 		);
 	}
 
@@ -82,7 +126,7 @@ mod tests {
 		let mut app = setup();
 		let parent = app
 			.world_mut()
-			.spawn(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y))
+			.spawn(GlobalTransform::from_xyz(1., 2., 3.))
 			.id();
 		let children = [
 			app.world_mut().spawn(LoSCameraOf(parent)).id(),
@@ -91,18 +135,20 @@ mod tests {
 
 		app.update();
 		_ = app.world_mut().entity_mut(children).map(|mut e| {
-			e.get_mut::<Transform>()
-				.map(|mut t| t.translation = Vec3::ZERO)
+			e.get_mut::<GlobalTransform>()
+				.map(|mut t| *t = GlobalTransform::default())
 		});
 		app.world_mut()
 			.entity_mut(parent)
-			.get_mut::<Transform>()
+			.get_mut::<GlobalTransform>()
 			.as_deref_mut();
 		app.update();
 
 		assert_eq!(
-			[Some(&Transform::from_xyz(1., 2., 3.)); 2],
-			app.world().entity(children).map(|e| e.get::<Transform>())
+			[Some(&GlobalTransform::from_xyz(1., 2., 3.)); 2],
+			app.world()
+				.entity(children)
+				.map(|e| e.get::<GlobalTransform>())
 		);
 	}
 }

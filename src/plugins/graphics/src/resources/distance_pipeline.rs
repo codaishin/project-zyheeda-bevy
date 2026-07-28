@@ -659,7 +659,6 @@ impl DistancePipelineDescriptor {
 
 #[derive(Resource, ExtractResource, Debug, PartialEq, Default, Clone)]
 pub(crate) struct DistancePipelineData {
-	pub(crate) player_position: Vec3,
 	bind_group: Option<BindGroup>,
 }
 
@@ -673,7 +672,6 @@ impl DistancePipelineData {
 	) {
 		let mut param = param.into_inner();
 		let mat = DistanceMaterial {
-			player_position: data.player_position,
 			range: *LitMaterial::RANGE,
 		};
 
@@ -692,8 +690,6 @@ impl DistancePipelineData {
 #[derive(AsBindGroup)]
 struct DistanceMaterial {
 	#[uniform(0)]
-	player_position: Vec3,
-	#[uniform(1)]
 	range: f32,
 }
 

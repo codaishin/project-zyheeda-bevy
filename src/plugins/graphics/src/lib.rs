@@ -22,7 +22,7 @@ use crate::{
 	resources::{
 		camera_parameters::CameraParameters,
 		depth_texture::{CopyDepthTexture, DepthTexture},
-		distance_pipeline::{DistancePipelineData, SetupDistancePipeline},
+		distance_pipeline::SetupDistancePipeline,
 		los_image::LoSImageAtlas,
 		post_process_pipeline::SetupPostProcessPipeline,
 		standard_materials::StandardMaterials,
@@ -140,13 +140,18 @@ where
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
 					StandardMaterials::replace_with_lit_material,
-					LitMaterial::set_player_position,
-					DistancePipelineData::set_player_position,
-					LoSCameras::update_positions,
 				)
 					.chain()
 					.in_set(GraphicSystems)
 					.after_plugin(TPhysics::SYSTEMS),
+			)
+			.add_systems(
+				PostUpdate,
+				(
+					LitMaterial::set_player_position,
+					LoSCameras::update_positions,
+				)
+					.after(TransformSystems::Propagate),
 			);
 	}
 

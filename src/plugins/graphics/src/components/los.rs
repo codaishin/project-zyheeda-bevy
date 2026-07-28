@@ -74,7 +74,7 @@ impl LoS {
 	pub(crate) const FULL_WIDTH: u32 = LoS::SUB_VIEW * 4;
 	pub(crate) const FULL_HEIGHT: u32 = LoS::SUB_VIEW * 3;
 
-	const FMT: TextureFormat = TextureFormat::Rgba8Unorm;
+	const FMT: TextureFormat = TextureFormat::Rgba32Float;
 
 	fn looking_to(&self) -> LookingTo {
 		match self {
