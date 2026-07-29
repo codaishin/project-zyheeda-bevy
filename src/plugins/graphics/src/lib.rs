@@ -23,7 +23,6 @@ use crate::{
 		camera_parameters::CameraParameters,
 		depth_texture::{CopyDepthTexture, DepthTexture},
 		distance_pipeline::SetupDistancePipeline,
-		los_image::LoSImageAtlas,
 		post_process_pipeline::SetupPostProcessPipeline,
 		standard_materials::StandardMaterials,
 	},
@@ -171,25 +170,7 @@ where
 			.add_prefab_observer::<LoS, ()>()
 			.add_systems(
 				PostStartup,
-				(
-					UiPass::spawn,
-					LoS::init_atlas,
-					LoS::init_cubemap,
-					|mut commands: Commands, img: Res<LoSImageAtlas>| {
-						commands.spawn((
-							Node {
-								width: Val::Px(400.0),
-								height: Val::Px(300.0),
-								..default()
-							},
-							ImageNode {
-								image: img.handle.clone(),
-								..default()
-							},
-						));
-					},
-				)
-					.chain(),
+				(UiPass::spawn, LoS::init_atlas, LoS::init_cubemap),
 			)
 			.add_systems(
 				Update,
