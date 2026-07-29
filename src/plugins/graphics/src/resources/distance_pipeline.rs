@@ -1,14 +1,15 @@
 use crate::{
-	components::los::LoS,
+	components::{distance_texture::DistanceTexture, los::LoS},
 	materials::lit_material::LitMaterial,
-	resources::los_image::{LoSImageAtlas, LoSImageCubemap},
+	resources::los_image::LoSImageCubemap,
 };
 use bevy::{
 	asset::UntypedAssetId,
 	camera::{MainPassResolutionOverride, Viewport},
 	core_pipeline::{
 		Core3dSystems,
-		core_3d::{Opaque3d, Opaque3dBatchSetKey, Opaque3dBinKey, main_opaque_pass_3d},
+		core_3d::{Opaque3d, Opaque3dBatchSetKey, Opaque3dBinKey},
+		deferred::node::late_deferred_prepass,
 		schedule::Core3d,
 	},
 	ecs::system::{StaticSystemParam, SystemParamItem},
@@ -70,14 +71,16 @@ use bevy::{
 			CachedRenderPipelineId,
 			ColorTargetState,
 			ColorWrites,
-			CommandEncoderDescriptor,
 			Extent3d,
 			Face,
 			FragmentState,
+			LoadOp,
+			Operations,
 			Origin3d,
 			PipelineCache,
 			PreparedBindGroup,
 			PrimitiveState,
+			RenderPassColorAttachment,
 			RenderPassDescriptor,
 			RenderPipelineDescriptor,
 			SpecializedMeshPipeline,
@@ -87,7 +90,7 @@ use bevy::{
 			TexelCopyTextureInfo,
 			TextureAspect,
 		},
-		renderer::{RenderContext, RenderDevice, RenderQueue, ViewQuery},
+		renderer::{RenderContext, RenderDevice, ViewQuery},
 		sync_world::MainEntity,
 		texture::GpuImage,
 		view::{
@@ -96,7 +99,6 @@ use bevy::{
 			RenderVisibleEntities,
 			RetainedViewEntity,
 			ViewDepthTexture,
-			ViewTarget,
 		},
 	},
 	shader::ShaderDefVal,
@@ -117,8 +119,8 @@ pub(crate) trait SetupDistancePipeline {
 impl SetupDistancePipeline for App {
 	fn setup_distance_pipeline(&mut self) -> &mut Self {
 		self.add_plugins((
-			ExtractResourcePlugin::<LoSImageAtlas>::default(),
 			ExtractResourcePlugin::<LoSImageCubemap>::default(),
+			ExtractComponentPlugin::<DistanceTexture>::default(),
 			ExtractComponentPlugin::<LoS>::default(),
 			BinnedRenderPhasePlugin::<Distance, DistancePipeline>::new(RenderDebugFlags::default()),
 		));
@@ -146,75 +148,15 @@ impl SetupDistancePipeline for App {
 				Core3d,
 				(
 					DistancePipeline::draw.pipe(OnError::log),
-					copy_atlas_to_cubemap,
+					DistancePipeline::copy_atlas_to_cubemap,
 				)
 					.chain()
-					.after(main_opaque_pass_3d)
-					.in_set(Core3dSystems::MainPass),
+					.after(late_deferred_prepass)
+					.in_set(Core3dSystems::Prepass),
 			);
 
 		self
 	}
-}
-
-fn copy_atlas_to_cubemap(
-	view: ViewQuery<&LoS>,
-	atlas: Res<LoSImageAtlas>,
-	cubemap: Res<LoSImageCubemap>,
-	images: Res<RenderAssets<GpuImage>>,
-	render_device: Res<RenderDevice>,
-	pending: Res<RenderQueue>,
-) {
-	let los = view.into_inner();
-
-	let Some(src) = images.get(&atlas.handle) else {
-		return;
-	};
-
-	let Some(dst) = images.get(&cubemap.handle) else {
-		return;
-	};
-
-	let offset = los.atlas_offset();
-	let depth = los.cubemap_depth();
-
-	// Immediately copy this texture sub view, otherwise it might not be ready for
-	// cameras rendering `LitMaterial`.
-	// TODO: Find a better way to ensure this.
-
-	let mut commands = render_device.create_command_encoder(&CommandEncoderDescriptor {
-		label: Some("copy_los_atlas_to_cubemap"),
-	});
-
-	commands.copy_texture_to_texture(
-		TexelCopyTextureInfo {
-			texture: &src.texture,
-			mip_level: 0,
-			origin: Origin3d {
-				x: offset.x,
-				y: offset.y,
-				z: 0,
-			},
-			aspect: TextureAspect::All,
-		},
-		TexelCopyTextureInfo {
-			texture: &dst.texture,
-			mip_level: 0,
-			origin: Origin3d {
-				x: 0,
-				y: 0,
-				z: depth,
-			},
-			aspect: TextureAspect::All,
-		},
-		Extent3d {
-			width: LoS::SUB_VIEW,
-			height: LoS::SUB_VIEW,
-			depth_or_array_layers: 1,
-		},
-	);
-
-	pending.submit([commands.finish()]);
 }
 
 #[derive(Resource)]
@@ -373,25 +315,37 @@ impl DistancePipeline {
 			(
 				&ExtractedCamera,
 				&ExtractedView,
-				&ViewTarget,
+				&DistanceTexture,
 				&ViewDepthTexture,
 				Option<&MainPassResolutionOverride>,
 			),
 			With<LoS>,
 		>,
 		phases: Res<ViewBinnedRenderPhases<Distance>>,
+		images: Res<RenderAssets<GpuImage>>,
 		mut ctx: RenderContext,
 	) -> Result<(), RenderError> {
 		let entity = view.entity();
-		let (camera, view, target, depth, resolution_override) = view.into_inner();
+		let (camera, view, DistanceTexture(image), depth, resolution_override) = view.into_inner();
 
+		let Some(image) = images.get(image) else {
+			return Ok(());
+		};
 		let Some(phase) = phases.get(&view.retained_view_entity) else {
 			return Ok(());
 		};
 		let depth_stencil_attachment = Some(depth.get_attachment(StoreOp::Store));
 		let mut render_pass = ctx.begin_tracked_render_pass(RenderPassDescriptor {
 			label: Some("distance pass"),
-			color_attachments: &[Some(target.get_color_attachment())],
+			color_attachments: &[Some(RenderPassColorAttachment {
+				view: &image.texture_view,
+				resolve_target: None,
+				depth_slice: None,
+				ops: Operations {
+					load: LoadOp::Clear(Color::WHITE.to_linear().into()),
+					store: StoreOp::Store,
+				},
+			})],
 			depth_stencil_attachment,
 			..default()
 		});
@@ -405,6 +359,49 @@ impl DistancePipeline {
 		phase
 			.render(&mut render_pass, world, entity)
 			.map_err(RenderError::Draw)
+	}
+
+	fn copy_atlas_to_cubemap(
+		view: ViewQuery<(&LoS, &DistanceTexture)>,
+		cubemap: Res<LoSImageCubemap>,
+		images: Res<RenderAssets<GpuImage>>,
+		mut ctx: RenderContext,
+	) {
+		let (los, DistanceTexture(src)) = view.into_inner();
+
+		let Some(src) = images.get(src) else {
+			return;
+		};
+
+		let Some(dst) = images.get(&cubemap.handle) else {
+			return;
+		};
+
+		let depth = los.cubemap_depth();
+
+		ctx.command_encoder().copy_texture_to_texture(
+			TexelCopyTextureInfo {
+				texture: &src.texture,
+				mip_level: 0,
+				origin: Origin3d::default(),
+				aspect: TextureAspect::All,
+			},
+			TexelCopyTextureInfo {
+				texture: &dst.texture,
+				mip_level: 0,
+				origin: Origin3d {
+					x: 0,
+					y: 0,
+					z: depth,
+				},
+				aspect: TextureAspect::All,
+			},
+			Extent3d {
+				width: LoS::SIDE,
+				height: LoS::SIDE,
+				depth_or_array_layers: 1,
+			},
+		);
 	}
 }
 
@@ -501,7 +498,7 @@ impl SpecializedMeshPipeline for DistancePipelineSpecializer {
 			fragment: Some(FragmentState {
 				shader: self.shader.clone(),
 				targets: vec![Some(ColorTargetState {
-					format: key.target_format(),
+					format: LoS::FMT,
 					blend: None,
 					write_mask: ColorWrites::ALL,
 				})],
