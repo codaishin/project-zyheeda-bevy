@@ -1,7 +1,7 @@
 use crate::{
 	components::roles::Player,
 	materials::lit_material::{LitMaterial, StandardLitMaterial},
-	resources::standard_materials::StandardMaterials,
+	resources::{los_image::LoSImageCubemap, standard_materials::StandardMaterials},
 };
 use bevy::prelude::*;
 use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
@@ -9,6 +9,7 @@ use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaComman
 impl StandardMaterials {
 	pub(crate) fn replace_with_lit_material(
 		mut materials: ResMut<Self>,
+		los: Res<LoSImageCubemap>,
 		players: Query<&Transform, With<Player>>,
 		standard_materials: Res<Assets<StandardMaterial>>,
 		mut lit_materials: ResMut<Assets<StandardLitMaterial>>,
@@ -22,7 +23,8 @@ impl StandardMaterials {
 			let player_position = players.single().map_or(Vec3::ZERO, |t| t.translation);
 			let lit_material = lit_materials.add(StandardLitMaterial {
 				base,
-				extension: LitMaterial::from_player_position(player_position),
+				extension: LitMaterial::from_player_position(player_position)
+					.with_los_cubemap(los.handle.clone()),
 			});
 
 			for entity in entities.iter() {
@@ -44,7 +46,10 @@ mod tests {
 	use std::collections::{HashMap, HashSet};
 	use testing::{SingleThreadedApp, new_handle};
 
-	fn setup<const N: usize>(materials: [(&Handle<StandardMaterial>, StandardMaterial); N]) -> App {
+	fn setup<const N: usize>(
+		los_image: Handle<Image>,
+		materials: [(&Handle<StandardMaterial>, StandardMaterial); N],
+	) -> App {
 		let mut app = App::new().single_threaded(Update);
 		let mut assets = Assets::default();
 
@@ -52,6 +57,7 @@ mod tests {
 			_ = assets.insert(id, asset);
 		}
 
+		app.insert_resource(LoSImageCubemap { handle: los_image });
 		app.insert_resource(assets);
 		app.init_resource::<Assets<StandardLitMaterial>>();
 		app.add_systems(Update, StandardMaterials::replace_with_lit_material);
@@ -61,17 +67,21 @@ mod tests {
 
 	#[test]
 	fn replace() {
-		let handle = new_handle();
-		let mut app = setup([(
-			&handle,
-			StandardMaterial {
-				base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
-				..default()
-			},
-		)]);
-		let entity = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
+		let material = new_handle();
+		let los = new_handle();
+		let mut app = setup(
+			los.clone(),
+			[(
+				&material,
+				StandardMaterial {
+					base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
+					..default()
+				},
+			)],
+		);
+		let entity = app.world_mut().spawn(MeshMaterial3d(material.clone())).id();
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(handle.id(), HashSet::from([entity]))]),
+			entities: HashMap::from([(material.id(), HashSet::from([entity]))]),
 		});
 
 		app.update();
@@ -81,7 +91,7 @@ mod tests {
 				&StandardMaterials::default(),
 				Some((
 					Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
-					LitMaterial::default()
+					&LitMaterial::default().with_los_cubemap(los)
 				)),
 				None
 			),
@@ -94,7 +104,7 @@ mod tests {
 						.world()
 						.resource::<Assets<StandardLitMaterial>>()
 						.get(handle))
-					.map(|m| (m.base.base_color, m.extension)),
+					.map(|m| (m.base.base_color, &m.extension)),
 				app.world()
 					.entity(entity)
 					.get::<MeshMaterial3d<StandardMaterial>>()
@@ -104,25 +114,29 @@ mod tests {
 
 	#[test]
 	fn replace_with_player_position() {
-		let handle = new_handle();
-		let mut app = setup([(
-			&handle,
-			StandardMaterial {
-				base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
-				..default()
-			},
-		)]);
-		let entity = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
+		let material = new_handle();
+		let los = new_handle();
+		let mut app = setup(
+			los.clone(),
+			[(
+				&material,
+				StandardMaterial {
+					base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
+					..default()
+				},
+			)],
+		);
+		let entity = app.world_mut().spawn(MeshMaterial3d(material.clone())).id();
 		app.world_mut()
 			.spawn((Player, Transform::from_xyz(1., 2., 3.)));
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(handle.id(), HashSet::from([entity]))]),
+			entities: HashMap::from([(material.id(), HashSet::from([entity]))]),
 		});
 
 		app.update();
 
 		assert_eq!(
-			Some(LitMaterial::from_player_position(Vec3::new(1., 2., 3.))),
+			Some(&LitMaterial::from_player_position(Vec3::new(1., 2., 3.)).with_los_cubemap(los)),
 			app.world()
 				.entity(entity)
 				.get::<MeshMaterial3d<StandardLitMaterial>>()
@@ -130,20 +144,23 @@ mod tests {
 					.world()
 					.resource::<Assets<StandardLitMaterial>>()
 					.get(handle))
-				.map(|m| m.extension),
+				.map(|m| &m.extension),
 		);
 	}
 
 	#[test]
 	fn replace_shared() {
 		let handle = new_handle();
-		let mut app = setup([(
-			&handle,
-			StandardMaterial {
-				base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
-				..default()
-			},
-		)]);
+		let mut app = setup(
+			new_handle(),
+			[(
+				&handle,
+				StandardMaterial {
+					base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
+					..default()
+				},
+			)],
+		);
 		let a = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		let b = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		app.insert_resource(StandardMaterials {
@@ -165,7 +182,7 @@ mod tests {
 	#[test]
 	fn replace_delayed() {
 		let handle = new_handle();
-		let mut app = setup([]);
+		let mut app = setup(new_handle(), []);
 		let entity = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		app.insert_resource(StandardMaterials {
 			entities: HashMap::from([(handle.id(), HashSet::from([entity]))]),
@@ -210,13 +227,16 @@ mod tests {
 	#[test]
 	fn leave_standard_assets_untouched() {
 		let handle = new_handle();
-		let mut app = setup([(
-			&handle,
-			StandardMaterial {
-				base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
-				..default()
-			},
-		)]);
+		let mut app = setup(
+			new_handle(),
+			[(
+				&handle,
+				StandardMaterial {
+					base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
+					..default()
+				},
+			)],
+		);
 		let entity = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		app.insert_resource(StandardMaterials {
 			entities: HashMap::from([(handle.id(), HashSet::from([entity]))]),

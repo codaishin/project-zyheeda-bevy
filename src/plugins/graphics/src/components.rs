@@ -1,6 +1,7 @@
 pub(crate) mod camera_labels;
 pub(crate) mod child_meshes;
 pub(crate) mod effect_material_handle;
+pub(crate) mod los;
 pub(crate) mod material_override;
 pub(crate) mod model_render_layers;
 pub(crate) mod only_depth_prepass;

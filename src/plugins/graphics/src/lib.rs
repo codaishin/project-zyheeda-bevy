@@ -9,6 +9,7 @@ mod traits;
 use crate::{
 	components::{
 		camera_labels::{AgentsPass, OutlinePass, WorldLight},
+		los::{LoS, LoSCameras},
 		model_render_layers::ModelRenderLayers,
 		only_depth_prepass::OnlyDepthPrepass,
 		post_process_camera::PostProcessCamera,
@@ -21,6 +22,7 @@ use crate::{
 	resources::{
 		camera_parameters::CameraParameters,
 		depth_texture::{CopyDepthTexture, DepthTexture},
+		distance_pipeline::SetupDistancePipeline,
 		post_process_pipeline::SetupPostProcessPipeline,
 		standard_materials::StandardMaterials,
 	},
@@ -121,6 +123,8 @@ where
 			.add_plugins(MaterialPlugin::<StandardLitMaterial>::default())
 			.register_derived_component::<Essence, MaterialOverride>()
 			.register_shader::<EssenceMaterial>()
+			.setup_post_process_pipeline()
+			.setup_distance_pipeline()
 			.add_observer(MaterialOverride::update_essence_shader)
 			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillContact>)
 			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillProjection>)
@@ -135,11 +139,18 @@ where
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
 					StandardMaterials::replace_with_lit_material,
-					LitMaterial::set_player_position,
 				)
 					.chain()
 					.in_set(GraphicSystems)
 					.after_plugin(TPhysics::SYSTEMS),
+			)
+			.add_systems(
+				PostUpdate,
+				(
+					LitMaterial::set_player_position,
+					LoSCameras::update_positions,
+				)
+					.after(TransformSystems::Propagate),
 			);
 	}
 
@@ -153,11 +164,14 @@ where
 			.copy_depth_texture::<WorldPass>()
 			.copy_depth_texture::<AgentsPass>()
 			.copy_depth_texture::<OutlinePass>()
-			.setup_post_process_pipeline()
 			.add_prefab_observer::<Player, ()>()
 			.add_prefab_observer::<Enemy, ()>()
 			.add_prefab_observer::<WorldLight, ()>()
-			.add_systems(PostStartup, UiPass::spawn)
+			.add_prefab_observer::<LoS, ()>()
+			.add_systems(
+				PostStartup,
+				(UiPass::spawn, LoS::init_atlas, LoS::init_cubemap),
+			)
 			.add_systems(
 				Update,
 				(

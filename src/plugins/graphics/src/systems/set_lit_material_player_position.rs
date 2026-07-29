@@ -7,14 +7,14 @@ use bevy::prelude::*;
 impl LitMaterial {
 	pub(crate) fn set_player_position(
 		mut materials: ResMut<Assets<StandardLitMaterial>>,
-		players: Query<&Transform, (With<Player>, Changed<Transform>)>,
+		players: Query<&GlobalTransform, (With<Player>, Changed<GlobalTransform>)>,
 	) {
-		let Ok(Transform { translation, .. }) = players.single() else {
+		let Ok(transform) = players.single() else {
 			return;
 		};
 
 		for (_, materials) in materials.iter_mut() {
-			materials.extension.player_position = *translation;
+			materials.extension.player_position = transform.translation();
 		}
 	}
 }
@@ -43,7 +43,7 @@ mod tests {
 	fn set_position() {
 		let mut app = setup([StandardLitMaterial::default()]);
 		app.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)));
+			.spawn((Player, GlobalTransform::from_xyz(1., 2., 3.)));
 
 		app.update();
 
@@ -60,7 +60,7 @@ mod tests {
 	#[test]
 	fn ignore_no_players() {
 		let mut app = setup([StandardLitMaterial::default()]);
-		app.world_mut().spawn(Transform::from_xyz(1., 2., 3.));
+		app.world_mut().spawn(GlobalTransform::from_xyz(1., 2., 3.));
 
 		app.update();
 
@@ -78,7 +78,7 @@ mod tests {
 	fn act_only_once() {
 		let mut app = setup([StandardLitMaterial::default()]);
 		app.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)));
+			.spawn((Player, GlobalTransform::from_xyz(1., 2., 3.)));
 
 		app.update();
 		for (_, m) in app
@@ -105,13 +105,13 @@ mod tests {
 		let mut app = setup([StandardLitMaterial::default()]);
 		let entity = app
 			.world_mut()
-			.spawn((Player, Transform::from_xyz(1., 2., 3.)))
+			.spawn((Player, GlobalTransform::from_xyz(1., 2., 3.)))
 			.id();
 
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.insert(Transform::from_xyz(3., 2., 3.));
+			.insert(GlobalTransform::from_xyz(3., 2., 3.));
 		app.update();
 
 		assert_eq!(
