@@ -44,7 +44,7 @@ use bevy::{
 		},
 		camera::{DirtySpecializations, ExtractedCamera, PendingQueues},
 		extract_component::ExtractComponentPlugin,
-		extract_resource::{ExtractResource, ExtractResourcePlugin},
+		extract_resource::ExtractResourcePlugin,
 		mesh::{RenderMesh, allocator::MeshAllocator},
 		render_asset::RenderAssets,
 		render_phase::{
@@ -65,6 +65,7 @@ use bevy::{
 		},
 		render_resource::{
 			AsBindGroup,
+			AsBindGroupError,
 			BindGroup,
 			CachedRenderPipelineId,
 			ColorTargetState,
@@ -116,13 +117,11 @@ pub(crate) trait SetupDistancePipeline {
 impl SetupDistancePipeline for App {
 	fn setup_distance_pipeline(&mut self) -> &mut Self {
 		self.add_plugins((
-			ExtractResourcePlugin::<DistancePipelineData>::default(),
 			ExtractResourcePlugin::<LoSImageAtlas>::default(),
 			ExtractResourcePlugin::<LoSImageCubemap>::default(),
 			ExtractComponentPlugin::<LoS>::default(),
 			BinnedRenderPhasePlugin::<Distance, DistancePipeline>::new(RenderDebugFlags::default()),
-		))
-		.init_resource::<DistancePipelineData>();
+		));
 
 		self.sub_app_mut(RenderApp)
 			.init_resource::<DistancePipeline>()
@@ -135,9 +134,9 @@ impl SetupDistancePipeline for App {
 			.add_systems(
 				Render,
 				(
-					DistancePipelineDescriptor::init
-						.run_if(not(resource_exists::<DistancePipelineDescriptor>)),
-					DistancePipelineData::compute_bind_group,
+					DistancePipelineBindGroup::init
+						.pipe(OnError::log)
+						.run_if(not(resource_exists::<DistancePipelineBindGroup>)),
 					DistancePipeline::specialize_and_queue_draws.pipe(OnError::log),
 				)
 					.chain()
@@ -260,7 +259,7 @@ impl DistancePipeline {
 		pipeline_cache: Res<PipelineCache>,
 		mesh_pipeline: Res<MeshPipeline>,
 		distance_pipeline: Res<DistancePipeline>,
-		distance_pipeline_descriptor: Res<DistancePipelineDescriptor>,
+		distance_pipeline_bind_group: Res<DistancePipelineBindGroup>,
 		allocator: Res<MeshAllocator>,
 		meshes: Res<RenderAssets<RenderMesh>>,
 		mesh_instances: Res<RenderMeshInstances>,
@@ -276,7 +275,7 @@ impl DistancePipeline {
 		let specializer = DistancePipelineSpecializer {
 			shader: distance_pipeline.shader.clone(),
 			mesh_pipeline: mesh_pipeline.clone(),
-			descriptor: distance_pipeline_descriptor.descriptor.clone(),
+			descriptor: distance_pipeline_bind_group.descriptor.clone(),
 		};
 
 		for (view, visible_entities) in &mut views {
@@ -606,7 +605,7 @@ impl<P, const I: usize> RenderCommand<P> for SetDistanceBindGroup<I>
 where
 	P: PhaseItem,
 {
-	type Param = Res<'static, DistancePipelineData>;
+	type Param = Res<'static, DistancePipelineBindGroup>;
 	type ViewQuery = ();
 	type ItemQuery = ();
 
@@ -619,14 +618,9 @@ where
 	) -> bevy::render::render_phase::RenderCommandResult {
 		let data = data.into_inner();
 
-		match data.bind_group {
-			None => RenderCommandResult::Failure("Distance material bind group missing"),
-			Some(ref bind_group) => {
-				pass.set_bind_group(I, bind_group, &[]);
+		pass.set_bind_group(I, &data.bind_group, &[]);
 
-				RenderCommandResult::Success
-			}
-		}
+		RenderCommandResult::Success
 	}
 }
 
@@ -645,45 +639,38 @@ impl ErrorData for RenderError {
 }
 
 #[derive(Resource, Debug, PartialEq)]
-struct DistancePipelineDescriptor {
+struct DistancePipelineBindGroup {
 	descriptor: BindGroupLayoutDescriptor,
+	bind_group: BindGroup,
 }
 
-impl DistancePipelineDescriptor {
-	fn init(mut commands: ZyheedaCommands, render_device: Res<RenderDevice>) {
-		let descriptor = DistanceMaterial::bind_group_layout_descriptor(&render_device);
-
-		commands.insert_resource(Self { descriptor });
-	}
-}
-
-#[derive(Resource, ExtractResource, Debug, PartialEq, Default, Clone)]
-pub(crate) struct DistancePipelineData {
-	bind_group: Option<BindGroup>,
-}
-
-impl DistancePipelineData {
-	fn compute_bind_group(
-		mut data: ResMut<Self>,
+impl DistancePipelineBindGroup {
+	fn init(
+		mut commands: ZyheedaCommands,
 		render_device: Res<RenderDevice>,
 		pipeline_cache: Res<PipelineCache>,
-		descriptor: Res<DistancePipelineDescriptor>,
 		param: StaticSystemParam<<DistanceMaterial as AsBindGroup>::Param>,
-	) {
-		let mut param = param.into_inner();
-		let mat = DistanceMaterial {
+	) -> Result<(), RenderError> {
+		let descriptor = DistanceMaterial::bind_group_layout_descriptor(&render_device);
+		let material = DistanceMaterial {
 			range: *LitMaterial::RANGE,
 		};
-
-		data.bind_group = mat
+		let bind_group = material
 			.as_bind_group(
-				&descriptor.descriptor,
+				&descriptor,
 				&render_device,
 				&pipeline_cache,
-				&mut param,
+				&mut param.into_inner(),
 			)
 			.map(|PreparedBindGroup { bind_group, .. }| bind_group)
-			.ok()
+			.map_err(RenderError::FaultyBindGroup)?;
+
+		commands.insert_resource(Self {
+			descriptor,
+			bind_group,
+		});
+
+		Ok(())
 	}
 }
 
@@ -698,6 +685,7 @@ struct Pending(pub PendingQueues);
 
 #[derive(Debug)]
 enum RenderError {
+	FaultyBindGroup(AsBindGroupError),
 	NoMesh(AssetId<Mesh>),
 	NoSlabs(AssetId<Mesh>),
 	Specialize(SpecializedMeshPipelineError),
@@ -707,6 +695,7 @@ enum RenderError {
 impl Display for RenderError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
+			RenderError::FaultyBindGroup(error) => write!(f, "{error}"),
 			RenderError::NoMesh(id) => write!(f, "{id}: no mesh"),
 			RenderError::NoSlabs(id) => write!(f, "{id}: no slabs"),
 			RenderError::Specialize(e) => write!(f, "Specialization failed with: {e}"),
