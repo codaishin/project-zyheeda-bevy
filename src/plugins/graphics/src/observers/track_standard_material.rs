@@ -1,4 +1,4 @@
-use crate::resources::standard_materials::StandardMaterials;
+use crate::{materials::lit_material::DeadSpace, resources::standard_materials::StandardMaterials};
 use bevy::prelude::*;
 use std::collections::{HashSet, hash_map::Entry};
 
@@ -14,10 +14,11 @@ impl StandardMaterials {
 
 		match materials.entities.entry(handle.id()) {
 			Entry::Occupied(mut entry) => {
-				entry.get_mut().insert(on_add.entity);
+				let (entities, _) = entry.get_mut();
+				entities.insert(on_add.entity);
 			}
 			Entry::Vacant(entry) => {
-				entry.insert(HashSet::from([on_add.entity]));
+				entry.insert((HashSet::from([on_add.entity]), DeadSpace(false)));
 			}
 		};
 	}
@@ -35,7 +36,7 @@ impl StandardMaterials {
 			return;
 		};
 
-		let entities = entry.get_mut();
+		let (entities, _) = entry.get_mut();
 
 		entities.remove(&on_discard.entity);
 		if !entities.is_empty() {
@@ -71,7 +72,10 @@ mod tests {
 
 		assert_eq!(
 			&StandardMaterials {
-				entities: HashMap::from([(handle.id(), HashSet::from([entity]))])
+				entities: HashMap::from([(
+					handle.id(),
+					(HashSet::from([entity]), DeadSpace(false))
+				)])
 			},
 			app.world().resource::<StandardMaterials>()
 		);
@@ -89,7 +93,10 @@ mod tests {
 
 		assert_eq!(
 			&StandardMaterials {
-				entities: HashMap::from([(handle.id(), HashSet::from(entities))])
+				entities: HashMap::from([(
+					handle.id(),
+					(HashSet::from(entities), DeadSpace(false))
+				)])
 			},
 			app.world().resource::<StandardMaterials>()
 		);
@@ -107,7 +114,10 @@ mod tests {
 
 		assert_eq!(
 			&StandardMaterials {
-				entities: HashMap::from([(handle.id(), HashSet::from([entity.id()]))])
+				entities: HashMap::from([(
+					handle.id(),
+					(HashSet::from([entity.id()]), DeadSpace(false))
+				)])
 			},
 			app.world().resource::<StandardMaterials>()
 		);
@@ -126,7 +136,7 @@ mod tests {
 
 		assert_eq!(
 			&StandardMaterials {
-				entities: HashMap::from([(handle.id(), HashSet::from([b]))])
+				entities: HashMap::from([(handle.id(), (HashSet::from([b]), DeadSpace(false)))])
 			},
 			app.world().resource::<StandardMaterials>()
 		);

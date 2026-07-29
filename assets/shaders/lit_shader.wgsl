@@ -42,24 +42,27 @@ fn fragment(
     out.color = apply_pbr_lighting(pbr_input);
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
 
-    let direction = in.world_position.xyz - player_position;
-    let vertex_distance = length(direction) / range;
-    let los_distance = textureSample(
-        los_texture,
-        los_sampler,
-        normalize(direction) * CUBEMAP_SAMPLE_CORRECTION
-    ).r;
+    #ifdef DEAD_SPACE
+        out.color = vec4(vec3(0), out.color.a);
+    #else
+        let direction = in.world_position.xyz - player_position;
+        let vertex_distance = length(direction) / range;
+        let los_distance = textureSample(
+            los_texture,
+            los_sampler,
+            normalize(direction) * CUBEMAP_SAMPLE_CORRECTION
+        ).r;
 
-    let visibility = step(vertex_distance, los_distance + BIAS);
+        let visibility = step(vertex_distance, los_distance + BIAS);
 
-    let light = mix(
-        min_light,
-        max(1. - vertex_distance, min_light),
-        visibility,
-    );
+        let light = mix(
+            min_light,
+            max(1. - vertex_distance, min_light),
+            visibility,
+        );
 
-    out.color = vec4(out.color.rgb * light, out.color.a);
-
+        out.color = vec4(out.color.rgb * light, out.color.a);
+    #endif
 #endif
 
     return out;

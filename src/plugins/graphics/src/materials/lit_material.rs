@@ -1,8 +1,10 @@
 use bevy::{
-	pbr::{ExtendedMaterial, MaterialExtension},
+	material::{descriptor::RenderPipelineDescriptor, specialize::SpecializedMeshPipelineError},
+	mesh::MeshVertexBufferLayoutRef,
+	pbr::{ExtendedMaterial, MaterialExtension, MaterialExtensionKey, MaterialExtensionPipeline},
 	prelude::*,
 	render::render_resource::AsBindGroup,
-	shader::ShaderRef,
+	shader::{ShaderDefVal, ShaderRef},
 };
 use common::tools::Units;
 use macros::asset_path;
@@ -10,6 +12,7 @@ use macros::asset_path;
 pub(crate) type StandardLitMaterial = ExtendedMaterial<StandardMaterial, LitMaterial>;
 
 #[derive(Asset, AsBindGroup, Reflect, Debug, PartialEq, Clone)]
+#[bind_group_data(DeadSpace)]
 pub(crate) struct LitMaterial {
 	#[uniform(100)]
 	pub(crate) player_position: Vec3,
@@ -20,6 +23,7 @@ pub(crate) struct LitMaterial {
 	#[texture(103, dimension = "cube")]
 	#[sampler(104)]
 	pub(crate) los: Handle<Image>,
+	pub(crate) dead_space: bool,
 }
 
 impl LitMaterial {
@@ -38,6 +42,11 @@ impl LitMaterial {
 		self.los = los;
 		self
 	}
+
+	pub(crate) fn with_dead_space(mut self, DeadSpace(dead_space): DeadSpace) -> Self {
+		self.dead_space = dead_space;
+		self
+	}
 }
 
 impl Default for LitMaterial {
@@ -47,6 +56,7 @@ impl Default for LitMaterial {
 			range: *Self::RANGE,
 			min_light: Self::MIN_LIGHT,
 			los: Handle::default(),
+			dead_space: false,
 		}
 	}
 }
@@ -58,5 +68,28 @@ impl MaterialExtension for LitMaterial {
 
 	fn deferred_fragment_shader() -> ShaderRef {
 		Self::SHADER.into()
+	}
+
+	fn specialize(
+		_: &MaterialExtensionPipeline,
+		descriptor: &mut RenderPipelineDescriptor,
+		_: &MeshVertexBufferLayoutRef,
+		key: MaterialExtensionKey<Self>,
+	) -> Result<(), SpecializedMeshPipelineError> {
+		if let (DeadSpace(true), Some(fragment)) = (key.bind_group_data, &mut descriptor.fragment) {
+			fragment.shader_defs.push(ShaderDefVal::from("DEAD_SPACE"));
+		}
+
+		Ok(())
+	}
+}
+
+#[repr(C)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub(crate) struct DeadSpace(pub(crate) bool);
+
+impl From<&LitMaterial> for DeadSpace {
+	fn from(LitMaterial { dead_space, .. }: &LitMaterial) -> Self {
+		Self(*dead_space)
 	}
 }

@@ -15,7 +15,7 @@ impl StandardMaterials {
 		mut lit_materials: ResMut<Assets<StandardLitMaterial>>,
 		mut commands: ZyheedaCommands,
 	) {
-		materials.entities.retain(|id, entities| {
+		materials.entities.retain(|id, (entities, dead_space)| {
 			let Some(base) = standard_materials.get(*id).cloned() else {
 				return true;
 			};
@@ -24,7 +24,8 @@ impl StandardMaterials {
 			let lit_material = lit_materials.add(StandardLitMaterial {
 				base,
 				extension: LitMaterial::from_player_position(player_position)
-					.with_los_cubemap(los.handle.clone()),
+					.with_los_cubemap(los.handle.clone())
+					.with_dead_space(*dead_space),
 			});
 
 			for entity in entities.iter() {
@@ -42,8 +43,12 @@ impl StandardMaterials {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::{components::roles::Player, materials::lit_material::StandardLitMaterial};
+	use crate::{
+		components::roles::Player,
+		materials::lit_material::{DeadSpace, StandardLitMaterial},
+	};
 	use std::collections::{HashMap, HashSet};
+	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup<const N: usize>(
@@ -65,8 +70,9 @@ mod tests {
 		app
 	}
 
-	#[test]
-	fn replace() {
+	#[test_case(DeadSpace(false); "without dead space")]
+	#[test_case(DeadSpace(true); "with dead space")]
+	fn replace(dead_space: DeadSpace) {
 		let material = new_handle();
 		let los = new_handle();
 		let mut app = setup(
@@ -81,7 +87,7 @@ mod tests {
 		);
 		let entity = app.world_mut().spawn(MeshMaterial3d(material.clone())).id();
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(material.id(), HashSet::from([entity]))]),
+			entities: HashMap::from([(material.id(), (HashSet::from([entity]), dead_space))]),
 		});
 
 		app.update();
@@ -91,7 +97,9 @@ mod tests {
 				&StandardMaterials::default(),
 				Some((
 					Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
-					&LitMaterial::default().with_los_cubemap(los)
+					&LitMaterial::default()
+						.with_los_cubemap(los)
+						.with_dead_space(dead_space)
 				)),
 				None
 			),
@@ -130,7 +138,7 @@ mod tests {
 		app.world_mut()
 			.spawn((Player, Transform::from_xyz(1., 2., 3.)));
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(material.id(), HashSet::from([entity]))]),
+			entities: HashMap::from([(material.id(), (HashSet::from([entity]), DeadSpace(false)))]),
 		});
 
 		app.update();
@@ -164,7 +172,7 @@ mod tests {
 		let a = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		let b = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(handle.id(), HashSet::from([a, b]))]),
+			entities: HashMap::from([(handle.id(), (HashSet::from([a, b]), DeadSpace(false)))]),
 		});
 
 		app.update();
@@ -185,7 +193,7 @@ mod tests {
 		let mut app = setup(new_handle(), []);
 		let entity = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(handle.id(), HashSet::from([entity]))]),
+			entities: HashMap::from([(handle.id(), (HashSet::from([entity]), DeadSpace(false)))]),
 		});
 
 		app.update();
@@ -239,7 +247,7 @@ mod tests {
 		);
 		let entity = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(handle.id(), HashSet::from([entity]))]),
+			entities: HashMap::from([(handle.id(), (HashSet::from([entity]), DeadSpace(false)))]),
 		});
 
 		app.update();
