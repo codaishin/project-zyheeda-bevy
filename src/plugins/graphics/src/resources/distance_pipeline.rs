@@ -1,7 +1,7 @@
 use crate::{
 	components::{distance_texture::DistanceTexture, los::LoS},
 	materials::lit_material::LitMaterial,
-	resources::los_image::{LoSImageAtlas, LoSImageCubemap},
+	resources::los_image::LoSImageCubemap,
 };
 use bevy::{
 	asset::UntypedAssetId,
@@ -119,7 +119,6 @@ pub(crate) trait SetupDistancePipeline {
 impl SetupDistancePipeline for App {
 	fn setup_distance_pipeline(&mut self) -> &mut Self {
 		self.add_plugins((
-			ExtractResourcePlugin::<LoSImageAtlas>::default(),
 			ExtractResourcePlugin::<LoSImageCubemap>::default(),
 			ExtractComponentPlugin::<DistanceTexture>::default(),
 			ExtractComponentPlugin::<LoS>::default(),
@@ -363,15 +362,14 @@ impl DistancePipeline {
 	}
 
 	fn copy_atlas_to_cubemap(
-		view: ViewQuery<&LoS>,
-		atlas: Res<LoSImageAtlas>,
+		view: ViewQuery<(&LoS, &DistanceTexture)>,
 		cubemap: Res<LoSImageCubemap>,
 		images: Res<RenderAssets<GpuImage>>,
 		mut ctx: RenderContext,
 	) {
-		let los = view.into_inner();
+		let (los, DistanceTexture(src)) = view.into_inner();
 
-		let Some(src) = images.get(&atlas.handle) else {
+		let Some(src) = images.get(src) else {
 			return;
 		};
 
@@ -379,18 +377,13 @@ impl DistancePipeline {
 			return;
 		};
 
-		let offset = los.atlas_offset();
 		let depth = los.cubemap_depth();
 
 		ctx.command_encoder().copy_texture_to_texture(
 			TexelCopyTextureInfo {
 				texture: &src.texture,
 				mip_level: 0,
-				origin: Origin3d {
-					x: offset.x,
-					y: offset.y,
-					z: 0,
-				},
+				origin: Origin3d::default(),
 				aspect: TextureAspect::All,
 			},
 			TexelCopyTextureInfo {
@@ -404,8 +397,8 @@ impl DistancePipeline {
 				aspect: TextureAspect::All,
 			},
 			Extent3d {
-				width: LoS::SUB_VIEW,
-				height: LoS::SUB_VIEW,
+				width: LoS::SIDE,
+				height: LoS::SIDE,
 				depth_or_array_layers: 1,
 			},
 		);

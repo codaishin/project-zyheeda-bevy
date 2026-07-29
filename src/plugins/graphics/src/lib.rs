@@ -170,7 +170,7 @@ where
 			.add_prefab_observer::<LoS, ()>()
 			.add_systems(
 				PostStartup,
-				(UiPass::spawn, LoS::init_atlas, LoS::init_cubemap),
+				(UiPass::spawn, LoS::init_shared_depth, LoS::init_cubemap),
 			)
 			.add_systems(
 				Update,

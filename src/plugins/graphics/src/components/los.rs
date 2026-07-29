@@ -1,11 +1,11 @@
 use crate::{
 	components::{camera_labels::WorldPass, distance_texture::DistanceTexture},
 	materials::lit_material::LitMaterial,
-	resources::los_image::{LoSImageAtlas, LoSImageCubemap},
+	resources::los_image::{LoSImageCubemap, LoSImageShared},
 };
 use bevy::{
 	asset::RenderAssetUsages,
-	camera::{RenderTarget, Viewport, visibility::RenderLayers},
+	camera::{RenderTarget, visibility::RenderLayers},
 	ecs::{entity::EntityHashSet, system::StaticSystemParam},
 	image::TextureFormatPixelInfo,
 	prelude::*,
@@ -38,7 +38,9 @@ pub(crate) struct LoSCameras(EntityHashSet);
 #[require(Transform)]
 pub(crate) struct LoSCameraOf(pub(crate) Entity);
 
-/// Basis for LoS cubemap using the following atlas layout
+/// Basis for LoS cubemap assuming the following layout
+///
+/// # As Atlas
 /// ```css
 ///     ┌───┐
 ///     │ U │
@@ -48,6 +50,15 @@ pub(crate) struct LoSCameraOf(pub(crate) Entity);
 ///     │ D │
 ///     └───┘
 /// ```
+///
+/// # Cubemap layers
+/// 0. [`LoS::Right`]
+/// 1. [`LoS::Left`]
+/// 2. [`LoS::Up`]
+/// 3. [`LoS::Down`]
+/// 4. [`LoS::Forward`]
+/// 5. [`LoS::Backward`]
+///
 #[derive(Component, ExtractComponent, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
 #[require(
@@ -70,9 +81,7 @@ pub(crate) enum LoS {
 }
 
 impl LoS {
-	pub(crate) const SUB_VIEW: u32 = 1024;
-	pub(crate) const FULL_WIDTH: u32 = LoS::SUB_VIEW * 4;
-	pub(crate) const FULL_HEIGHT: u32 = LoS::SUB_VIEW * 3;
+	pub(crate) const SIDE: u32 = 1024;
 	pub(crate) const FMT: TextureFormat = TextureFormat::R32Float;
 
 	fn looking_to(&self) -> LookingTo {
@@ -104,35 +113,6 @@ impl LoS {
 		}
 	}
 
-	pub(crate) fn atlas_offset(&self) -> UVec2 {
-		match self {
-			LoS::Right => UVec2 {
-				x: LoS::SUB_VIEW * 2,
-				y: LoS::SUB_VIEW,
-			},
-			LoS::Left => UVec2 {
-				x: 0,
-				y: LoS::SUB_VIEW,
-			},
-			LoS::Up => UVec2 {
-				x: LoS::SUB_VIEW,
-				y: 0,
-			},
-			LoS::Down => UVec2 {
-				x: LoS::SUB_VIEW,
-				y: LoS::SUB_VIEW * 2,
-			},
-			LoS::Forward => UVec2 {
-				x: LoS::SUB_VIEW,
-				y: LoS::SUB_VIEW,
-			},
-			LoS::Backward => UVec2 {
-				x: LoS::SUB_VIEW * 3,
-				y: LoS::SUB_VIEW,
-			},
-		}
-	}
-
 	pub(crate) fn cubemap_depth(&self) -> u32 {
 		match self {
 			LoS::Right => 0,
@@ -158,17 +138,19 @@ impl LoS {
 	pub(crate) fn sub_view_data_size() -> Option<usize> {
 		let pixel_size = LoS::FMT.pixel_size().ok()?;
 
-		Some(pixel_size * (LoS::SUB_VIEW * LoS::SUB_VIEW) as usize)
+		Some(pixel_size * (LoS::SIDE * LoS::SIDE) as usize)
 	}
 
-	pub(crate) fn init_atlas(mut commands: ZyheedaCommands, mut images: ResMut<Assets<Image>>) {
-		let mut image =
-			Image::new_target_texture(LoS::FULL_WIDTH, LoS::FULL_HEIGHT, LoS::FMT, None);
+	pub(crate) fn init_shared_depth(
+		mut commands: ZyheedaCommands,
+		mut images: ResMut<Assets<Image>>,
+	) {
+		let mut image = Image::new_target_texture(LoS::SIDE, LoS::SIDE, LoS::FMT, None);
 
 		image.texture_descriptor.usage |= TextureUsages::COPY_SRC;
 		image.texture_descriptor.usage &= !TextureUsages::COPY_DST;
 
-		commands.insert_resource(LoSImageAtlas {
+		commands.insert_resource(LoSImageShared {
 			handle: images.add(image),
 		});
 	}
@@ -176,8 +158,8 @@ impl LoS {
 	pub(crate) fn init_cubemap(mut commands: ZyheedaCommands, mut images: ResMut<Assets<Image>>) {
 		let usage = TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST;
 		let size = Extent3d {
-			width: LoS::SUB_VIEW,
-			height: LoS::SUB_VIEW,
+			width: LoS::SIDE,
+			height: LoS::SIDE,
 			depth_or_array_layers: 6,
 		};
 		let data = LoS::sub_view_data_size()
@@ -212,35 +194,26 @@ impl LoS {
 
 impl Prefab<()> for LoS {
 	type TError = Unreachable;
-	type TSystemParam = Res<'static, LoSImageAtlas>;
+	type TSystemParam = Res<'static, LoSImageShared>;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		los_image: StaticSystemParam<Self::TSystemParam>,
+		shared: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError> {
 		let LookingTo { direction, up } = self.looking_to();
 
 		entity.try_insert((
 			RenderTarget::None {
 				size: UVec2 {
-					x: LoS::FULL_WIDTH,
-					y: LoS::FULL_HEIGHT,
+					x: LoS::SIDE,
+					y: LoS::SIDE,
 				},
 			},
-			DistanceTexture(los_image.handle.clone()),
+			DistanceTexture(shared.handle.clone()),
 			RenderLayers::from(WorldPass),
 			Camera {
 				order: self.order(),
-				viewport: Some(Viewport {
-					physical_position: self.atlas_offset(),
-					physical_size: UVec2 {
-						x: LoS::SUB_VIEW,
-						y: LoS::SUB_VIEW,
-					},
-					..default()
-				}),
-				clear_color: ClearColorConfig::Custom(Color::WHITE),
 				..default()
 			},
 			Transform::default().looking_to(direction, up),
