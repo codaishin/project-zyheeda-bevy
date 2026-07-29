@@ -24,6 +24,8 @@
 // corrects for the right/left handed coordinate systems mismatch between bevy and wgsl
 const CUBEMAP_SAMPLE_CORRECTION: vec3<f32> = vec3(1.0, 1.0, -1.0);
 
+const BIAS: f32 = 0.01;
+
 @fragment
 fn fragment(
     in: VertexOutput,
@@ -42,17 +44,21 @@ fn fragment(
 
     let direction = in.world_position.xyz - player_position;
     let vertex_distance = length(direction) / range;
-    var los_distance = textureSample(
+    let los_distance = textureSample(
         los_texture,
         los_sampler,
         normalize(direction) * CUBEMAP_SAMPLE_CORRECTION
     ).r;
 
-    if vertex_distance <= los_distance + 0.01 {
-        out.color = vec4(out.color.rgb * max(1. - vertex_distance, min_light), out.color.a);
-    } else {
-        out.color = vec4(out.color.rgb * min_light, out.color.a);
-    }
+    let visibility = step(vertex_distance, los_distance + BIAS);
+
+    let light = mix(
+        min_light,
+        max(1. - vertex_distance, min_light),
+        visibility,
+    );
+
+    out.color = vec4(out.color.rgb * light, out.color.a);
 
 #endif
 
