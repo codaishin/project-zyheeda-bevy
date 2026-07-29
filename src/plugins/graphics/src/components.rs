@@ -1,5 +1,6 @@
 pub(crate) mod camera_labels;
 pub(crate) mod child_meshes;
+pub(crate) mod distance_texture;
 pub(crate) mod effect_material_handle;
 pub(crate) mod los;
 pub(crate) mod material_override;

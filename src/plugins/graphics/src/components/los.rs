@@ -1,11 +1,11 @@
 use crate::{
-	components::camera_labels::WorldPass,
+	components::{camera_labels::WorldPass, distance_texture::DistanceTexture},
 	materials::lit_material::LitMaterial,
 	resources::los_image::{LoSImageAtlas, LoSImageCubemap},
 };
 use bevy::{
 	asset::RenderAssetUsages,
-	camera::{ImageRenderTarget, RenderTarget, Viewport, visibility::RenderLayers},
+	camera::{RenderTarget, Viewport, visibility::RenderLayers},
 	ecs::{entity::EntityHashSet, system::StaticSystemParam},
 	image::TextureFormatPixelInfo,
 	prelude::*,
@@ -73,8 +73,7 @@ impl LoS {
 	pub(crate) const SUB_VIEW: u32 = 1024;
 	pub(crate) const FULL_WIDTH: u32 = LoS::SUB_VIEW * 4;
 	pub(crate) const FULL_HEIGHT: u32 = LoS::SUB_VIEW * 3;
-
-	const FMT: TextureFormat = TextureFormat::R32Float;
+	pub(crate) const FMT: TextureFormat = TextureFormat::R32Float;
 
 	fn looking_to(&self) -> LookingTo {
 		match self {
@@ -223,10 +222,13 @@ impl Prefab<()> for LoS {
 		let LookingTo { direction, up } = self.looking_to();
 
 		entity.try_insert((
-			RenderTarget::Image(ImageRenderTarget {
-				handle: los_image.handle.clone(),
-				scale_factor: 1.,
-			}),
+			RenderTarget::None {
+				size: UVec2 {
+					x: LoS::FULL_WIDTH,
+					y: LoS::FULL_HEIGHT,
+				},
+			},
+			DistanceTexture(los_image.handle.clone()),
 			RenderLayers::from(WorldPass),
 			Camera {
 				order: self.order(),
