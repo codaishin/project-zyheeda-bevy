@@ -46,29 +46,37 @@ fn fragment(
     #ifdef DEAD_SPACE
         out.color = vec4(vec3(0), out.color.a);
     #else
-        // Directions
+        var visibility: f32;
+
         var direction = in.world_position.xyz - player_position;
         let vertex_distance = length(direction);
-        direction = normalize(direction);
 
-        // Bias
-        var ndl = -dot(direction, normalize(in.world_normal.xyz));
-        ndl = select(ndl, 1, ndl < 0);
-        var slope_bias = mix(FLAT_ANGLE_BIAS, BIAS, ndl);
-        let distance_factor = pow(vertex_distance / range, 2.0);
-        slope_bias *= (1 + distance_factor);
+        if vertex_distance == 0 {
+            visibility = 1;
+        } else if vertex_distance > range {
+            visibility = 0;
+        } else {
+            direction = normalize(direction);
 
-        // Compute visibility
-        let los_distance = textureSample(
-            los_texture,
-            los_sampler,
-            direction * CUBEMAP_SAMPLE_CORRECTION
-        ).r * range;
-        var visibility = smoothstep(
-            -BIAS, // Shadow side with fixed bias to prevent "shine through artifacts"
-            slope_bias,
-            los_distance - vertex_distance + slope_bias
-        );
+            // Bias
+            var ndl = -dot(direction, normalize(in.world_normal.xyz));
+            ndl = select(ndl, 1, ndl < 0);
+            var slope_bias = mix(FLAT_ANGLE_BIAS, BIAS, ndl);
+            let distance_factor = pow(vertex_distance / range, 2.0);
+            slope_bias *= (1 + distance_factor);
+
+            // Compute visibility
+            let los_distance = textureSample(
+                los_texture,
+                los_sampler,
+                direction * CUBEMAP_SAMPLE_CORRECTION
+            ).r * range;
+            visibility = smoothstep(
+                -BIAS, // Shadow side with fixed bias to prevent "shine through artifacts"
+                slope_bias,
+                los_distance - vertex_distance + slope_bias
+            );
+        }
 
         // Apply Visibility
         let light = mix(
