@@ -24,7 +24,8 @@
 // corrects for the right/left handed coordinate systems mismatch between bevy and wgsl
 const CUBEMAP_SAMPLE_CORRECTION: vec3<f32> = vec3(1.0, 1.0, -1.0);
 
-const BIAS: f32 = 0.01;
+const BIAS: f32 = 0.03;
+const FLAT_ANGLE_BIAS: f32 = 0.9;
 
 @fragment
 fn fragment(
@@ -45,22 +46,36 @@ fn fragment(
     #ifdef DEAD_SPACE
         out.color = vec4(vec3(0), out.color.a);
     #else
-        let direction = in.world_position.xyz - player_position;
-        let vertex_distance = length(direction) / range;
+        // Directions
+        var direction = in.world_position.xyz - player_position;
+        let vertex_distance = length(direction);
+        direction = normalize(direction);
+
+        // Bias
+        var ndl = -dot(direction, normalize(in.world_normal.xyz));
+        ndl = select(ndl, 1, ndl < 0);
+        var slope_bias = mix(FLAT_ANGLE_BIAS, BIAS, ndl);
+        let distance_factor = pow(vertex_distance / range, 2.0);
+        slope_bias *= (1 + distance_factor);
+
+        // Compute visibility
         let los_distance = textureSample(
             los_texture,
             los_sampler,
-            normalize(direction) * CUBEMAP_SAMPLE_CORRECTION
-        ).r;
-
-        let visibility = step(vertex_distance, los_distance + BIAS);
-
-        let light = mix(
-            min_light,
-            max(1. - vertex_distance, min_light),
-            visibility,
+            direction * CUBEMAP_SAMPLE_CORRECTION
+        ).r * range;
+        var visibility = smoothstep(
+            -BIAS, // Shadow side with fixed bias to prevent "shine through artifacts"
+            slope_bias,
+            los_distance - vertex_distance + slope_bias
         );
 
+        // Apply Visibility
+        let light = mix(
+            min_light,
+            max(1. - (vertex_distance / range), min_light),
+            visibility,
+        );
         out.color = vec4(out.color.rgb * light, out.color.a);
     #endif
 #endif
