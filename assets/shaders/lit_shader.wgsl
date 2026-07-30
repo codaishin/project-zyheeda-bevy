@@ -25,7 +25,20 @@
 const CUBEMAP_SAMPLE_CORRECTION: vec3<f32> = vec3(1.0, 1.0, -1.0);
 
 const BIAS: f32 = 0.03;
-const FLAT_ANGLE_BIAS: f32 = 0.9;
+const FLAT_ANGLE_BIAS: f32 = 0.3;
+
+const KERNEL_COUNT: u32 = 8;
+const KERNEL: array<vec2<f32>, KERNEL_COUNT> = array(
+    normalize(vec2(-1, -1)),
+    normalize(vec2(-1,  0)),
+    normalize(vec2(-1,  1)),
+    normalize(vec2( 0, -1)),
+    normalize(vec2( 0,  1)),
+    normalize(vec2( 1, -1)),
+    normalize(vec2( 1,  0)),
+    normalize(vec2( 1,  1)),
+);
+const CONE_RADIUS: f32 = 0.02;
 
 @fragment
 fn fragment(
@@ -71,11 +84,37 @@ fn fragment(
                 los_sampler,
                 direction * CUBEMAP_SAMPLE_CORRECTION
             ).r * range;
-            visibility = smoothstep(
-                -BIAS, // Shadow side with fixed bias to prevent "shine through artifacts"
-                slope_bias,
-                los_distance - vertex_distance + slope_bias
+            visibility = step(vertex_distance, los_distance + BIAS);
+
+            // Cone visibility
+            var up = select(
+                vec3(1.0, 0.0, 0.0),
+                vec3(0.0, 1.0, 0.0),
+                dot(direction, vec3(0, 1, 0)) < 0.9
             );
+            let right = cross(direction, up);
+            up = cross(direction, right);
+
+            if visibility < 1 {
+                var radius_scale = vertex_distance / range;
+                var in_light = 0.0;
+                for (var k: u32 = 0; k < KERNEL_COUNT; k++) {
+                    let kernel = KERNEL[k];
+                    let offset = right * kernel.x + up * kernel.y;
+                    let radius = CONE_RADIUS * radius_scale;
+                    let kernel_direction = normalize(direction + offset * radius);
+                    let kernel_los_distance = textureSample(
+                        los_texture,
+                        los_sampler,
+                        kernel_direction * CUBEMAP_SAMPLE_CORRECTION
+                    ).r * range;
+
+                    in_light += step(vertex_distance, kernel_los_distance + BIAS);
+                }
+                in_light /= f32(KERNEL_COUNT);
+                visibility = smoothstep(0, 0.5, in_light);
+            }
+
         }
 
         // Apply Visibility
@@ -84,7 +123,7 @@ fn fragment(
             max(1. - (vertex_distance / range), min_light),
             visibility,
         );
-        out.color = vec4(out.color.rgb * light, out.color.a);
+        out.color = vec4(vec3(visibility), out.color.a);
     #endif
 #endif
 
