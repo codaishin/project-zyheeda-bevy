@@ -38,7 +38,8 @@ const KERNEL: array<vec2<f32>, KERNEL_COUNT> = array(
     normalize(vec2( 1,  0)),
     normalize(vec2( 1,  1)),
 );
-const CONE_RADIUS: f32 = 0.02;
+const CONE_SAMPLE_COUNT = 8;
+const CONE_RADIUS: f32 = 0.005;
 
 @fragment
 fn fragment(
@@ -71,13 +72,6 @@ fn fragment(
         } else {
             direction = normalize(direction);
 
-            // Bias
-            var ndl = -dot(direction, normalize(in.world_normal.xyz));
-            ndl = select(ndl, 1, ndl < 0);
-            var slope_bias = mix(FLAT_ANGLE_BIAS, BIAS, ndl);
-            let distance_factor = pow(vertex_distance / range, 2.0);
-            slope_bias *= (1 + distance_factor);
-
             // Compute visibility
             let los_distance = textureSample(
                 los_texture,
@@ -87,34 +81,35 @@ fn fragment(
             visibility = step(vertex_distance, los_distance + BIAS);
 
             // Cone visibility
-            var up = select(
-                vec3(1.0, 0.0, 0.0),
-                vec3(0.0, 1.0, 0.0),
-                dot(direction, vec3(0, 1, 0)) < 0.9
-            );
-            let right = cross(direction, up);
-            up = cross(direction, right);
-
             if visibility < 1 {
-                var radius_scale = vertex_distance / range;
+                var up = select(
+                    vec3(1.0, 0.0, 0.0),
+                    vec3(0.0, 1.0, 0.0),
+                    dot(direction, vec3(0, 1, 0)) < 0.9
+                );
+                let right = cross(direction, up);
+                up = cross(direction, right);
+
+                var radius_scale = max((vertex_distance - los_distance) / range, 0.0);
                 var in_light = 0.0;
-                for (var k: u32 = 0; k < KERNEL_COUNT; k++) {
-                    let kernel = KERNEL[k];
-                    let offset = right * kernel.x + up * kernel.y;
-                    let radius = CONE_RADIUS * radius_scale;
-                    let kernel_direction = normalize(direction + offset * radius);
-                    let kernel_los_distance = textureSample(
-                        los_texture,
-                        los_sampler,
-                        kernel_direction * CUBEMAP_SAMPLE_CORRECTION
-                    ).r * range;
+                for (var c: u32 = 0; c < CONE_SAMPLE_COUNT; c++) {
+                    let radius = CONE_RADIUS * radius_scale * f32(c + 1);
+                    for (var k: u32 = 0; k < KERNEL_COUNT; k++) {
+                        let kernel = KERNEL[k];
+                        let offset = right * kernel.x + up * kernel.y;
+                        let kernel_direction = normalize(direction + offset * radius);
+                        let kernel_los_distance = textureSample(
+                            los_texture,
+                            los_sampler,
+                            kernel_direction * CUBEMAP_SAMPLE_CORRECTION
+                        ).r * range;
 
-                    in_light += step(vertex_distance, kernel_los_distance + BIAS);
+                        in_light += step(vertex_distance, kernel_los_distance + BIAS);
+                    }
                 }
-                in_light /= f32(KERNEL_COUNT);
-                visibility = smoothstep(0, 0.5, in_light);
+                in_light /= f32(KERNEL_COUNT * CONE_SAMPLE_COUNT);
+                visibility = smoothstep(0.0, 0.2, in_light);
             }
-
         }
 
         // Apply Visibility
@@ -123,7 +118,7 @@ fn fragment(
             max(1. - (vertex_distance / range), min_light),
             visibility,
         );
-        out.color = vec4(vec3(visibility), out.color.a);
+        out.color = vec4(out.color.rgb * light, out.color.a);
     #endif
 #endif
 
