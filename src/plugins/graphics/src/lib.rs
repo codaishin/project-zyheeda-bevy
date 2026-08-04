@@ -130,6 +130,7 @@ where
 			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillProjection>)
 			.add_observer(StandardMaterials::track_inserted)
 			.add_observer(StandardMaterials::track_discarded)
+			.add_observer(StandardMaterials::set_invisible_material("Invisible"))
 			.add_systems(
 				Update,
 				(
