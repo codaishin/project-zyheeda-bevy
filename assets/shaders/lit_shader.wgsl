@@ -25,7 +25,6 @@
 const CUBEMAP_SAMPLE_CORRECTION: vec3<f32> = vec3(1.0, 1.0, -1.0);
 
 const BIAS: f32 = 0.03;
-const FLAT_ANGLE_BIAS: f32 = 0.3;
 
 const KERNEL_COUNT: u32 = 8;
 const KERNEL: array<vec2<f32>, KERNEL_COUNT> = array(
@@ -40,6 +39,16 @@ const KERNEL: array<vec2<f32>, KERNEL_COUNT> = array(
 );
 const CONE_SAMPLE_COUNT = 8;
 const CONE_RADIUS: f32 = 0.005;
+
+struct Computed {
+    visibility: f32,
+    vertex_distance: f32
+}
+
+struct VecSample {
+    x: vec3<f32>,
+    y: vec3<f32>,
+}
 
 @fragment
 fn fragment(
@@ -60,67 +69,75 @@ fn fragment(
     #ifdef DEAD_SPACE
         out.color = vec4(vec3(0), out.color.a);
     #else
-        var visibility: f32;
-
-        var direction = in.world_position.xyz - player_position;
-        let vertex_distance = length(direction);
-
-        if vertex_distance == 0 {
-            visibility = 1;
-        } else if vertex_distance > range {
-            visibility = 0;
-        } else {
-            direction = normalize(direction);
-
-            // Compute visibility
-            let los_distance = textureSample(
-                los_texture,
-                los_sampler,
-                direction * CUBEMAP_SAMPLE_CORRECTION
-            ).r * range;
-            visibility = step(vertex_distance, los_distance + BIAS);
-
-            // Cone visibility
-            if visibility < 1 {
-                var up = select(
-                    vec3(1.0, 0.0, 0.0),
-                    vec3(0.0, 1.0, 0.0),
-                    dot(direction, vec3(0, 1, 0)) < 0.9
-                );
-                let right = cross(direction, up);
-                up = cross(direction, right);
-
-                var radius_scale = max((vertex_distance - los_distance) / range, 0.0);
-                var in_light = 0.0;
-                for (var c: u32 = 0; c < CONE_SAMPLE_COUNT; c++) {
-                    let radius = CONE_RADIUS * radius_scale * f32(c + 1);
-                    for (var k: u32 = 0; k < KERNEL_COUNT; k++) {
-                        let kernel = KERNEL[k];
-                        let offset = right * kernel.x + up * kernel.y;
-                        let kernel_direction = normalize(direction + offset * radius);
-                        let kernel_los_distance = textureSample(
-                            los_texture,
-                            los_sampler,
-                            kernel_direction * CUBEMAP_SAMPLE_CORRECTION
-                        ).r * range;
-
-                        in_light += step(vertex_distance, kernel_los_distance + BIAS);
-                    }
-                }
-                in_light /= f32(KERNEL_COUNT * CONE_SAMPLE_COUNT);
-                visibility = smoothstep(0.0, 0.2, in_light);
-            }
-        }
-
-        // Apply Visibility
+        let computed = compute_visibility(in);
         let light = mix(
             min_light,
-            max(1. - (vertex_distance / range), min_light),
-            visibility,
+            max(1. - (computed.vertex_distance / range), min_light),
+            computed.visibility,
         );
         out.color = vec4(out.color.rgb * light, out.color.a);
     #endif
 #endif
 
     return out;
+}
+
+fn compute_visibility(in: VertexOutput) -> Computed {
+    var direction = in.world_position.xyz - player_position;
+    let vertex_distance = length(direction);
+
+    if vertex_distance == 0 {
+        return Computed(1, vertex_distance);
+    }
+
+    if vertex_distance > range {
+        return Computed(0, vertex_distance);
+    }
+
+    direction = normalize(direction);
+
+    let los_distance = textureSample(
+        los_texture,
+        los_sampler,
+        direction * CUBEMAP_SAMPLE_CORRECTION
+    ).r * range;
+
+    if step(vertex_distance, los_distance + BIAS) == 1 {
+        return Computed(1, vertex_distance);
+    }
+
+    let sample_vectors = compute_sample_vectors(direction);
+    var radius_scale = max((vertex_distance - los_distance) / range, 0.0);
+    var in_light = 0.0;
+    for (var c: u32 = 0; c < CONE_SAMPLE_COUNT; c++) {
+        let radius = CONE_RADIUS * radius_scale * f32(c + 1);
+        for (var k: u32 = 0; k < KERNEL_COUNT; k++) {
+            let kernel = KERNEL[k];
+            let offset = sample_vectors.x * kernel.x + sample_vectors.y * kernel.y;
+            let kernel_direction = normalize(direction + offset * radius);
+            let kernel_los_distance = textureSample(
+                los_texture,
+                los_sampler,
+                kernel_direction * CUBEMAP_SAMPLE_CORRECTION
+            ).r * range;
+
+            in_light += step(vertex_distance, kernel_los_distance + BIAS);
+        }
+    }
+    in_light /= f32(KERNEL_COUNT * CONE_SAMPLE_COUNT);
+    let visibility = smoothstep(0.0, 0.2, in_light);
+
+    return Computed(visibility, vertex_distance);
+}
+
+fn compute_sample_vectors(direction: vec3<f32>) -> VecSample {
+    var y = select(
+        vec3(1.0, 0.0, 0.0),
+        vec3(0.0, 1.0, 0.0),
+        dot(direction, vec3(0, 1, 0)) < 0.9
+    );
+    let x = cross(direction, y);
+    y = cross(direction, x);
+
+    return VecSample(y, x);
 }
