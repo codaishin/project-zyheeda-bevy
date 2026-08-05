@@ -139,10 +139,10 @@ fn compute_sample_vectors(direction: vec3<f32>) -> VecSample {
     var y = select(
         vec3(1.0, 0.0, 0.0),
         vec3(0.0, 1.0, 0.0),
-        dot(direction, vec3(0, 1, 0)) < 0.9
+        abs(dot(direction, vec3(0, 1, 0))) < 0.9
     );
-    let x = cross(direction, y);
-    y = cross(direction, x);
+    let x = normalize(cross(direction, y));
+    y = normalize(cross(direction, x));
 
     return VecSample(x, y);
 }
