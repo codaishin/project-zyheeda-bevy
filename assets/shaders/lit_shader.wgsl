@@ -96,9 +96,9 @@ fn compute_light(in: VertexOutput) -> f32 {
     direction = normalize(direction);
 
 #ifdef IGNORE_NDL
-    let ndl = 1.0;
+    var ndl = 1.0;
 #else
-    let ndl = max(dot(-direction, normalize(in.world_normal.xyz)), 0.0);
+    var ndl = max(dot(-direction, normalize(in.world_normal.xyz)), 0.0);
 #endif
     let bias = mix(LOW_NDL_BIAS, BIAS, ndl);
     let los_distance = get_los_distance(direction);
@@ -153,9 +153,10 @@ fn compute_visibility(los_distance: f32, distance: f32, bias: f32) -> f32 {
 
 fn final_light(visibility: f32, distance: f32, ndl: f32) -> f32 {
     let normalized_distance = distance / range;
-    let fully_lit = max(1. - normalized_distance, min_light);
-    let ndl_weight = pow(1 - ndl, 5);
-    let lighting = mix(visibility, ndl, ndl_weight);
+    let light = max(1. - normalized_distance, min_light);
+    let scaled_ndl = pow(1 - ndl, 5);
+    let ndl_weight = select(scaled_ndl, 0, visibility == 0);
+    let visibility_or_ndl = mix(visibility, ndl, ndl_weight);
 
-    return mix(min_light, fully_lit, lighting);
+    return mix(min_light, light, visibility_or_ndl);
 }
