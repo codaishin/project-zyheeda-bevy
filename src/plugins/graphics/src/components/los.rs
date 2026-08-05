@@ -7,7 +7,7 @@ use bevy::{
 	asset::RenderAssetUsages,
 	camera::{RenderTarget, visibility::RenderLayers},
 	ecs::{entity::EntityHashSet, system::StaticSystemParam},
-	image::TextureFormatPixelInfo,
+	image::{ImageSampler, TextureFormatPixelInfo},
 	prelude::*,
 	render::{
 		extract_component::ExtractComponent,
@@ -149,6 +149,7 @@ impl LoS {
 
 		image.texture_descriptor.usage |= TextureUsages::COPY_SRC;
 		image.texture_descriptor.usage &= !TextureUsages::COPY_DST;
+		image.sampler = ImageSampler::nearest();
 
 		commands.insert_resource(LoSImageShared {
 			handle: images.add(image),
@@ -186,6 +187,7 @@ impl LoS {
 				}),
 				asset_usage: RenderAssetUsages::default(),
 				copy_on_resize: true,
+				sampler: ImageSampler::nearest(),
 				..default()
 			}),
 		});
