@@ -12,7 +12,7 @@ use macros::asset_path;
 pub(crate) type StandardLitMaterial = ExtendedMaterial<StandardMaterial, LitMaterial>;
 
 #[derive(Asset, AsBindGroup, Reflect, Debug, PartialEq, Clone)]
-#[bind_group_data(DeadSpace)]
+#[bind_group_data(LitType)]
 pub(crate) struct LitMaterial {
 	#[uniform(100)]
 	pub(crate) player_position: Vec3,
@@ -23,7 +23,7 @@ pub(crate) struct LitMaterial {
 	#[texture(103, dimension = "cube")]
 	#[sampler(104)]
 	pub(crate) los: Handle<Image>,
-	pub(crate) dead_space: bool,
+	pub(crate) lit_type: LitType,
 }
 
 impl LitMaterial {
@@ -43,8 +43,8 @@ impl LitMaterial {
 		self
 	}
 
-	pub(crate) fn with_dead_space(mut self, DeadSpace(dead_space): DeadSpace) -> Self {
-		self.dead_space = dead_space;
+	pub(crate) fn with_lit_type(mut self, lit_type: LitType) -> Self {
+		self.lit_type = lit_type;
 		self
 	}
 }
@@ -56,7 +56,7 @@ impl Default for LitMaterial {
 			range: *Self::RANGE,
 			min_light: Self::MIN_LIGHT,
 			los: Handle::default(),
-			dead_space: false,
+			lit_type: LitType::Terrain,
 		}
 	}
 }
@@ -76,20 +76,35 @@ impl MaterialExtension for LitMaterial {
 		_: &MeshVertexBufferLayoutRef,
 		key: MaterialExtensionKey<Self>,
 	) -> Result<(), SpecializedMeshPipelineError> {
-		if let (DeadSpace(true), Some(fragment)) = (key.bind_group_data, &mut descriptor.fragment) {
-			fragment.shader_defs.push(ShaderDefVal::from("DEAD_SPACE"));
-		}
+		let Some(ref mut fragment) = descriptor.fragment else {
+			return Ok(());
+		};
+
+		let defs: &[&'static str] = match key.bind_group_data {
+			LitType::Terrain => &["LIGHT"],
+			LitType::DeadSpace => &["NO_LIGHT"],
+			LitType::Agent => &["LIGHT", "IGNORE_NDL"],
+		};
+
+		fragment
+			.shader_defs
+			.extend(defs.iter().map(|def| ShaderDefVal::from(*def)));
 
 		Ok(())
 	}
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub(crate) struct DeadSpace(pub(crate) bool);
+#[derive(Reflect, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
+pub(crate) enum LitType {
+	#[default]
+	Terrain,
+	DeadSpace,
+	Agent,
+}
 
-impl From<&LitMaterial> for DeadSpace {
-	fn from(LitMaterial { dead_space, .. }: &LitMaterial) -> Self {
-		Self(*dead_space)
+impl From<&LitMaterial> for LitType {
+	fn from(LitMaterial { lit_type, .. }: &LitMaterial) -> Self {
+		*lit_type
 	}
 }

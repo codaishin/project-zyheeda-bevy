@@ -139,7 +139,7 @@ where
 					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
 					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
 					EffectMaterialHandle::propagate_material,
-					StandardMaterials::set_dead_space_for_material("DeadSpace"),
+					StandardMaterials::set_lit_type,
 					StandardMaterials::replace_with_lit_material,
 				)
 					.chain()

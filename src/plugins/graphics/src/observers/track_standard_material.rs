@@ -1,4 +1,4 @@
-use crate::{materials::lit_material::DeadSpace, resources::standard_materials::StandardMaterials};
+use crate::{materials::lit_material::LitType, resources::standard_materials::StandardMaterials};
 use bevy::prelude::*;
 use std::collections::{HashSet, hash_map::Entry};
 
@@ -18,7 +18,7 @@ impl StandardMaterials {
 				entities.insert(on_add.entity);
 			}
 			Entry::Vacant(entry) => {
-				entry.insert((HashSet::from([on_add.entity]), DeadSpace(false)));
+				entry.insert((HashSet::from([on_add.entity]), LitType::Terrain));
 			}
 		};
 	}
@@ -74,7 +74,7 @@ mod tests {
 			&StandardMaterials {
 				entities: HashMap::from([(
 					handle.id(),
-					(HashSet::from([entity]), DeadSpace(false))
+					(HashSet::from([entity]), LitType::Terrain)
 				)])
 			},
 			app.world().resource::<StandardMaterials>()
@@ -95,7 +95,7 @@ mod tests {
 			&StandardMaterials {
 				entities: HashMap::from([(
 					handle.id(),
-					(HashSet::from(entities), DeadSpace(false))
+					(HashSet::from(entities), LitType::Terrain)
 				)])
 			},
 			app.world().resource::<StandardMaterials>()
@@ -116,7 +116,7 @@ mod tests {
 			&StandardMaterials {
 				entities: HashMap::from([(
 					handle.id(),
-					(HashSet::from([entity.id()]), DeadSpace(false))
+					(HashSet::from([entity.id()]), LitType::Terrain)
 				)])
 			},
 			app.world().resource::<StandardMaterials>()
@@ -136,7 +136,7 @@ mod tests {
 
 		assert_eq!(
 			&StandardMaterials {
-				entities: HashMap::from([(handle.id(), (HashSet::from([b]), DeadSpace(false)))])
+				entities: HashMap::from([(handle.id(), (HashSet::from([b]), LitType::Terrain))])
 			},
 			app.world().resource::<StandardMaterials>()
 		);

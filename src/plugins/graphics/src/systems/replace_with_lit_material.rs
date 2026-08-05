@@ -15,7 +15,7 @@ impl StandardMaterials {
 		mut lit_materials: ResMut<Assets<StandardLitMaterial>>,
 		mut commands: ZyheedaCommands,
 	) {
-		materials.entities.retain(|id, (entities, dead_space)| {
+		materials.entities.retain(|id, (entities, lit_type)| {
 			let Some(base) = standard_materials.get(*id).cloned() else {
 				return true;
 			};
@@ -25,7 +25,7 @@ impl StandardMaterials {
 				base,
 				extension: LitMaterial::from_player_position(player_position)
 					.with_los_cubemap(los.handle.clone())
-					.with_dead_space(*dead_space),
+					.with_lit_type(*lit_type),
 			});
 
 			for entity in entities.iter() {
@@ -45,7 +45,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::roles::Player,
-		materials::lit_material::{DeadSpace, StandardLitMaterial},
+		materials::lit_material::{LitType, StandardLitMaterial},
 	};
 	use std::collections::{HashMap, HashSet};
 	use test_case::test_case;
@@ -70,9 +70,10 @@ mod tests {
 		app
 	}
 
-	#[test_case(DeadSpace(false); "without dead space")]
-	#[test_case(DeadSpace(true); "with dead space")]
-	fn replace(dead_space: DeadSpace) {
+	#[test_case(LitType::Terrain; "terrain")]
+	#[test_case(LitType::DeadSpace; "dead space")]
+	#[test_case(LitType::Agent; "agent")]
+	fn replace(lit_type: LitType) {
 		let material = new_handle();
 		let los = new_handle();
 		let mut app = setup(
@@ -87,7 +88,7 @@ mod tests {
 		);
 		let entity = app.world_mut().spawn(MeshMaterial3d(material.clone())).id();
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(material.id(), (HashSet::from([entity]), dead_space))]),
+			entities: HashMap::from([(material.id(), (HashSet::from([entity]), lit_type))]),
 		});
 
 		app.update();
@@ -99,7 +100,7 @@ mod tests {
 					Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
 					&LitMaterial::default()
 						.with_los_cubemap(los)
-						.with_dead_space(dead_space)
+						.with_lit_type(lit_type)
 				)),
 				None
 			),
@@ -138,7 +139,7 @@ mod tests {
 		app.world_mut()
 			.spawn((Player, Transform::from_xyz(1., 2., 3.)));
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(material.id(), (HashSet::from([entity]), DeadSpace(false)))]),
+			entities: HashMap::from([(material.id(), (HashSet::from([entity]), LitType::Terrain))]),
 		});
 
 		app.update();
@@ -172,7 +173,7 @@ mod tests {
 		let a = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		let b = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(handle.id(), (HashSet::from([a, b]), DeadSpace(false)))]),
+			entities: HashMap::from([(handle.id(), (HashSet::from([a, b]), LitType::Terrain))]),
 		});
 
 		app.update();
@@ -193,7 +194,7 @@ mod tests {
 		let mut app = setup(new_handle(), []);
 		let entity = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(handle.id(), (HashSet::from([entity]), DeadSpace(false)))]),
+			entities: HashMap::from([(handle.id(), (HashSet::from([entity]), LitType::Terrain))]),
 		});
 
 		app.update();
@@ -247,7 +248,7 @@ mod tests {
 		);
 		let entity = app.world_mut().spawn(MeshMaterial3d(handle.clone())).id();
 		app.insert_resource(StandardMaterials {
-			entities: HashMap::from([(handle.id(), (HashSet::from([entity]), DeadSpace(false)))]),
+			entities: HashMap::from([(handle.id(), (HashSet::from([entity]), LitType::Terrain))]),
 		});
 
 		app.update();

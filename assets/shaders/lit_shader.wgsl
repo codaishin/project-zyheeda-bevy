@@ -24,8 +24,14 @@
 // corrects for the right/left handed coordinate systems mismatch between bevy and wgsl
 const CUBEMAP_SAMPLE_CORRECTION: vec3<f32> = vec3(1.0, 1.0, -1.0);
 
+// applied in comparison of distance to los distance
 const BIAS: f32 = 0.01;
-const FLAT_ANGLE_BIAS: f32 = 0.3;
+
+// applied in comparison of distance to los distance for decreasing ndl
+const LOW_NDL_BIAS: f32 = 0.9;
+
+// ratio of kernel area that needs to be in light for a vertex to be considered fully visible
+const IN_LIGHT_UPPER_BOUND = 0.2;
 
 const KERNEL_COUNT: u32 = 8;
 const KERNEL: array<vec2<f32>, KERNEL_COUNT> = array(
@@ -39,12 +45,7 @@ const KERNEL: array<vec2<f32>, KERNEL_COUNT> = array(
     normalize(vec2( 1,  1)),
 );
 const CONE_SAMPLE_COUNT = 10;
-const CONE_RADIUS: f32 = 0.007;
-
-struct Computed {
-    visibility: f32,
-    vertex_distance: f32
-}
+const CONE_RADIUS: f32 = 0.002;
 
 struct VecSample {
     x: vec3<f32>,
@@ -66,71 +67,72 @@ fn fragment(
     var out: FragmentOutput;
     out.color = apply_pbr_lighting(pbr_input);
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
+#endif
 
-    #ifdef DEAD_SPACE
-        out.color = vec4(vec3(0), out.color.a);
-    #else
-        let computed = compute_visibility(in);
-        let light = mix(
-            min_light,
-            max(1. - (computed.vertex_distance / range), min_light),
-            computed.visibility,
-        );
-        out.color = vec4(out.color.rgb * light, out.color.a);
-    #endif
+#ifdef NO_LIGHT
+    out.color = vec4(vec3(0), out.color.a);
+#endif
+
+#ifdef LIGHT
+    let light = compute_light(in);
+    out.color = vec4(out.color.rgb * light, out.color.a);
 #endif
 
     return out;
 }
 
-fn compute_visibility(in: VertexOutput) -> Computed {
+fn compute_light(in: VertexOutput) -> f32 {
     var direction = in.world_position.xyz - player_position;
     let vertex_distance = length(direction);
 
     if vertex_distance == 0 {
-        return Computed(1, vertex_distance);
+        return final_light(1, vertex_distance, 1);
     }
 
     if vertex_distance > range {
-        return Computed(0, vertex_distance);
+        return final_light(0, vertex_distance, 1);
     }
 
     direction = normalize(direction);
 
-    let ndl = max(dot(direction, normalize(in.world_normal.xyz)), 0.0);
-    let bias = mix(FLAT_ANGLE_BIAS, BIAS, ndl);
-    let los_distance = textureSample(
-        los_texture,
-        los_sampler,
-        direction * CUBEMAP_SAMPLE_CORRECTION
-    ).r * range;
+#ifdef IGNORE_NDL
+    let ndl = 1.0;
+#else
+    let ndl = max(dot(-direction, normalize(in.world_normal.xyz)), 0.0);
+#endif
+    let bias = mix(LOW_NDL_BIAS, BIAS, ndl);
+    let los_distance = get_los_distance(direction);
 
-    var in_light = step(vertex_distance, los_distance + bias);
+    var in_light = compute_visibility(los_distance, vertex_distance, bias);
 
     if in_light == 1 {
-        return Computed(in_light, vertex_distance);
+        return final_light(1, vertex_distance, ndl);
     }
 
     let sample_vectors = compute_sample_vectors(direction);
     for (var c: u32 = 0; c < CONE_SAMPLE_COUNT; c++) {
-        let radius = CONE_RADIUS * bias * f32(c + 1);
+        let radius = CONE_RADIUS * f32(c + 1);
         for (var k: u32 = 0; k < KERNEL_COUNT; k++) {
             let kernel = KERNEL[k];
             let offset = sample_vectors.x * kernel.x + sample_vectors.y * kernel.y;
-            let kernel_direction = normalize(direction + offset * radius);
-            let kernel_los_distance = textureSample(
-                los_texture,
-                los_sampler,
-                kernel_direction * CUBEMAP_SAMPLE_CORRECTION
-            ).r * range;
+            let sample_direction = normalize(direction + offset * radius);
+            let sample_los_distance = get_los_distance(sample_direction);
 
-            in_light += step(vertex_distance, kernel_los_distance + bias);
+            in_light += compute_visibility(sample_los_distance, vertex_distance, bias);
         }
     }
     in_light /= f32(KERNEL_COUNT * CONE_SAMPLE_COUNT + 1);
-    let visibility = smoothstep(0.0, bias, in_light);
+    let visibility = smoothstep(0.0, IN_LIGHT_UPPER_BOUND, in_light);
 
-    return Computed(visibility, vertex_distance);
+    return final_light(visibility, vertex_distance, ndl);
+}
+
+fn get_los_distance(direction: vec3<f32>) -> f32 {
+    return textureSample(
+        los_texture,
+        los_sampler,
+        direction * CUBEMAP_SAMPLE_CORRECTION
+    ).r * range;
 }
 
 fn compute_sample_vectors(direction: vec3<f32>) -> VecSample {
@@ -142,5 +144,18 @@ fn compute_sample_vectors(direction: vec3<f32>) -> VecSample {
     let x = cross(direction, y);
     y = cross(direction, x);
 
-    return VecSample(y, x);
+    return VecSample(x, y);
+}
+
+fn compute_visibility(los_distance: f32, distance: f32, bias: f32) -> f32 {
+    return smoothstep(-bias, bias, los_distance - distance);
+}
+
+fn final_light(visibility: f32, distance: f32, ndl: f32) -> f32 {
+    let normalized_distance = distance / range;
+    let fully_lit = max(1. - normalized_distance, min_light);
+    let ndl_weight = pow(1 - ndl, 5);
+    let lighting = mix(visibility, ndl, ndl_weight);
+
+    return mix(min_light, fully_lit, lighting);
 }
