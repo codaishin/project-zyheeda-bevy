@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use camera_control::CameraControlPlugin;
 use common::CommonPlugin;
 use frame_limiter::FrameLimiterPlugin;
+use game_states::GameStatesPlugin;
 use graphics::GraphicsPlugin;
 use input::InputPlugin;
 use interactive::InteractivePlugin;
@@ -43,6 +44,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	};
 	let game_dir = home.join("Games").join("Project Zyheeda");
 
+	let game_states = GameStatesPlugin;
 	let loading = LoadingPlugin;
 	let input = InputPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
@@ -104,6 +106,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(camera_control)
 		.add_plugins(common)
 		.add_plugins(frame_limiter)
+		.add_plugins(game_states)
 		.add_plugins(graphics)
 		.add_plugins(input)
 		.add_plugins(interactive)
