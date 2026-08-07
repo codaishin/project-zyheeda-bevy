@@ -20,6 +20,10 @@ where
 		Self(values.into())
 	}
 
+	pub(super) fn len(&self) -> usize {
+		self.0.len()
+	}
+
 	pub(super) fn is_empty(&self) -> bool {
 		self.0.is_empty()
 	}
@@ -49,6 +53,10 @@ where
 
 	pub(super) fn iter(&self) -> super::UniqueIter<'_, TKey> {
 		self.0.iter()
+	}
+
+	pub(super) fn get(&self, index: usize) -> Option<&TKey> {
+		self.0.get(index)
 	}
 }
 

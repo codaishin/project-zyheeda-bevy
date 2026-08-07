@@ -97,6 +97,34 @@ where
 	pub fn is_empty(&self) -> bool {
 		self.map.is_empty()
 	}
+
+	pub fn first(&self) -> Option<(&TKey, &TValue)> {
+		let key = self.order.get(0)?;
+		let value = self.map.get(key)?;
+
+		Some((key, value))
+	}
+
+	pub fn first_mut(&mut self) -> Option<(&TKey, &mut TValue)> {
+		let key = self.order.get(0)?;
+		let value = self.map.get_mut(key)?;
+
+		Some((key, value))
+	}
+
+	pub fn last(&self) -> Option<(&TKey, &TValue)> {
+		let key = self.order.get(self.order.len().checked_sub(1)?)?;
+		let value = self.map.get(key)?;
+
+		Some((key, value))
+	}
+
+	pub fn last_mut(&mut self) -> Option<(&TKey, &mut TValue)> {
+		let key = self.order.get(self.order.len().checked_sub(1)?)?;
+		let value = self.map.get_mut(key)?;
+
+		Some((key, value))
+	}
 }
 
 impl<TKey, TValue> Default for OrderedHashMap<TKey, TValue>
@@ -375,6 +403,14 @@ where
 	pub fn is_empty(&self) -> bool {
 		self.values.is_empty()
 	}
+
+	pub fn first(&self) -> Option<&T> {
+		self.values.get(0)
+	}
+
+	pub fn last(&self) -> Option<&T> {
+		self.values.get(self.values.len().checked_sub(1)?)
+	}
 }
 
 impl<T> Default for OrderedSet<T>
@@ -420,347 +456,418 @@ pub type UniqueIter<'a, T> = std::collections::vec_deque::Iter<'a, T>;
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use serde_json::{Error, from_value, json, to_value};
 
-	macro_rules! repeat {
-		($count:expr, $code:expr) => {
-			for _ in 0..$count {
-				$code
-			}
-		};
-	}
+	mod map {
+		use super::*;
+		use serde_json::{Error, from_value, json, to_value};
 
-	#[test]
-	fn insert_value_and_iterate_in_order() {
-		repeat!(100, {
+		macro_rules! repeat {
+			($count:expr, $code:expr) => {
+				for _ in 0..$count {
+					$code
+				}
+			};
+		}
+
+		#[test]
+		fn insert_value_and_iterate_in_order() {
+			repeat!(100, {
+				let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+				map.insert("first", 0);
+				map.insert("second", 1);
+
+				assert_eq!(
+					vec![(&"first", &0), (&"second", &1)],
+					map.iter().collect::<Vec<_>>()
+				)
+			})
+		}
+
+		#[test]
+		fn insert_value_and_move_iterate_in_order() {
+			repeat!(100, {
+				let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+				map.insert("first", 0);
+				map.insert("second", 1);
+
+				assert_eq!(
+					vec![("first", 0), ("second", 1)],
+					map.into_iter().collect::<Vec<_>>()
+				)
+			})
+		}
+
+		#[test]
+		fn insert_value_and_iterate_values_in_order() {
+			repeat!(100, {
+				let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+				map.insert("first", 0);
+				map.insert("second", 1);
+
+				assert_eq!(vec![&0, &1], map.values().collect::<Vec<_>>())
+			})
+		}
+
+		#[test]
+		fn insert_value_and_iterate_keys_in_order() {
+			repeat!(100, {
+				let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+				map.insert("first", 0);
+				map.insert("second", 1);
+
+				assert_eq!(vec![&"first", &"second"], map.keys().collect::<Vec<_>>())
+			})
+		}
+
+		#[test]
+		fn insert_duplicate_key_pushes_that_item_back_for_iteration() {
 			let mut map = OrderedHashMap::<&'static str, u32>::default();
 
 			map.insert("first", 0);
 			map.insert("second", 1);
+			map.insert("first", 2);
+			map.insert("first", 3);
+
+			assert_eq!(
+				vec![(&"second", &1), (&"first", &3)],
+				map.iter().collect::<Vec<_>>()
+			)
+		}
+
+		#[test]
+		fn remove_key() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+			map.insert("second", 1);
+			map.remove(&"first");
+
+			assert_eq!(vec![(&"second", &1)], map.iter().collect::<Vec<_>>())
+		}
+
+		#[test]
+		fn clear() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+			map.insert("second", 1);
+			map.clear();
+
+			assert_eq!((true, true), (map.order.is_empty(), map.map.is_empty()));
+		}
+
+		#[test]
+		fn get_inserted_value() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+
+			assert_eq!(Some(&0), map.get(&"first"));
+		}
+
+		#[test]
+		fn get_mut_inserted_value() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+
+			assert_eq!(Some(&mut 0), map.get_mut(&"first"));
+		}
+
+		#[test]
+		fn remove_gets_value() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+
+			assert_eq!(Some(0), map.remove(&"first"));
+		}
+
+		#[test]
+		fn remove_removes_value() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+			map.remove(&"first");
+
+			assert_eq!(None, map.get(&"first"));
+		}
+
+		#[test]
+		fn remove_value_from_order() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+			map.remove(&"first");
+
+			assert_eq!(
+				vec![] as Vec<(&&'static str, &u32)>,
+				map.iter().collect::<Vec<_>>()
+			)
+		}
+
+		#[test]
+		fn remove_non_first_value_from_order() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+			map.insert("second", 1);
+			map.remove(&"second");
+
+			assert_eq!(vec![(&"first", &0)], map.iter().collect::<Vec<_>>())
+		}
+
+		#[test]
+		fn get_inserted_entry() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+
+			let Entry::Occupied(entry) = map.entry("first") else {
+				panic!("Expected a occupied entry, but it was vacant");
+			};
+
+			assert_eq!(&0, entry.get());
+		}
+
+		#[test]
+		fn get_mut_inserted_entry() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+
+			let Entry::Occupied(mut entry) = map.entry("first") else {
+				panic!("Expected a occupied entry, but it was vacant");
+			};
+
+			assert_eq!(&mut 0, entry.get_mut());
+		}
+
+		#[test]
+		fn update_order_when_inserting_on_empty_value() {
+			let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+			map.insert("first", 0);
+
+			let Entry::Vacant(entry) = map.entry("second") else {
+				panic!("Expected a vacant entry, but it was occupied");
+			};
+
+			entry.insert(1);
 
 			assert_eq!(
 				vec![(&"first", &0), (&"second", &1)],
 				map.iter().collect::<Vec<_>>()
+			);
+		}
+
+		#[test]
+		fn extend() {
+			repeat!(100, {
+				let mut map = OrderedHashMap::<&'static str, u32>::default();
+
+				map.insert("first", 0);
+				map.extend([("second", 1)].into_iter());
+
+				assert_eq!(
+					vec![(&"first", &0), (&"second", &1)],
+					map.iter().collect::<Vec<_>>()
+				)
+			})
+		}
+
+		#[test]
+		fn from_array_empty() {
+			assert_eq!(
+				OrderedHashMap::<&'static str, u32>::default(),
+				OrderedHashMap::<&'static str, u32>::from([])
 			)
-		})
-	}
+		}
 
-	#[test]
-	fn insert_value_and_move_iterate_in_order() {
-		repeat!(100, {
-			let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-			map.insert("first", 0);
-			map.insert("second", 1);
+		#[test]
+		fn from_array_ordered() {
+			let mut expected = OrderedHashMap::<&'static str, u32>::default();
+			expected.insert("first", 0);
+			expected.insert("second", 1);
 
 			assert_eq!(
-				vec![("first", 0), ("second", 1)],
-				map.into_iter().collect::<Vec<_>>()
+				expected,
+				OrderedHashMap::from([("first", 0), ("second", 1)])
 			)
-		})
-	}
+		}
 
-	#[test]
-	fn insert_value_and_iterate_values_in_order() {
-		repeat!(100, {
-			let mut map = OrderedHashMap::<&'static str, u32>::default();
+		#[test]
+		fn from_iter_empty() {
+			assert_eq!(
+				OrderedHashMap::<&'static str, u32>::default(),
+				OrderedHashMap::<&'static str, u32>::from_iter([].into_iter())
+			)
+		}
 
-			map.insert("first", 0);
-			map.insert("second", 1);
-
-			assert_eq!(vec![&0, &1], map.values().collect::<Vec<_>>())
-		})
-	}
-
-	#[test]
-	fn insert_value_and_iterate_keys_in_order() {
-		repeat!(100, {
-			let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-			map.insert("first", 0);
-			map.insert("second", 1);
-
-			assert_eq!(vec![&"first", &"second"], map.keys().collect::<Vec<_>>())
-		})
-	}
-
-	#[test]
-	fn insert_duplicate_key_pushes_that_item_back_for_iteration() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-		map.insert("second", 1);
-		map.insert("first", 2);
-		map.insert("first", 3);
-
-		assert_eq!(
-			vec![(&"second", &1), (&"first", &3)],
-			map.iter().collect::<Vec<_>>()
-		)
-	}
-
-	#[test]
-	fn remove_key() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-		map.insert("second", 1);
-		map.remove(&"first");
-
-		assert_eq!(vec![(&"second", &1)], map.iter().collect::<Vec<_>>())
-	}
-
-	#[test]
-	fn clear() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-		map.insert("second", 1);
-		map.clear();
-
-		assert_eq!((true, true), (map.order.is_empty(), map.map.is_empty()));
-	}
-
-	#[test]
-	fn get_inserted_value() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-
-		assert_eq!(Some(&0), map.get(&"first"));
-	}
-
-	#[test]
-	fn get_mut_inserted_value() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-
-		assert_eq!(Some(&mut 0), map.get_mut(&"first"));
-	}
-
-	#[test]
-	fn remove_gets_value() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-
-		assert_eq!(Some(0), map.remove(&"first"));
-	}
-
-	#[test]
-	fn remove_removes_value() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-		map.remove(&"first");
-
-		assert_eq!(None, map.get(&"first"));
-	}
-
-	#[test]
-	fn remove_value_from_order() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-		map.remove(&"first");
-
-		assert_eq!(
-			vec![] as Vec<(&&'static str, &u32)>,
-			map.iter().collect::<Vec<_>>()
-		)
-	}
-
-	#[test]
-	fn remove_non_first_value_from_order() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-		map.insert("second", 1);
-		map.remove(&"second");
-
-		assert_eq!(vec![(&"first", &0)], map.iter().collect::<Vec<_>>())
-	}
-
-	#[test]
-	fn get_inserted_entry() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-
-		let Entry::Occupied(entry) = map.entry("first") else {
-			panic!("Expected a occupied entry, but it was vacant");
-		};
-
-		assert_eq!(&0, entry.get());
-	}
-
-	#[test]
-	fn get_mut_inserted_entry() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-
-		let Entry::Occupied(mut entry) = map.entry("first") else {
-			panic!("Expected a occupied entry, but it was vacant");
-		};
-
-		assert_eq!(&mut 0, entry.get_mut());
-	}
-
-	#[test]
-	fn update_order_when_inserting_on_empty_value() {
-		let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-		map.insert("first", 0);
-
-		let Entry::Vacant(entry) = map.entry("second") else {
-			panic!("Expected a vacant entry, but it was occupied");
-		};
-
-		entry.insert(1);
-
-		assert_eq!(
-			vec![(&"first", &0), (&"second", &1)],
-			map.iter().collect::<Vec<_>>()
-		);
-	}
-
-	#[test]
-	fn extend() {
-		repeat!(100, {
-			let mut map = OrderedHashMap::<&'static str, u32>::default();
-
-			map.insert("first", 0);
-			map.extend([("second", 1)].into_iter());
+		#[test]
+		fn from_iter_ordered() {
+			let mut expected = OrderedHashMap::<&'static str, u32>::default();
+			expected.insert("first", 0);
+			expected.insert("second", 1);
 
 			assert_eq!(
-				vec![(&"first", &0), (&"second", &1)],
-				map.iter().collect::<Vec<_>>()
+				expected,
+				OrderedHashMap::from_iter([("first", 0), ("second", 1)].into_iter())
 			)
-		})
-	}
+		}
 
-	#[test]
-	fn from_array_empty() {
-		assert_eq!(
-			OrderedHashMap::<&'static str, u32>::default(),
-			OrderedHashMap::<&'static str, u32>::from([])
-		)
-	}
+		#[test]
+		fn iter_mut() {
+			repeat!(100, {
+				let mut map =
+					OrderedHashMap::from([("first", "0".to_owned()), ("second", "1".to_owned())]);
+				let mut order = vec![];
 
-	#[test]
-	fn from_array_ordered() {
-		let mut expected = OrderedHashMap::<&'static str, u32>::default();
-		expected.insert("first", 0);
-		expected.insert("second", 1);
+				for (key, value) in map.iter_mut() {
+					*value = format!("{}: {}", key, *value);
+					order.push(*key);
+				}
 
-		assert_eq!(
-			expected,
-			OrderedHashMap::from([("first", 0), ("second", 1)])
-		)
-	}
+				assert_eq!(
+					(
+						vec!["first", "second"],
+						OrderedHashMap::from_iter([
+							("first", "first: 0".to_owned()),
+							("second", "second: 1".to_owned())
+						])
+					),
+					(order, map),
+				)
+			})
+		}
 
-	#[test]
-	fn from_iter_empty() {
-		assert_eq!(
-			OrderedHashMap::<&'static str, u32>::default(),
-			OrderedHashMap::<&'static str, u32>::from_iter([].into_iter())
-		)
-	}
+		#[test]
+		fn keys() {
+			let map = OrderedHashMap::from([(-11, "0"), (32, "1")]);
 
-	#[test]
-	fn from_iter_ordered() {
-		let mut expected = OrderedHashMap::<&'static str, u32>::default();
-		expected.insert("first", 0);
-		expected.insert("second", 1);
+			assert_eq!(vec![&-11, &32], map.keys().collect::<Vec<_>>());
+		}
 
-		assert_eq!(
-			expected,
-			OrderedHashMap::from_iter([("first", 0), ("second", 1)].into_iter())
-		)
-	}
+		#[test]
+		fn values() {
+			let map = OrderedHashMap::from([(-11, "0"), (32, "1")]);
 
-	#[test]
-	fn iter_mut() {
-		repeat!(100, {
-			let mut map =
-				OrderedHashMap::from([("first", "0".to_owned()), ("second", "1".to_owned())]);
-			let mut order = vec![];
+			assert_eq!(vec![&"0", &"1"], map.values().collect::<Vec<_>>());
+		}
 
-			for (key, value) in map.iter_mut() {
-				*value = format!("{}: {}", key, *value);
-				order.push(*key);
-			}
+		#[test]
+		fn is_empty() {
+			let filled = OrderedHashMap::from([(32, 32)]);
+			let empty = OrderedHashMap::<u32, u32>::from([]);
+
+			assert_eq!((false, true), (filled.is_empty(), empty.is_empty()));
+		}
+
+		#[test]
+		fn serialize() -> Result<(), Error> {
+			let map = OrderedHashMap::from([(1, "a"), (2, "b"), (3, "c")]);
+
+			let value = to_value(map)?;
+
+			assert_eq!(json!([(1, "a"), (2, "b"), (3, "c")]), value);
+			Ok(())
+		}
+
+		#[test]
+		fn deserialize() -> Result<(), Error> {
+			let json = json!([(1, "a"), (2, "b"), (3, "c")]);
+
+			let map = from_value::<OrderedHashMap<u8, String>>(json)?;
 
 			assert_eq!(
-				(
-					vec!["first", "second"],
-					OrderedHashMap::from_iter([
-						("first", "first: 0".to_owned()),
-						("second", "second: 1".to_owned())
-					])
-				),
-				(order, map),
-			)
-		})
+				OrderedHashMap::from([
+					(1, "a".to_owned()),
+					(2, "b".to_owned()),
+					(3, "c".to_owned()),
+				]),
+				map
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn deserialize_rejection_on_non_unique() {
+			let json = json!([(1, "a"), (2, "b"), (2, "b"), (3, "c")]);
+
+			let map = from_value::<OrderedHashMap<u8, String>>(json);
+
+			assert!(map.is_err());
+		}
+
+		#[test]
+		fn get_first() {
+			let map = OrderedHashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+
+			assert_eq!(Some((&"a", &1)), map.first());
+		}
+
+		#[test]
+		fn get_first_mut() {
+			let mut map = OrderedHashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+
+			assert_eq!(Some((&"a", &mut 1)), map.first_mut());
+		}
+
+		#[test]
+		fn get_last() {
+			let map = OrderedHashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+
+			assert_eq!(Some((&"c", &3)), map.last());
+		}
+
+		#[test]
+		fn get_last_from_empty() {
+			let map = OrderedHashMap::<&str, i32>::from([]);
+
+			assert_eq!(None, map.last());
+		}
+
+		#[test]
+		fn get_last_mut() {
+			let mut map = OrderedHashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+
+			assert_eq!(Some((&"c", &mut 3)), map.last_mut());
+		}
+
+		#[test]
+		fn get_last_mut_from_empty() {
+			let mut map = OrderedHashMap::<&str, i32>::from([]);
+
+			assert_eq!(None, map.last_mut());
+		}
 	}
 
-	#[test]
-	fn keys() {
-		let map = OrderedHashMap::from([(-11, "0"), (32, "1")]);
+	mod set {
+		use super::*;
 
-		assert_eq!(vec![&-11, &32], map.keys().collect::<Vec<_>>());
-	}
+		#[test]
+		fn get_first() {
+			let set = OrderedSet::from([1, 2, 3]);
 
-	#[test]
-	fn values() {
-		let map = OrderedHashMap::from([(-11, "0"), (32, "1")]);
+			assert_eq!(Some(&1), set.first());
+		}
 
-		assert_eq!(vec![&"0", &"1"], map.values().collect::<Vec<_>>());
-	}
+		#[test]
+		fn get_last() {
+			let set = OrderedSet::from([1, 2, 3]);
 
-	#[test]
-	fn is_empty() {
-		let filled = OrderedHashMap::from([(32, 32)]);
-		let empty = OrderedHashMap::<u32, u32>::from([]);
+			assert_eq!(Some(&3), set.last());
+		}
 
-		assert_eq!((false, true), (filled.is_empty(), empty.is_empty()));
-	}
+		#[test]
+		fn get_last_from_empty() {
+			let set = OrderedSet::<i32>::from([]);
 
-	#[test]
-	fn serialize() -> Result<(), Error> {
-		let map = OrderedHashMap::from([(1, "a"), (2, "b"), (3, "c")]);
-
-		let value = to_value(map)?;
-
-		assert_eq!(json!([(1, "a"), (2, "b"), (3, "c")]), value);
-		Ok(())
-	}
-
-	#[test]
-	fn deserialize() -> Result<(), Error> {
-		let json = json!([(1, "a"), (2, "b"), (3, "c")]);
-
-		let map = from_value::<OrderedHashMap<u8, String>>(json)?;
-
-		assert_eq!(
-			OrderedHashMap::from([
-				(1, "a".to_owned()),
-				(2, "b".to_owned()),
-				(3, "c".to_owned()),
-			]),
-			map
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn deserialize_rejection_on_non_unique() {
-		let json = json!([(1, "a"), (2, "b"), (2, "b"), (3, "c")]);
-
-		let map = from_value::<OrderedHashMap<u8, String>>(json);
-
-		assert!(map.is_err());
+			assert_eq!(None, set.last());
+		}
 	}
 }
