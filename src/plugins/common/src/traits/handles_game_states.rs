@@ -4,51 +4,70 @@ use bevy::{
 };
 use std::collections::HashSet;
 
-use crate::traits::thread_safe::ThreadSafe;
-
-pub trait HandlesGameStates:
-	HandlesGameState<ActivityState> + HandlesGameState<SaveState> + HandlesGameState<MenuState>
-{
-}
-
-impl<T> HandlesGameStates for T where
-	T: HandlesGameState<ActivityState> + HandlesGameState<SaveState> + HandlesGameState<MenuState>
-{
-}
-
-pub trait HandlesGameState<T>
-where
-	T: ThreadSafe,
-{
-	type TGameStates: SystemParam + GameStates<T>;
-	type TGameStatesMut: SystemParam + GameStatesMut<T>;
+pub trait HandlesGameStates {
+	type TGameStates: SystemParam + GameStates;
+	type TGameStatesMut: SystemParam + GameStatesMut;
 
 	fn add_systems<M>(
 		app: &mut App,
-		on_state: OnState<T>,
+		on_state: OnGameState,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	);
 }
 
-pub trait GameStates<T>
-where
-	T: ThreadSafe,
-{
-	fn game_states(&self) -> &HashSet<T>;
+pub trait GameStatesMut: GameStates + AddGameState + RemoveGameState {}
+
+impl<T> GameStatesMut for T where T: GameStates + AddGameState + RemoveGameState {}
+
+pub trait IntoGameStateAdd: Into<GameState> + game_state::CanAdd {}
+pub trait IntoGameStateRemove: Into<GameState> + game_state::CanRemove {}
+
+pub trait GameStates {
+	fn game_states(&self) -> &HashSet<GameState>;
 }
 
-pub trait GameStatesMut<T>: GameStates<T>
-where
-	T: ThreadSafe,
-{
-	fn game_states_mut(&mut self) -> &mut HashSet<T>;
+pub trait AddGameState {
+	fn add_game_state<T>(&mut self, state: T)
+	where
+		T: IntoGameStateAdd;
+}
+
+pub trait RemoveGameState {
+	fn remove_game_state<T>(&mut self, state: &T)
+	where
+		T: IntoGameStateRemove;
 }
 
 #[derive(Debug, PartialEq)]
-pub enum OnState<T> {
-	Enter(T),
-	Exit(T),
+pub enum OnGameState {
+	Enter(GameState),
+	Exit(GameState),
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum GameState {
+	Activity(ActivityState),
+	Save(SaveState),
+	StartUI(StartUIState),
+	IngameUI(IngameUIState),
+	Read(ReadState),
+}
+
+macro_rules! impl_into_game_state {
+	($wrapper:ident($ty:ty)) => {
+		impl From<$ty> for GameState {
+			fn from(value: $ty) -> Self {
+				Self::$wrapper(value)
+			}
+		}
+	};
+}
+
+impl_into_game_state!(Activity(ActivityState));
+impl_into_game_state!(Save(SaveState));
+impl_into_game_state!(StartUI(StartUIState));
+impl_into_game_state!(IngameUI(IngameUIState));
+impl_into_game_state!(Read(ReadState));
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ActivityState {
@@ -60,16 +79,45 @@ pub enum ActivityState {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum StartUIState {
+	StartMenu,
+	Settings,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum IngameUIState {
+	Hud,
+	Inventory,
+	ComboOverview,
+	Settings,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum SaveState {
 	Save,
-	LoadAttempt,
 	Load,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum MenuState {
-	StartMenu,
-	Inventory,
-	ComboOverview,
-	Settings,
+pub enum ReadState {
+	Load,
+}
+
+mod game_state {
+	use super::*;
+
+	pub trait CanAdd {}
+
+	impl<T> IntoGameStateAdd for T where T: Into<GameState> + CanAdd {}
+
+	impl CanAdd for ActivityState {}
+	impl CanAdd for SaveState {}
+	impl CanAdd for StartUIState {}
+	impl CanAdd for IngameUIState {}
+
+	pub trait CanRemove {}
+
+	impl<T> IntoGameStateRemove for T where T: Into<GameState> + CanRemove {}
+
+	impl CanRemove for IngameUIState {}
 }

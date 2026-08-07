@@ -1,11 +1,8 @@
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::traits::handles_game_states::GameState;
 use std::collections::HashSet;
 
 #[derive(Resource, Default)]
-pub(crate) struct GameStatesContext<T>
-where
-	T: ThreadSafe,
-{
-	pub(crate) states: HashSet<T>,
+pub(crate) struct GameStatesContext {
+	pub(crate) states: HashSet<GameState>,
 }
