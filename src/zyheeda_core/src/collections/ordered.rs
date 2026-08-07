@@ -99,28 +99,34 @@ where
 	}
 
 	pub fn first(&self) -> Option<(&TKey, &TValue)> {
-		let key = self.order.get(0)?;
-		let value = self.map.get(key)?;
-
-		Some((key, value))
+		self.get_index(0)
 	}
 
 	pub fn first_mut(&mut self) -> Option<(&TKey, &mut TValue)> {
-		let key = self.order.get(0)?;
-		let value = self.map.get_mut(key)?;
-
-		Some((key, value))
+		self.get_index_mut(0)
 	}
 
 	pub fn last(&self) -> Option<(&TKey, &TValue)> {
-		let key = self.order.get(self.order.len().checked_sub(1)?)?;
+		self.get_index(self.last_index()?)
+	}
+
+	pub fn last_mut(&mut self) -> Option<(&TKey, &mut TValue)> {
+		self.get_index_mut(self.last_index()?)
+	}
+
+	fn last_index(&self) -> Option<usize> {
+		self.order.len().checked_sub(1)
+	}
+
+	pub fn get_index(&self, index: usize) -> Option<(&TKey, &TValue)> {
+		let key = self.order.get(index)?;
 		let value = self.map.get(key)?;
 
 		Some((key, value))
 	}
 
-	pub fn last_mut(&mut self) -> Option<(&TKey, &mut TValue)> {
-		let key = self.order.get(self.order.len().checked_sub(1)?)?;
+	pub fn get_index_mut(&mut self, index: usize) -> Option<(&TKey, &mut TValue)> {
+		let key = self.order.get(index)?;
 		let value = self.map.get_mut(key)?;
 
 		Some((key, value))
@@ -402,6 +408,10 @@ where
 
 	pub fn is_empty(&self) -> bool {
 		self.values.is_empty()
+	}
+
+	pub fn get_index(&self, index: usize) -> Option<&T> {
+		self.values.get(index)
 	}
 
 	pub fn first(&self) -> Option<&T> {
@@ -844,6 +854,20 @@ mod tests {
 
 			assert_eq!(None, map.last_mut());
 		}
+
+		#[test]
+		fn get_index() {
+			let map = OrderedHashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+
+			assert_eq!(Some((&"b", &2)), map.get_index(1));
+		}
+
+		#[test]
+		fn get_index_mut() {
+			let mut map = OrderedHashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+
+			assert_eq!(Some((&"b", &mut 2)), map.get_index_mut(1));
+		}
 	}
 
 	mod set {
@@ -868,6 +892,13 @@ mod tests {
 			let set = OrderedSet::<i32>::from([]);
 
 			assert_eq!(None, set.last());
+		}
+
+		#[test]
+		fn get_index() {
+			let set = OrderedSet::from([1, 2, 3]);
+
+			assert_eq!(Some(&2), set.get_index(1));
 		}
 	}
 }
