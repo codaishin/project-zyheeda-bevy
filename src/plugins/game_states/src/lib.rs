@@ -22,7 +22,7 @@ impl Plugin for GameStatesPlugin {
 
 impl HandlesGameStates for GameStatesPlugin {
 	type TGameStates = GameStatesRead<'static>;
-	type TGameStatesMut = GameStatesWrite<'static>;
+	type TGameStatesMut = GameStatesWrite<'static, 'static>;
 
 	fn add_systems<M>(
 		app: &mut App,
