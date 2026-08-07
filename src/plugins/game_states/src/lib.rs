@@ -1,43 +1,40 @@
+mod events;
 mod resources;
 mod states;
 mod system_params;
 
 use crate::{
-	states::GameState,
+	resources::game_state_context::GameStatesContext,
+	states::GameStateInternal,
 	system_params::{game_states_read::GameStatesRead, game_states_write::GameStatesWrite},
 };
 use bevy::{ecs::system::ScheduleSystem, prelude::*};
-use common::traits::{
-	handles_game_states::{HandlesGameState, OnState},
-	thread_safe::ThreadSafe,
-};
+use common::traits::handles_game_states::{HandlesGameStates, OnGameState};
 
 pub struct GameStatesPlugin;
 
 impl Plugin for GameStatesPlugin {
 	fn build(&self, app: &mut App) {
-		app.init_state::<GameState>();
+		app.init_resource::<GameStatesContext>()
+			.init_state::<GameStateInternal>();
 	}
 }
 
-impl<T> HandlesGameState<T> for GameStatesPlugin
-where
-	T: ThreadSafe + Into<GameState>,
-{
-	type TGameStates = GameStatesRead<'static, T>;
-	type TGameStatesMut = GameStatesWrite<'static, T>;
+impl HandlesGameStates for GameStatesPlugin {
+	type TGameStates = GameStatesRead<'static>;
+	type TGameStatesMut = GameStatesWrite<'static>;
 
 	fn add_systems<M>(
 		app: &mut App,
-		on_state: OnState<T>,
+		on_state: OnGameState,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	) {
 		match on_state {
-			OnState::Enter(state) => {
-				app.add_systems(OnEnter(state.into()), systems);
+			OnGameState::Enter(state) => {
+				app.add_systems(OnEnter(GameStateInternal(state)), systems);
 			}
-			OnState::Exit(state) => {
-				app.add_systems(OnExit(state.into()), systems);
+			OnGameState::Exit(state) => {
+				app.add_systems(OnExit(GameStateInternal(state)), systems);
 			}
 		}
 	}

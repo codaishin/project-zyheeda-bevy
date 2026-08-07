@@ -1,11 +1,8 @@
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
-use std::collections::HashSet;
+use common::traits::handles_game_states::GameState;
+use zyheeda_core::collections::ordered::OrderedSet;
 
 #[derive(Resource, Default)]
-pub(crate) struct GameStatesContext<T>
-where
-	T: ThreadSafe,
-{
-	pub(crate) states: HashSet<T>,
+pub(crate) struct GameStatesContext {
+	pub(crate) states: OrderedSet<GameState>,
 }

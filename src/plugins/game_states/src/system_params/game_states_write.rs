@@ -1,33 +1,21 @@
 use crate::resources::game_state_context::GameStatesContext;
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::traits::{
-	handles_game_states::{GameStates, GameStatesMut},
-	thread_safe::ThreadSafe,
-};
-use std::collections::HashSet;
+use common::traits::handles_game_states::{GameState, GameStates, GameStatesMut};
+use zyheeda_core::collections::ordered::OrderedSet;
 
 #[derive(SystemParam)]
-pub struct GameStatesWrite<'w, T>
-where
-	T: ThreadSafe,
-{
-	ctx: ResMut<'w, GameStatesContext<T>>,
+pub struct GameStatesWrite<'w> {
+	ctx: ResMut<'w, GameStatesContext>,
 }
 
-impl<T> GameStates<T> for GameStatesWrite<'_, T>
-where
-	T: ThreadSafe,
-{
-	fn game_states(&self) -> &HashSet<T> {
+impl GameStates for GameStatesWrite<'_> {
+	fn game_states(&self) -> &OrderedSet<GameState> {
 		&self.ctx.states
 	}
 }
 
-impl<T> GameStatesMut<T> for GameStatesWrite<'_, T>
-where
-	T: ThreadSafe,
-{
-	fn game_states_mut(&mut self) -> &mut HashSet<T> {
+impl GameStatesMut for GameStatesWrite<'_> {
+	fn game_states_mut(&mut self) -> &mut OrderedSet<GameState> {
 		&mut self.ctx.states
 	}
 }

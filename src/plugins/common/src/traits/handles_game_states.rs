@@ -2,52 +2,38 @@ use bevy::{
 	ecs::system::{ScheduleSystem, SystemParam},
 	prelude::*,
 };
-use std::collections::HashSet;
+use zyheeda_core::collections::ordered::OrderedSet;
 
-use crate::traits::thread_safe::ThreadSafe;
-
-pub trait HandlesGameStates:
-	HandlesGameState<ActivityState> + HandlesGameState<SaveState> + HandlesGameState<MenuState>
-{
-}
-
-impl<T> HandlesGameStates for T where
-	T: HandlesGameState<ActivityState> + HandlesGameState<SaveState> + HandlesGameState<MenuState>
-{
-}
-
-pub trait HandlesGameState<T>
-where
-	T: ThreadSafe,
-{
-	type TGameStates: SystemParam + GameStates<T>;
-	type TGameStatesMut: SystemParam + GameStatesMut<T>;
+pub trait HandlesGameStates {
+	type TGameStates: SystemParam + GameStates;
+	type TGameStatesMut: SystemParam + GameStatesMut;
 
 	fn add_systems<M>(
 		app: &mut App,
-		on_state: OnState<T>,
+		on_state: OnGameState,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	);
 }
 
-pub trait GameStates<T>
-where
-	T: ThreadSafe,
-{
-	fn game_states(&self) -> &HashSet<T>;
+pub trait GameStates {
+	fn game_states(&self) -> &OrderedSet<GameState>;
 }
 
-pub trait GameStatesMut<T>: GameStates<T>
-where
-	T: ThreadSafe,
-{
-	fn game_states_mut(&mut self) -> &mut HashSet<T>;
+pub trait GameStatesMut: GameStates {
+	fn game_states_mut(&mut self) -> &mut OrderedSet<GameState>;
 }
 
 #[derive(Debug, PartialEq)]
-pub enum OnState<T> {
-	Enter(T),
-	Exit(T),
+pub enum OnGameState {
+	Enter(GameState),
+	Exit(GameState),
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum GameState {
+	Activity(ActivityState),
+	Save(SaveState),
+	Menu(MenuState),
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
