@@ -4,6 +4,8 @@ use bevy::{
 };
 use std::collections::HashSet;
 
+use crate::traits::thread_safe::ThreadSafe;
+
 pub trait HandlesGameStates:
 	HandlesGameState<ActivityState> + HandlesGameState<SaveState> + HandlesGameState<MenuState>
 {
@@ -14,7 +16,10 @@ impl<T> HandlesGameStates for T where
 {
 }
 
-pub trait HandlesGameState<T> {
+pub trait HandlesGameState<T>
+where
+	T: ThreadSafe,
+{
 	type TGameStates: SystemParam + GameStates<T>;
 	type TGameStatesMut: SystemParam + GameStatesMut<T>;
 
@@ -25,11 +30,17 @@ pub trait HandlesGameState<T> {
 	);
 }
 
-pub trait GameStates<T> {
+pub trait GameStates<T>
+where
+	T: ThreadSafe,
+{
 	fn game_states(&self) -> &HashSet<T>;
 }
 
-pub trait GameStatesMut<T>: GameStates<T> {
+pub trait GameStatesMut<T>: GameStates<T>
+where
+	T: ThreadSafe,
+{
 	fn game_states_mut(&mut self) -> &mut HashSet<T>;
 }
 
@@ -39,7 +50,7 @@ pub enum OnState<T> {
 	Exit(T),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ActivityState {
 	LoadingEssentialAssets,
 	LoadDependencies,
@@ -48,14 +59,14 @@ pub enum ActivityState {
 	Paused,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum SaveState {
 	Save,
 	LoadAttempt,
 	Load,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum MenuState {
 	StartMenu,
 	Inventory,
