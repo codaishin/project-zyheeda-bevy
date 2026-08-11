@@ -35,7 +35,7 @@ pub trait AddGameState {
 pub trait RemoveGameState {
 	fn remove_game_state<T>(&mut self, state: &T)
 	where
-		T: IntoGameStateRemove;
+		T: IntoGameStateRemove + Copy;
 }
 
 #[derive(Debug, PartialEq)]
@@ -47,9 +47,7 @@ pub enum OnGameState {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum GameState {
 	Activity(ActivityState),
-	Save(SaveState),
-	StartUI(StartUIState),
-	IngameUI(IngameUIState),
+	IngameUI(UIState),
 	Read(ReadState),
 }
 
@@ -64,28 +62,23 @@ macro_rules! impl_into_game_state {
 }
 
 impl_into_game_state!(Activity(ActivityState));
-impl_into_game_state!(Save(SaveState));
-impl_into_game_state!(StartUI(StartUIState));
-impl_into_game_state!(IngameUI(IngameUIState));
+impl_into_game_state!(IngameUI(UIState));
 impl_into_game_state!(Read(ReadState));
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ActivityState {
 	LoadingEssentialAssets,
 	LoadDependencies,
+	StartScreen,
 	NewGame,
 	Play,
 	Paused,
+	Save,
+	Load,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum StartUIState {
-	StartMenu,
-	Settings,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum IngameUIState {
+pub enum UIState {
 	Hud,
 	Inventory,
 	ComboOverview,
@@ -93,14 +86,8 @@ pub enum IngameUIState {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum SaveState {
-	Save,
-	Load,
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ReadState {
-	Load,
+	Loading,
 }
 
 mod game_state {
@@ -111,13 +98,11 @@ mod game_state {
 	impl<T> IntoGameStateAdd for T where T: Into<GameState> + CanAdd {}
 
 	impl CanAdd for ActivityState {}
-	impl CanAdd for SaveState {}
-	impl CanAdd for StartUIState {}
-	impl CanAdd for IngameUIState {}
+	impl CanAdd for UIState {}
 
 	pub trait CanRemove {}
 
 	impl<T> IntoGameStateRemove for T where T: Into<GameState> + CanRemove {}
 
-	impl CanRemove for IngameUIState {}
+	impl CanRemove for UIState {}
 }
