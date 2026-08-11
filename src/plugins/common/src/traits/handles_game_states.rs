@@ -1,4 +1,7 @@
-use crate::tools::is_not::IsNot;
+use crate::{
+	tools::is_not::IsNot,
+	traits::iteration::{Iter, IterFinite},
+};
 use bevy::{
 	ecs::system::{ScheduleSystem, SystemParam},
 	prelude::*,
@@ -96,7 +99,40 @@ pub enum UIState {
 	Settings,
 }
 
+impl IterFinite for UIState {
+	fn iterator() -> Iter<Self> {
+		Iter(Some(UIState::Hud))
+	}
+
+	fn next(current: &Iter<Self>) -> Option<Self> {
+		match current.0? {
+			UIState::Hud => Some(UIState::Inventory),
+			UIState::Inventory => Some(UIState::ComboOverview),
+			UIState::ComboOverview => Some(UIState::Settings),
+			UIState::Settings => None,
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ReadState {
 	Loading,
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn iter_ui_states() {
+		assert_eq!(
+			vec![
+				UIState::Hud,
+				UIState::Inventory,
+				UIState::ComboOverview,
+				UIState::Settings,
+			],
+			UIState::iterator().take(100).collect::<Vec<_>>()
+		);
+	}
 }
