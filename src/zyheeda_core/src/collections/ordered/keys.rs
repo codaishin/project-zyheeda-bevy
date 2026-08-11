@@ -55,6 +55,10 @@ where
 		self.0.iter()
 	}
 
+	pub(super) fn into_iter(self) -> super::UniqueIntoIter<TKey> {
+		self.0.into_iter()
+	}
+
 	pub(super) fn get(&self, index: usize) -> Option<&TKey> {
 		self.0.get(index)
 	}

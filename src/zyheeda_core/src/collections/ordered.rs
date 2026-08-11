@@ -442,12 +442,11 @@ where
 	}
 }
 
-impl<TIter, T> From<TIter> for OrderedSet<T>
+impl<const N: usize, T> From<[T; N]> for OrderedSet<T>
 where
-	TIter: IntoIterator<Item = T>,
 	T: PartialEq,
 {
-	fn from(iter: TIter) -> Self {
+	fn from(iter: [T; N]) -> Self {
 		let mut set = Self::default();
 
 		for value in iter {
@@ -469,7 +468,20 @@ where
 	}
 }
 
+impl<T> IntoIterator for OrderedSet<T>
+where
+	T: PartialEq,
+{
+	type Item = T;
+	type IntoIter = UniqueIntoIter<T>;
+
+	fn into_iter(self) -> Self::IntoIter {
+		self.values.into_iter()
+	}
+}
+
 pub type UniqueIter<'a, T> = std::collections::vec_deque::Iter<'a, T>;
+pub type UniqueIntoIter<T> = std::collections::vec_deque::IntoIter<T>;
 
 #[cfg(test)]
 mod tests {
@@ -935,6 +947,13 @@ mod tests {
 			let set = OrderedSet::from([1, 2, 3]);
 
 			assert!(!set.contains(&4));
+		}
+
+		#[test]
+		fn into_iter() {
+			let set = OrderedSet::from([1, 2, 3]);
+
+			assert_eq!(vec![1, 2, 3], set.into_iter().collect::<Vec<_>>());
 		}
 	}
 }
