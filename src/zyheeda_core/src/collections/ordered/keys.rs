@@ -58,6 +58,10 @@ where
 	pub(super) fn get(&self, index: usize) -> Option<&TKey> {
 		self.0.get(index)
 	}
+
+	pub(super) fn contains(&self, key: &TKey) -> bool {
+		self.0.contains(key)
+	}
 }
 
 impl<TKey> Default for Unique<TKey>

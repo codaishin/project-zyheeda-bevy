@@ -98,6 +98,10 @@ where
 		self.map.is_empty()
 	}
 
+	pub fn contains_key(&self, key: &TKey) -> bool {
+		self.map.contains_key(key)
+	}
+
 	pub fn first(&self) -> Option<(&TKey, &TValue)> {
 		self.get_index(0)
 	}
@@ -408,6 +412,10 @@ where
 
 	pub fn is_empty(&self) -> bool {
 		self.values.is_empty()
+	}
+
+	pub fn contains(&self, v: &T) -> bool {
+		self.values.contains(v)
 	}
 
 	pub fn get_index(&self, index: usize) -> Option<&T> {
@@ -868,6 +876,20 @@ mod tests {
 
 			assert_eq!(Some((&"b", &mut 2)), map.get_index_mut(1));
 		}
+
+		#[test]
+		fn contains_key_true() {
+			let map = OrderedHashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+
+			assert!(map.contains_key(&"c"));
+		}
+
+		#[test]
+		fn contains_key_false() {
+			let map = OrderedHashMap::from([("a", 1), ("b", 2), ("c", 3)]);
+
+			assert!(!map.contains_key(&"d"));
+		}
 	}
 
 	mod set {
@@ -899,6 +921,20 @@ mod tests {
 			let set = OrderedSet::from([1, 2, 3]);
 
 			assert_eq!(Some(&2), set.get_index(1));
+		}
+
+		#[test]
+		fn contains_true() {
+			let set = OrderedSet::from([1, 2, 3]);
+
+			assert!(set.contains(&1));
+		}
+
+		#[test]
+		fn contains_false() {
+			let set = OrderedSet::from([1, 2, 3]);
+
+			assert!(!set.contains(&4));
 		}
 	}
 }
