@@ -1,7 +1,7 @@
 use crate::{
 	resources::game_state_context::GameStatesContext,
 	states::activity::Activity,
-	system_params::ui_states::UIStates,
+	system_params::ui_states::UIStatesMut,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::handles_game_states::{
@@ -18,7 +18,7 @@ use std::collections::HashSet;
 pub struct GameStatesWrite<'w> {
 	ctx: ResMut<'w, GameStatesContext>,
 	activity: ResMut<'w, NextState<Activity>>,
-	ui: UIStates<'w>,
+	ui: UIStatesMut<'w>,
 }
 
 impl GameStates for GameStatesWrite<'_> {
@@ -48,7 +48,10 @@ impl RemoveGameState<UIState> for GameStatesWrite<'_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::states::ui::{ComboOverview, Hud, Inventory, Settings};
+	use crate::{
+		states::ui::{ComboOverview, Hud, Inventory, Settings},
+		system_params::ui_states::UIStates,
+	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		state::{app::StatesPlugin, state::FreelyMutableState},

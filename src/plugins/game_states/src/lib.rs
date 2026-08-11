@@ -1,6 +1,7 @@
 mod resources;
 mod states;
 mod system_params;
+mod systems;
 
 use crate::{
 	resources::game_state_context::GameStatesContext,
@@ -12,18 +13,31 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::ScheduleSystem, prelude::*};
-use common::traits::handles_game_states::{GameState, HandlesGameStates, OnGameState};
+use common::{
+	tools::plugin_system_set::PluginSystemSet,
+	traits::{
+		handles_game_states::{GameState, HandlesGameStates, OnGameState},
+		system_set_definition::SystemSetDefinition,
+	},
+};
 
 pub struct GameStatesPlugin;
 
 impl Plugin for GameStatesPlugin {
 	fn build(&self, app: &mut App) {
-		app.init_resource::<GameStatesContext>()
-			.init_state::<Activity>();
-
 		UIStates::init(app);
+
+		app.init_resource::<GameStatesContext>()
+			.init_state::<Activity>()
+			.add_systems(
+				Update,
+				GameStatesContext::sync_states.in_set(GameStateSystems),
+			);
 	}
 }
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub struct GameStateSystems;
 
 impl HandlesGameStates for GameStatesPlugin {
 	type TGameStates = GameStatesRead<'static>;
@@ -55,4 +69,10 @@ impl HandlesGameStates for GameStatesPlugin {
 			}
 		}
 	}
+}
+
+impl SystemSetDefinition for GameStatesPlugin {
+	type TSystemSet = GameStateSystems;
+
+	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(GameStateSystems);
 }
