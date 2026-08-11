@@ -23,7 +23,7 @@ impl UIStates<'_> {
 		}
 	}
 
-	pub(crate) fn set_off(&mut self, ui: UIState) {
+	pub(crate) fn set_off(&mut self, ui: &UIState) {
 		match ui {
 			UIState::Hud => self.hud.set(Hud::Off),
 			UIState::Inventory => self.inventory.set(Inventory::Off),

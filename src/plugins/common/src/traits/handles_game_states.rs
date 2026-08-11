@@ -1,3 +1,4 @@
+use crate::tools::is_not::IsNot;
 use bevy::{
 	ecs::system::{ScheduleSystem, SystemParam},
 	prelude::*,
@@ -15,27 +16,26 @@ pub trait HandlesGameStates {
 	);
 }
 
-pub trait GameStatesMut: GameStates + AddGameState + RemoveGameState {}
+pub trait GameStatesMut:
+	GameStates + AddGameState<ActivityState> + AddGameState<UIState> + RemoveGameState<UIState>
+{
+}
 
-impl<T> GameStatesMut for T where T: GameStates + AddGameState + RemoveGameState {}
-
-pub trait IntoGameStateAdd: Into<GameState> + game_state::CanAdd {}
-pub trait IntoGameStateRemove: Into<GameState> + game_state::CanRemove {}
+impl<T> GameStatesMut for T where
+	T: GameStates + AddGameState<ActivityState> + AddGameState<UIState> + RemoveGameState<UIState>
+{
+}
 
 pub trait GameStates {
 	fn game_states(&self) -> &HashSet<GameState>;
 }
 
-pub trait AddGameState {
-	fn add_game_state<T>(&mut self, state: T)
-	where
-		T: IntoGameStateAdd;
+pub trait AddGameState<T> {
+	fn add_game_state(&mut self, state: T);
 }
 
-pub trait RemoveGameState {
-	fn remove_game_state<T>(&mut self, state: &T)
-	where
-		T: IntoGameStateRemove + Copy;
+pub trait RemoveGameState<T> {
+	fn remove_game_state(&mut self, state: &T);
 }
 
 #[derive(Debug, PartialEq)]
@@ -51,19 +51,30 @@ pub enum GameState {
 	Read(ReadState),
 }
 
-macro_rules! impl_into_game_state {
-	($wrapper:ident($ty:ty)) => {
-		impl From<$ty> for GameState {
-			fn from(value: $ty) -> Self {
+macro_rules! game_state_conversions {
+	($wrapper:ident($inner:ty)) => {
+		impl From<$inner> for GameState {
+			fn from(value: $inner) -> Self {
 				Self::$wrapper(value)
+			}
+		}
+
+		impl TryFrom<GameState> for $inner {
+			type Error = IsNot<$inner>;
+
+			fn try_from(game_state: GameState) -> Result<$inner, Self::Error> {
+				match game_state {
+					GameState::$wrapper(inner) => Ok(inner),
+					_ => Err(IsNot::target_type()),
+				}
 			}
 		}
 	};
 }
 
-impl_into_game_state!(Activity(ActivityState));
-impl_into_game_state!(IngameUI(UIState));
-impl_into_game_state!(Read(ReadState));
+game_state_conversions!(Activity(ActivityState));
+game_state_conversions!(IngameUI(UIState));
+game_state_conversions!(Read(ReadState));
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ActivityState {
@@ -88,21 +99,4 @@ pub enum UIState {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ReadState {
 	Loading,
-}
-
-mod game_state {
-	use super::*;
-
-	pub trait CanAdd {}
-
-	impl<T> IntoGameStateAdd for T where T: Into<GameState> + CanAdd {}
-
-	impl CanAdd for ActivityState {}
-	impl CanAdd for UIState {}
-
-	pub trait CanRemove {}
-
-	impl<T> IntoGameStateRemove for T where T: Into<GameState> + CanRemove {}
-
-	impl CanRemove for UIState {}
 }

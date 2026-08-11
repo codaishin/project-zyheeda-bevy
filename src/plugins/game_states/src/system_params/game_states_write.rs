@@ -5,12 +5,12 @@ use crate::{
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::handles_game_states::{
+	ActivityState,
 	AddGameState,
 	GameState,
 	GameStates,
-	IntoGameStateAdd,
-	IntoGameStateRemove,
 	RemoveGameState,
+	UIState,
 };
 use std::collections::HashSet;
 
@@ -27,32 +27,21 @@ impl GameStates for GameStatesWrite<'_> {
 	}
 }
 
-const REMOVE_ACTIVITY_NOT_ALLOWED: &str = "Activity game state cannot be removed";
-const MODIFY_READ_NOT_ALLOWED: &str = "Read game state cannot be set via public interface";
-
-impl AddGameState for GameStatesWrite<'_> {
-	fn add_game_state<T>(&mut self, state: T)
-	where
-		T: IntoGameStateAdd,
-	{
-		match state.into() {
-			GameState::Activity(activity) => self.activity.set(Activity::from(activity)),
-			GameState::IngameUI(ui) => self.ui.set_on(ui),
-			GameState::Read(_) => unreachable!("{MODIFY_READ_NOT_ALLOWED}"),
-		}
+impl AddGameState<ActivityState> for GameStatesWrite<'_> {
+	fn add_game_state(&mut self, activity: ActivityState) {
+		self.activity.set(Activity::from(activity));
 	}
 }
 
-impl RemoveGameState for GameStatesWrite<'_> {
-	fn remove_game_state<T>(&mut self, state: &T)
-	where
-		T: IntoGameStateRemove + Copy,
-	{
-		match (*state).into() {
-			GameState::Activity(_) => unreachable!("{REMOVE_ACTIVITY_NOT_ALLOWED}"),
-			GameState::IngameUI(ui) => self.ui.set_off(ui),
-			GameState::Read(_) => unreachable!("{MODIFY_READ_NOT_ALLOWED}"),
-		}
+impl AddGameState<UIState> for GameStatesWrite<'_> {
+	fn add_game_state(&mut self, ui: UIState) {
+		self.ui.set_on(ui);
+	}
+}
+
+impl RemoveGameState<UIState> for GameStatesWrite<'_> {
+	fn remove_game_state(&mut self, ui: &UIState) {
+		self.ui.set_off(ui);
 	}
 }
 
@@ -106,7 +95,8 @@ mod tests {
 	#[test_case(UIState::Settings, Settings::On; "settings")]
 	fn add_state<T, U>(state: T, expected: U) -> Result<(), RunSystemError>
 	where
-		T: IntoGameStateAdd + Copy + ThreadSafe,
+		for<'w> GameStatesWrite<'w>: AddGameState<T>,
+		T: Copy + ThreadSafe,
 		U: FreelyMutableState,
 	{
 		let mut app = setup();
@@ -127,9 +117,8 @@ mod tests {
 	#[test_case(UIState::Inventory, Inventory::Off; "inventory")]
 	#[test_case(UIState::ComboOverview, ComboOverview::Off; "combos")]
 	#[test_case(UIState::Settings, Settings::Off; "settings")]
-	fn remove_state<T, U>(state: T, expected: U) -> Result<(), RunSystemError>
+	fn remove_state<U>(state: UIState, expected: U) -> Result<(), RunSystemError>
 	where
-		T: IntoGameStateRemove + Copy + ThreadSafe,
 		U: FreelyMutableState,
 	{
 		let mut app = setup();
