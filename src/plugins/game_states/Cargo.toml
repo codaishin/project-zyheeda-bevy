@@ -1,0 +1,19 @@
+[package]
+name = "game_states"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+# external
+bevy.workspace = true
+
+# internal
+common.workspace = true
+zyheeda_core.workspace = true
+
+[dev-dependencies]
+# external
+test-case.workspace = true
+
+# internal
+testing.workspace = true

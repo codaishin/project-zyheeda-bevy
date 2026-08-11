@@ -15,6 +15,7 @@ pub mod handles_animations;
 pub mod handles_asset_resource_loading;
 pub mod handles_custom_assets;
 pub mod handles_enemies;
+pub mod handles_game_states;
 pub mod handles_graphics;
 pub mod handles_input;
 pub mod handles_interactive;
