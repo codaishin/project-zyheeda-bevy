@@ -3,6 +3,8 @@ mod states;
 mod system_params;
 mod systems;
 
+use std::collections::HashMap;
+
 use crate::{
 	resources::game_state_context::GameStatesContext,
 	states::activity::Activity,
@@ -16,7 +18,17 @@ use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use common::{
 	tools::plugin_system_set::PluginSystemSet,
 	traits::{
-		handles_game_states::{GameState, HandlesGameStates, OnGameState},
+		handles_game_states::{
+			ActivityState,
+			AddGameStateSystem,
+			AutomaticGameStateTransitions,
+			GameState,
+			HandlesGameStates,
+			OnGameState,
+			StateTransition,
+			TransitionsConfigError,
+			WithOptionalTransitions,
+		},
 		system_set_definition::SystemSetDefinition,
 	},
 };
@@ -42,8 +54,10 @@ pub struct GameStateSystems;
 impl HandlesGameStates for GameStatesPlugin {
 	type TGameStates = GameStatesRead<'static>;
 	type TGameStatesMut = GameStatesWrite<'static>;
+}
 
-	fn add_systems<M>(
+impl AddGameStateSystem for GameStatesPlugin {
+	fn add_game_state_systems<M>(
 		app: &mut App,
 		on_state: OnGameState,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
@@ -68,6 +82,33 @@ impl HandlesGameStates for GameStatesPlugin {
 				UIStates::on_exit(app, ui, systems);
 			}
 		}
+	}
+}
+
+impl AutomaticGameStateTransitions<ActivityState> for GameStatesPlugin {
+	type TOptionalTransitions<'a> = OptionalTransitions<'a>;
+
+	fn automatic_game_state_transitions(
+		app: &mut App,
+		_: ActivityState,
+		_: StateTransition<ActivityState>,
+	) -> Result<Self::TOptionalTransitions<'_>, TransitionsConfigError<ActivityState>> {
+		Ok(OptionalTransitions(app))
+	}
+}
+
+pub struct OptionalTransitions<'a>(&'a mut App);
+
+impl WithOptionalTransitions<ActivityState> for OptionalTransitions<'_> {
+	fn with_optional_transitions<TResult, M>(
+		self,
+		_: impl IntoSystem<(), Option<TResult>, M>,
+		_: HashMap<TResult, StateTransition<ActivityState>>,
+	) -> Result<(), TransitionsConfigError<ActivityState>>
+	where
+		TResult: PartialEq + Eq + std::hash::Hash,
+	{
+		Ok(())
 	}
 }
 
