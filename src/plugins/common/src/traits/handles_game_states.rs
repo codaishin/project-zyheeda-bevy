@@ -1,22 +1,84 @@
 use crate::{
 	tools::is_not::IsNot,
-	traits::iteration::{Iter, IterFinite},
+	traits::{
+		iteration::{Iter, IterFinite},
+		thread_safe::ThreadSafe,
+	},
 };
 use bevy::{
 	ecs::system::{ScheduleSystem, SystemParam},
 	prelude::*,
 };
-use std::collections::HashSet;
+use std::{
+	collections::{HashMap, HashSet},
+	fmt::{Debug, Display},
+	hash::Hash,
+};
 
-pub trait HandlesGameStates {
+pub trait HandlesGameStates:
+	AddGameStateSystem + AutomaticGameStateTransitions<ActivityState>
+{
 	type TGameStates: SystemParam + GameStates;
 	type TGameStatesMut: SystemParam + GameStatesMut;
+}
 
-	fn add_systems<M>(
+pub trait AddGameStateSystem {
+	fn add_game_state_systems<M>(
 		app: &mut App,
 		on_state: OnGameState,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	);
+}
+
+pub trait AutomaticGameStateTransitions<T> {
+	type TOptionalTransitions<'a>: WithOptionalTransitions<T>;
+
+	fn automatic_game_state_transitions(
+		app: &mut App,
+		from_state: T,
+		to_state: StateTransition<T>,
+	) -> Result<Self::TOptionalTransitions<'_>, TransitionsConfigError<T>>;
+}
+
+pub trait WithOptionalTransitions<T> {
+	fn with_optional_transitions<TResult, M>(
+		self,
+		check: impl IntoSystem<(), Option<TResult>, M>,
+		transitions: HashMap<TResult, StateTransition<T>>,
+	) -> Result<(), TransitionsConfigError<T>>
+	where
+		TResult: PartialEq + Eq + Hash + ThreadSafe;
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum StateTransition<T> {
+	To(T),
+	ToPrevious,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TransitionsConfigError<TState> {
+	AlreadyConfigured(TState),
+	MayNotTransitionToSelf(TState),
+}
+
+impl<TState> Display for TransitionsConfigError<TState>
+where
+	TState: Debug,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		match self {
+			TransitionsConfigError::AlreadyConfigured(state) => {
+				write!(f, "{state:?}: Cannot be configured more than once")
+			}
+			TransitionsConfigError::MayNotTransitionToSelf(state) => {
+				write!(
+					f,
+					"{state:?}: May not automatically transition back to itself"
+				)
+			}
+		}
+	}
 }
 
 pub trait GameStatesMut:
