@@ -1,6 +1,9 @@
 use crate::{
 	tools::is_not::IsNot,
-	traits::iteration::{Iter, IterFinite},
+	traits::{
+		iteration::{Iter, IterFinite},
+		thread_safe::ThreadSafe,
+	},
 };
 use bevy::{
 	ecs::system::{ScheduleSystem, SystemParam},
@@ -44,9 +47,10 @@ pub trait WithOptionalTransitions<T> {
 		transitions: HashMap<TResult, StateTransition<T>>,
 	) -> Result<(), TransitionsConfigError<T>>
 	where
-		TResult: PartialEq + Eq + Hash;
+		TResult: PartialEq + Eq + Hash + ThreadSafe;
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum StateTransition<T> {
 	To(T),
 	ToPrevious,
