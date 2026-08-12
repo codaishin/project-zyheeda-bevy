@@ -4,7 +4,10 @@ mod system_params;
 mod systems;
 
 use crate::{
-	resources::{active_transitions::ActiveTransitions, game_state_context::GameStatesContext},
+	resources::{
+		configured_transitions::ConfiguredTransitions,
+		game_state_context::GameStatesContext,
+	},
 	states::activity::Activity,
 	system_params::{
 		game_states_read::GameStatesRead,
@@ -149,15 +152,15 @@ impl AutomaticGameStateTransitions<ActivityState> for GameStatesPlugin {
 			return Err(TransitionsConfigError::MayNotTransitionToSelf(from_state));
 		}
 
-		let ActiveTransitions(active_transitions) = app
+		let ConfiguredTransitions(configured_transitions) = app
 			.world_mut()
-			.get_resource_or_init::<ActiveTransitions>()
+			.get_resource_or_init::<ConfiguredTransitions>()
 			.into_inner();
-		if active_transitions.contains(&from_state) {
+		if configured_transitions.contains(&from_state) {
 			return Err(TransitionsConfigError::AlreadyConfigured(from_state));
 		}
 
-		active_transitions.insert(from_state);
+		configured_transitions.insert(from_state);
 
 		app.configure_sets(
 			OnEnter(Activity::from(from_state)),
