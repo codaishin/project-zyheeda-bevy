@@ -88,7 +88,6 @@ impl Plugin for GameStatesPlugin {
 
 		app.init_state::<Activity>()
 			.init_resource::<GameStatesContext>()
-			.init_resource::<ActiveTransitions>()
 			.add_systems(
 				Update,
 				GameStatesContext::sync_states.in_set(GameStateSystems),
@@ -152,7 +151,7 @@ impl AutomaticGameStateTransitions<ActivityState> for GameStatesPlugin {
 
 		let ActiveTransitions(active_transitions) = app
 			.world_mut()
-			.resource_mut::<ActiveTransitions>()
+			.get_resource_or_init::<ActiveTransitions>()
 			.into_inner();
 		if active_transitions.contains(&from_state) {
 			return Err(TransitionsConfigError::AlreadyConfigured(from_state));
@@ -281,7 +280,6 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(StatesPlugin);
-		app.init_resource::<ActiveTransitions>();
 		app.init_state::<Activity>();
 
 		app
