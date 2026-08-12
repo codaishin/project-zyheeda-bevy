@@ -69,10 +69,13 @@ where
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			TransitionsConfigError::AlreadyConfigured(state) => {
-				write!(f, "{state:?}: Cannot be configure more than once")
+				write!(f, "{state:?}: Cannot be configured more than once")
 			}
 			TransitionsConfigError::MayNotTransitionToSelf(state) => {
-				write!(f, "{state:?}: May automatically transition back to itself")
+				write!(
+					f,
+					"{state:?}: May not automatically transition back to itself"
+				)
 			}
 		}
 	}
