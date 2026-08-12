@@ -113,6 +113,8 @@ impl AddGameStateSystem for GameStatesPlugin {
 		on_state: OnGameState,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	) {
+		let systems = systems.after(AutomaticTransitions::Override);
+
 		match on_state {
 			OnGameState::Enter(GameState::Activity(activity)) => {
 				app.add_systems(OnEnter(Activity::from(activity)), systems);
@@ -158,12 +160,20 @@ impl AutomaticGameStateTransitions<ActivityState> for GameStatesPlugin {
 
 		active_transitions.insert(from_state);
 
+		app.configure_sets(
+			OnEnter(Activity::from(from_state)),
+			(
+				AutomaticTransitions::Fallback,
+				AutomaticTransitions::Override,
+			)
+				.chain(),
+		);
 		app.add_systems(
 			OnEnter(Activity::from(from_state)),
 			(move || Some(to_state))
 				.pipe(GameStatesPlugin::apply_transition_from(from_state))
 				.pipe(OnError::log)
-				.in_set(FallbackTransitions),
+				.in_set(AutomaticTransitions::Fallback),
 		);
 
 		Ok(OptionalTransitions { from_state, app })
@@ -199,14 +209,17 @@ impl WithOptionalTransitions<ActivityState> for OptionalTransitions<'_> {
 				.pipe(move |In(result)| transitions.get(&result?).copied())
 				.pipe(GameStatesPlugin::apply_transition_from(self.from_state))
 				.pipe(OnError::log)
-				.after(FallbackTransitions),
+				.in_set(AutomaticTransitions::Override),
 		);
 		Ok(())
 	}
 }
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-struct FallbackTransitions;
+enum AutomaticTransitions {
+	Fallback,
+	Override,
+}
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct GameStateSystems;
@@ -412,6 +425,41 @@ mod tests {
 
 		assert_eq!(
 			&Activity::Play,
+			app.world().resource::<State<Activity>>().get()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn allow_automatic_transitions_to_be_overridden() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		GameStatesPlugin::add_game_state_systems(
+			&mut app,
+			OnGameState::Enter(GameState::Activity(ActivityState::Paused)),
+			|mut state: ResMut<NextState<Activity>>| {
+				state.set(Activity::StartScreen);
+			},
+		);
+		let transitions = GameStatesPlugin::automatic_game_state_transitions(
+			&mut app,
+			ActivityState::Paused,
+			StateTransition::To(ActivityState::Play),
+		)
+		.unwrap();
+		_ = transitions.with_optional_transitions(
+			|| Some(true),
+			HashMap::from([(true, StateTransition::To(ActivityState::Save))]),
+		);
+
+		app.world_mut()
+			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
+				state.set(Activity::Paused);
+			})?;
+		app.update();
+		app.update();
+
+		assert_eq!(
+			&Activity::StartScreen,
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
