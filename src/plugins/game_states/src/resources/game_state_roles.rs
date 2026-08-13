@@ -8,10 +8,21 @@ pub(crate) struct GameStateRoles {
 	pub(crate) non_pause_states: HashSet<GameState>,
 }
 
+impl GameStateRoles {
+	pub(crate) fn is_pause_state(&self, state: impl Into<GameState>) -> bool {
+		!self.non_pause_states.contains(&state.into())
+	}
+}
+
 impl Default for GameStateRoles {
 	fn default() -> Self {
 		Self {
-			non_pause_states: HashSet::from_iter(GameStatesPlugin::NEVER_PAUSE.iter().copied()),
+			non_pause_states: HashSet::from_iter(
+				GameStatesPlugin::DOES_NOT_PAUSE
+					.iter()
+					.copied()
+					.map(GameState::Activity),
+			),
 		}
 	}
 }
