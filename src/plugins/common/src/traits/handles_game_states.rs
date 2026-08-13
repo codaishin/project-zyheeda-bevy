@@ -82,7 +82,7 @@ where
 }
 
 pub trait NonPausedStates {
-	const DOES_NOT_PAUSE: &[ActivityState] = &[ActivityState::Play];
+	const DEFAULT: &[ActivityState] = &[ActivityState::Play];
 
 	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>);
 }

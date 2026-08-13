@@ -80,7 +80,7 @@ mod tests {
 	fn default_non_pause_states_do_not_pause() {
 		let mut app = setup();
 
-		for state in GameStatesPlugin::DOES_NOT_PAUSE {
+		for state in GameStatesPlugin::DEFAULT {
 			app.world_mut().resource_mut::<Time<Virtual>>().pause();
 			app.world_mut().resource_mut::<GameStateContext>().activity = *state;
 

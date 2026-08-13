@@ -18,7 +18,7 @@ impl Default for GameStateRoles {
 	fn default() -> Self {
 		Self {
 			non_pause_states: HashSet::from_iter(
-				GameStatesPlugin::DOES_NOT_PAUSE
+				GameStatesPlugin::DEFAULT
 					.iter()
 					.copied()
 					.map(GameState::Activity),
