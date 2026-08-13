@@ -5,6 +5,7 @@ use bevy::{
 };
 use common::traits::{handles_game_states::UIState, iteration::IterFinite};
 use std::collections::HashSet;
+use zyheeda_core::prelude::*;
 
 #[derive(SystemParam)]
 pub(crate) struct UIStates<'w> {
@@ -22,6 +23,15 @@ impl UIStates<'_> {
 			UIState::ComboOverview => self.combos.get() == &ComboOverview::On,
 			UIState::Settings => self.settings.get() == &Settings::On,
 		}
+	}
+
+	pub(crate) fn is_changed(&self) -> bool {
+		any!(is_changed(
+			self.hud,
+			self.inventory,
+			self.combos,
+			self.settings
+		))
 	}
 }
 

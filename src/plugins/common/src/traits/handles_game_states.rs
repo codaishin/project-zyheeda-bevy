@@ -89,6 +89,7 @@ pub trait GameStatesMut: GameStates {
 	fn game_states_mut(&mut self) -> GameStateCollectionMut<'_>;
 }
 
+#[derive(Debug, PartialEq, Clone)]
 pub struct GameStateCollection<'a> {
 	pub activity: ActivityState,
 	pub ui: &'a HashSet<UIState>,
@@ -119,9 +120,16 @@ impl Iterator for Iter<'_> {
 	}
 }
 
+#[derive(Debug, PartialEq)]
 pub struct GameStateCollectionMut<'a> {
-	pub activity: &'a mut ActivityState,
-	pub ui: &'a mut HashSet<UIState>,
+	pub current: GameStateCollection<'a>,
+	pub next: &'a mut NextGameStates,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct NextGameStates {
+	pub activity: ActivityState,
+	pub ui: HashSet<UIState>,
 }
 
 #[derive(Debug, PartialEq)]

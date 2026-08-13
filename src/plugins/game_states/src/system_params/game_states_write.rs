@@ -1,16 +1,16 @@
 use crate::{
-	resources::{activity_context::ActivityContext, ui_context::UIContext},
+	resources::game_state_context::GameStateContext,
 	states::activity::Activity,
 	system_params::ui_states::UIStatesMut,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::{
 	handles_game_states::{
-		ActivityState,
 		GameStateCollection,
 		GameStateCollectionMut,
 		GameStates,
 		GameStatesMut,
+		NextGameStates,
 		UIState,
 	},
 	iteration::IterFinite,
@@ -19,49 +19,50 @@ use std::collections::HashSet;
 
 #[derive(SystemParam)]
 pub struct GameStatesWrite<'w, 's> {
-	activity_ctx: ResMut<'w, ActivityContext>,
-	ui_ctx: ResMut<'w, UIContext>,
+	current: Res<'w, GameStateContext>,
 	activity: ResMut<'w, NextState<Activity>>,
-	ui_states: UIStatesMut<'w>,
-	cache: Local<'s, Option<(ActivityState, HashSet<UIState>)>>,
+	ui: UIStatesMut<'w>,
+	next: Local<'s, Option<NextGameStates>>,
 }
 
 impl GameStates for GameStatesWrite<'_, '_> {
 	fn game_states(&self) -> GameStateCollection<'_> {
 		GameStateCollection {
-			activity: self.activity_ctx.activity,
-			ui: &self.ui_ctx.ui,
+			activity: self.current.activity,
+			ui: &self.current.ui,
 		}
 	}
 }
 
 impl GameStatesMut for GameStatesWrite<'_, '_> {
 	fn game_states_mut(&mut self) -> GameStateCollectionMut<'_> {
-		if self.cache.is_none() {
-			*self.cache = Some((self.activity_ctx.activity, self.ui_ctx.ui.clone()));
-		}
-
 		GameStateCollectionMut {
-			activity: &mut self.activity_ctx.activity,
-			ui: &mut self.ui_ctx.ui,
+			current: GameStateCollection {
+				activity: self.current.activity,
+				ui: &self.current.ui,
+			},
+			next: self.next.get_or_insert(NextGameStates {
+				activity: self.current.activity,
+				ui: self.current.ui.clone(),
+			}),
 		}
 	}
 }
 
 impl Drop for GameStatesWrite<'_, '_> {
 	fn drop(&mut self) {
-		let Some((ref old_activity, ref old_ui_states)) = self.cache.take() else {
+		let Some(next) = self.next.take() else {
 			return;
 		};
 
-		if &self.activity_ctx.activity != old_activity {
-			self.activity.set(Activity(self.activity_ctx.activity));
+		if next.activity != self.current.activity {
+			self.activity.set(Activity(next.activity));
 		}
 
 		for state in UIState::iterator() {
-			match Change::of(&state, old_ui_states, &self.ui_ctx.ui) {
-				Some(Change::Added) => self.ui_states.set_on(state),
-				Some(Change::Removed) => self.ui_states.set_off(&state),
+			match Change::of(&state, &self.current.ui, &next.ui) {
+				Some(Change::Added) => self.ui.set_on(state),
+				Some(Change::Removed) => self.ui.set_off(&state),
 				None => continue,
 			}
 		}
@@ -74,8 +75,12 @@ enum Change {
 }
 
 impl Change {
-	fn of(state: &UIState, old: &HashSet<UIState>, current: &HashSet<UIState>) -> Option<Change> {
-		match (old.contains(state), current.contains(state)) {
+	fn of(
+		state: &UIState,
+		current: &HashSet<UIState>,
+		queued: &HashSet<UIState>,
+	) -> Option<Change> {
+		match (current.contains(state), queued.contains(state)) {
 			(true, false) => Some(Change::Removed),
 			(false, true) => Some(Change::Added),
 			_ => None,
@@ -105,8 +110,7 @@ mod tests {
 		app.add_plugins(StatesPlugin);
 		app.init_state::<Activity>();
 		UIStates::init(&mut app);
-		app.init_resource::<ActivityContext>();
-		app.init_resource::<UIContext>();
+		app.init_resource::<GameStateContext>();
 
 		app
 	}
@@ -129,12 +133,83 @@ mod tests {
 	}
 
 	#[test]
+	fn next_matches_current() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::NewGame;
+		app.world_mut().resource_mut::<GameStateContext>().ui =
+			HashSet::from([UIState::Hud, UIState::Settings]);
+
+		let queued = app
+			.world_mut()
+			.run_system_once(move |mut w: GameStatesWrite| w.game_states_mut().next.clone())?;
+
+		assert_eq!(
+			NextGameStates {
+				activity: ActivityState::NewGame,
+				ui: HashSet::from([UIState::Hud, UIState::Settings])
+			},
+			queued
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn next_matches_changed_current_state() -> Result<(), RunSystemError> {
+		#[derive(Resource, Debug, PartialEq)]
+		struct _Result(NextGameStates);
+
+		fn get_queued(mut w: GameStatesWrite, mut c: Commands) {
+			c.insert_resource(_Result(w.game_states_mut().next.clone()));
+		}
+
+		let mut app = setup();
+		app.add_systems(Update, get_queued);
+
+		app.update();
+		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::NewGame;
+		app.world_mut().resource_mut::<GameStateContext>().ui =
+			HashSet::from([UIState::Hud, UIState::Settings]);
+		app.update();
+
+		assert_eq!(
+			&_Result(NextGameStates {
+				activity: ActivityState::NewGame,
+				ui: HashSet::from([UIState::Hud, UIState::Settings])
+			}),
+			app.world().resource::<_Result>()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn retrieving_next_multiple_times_retains_changes() -> Result<(), RunSystemError> {
+		let mut app = setup();
+
+		let queued = app
+			.world_mut()
+			.run_system_once(move |mut w: GameStatesWrite| {
+				w.game_states_mut().next.activity = ActivityState::NewGame;
+				w.game_states_mut().next.ui = HashSet::from([UIState::Hud, UIState::Settings]);
+				w.game_states_mut().next.clone()
+			})?;
+
+		assert_eq!(
+			NextGameStates {
+				activity: ActivityState::NewGame,
+				ui: HashSet::from([UIState::Hud, UIState::Settings])
+			},
+			queued
+		);
+		Ok(())
+	}
+
+	#[test]
 	fn set_activity() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWrite| {
-				*w.game_states_mut().activity = ActivityState::Paused;
+				w.game_states_mut().next.activity = ActivityState::Paused;
 			})?;
 
 		assert_state_eq!(
@@ -156,7 +231,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWrite| {
-				w.game_states_mut().ui.insert(state);
+				w.game_states_mut().next.ui.insert(state);
 			})?;
 
 		assert_state_eq!(
@@ -176,13 +251,13 @@ mod tests {
 	{
 		let mut app = setup();
 		app.world_mut()
-			.run_system_once(move |mut w: GameStatesWrite| {
-				w.game_states_mut().ui.insert(state);
-			})?;
+			.resource_mut::<GameStateContext>()
+			.ui
+			.insert(state);
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWrite| {
-				w.game_states_mut().ui.remove(&state);
+				w.game_states_mut().next.ui.remove(&state);
 			})?;
 
 		assert_state_eq!(
@@ -212,44 +287,5 @@ mod tests {
 			app.world().resource::<NextState<TState>>()
 		);
 		Ok(())
-	}
-
-	#[test_case(|s| *s.activity = ActivityState::Play, |s| *s.activity = ActivityState::LoadingEssentialAssets, Activity(ActivityState::LoadingEssentialAssets); "activity")]
-	#[test_case(|s| { s.ui.insert(UIState::Hud); }, |s| { s.ui.remove(&UIState::Hud); }, Hud::Off; "hud")]
-	#[test_case(|s| { s.ui.insert(UIState::Inventory); }, |s| { s.ui.remove(&UIState::Inventory); }, Inventory::Off; "inventory")]
-	#[test_case(|s| { s.ui.insert(UIState::ComboOverview); }, |s| { s.ui.remove(&UIState::ComboOverview); }, ComboOverview::Off; "combos")]
-	#[test_case(|s| { s.ui.insert(UIState::Settings); }, |s| { s.ui.remove(&UIState::Settings); }, Settings::Off; "settings")]
-	fn reevaluate_change_in_later_frame<TState>(
-		op_a: fn(GameStateCollectionMut),
-		op_b: fn(GameStateCollectionMut),
-		expected: TState,
-	) where
-		TState: FreelyMutableState,
-	{
-		fn alternate(
-			op_a: fn(GameStateCollectionMut),
-			op_b: fn(GameStateCollectionMut),
-		) -> impl Fn(GameStatesWrite, Local<bool>) {
-			move |mut p, mut use_b| {
-				if *use_b {
-					op_b(p.game_states_mut());
-				} else {
-					op_a(p.game_states_mut());
-				}
-
-				*use_b = !*use_b;
-			}
-		}
-
-		let mut app = setup();
-
-		app.add_systems(Update, alternate(op_a, op_b));
-		app.update();
-		app.update();
-
-		assert_state_eq!(
-			&NextState::<TState>::Pending(expected),
-			app.world().resource::<NextState<TState>>()
-		);
 	}
 }

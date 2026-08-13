@@ -1,12 +1,12 @@
 mod resources;
 mod states;
 mod system_params;
+mod systems;
 
 use crate::{
 	resources::{
-		activity_context::ActivityContext,
 		configured_transitions::ConfiguredTransitions,
-		ui_context::UIContext,
+		game_state_context::GameStateContext,
 	},
 	states::activity::Activity,
 	system_params::{
@@ -90,8 +90,11 @@ impl Plugin for GameStatesPlugin {
 		UIStates::init(app);
 
 		app.init_state::<Activity>()
-			.init_resource::<ActivityContext>()
-			.init_resource::<UIContext>();
+			.init_resource::<GameStateContext>()
+			.add_systems(
+				Update,
+				GameStateContext::sync_states.in_set(GameStateSystems),
+			);
 	}
 }
 
