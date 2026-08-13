@@ -81,26 +81,12 @@ where
 	}
 }
 
-pub trait GameStatesMut:
-	GameStates + AddGameState<ActivityState> + AddGameState<UIState> + RemoveGameState<UIState>
-{
-}
-
-impl<T> GameStatesMut for T where
-	T: GameStates + AddGameState<ActivityState> + AddGameState<UIState> + RemoveGameState<UIState>
-{
-}
-
 pub trait GameStates {
 	fn game_states(&self) -> GameStateCollection<'_>;
 }
 
-pub trait AddGameState<T> {
-	fn add_game_state(&mut self, state: T);
-}
-
-pub trait RemoveGameState<T> {
-	fn remove_game_state(&mut self, state: &T);
+pub trait GameStatesMut: GameStates {
+	fn game_states_mut(&mut self) -> GameStateCollectionMut<'_>;
 }
 
 pub struct GameStateCollection<'a> {
@@ -131,6 +117,11 @@ impl Iterator for Iter<'_> {
 			None => self.ui.next().copied().map(GameState::IngameUI),
 		}
 	}
+}
+
+pub struct GameStateCollectionMut<'a> {
+	pub activity: &'a mut ActivityState,
+	pub ui: &'a mut HashSet<UIState>,
 }
 
 #[derive(Debug, PartialEq)]

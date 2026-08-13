@@ -1,17 +1,18 @@
-use crate::resources::game_state_context::GameStatesContext;
+use crate::resources::{activity_context::ActivityContext, ui_context::UIContext};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::handles_game_states::{GameStateCollection, GameStates};
 
 #[derive(SystemParam)]
 pub struct GameStatesRead<'w> {
-	ctx: Res<'w, GameStatesContext>,
+	activity_ctx: Res<'w, ActivityContext>,
+	ui_ctx: Res<'w, UIContext>,
 }
 
 impl GameStates for GameStatesRead<'_> {
 	fn game_states(&self) -> GameStateCollection<'_> {
 		GameStateCollection {
-			activity: self.ctx.activity,
-			ui: &self.ctx.ui,
+			activity: self.activity_ctx.activity,
+			ui: &self.ui_ctx.ui,
 		}
 	}
 }
