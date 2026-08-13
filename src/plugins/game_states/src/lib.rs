@@ -7,6 +7,7 @@ use crate::{
 	resources::{
 		configured_transitions::ConfiguredTransitions,
 		game_state_context::GameStateContext,
+		game_state_roles::GameStateRoles,
 	},
 	states::activity::Activity,
 	system_params::{
@@ -27,6 +28,7 @@ use common::{
 			AutomaticGameStateTransitions,
 			GameState,
 			HandlesGameStates,
+			NonPausedStates,
 			OnGameState,
 			StateTransition,
 			TransitionsConfigError,
@@ -91,6 +93,7 @@ impl Plugin for GameStatesPlugin {
 
 		app.init_state::<Activity>()
 			.init_resource::<GameStateContext>()
+			.init_resource::<GameStateRoles>()
 			.add_systems(
 				Update,
 				GameStateContext::sync_states.in_set(GameStateSystems),
@@ -131,6 +134,17 @@ impl AddGameStateSystem for GameStatesPlugin {
 				UIStates::on_exit(app, ui, systems);
 			}
 		}
+	}
+}
+
+impl NonPausedStates for GameStatesPlugin {
+	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>) {
+		let GameStateRoles { non_pause_states } = app
+			.world_mut()
+			.get_resource_or_init::<GameStateRoles>()
+			.into_inner();
+
+		non_pause_states.insert(state.into());
 	}
 }
 

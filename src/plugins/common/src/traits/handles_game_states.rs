@@ -16,7 +16,7 @@ use std::{
 };
 
 pub trait HandlesGameStates:
-	AddGameStateSystem + AutomaticGameStateTransitions<ActivityState>
+	AddGameStateSystem + AutomaticGameStateTransitions<ActivityState> + NonPausedStates
 {
 	type TGameStates: SystemParam + GameStates;
 	type TGameStatesMut: SystemParam + GameStatesMut;
@@ -79,6 +79,12 @@ where
 			}
 		}
 	}
+}
+
+pub trait NonPausedStates {
+	const NEVER_PAUSE: &[GameState] = &[GameState::Activity(ActivityState::Play)];
+
+	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>);
 }
 
 pub trait GameStates {
