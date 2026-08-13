@@ -16,7 +16,7 @@ use std::{
 };
 
 pub trait HandlesGameStates:
-	AddGameStateSystem + AutomaticGameStateTransitions<ActivityState>
+	AddGameStateSystem + AutomaticGameStateTransitions<ActivityState> + NonPausedStates
 {
 	type TGameStates: SystemParam + GameStates;
 	type TGameStatesMut: SystemParam + GameStatesMut;
@@ -36,7 +36,7 @@ pub trait AutomaticGameStateTransitions<T> {
 	fn automatic_game_state_transitions(
 		app: &mut App,
 		from_state: T,
-		to_state: StateTransition<T>,
+		to_state: GameStateTransition<T>,
 	) -> Result<Self::TOptionalTransitions<'_>, TransitionsConfigError<T>>;
 }
 
@@ -44,14 +44,14 @@ pub trait WithOptionalTransitions<T> {
 	fn with_optional_transitions<TResult, M>(
 		self,
 		check: impl IntoSystem<(), Option<TResult>, M>,
-		transitions: HashMap<TResult, StateTransition<T>>,
+		transitions: HashMap<TResult, GameStateTransition<T>>,
 	) -> Result<(), TransitionsConfigError<T>>
 	where
 		TResult: PartialEq + Eq + Hash + ThreadSafe;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum StateTransition<T> {
+pub enum GameStateTransition<T> {
 	To(T),
 	ToPrevious,
 }
@@ -79,6 +79,12 @@ where
 			}
 		}
 	}
+}
+
+pub trait NonPausedStates {
+	const DEFAULT: &[ActivityState] = &[ActivityState::Play];
+
+	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>);
 }
 
 pub trait GameStates {

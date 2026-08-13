@@ -7,6 +7,7 @@ use crate::{
 	resources::{
 		configured_transitions::ConfiguredTransitions,
 		game_state_context::GameStateContext,
+		game_state_roles::GameStateRoles,
 	},
 	states::activity::Activity,
 	system_params::{
@@ -15,7 +16,7 @@ use crate::{
 		ui_states::UIStates,
 	},
 };
-use bevy::{ecs::system::ScheduleSystem, prelude::*};
+use bevy::{ecs::system::ScheduleSystem, prelude::*, state::state::StateTransitionSystems};
 use common::{
 	errors::{ErrorData, Level},
 	systems::log::OnError,
@@ -26,9 +27,10 @@ use common::{
 			AddGameStateSystem,
 			AutomaticGameStateTransitions,
 			GameState,
+			GameStateTransition,
 			HandlesGameStates,
+			NonPausedStates,
 			OnGameState,
-			StateTransition,
 			TransitionsConfigError,
 			WithOptionalTransitions,
 		},
@@ -48,13 +50,13 @@ impl GameStatesPlugin {
 	fn apply_transition_from(
 		from_state: ActivityState,
 	) -> impl IntoSystem<
-		In<Option<StateTransition<ActivityState>>>,
+		In<Option<GameStateTransition<ActivityState>>>,
 		Result<(), TransitionError<ActivityState>>,
 		(),
 	> {
 		#[rustfmt::skip]
 		let system = move |
-			In(to_state): In<Option<StateTransition<ActivityState>>>,
+			In(to_state): In<Option<GameStateTransition<ActivityState>>>,
 			mut state_transitions: MessageReader<StateTransitionEvent<Activity>>,
 			mut state: ResMut<NextState<Activity>>
 		| {
@@ -63,10 +65,10 @@ impl GameStatesPlugin {
 			};
 
 			match to_state {
-				StateTransition::To(to_state) => {
+				GameStateTransition::To(to_state) => {
 					state.set(Activity::from(to_state));
 				}
-				StateTransition::ToPrevious => {
+				GameStateTransition::ToPrevious => {
 					let Some(last_transition) = state_transitions.read().last() else {
 						return Err(TransitionError::NoStateTransitionsFor(from_state));
 					};
@@ -91,9 +93,13 @@ impl Plugin for GameStatesPlugin {
 
 		app.init_state::<Activity>()
 			.init_resource::<GameStateContext>()
+			.init_resource::<GameStateRoles>()
 			.add_systems(
-				Update,
-				GameStateContext::sync_states.in_set(GameStateSystems),
+				StateTransition,
+				(GameStateContext::sync_states, GameStateRoles::pause)
+					.chain()
+					.in_set(GameStateSystems)
+					.after(StateTransitionSystems::EnterSchedules),
 			);
 	}
 }
@@ -134,15 +140,26 @@ impl AddGameStateSystem for GameStatesPlugin {
 	}
 }
 
+impl NonPausedStates for GameStatesPlugin {
+	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>) {
+		let GameStateRoles { non_pause_states } = app
+			.world_mut()
+			.get_resource_or_init::<GameStateRoles>()
+			.into_inner();
+
+		non_pause_states.insert(state.into());
+	}
+}
+
 impl AutomaticGameStateTransitions<ActivityState> for GameStatesPlugin {
 	type TOptionalTransitions<'a> = OptionalTransitions<'a>;
 
 	fn automatic_game_state_transitions(
 		app: &mut App,
 		from_state: ActivityState,
-		to_state: StateTransition<ActivityState>,
+		to_state: GameStateTransition<ActivityState>,
 	) -> Result<Self::TOptionalTransitions<'_>, TransitionsConfigError<ActivityState>> {
-		if matches!(to_state, StateTransition::To(to_state) if to_state == from_state) {
+		if matches!(to_state, GameStateTransition::To(to_state) if to_state == from_state) {
 			return Err(TransitionsConfigError::MayNotTransitionToSelf(from_state));
 		}
 
@@ -185,13 +202,13 @@ impl WithOptionalTransitions<ActivityState> for OptionalTransitions<'_> {
 	fn with_optional_transitions<TResult, M>(
 		self,
 		check: impl IntoSystem<(), Option<TResult>, M>,
-		transitions: HashMap<TResult, StateTransition<ActivityState>>,
+		transitions: HashMap<TResult, GameStateTransition<ActivityState>>,
 	) -> Result<(), TransitionsConfigError<ActivityState>>
 	where
 		TResult: PartialEq + Eq + Hash + ThreadSafe,
 	{
 		let any_self_transitions = transitions.values().any(
-			|to_state| matches!(to_state, StateTransition::To(to_state) if to_state == &self.from_state),
+			|to_state| matches!(to_state, GameStateTransition::To(to_state) if to_state == &self.from_state),
 		);
 		if any_self_transitions {
 			return Err(TransitionsConfigError::MayNotTransitionToSelf(
@@ -288,7 +305,7 @@ mod tests {
 		_ = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::To(ActivityState::Play),
+			GameStateTransition::To(ActivityState::Play),
 		);
 
 		app.world_mut()
@@ -311,7 +328,7 @@ mod tests {
 		_ = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::ToPrevious,
+			GameStateTransition::ToPrevious,
 		);
 
 		app.world_mut()
@@ -339,12 +356,12 @@ mod tests {
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::To(ActivityState::Play),
+			GameStateTransition::To(ActivityState::Play),
 		)
 		.unwrap();
 		_ = transitions.with_optional_transitions(
 			|| Some("new game"),
-			HashMap::from([("new game", StateTransition::To(ActivityState::NewGame))]),
+			HashMap::from([("new game", GameStateTransition::To(ActivityState::NewGame))]),
 		);
 
 		app.world_mut()
@@ -367,12 +384,12 @@ mod tests {
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::To(ActivityState::Play),
+			GameStateTransition::To(ActivityState::Play),
 		)
 		.unwrap();
 		_ = transitions.with_optional_transitions(
 			|| Some("previous"),
-			HashMap::from([("previous", StateTransition::ToPrevious)]),
+			HashMap::from([("previous", GameStateTransition::ToPrevious)]),
 		);
 
 		app.world_mut()
@@ -403,12 +420,12 @@ mod tests {
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::To(ActivityState::Play),
+			GameStateTransition::To(ActivityState::Play),
 		)
 		.unwrap();
 		_ = transitions.with_optional_transitions(
 			move || result,
-			HashMap::from([("new game", StateTransition::To(ActivityState::NewGame))]),
+			HashMap::from([("new game", GameStateTransition::To(ActivityState::NewGame))]),
 		);
 
 		app.world_mut()
@@ -438,12 +455,12 @@ mod tests {
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::To(ActivityState::Play),
+			GameStateTransition::To(ActivityState::Play),
 		)
 		.unwrap();
 		_ = transitions.with_optional_transitions(
 			|| Some(true),
-			HashMap::from([(true, StateTransition::To(ActivityState::Save))]),
+			HashMap::from([(true, GameStateTransition::To(ActivityState::Save))]),
 		);
 
 		app.world_mut()
@@ -466,13 +483,13 @@ mod tests {
 		_ = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::To(ActivityState::Play),
+			GameStateTransition::To(ActivityState::Play),
 		);
 
 		let result = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::To(ActivityState::Play),
+			GameStateTransition::To(ActivityState::Play),
 		);
 
 		let error = match result {
@@ -492,7 +509,7 @@ mod tests {
 		let result = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::To(ActivityState::Paused),
+			GameStateTransition::To(ActivityState::Paused),
 		);
 
 		let error = match result {
@@ -512,14 +529,14 @@ mod tests {
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
 			ActivityState::Paused,
-			StateTransition::To(ActivityState::Play),
+			GameStateTransition::To(ActivityState::Play),
 		)
 		.unwrap();
 		let result = transitions.with_optional_transitions(
 			|| Some("foo"),
 			HashMap::from([
-				("foo", StateTransition::ToPrevious),
-				("bar", StateTransition::To(ActivityState::Paused)),
+				("foo", GameStateTransition::ToPrevious),
+				("bar", GameStateTransition::To(ActivityState::Paused)),
 			]),
 		);
 
