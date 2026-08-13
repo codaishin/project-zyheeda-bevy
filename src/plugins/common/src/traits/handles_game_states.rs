@@ -1,7 +1,7 @@
 use crate::{
 	tools::is_not::IsNot,
 	traits::{
-		iteration::{Iter, IterFinite},
+		iteration::{Iter as FiniteIter, IterFinite},
 		thread_safe::ThreadSafe,
 	},
 };
@@ -10,7 +10,7 @@ use bevy::{
 	prelude::*,
 };
 use std::{
-	collections::{HashMap, HashSet},
+	collections::{HashMap, HashSet, hash_set::Iter as HashSetIter},
 	fmt::{Debug, Display},
 	hash::Hash,
 };
@@ -92,7 +92,7 @@ impl<T> GameStatesMut for T where
 }
 
 pub trait GameStates {
-	fn game_states(&self) -> &HashSet<GameState>;
+	fn game_states(&self) -> GameStateCollection<'_>;
 }
 
 pub trait AddGameState<T> {
@@ -101,6 +101,36 @@ pub trait AddGameState<T> {
 
 pub trait RemoveGameState<T> {
 	fn remove_game_state(&mut self, state: &T);
+}
+
+pub struct GameStateCollection<'a> {
+	pub activity: ActivityState,
+	pub ui: &'a HashSet<UIState>,
+}
+
+impl GameStateCollection<'_> {
+	pub fn iter(&self) -> Iter<'_> {
+		Iter {
+			activity: Some(&self.activity),
+			ui: self.ui.iter(),
+		}
+	}
+}
+
+pub struct Iter<'a> {
+	activity: Option<&'a ActivityState>,
+	ui: HashSetIter<'a, UIState>,
+}
+
+impl Iterator for Iter<'_> {
+	type Item = GameState;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		match self.activity.take().copied() {
+			Some(activity) => Some(GameState::Activity(activity)),
+			None => self.ui.next().copied().map(GameState::IngameUI),
+		}
+	}
 }
 
 #[derive(Debug, PartialEq)]
@@ -113,7 +143,6 @@ pub enum OnGameState {
 pub enum GameState {
 	Activity(ActivityState),
 	IngameUI(UIState),
-	Read(ReadState),
 }
 
 macro_rules! game_state_conversions {
@@ -139,7 +168,6 @@ macro_rules! game_state_conversions {
 
 game_state_conversions!(Activity(ActivityState));
 game_state_conversions!(IngameUI(UIState));
-game_state_conversions!(Read(ReadState));
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ActivityState {
@@ -162,11 +190,11 @@ pub enum UIState {
 }
 
 impl IterFinite for UIState {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(UIState::Hud))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(UIState::Hud))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
 			UIState::Hud => Some(UIState::Inventory),
 			UIState::Inventory => Some(UIState::ComboOverview),
@@ -174,11 +202,6 @@ impl IterFinite for UIState {
 			UIState::Settings => None,
 		}
 	}
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum ReadState {
-	Loading,
 }
 
 #[cfg(test)]
@@ -195,6 +218,23 @@ mod tests {
 				UIState::Settings,
 			],
 			UIState::iterator().take(100).collect::<Vec<_>>()
+		);
+	}
+
+	#[test]
+	fn iter_game_state_collection() {
+		let game_states = GameStateCollection {
+			activity: ActivityState::Play,
+			ui: &HashSet::from([UIState::Hud, UIState::Settings]),
+		};
+
+		assert_eq!(
+			HashSet::from([
+				GameState::Activity(ActivityState::Play),
+				GameState::IngameUI(UIState::Hud),
+				GameState::IngameUI(UIState::Settings)
+			]),
+			game_states.iter().collect::<HashSet<_>>()
 		);
 	}
 }

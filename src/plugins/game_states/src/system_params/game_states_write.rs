@@ -7,12 +7,11 @@ use bevy::{ecs::system::SystemParam, prelude::*};
 use common::traits::handles_game_states::{
 	ActivityState,
 	AddGameState,
-	GameState,
+	GameStateCollection,
 	GameStates,
 	RemoveGameState,
 	UIState,
 };
-use std::collections::HashSet;
 
 #[derive(SystemParam)]
 pub struct GameStatesWrite<'w> {
@@ -22,8 +21,11 @@ pub struct GameStatesWrite<'w> {
 }
 
 impl GameStates for GameStatesWrite<'_> {
-	fn game_states(&self) -> &HashSet<GameState> {
-		&self.ctx.states
+	fn game_states(&self) -> GameStateCollection<'_> {
+		GameStateCollection {
+			activity: self.ctx.activity,
+			ui: &self.ctx.ui,
+		}
 	}
 }
 
@@ -91,7 +93,7 @@ mod tests {
 		}};
 	}
 
-	#[test_case(ActivityState::Paused, Activity::Paused; "paused")]
+	#[test_case(ActivityState::Paused, Activity(ActivityState::Paused); "paused")]
 	#[test_case(UIState::Hud, Hud::On; "hud")]
 	#[test_case(UIState::Inventory, Inventory::On; "inventory")]
 	#[test_case(UIState::ComboOverview, ComboOverview::On; "combos")]

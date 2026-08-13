@@ -3,7 +3,8 @@ use bevy::{
 	ecs::system::{ScheduleSystem, SystemParam},
 	prelude::*,
 };
-use common::traits::handles_game_states::UIState;
+use common::traits::{handles_game_states::UIState, iteration::IterFinite};
+use std::collections::HashSet;
 use zyheeda_core::prelude::*;
 
 #[derive(SystemParam)]
@@ -66,6 +67,12 @@ impl UIStates<'static> {
 			UIState::ComboOverview => app.add_systems(OnExit(ComboOverview::On), systems),
 			UIState::Settings => app.add_systems(OnExit(Settings::On), systems),
 		};
+	}
+}
+
+impl From<&UIStates<'_>> for HashSet<UIState> {
+	fn from(ui: &UIStates<'_>) -> Self {
+		HashSet::from_iter(UIState::iterator().filter(|s| ui.is_on(s)))
 	}
 }
 
