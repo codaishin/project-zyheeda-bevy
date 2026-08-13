@@ -6,7 +6,7 @@ mod systems;
 use crate::{
 	resources::{
 		configured_transitions::ConfiguredTransitions,
-		game_state_context::GameStatesContext,
+		game_state_context::GameStateContext,
 	},
 	states::activity::Activity,
 	system_params::{
@@ -90,10 +90,10 @@ impl Plugin for GameStatesPlugin {
 		UIStates::init(app);
 
 		app.init_state::<Activity>()
-			.init_resource::<GameStatesContext>()
+			.init_resource::<GameStateContext>()
 			.add_systems(
 				Update,
-				GameStatesContext::sync_states.in_set(GameStateSystems),
+				GameStateContext::sync_states.in_set(GameStateSystems),
 			);
 	}
 }
@@ -106,7 +106,7 @@ impl SystemSetDefinition for GameStatesPlugin {
 
 impl HandlesGameStates for GameStatesPlugin {
 	type TGameStates = GameStatesRead<'static>;
-	type TGameStatesMut = GameStatesWrite<'static>;
+	type TGameStatesMut = GameStatesWrite<'static, 'static>;
 }
 
 impl AddGameStateSystem for GameStatesPlugin {
@@ -123,12 +123,6 @@ impl AddGameStateSystem for GameStatesPlugin {
 			}
 			OnGameState::Exit(GameState::Activity(activity)) => {
 				app.add_systems(OnExit(Activity::from(activity)), systems);
-			}
-			OnGameState::Enter(GameState::Read(read)) => {
-				app.add_systems(OnEnter(Activity::from(read)), systems);
-			}
-			OnGameState::Exit(GameState::Read(read)) => {
-				app.add_systems(OnExit(Activity::from(read)), systems);
 			}
 			OnGameState::Enter(GameState::IngameUI(ui)) => {
 				UIStates::on_enter(app, ui, systems);
@@ -299,13 +293,13 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity::Paused);
+				state.set(Activity(ActivityState::Paused));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity::Play,
+			&Activity(ActivityState::Play),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -322,18 +316,18 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity::Play);
+				state.set(Activity(ActivityState::Play));
 			})?;
 		app.update();
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity::Paused);
+				state.set(Activity(ActivityState::Paused));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity::Play,
+			&Activity(ActivityState::Play),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -355,13 +349,13 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity::Paused);
+				state.set(Activity(ActivityState::Paused));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity::NewGame,
+			&Activity(ActivityState::NewGame),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -383,18 +377,18 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity::StartScreen);
+				state.set(Activity(ActivityState::StartScreen));
 			})?;
 		app.update();
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity::Paused);
+				state.set(Activity(ActivityState::Paused));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity::StartScreen,
+			&Activity(ActivityState::StartScreen),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -419,13 +413,13 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity::Paused);
+				state.set(Activity(ActivityState::Paused));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity::Play,
+			&Activity(ActivityState::Play),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -438,7 +432,7 @@ mod tests {
 			&mut app,
 			OnGameState::Enter(GameState::Activity(ActivityState::Paused)),
 			|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity::StartScreen);
+				state.set(Activity(ActivityState::StartScreen));
 			},
 		);
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
@@ -454,13 +448,13 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity::Paused);
+				state.set(Activity(ActivityState::Paused));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity::StartScreen,
+			&Activity(ActivityState::StartScreen),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
