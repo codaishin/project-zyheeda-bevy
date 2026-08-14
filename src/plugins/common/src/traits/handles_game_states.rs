@@ -1,9 +1,6 @@
-use crate::{
-	tools::is_not::IsNot,
-	traits::{
-		iteration::{Iter as FiniteIter, IterFinite},
-		thread_safe::ThreadSafe,
-	},
+use crate::traits::{
+	iteration::{Iter as FiniteIter, IterFinite},
+	thread_safe::ThreadSafe,
 };
 use bevy::{
 	ecs::system::{ScheduleSystem, SystemParam},
@@ -14,6 +11,7 @@ use std::{
 	fmt::{Debug, Display},
 	hash::Hash,
 };
+use zyheeda_core::prelude::*;
 
 pub trait HandlesGameStates:
 	AddGameStateSystem + AutomaticGameStateTransitions<ActivityState> + NonPausedStates
