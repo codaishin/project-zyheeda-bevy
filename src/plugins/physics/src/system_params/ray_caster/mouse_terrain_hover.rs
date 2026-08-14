@@ -1,5 +1,5 @@
 use crate::system_params::ray_caster::RayCasterMut;
-use common::traits::handles_physics::{MouseTerrainHover, MouseTerrainPoint, Raycast, Terrain};
+use common::prelude::*;
 
 impl Raycast<MouseTerrainHover> for RayCasterMut<'_, '_> {
 	fn raycast(&mut self, _: MouseTerrainHover) -> Option<MouseTerrainPoint> {

@@ -1,5 +1,5 @@
 use crate::system_parameters::loadout_activity::LoadoutActivityReadContext;
-use common::{tools::action_key::slot::SlotKey, traits::handles_loadout::HeldSkills};
+use common::prelude::*;
 use std::collections::HashSet;
 
 impl HeldSkills for LoadoutActivityReadContext<'_> {
@@ -21,7 +21,6 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{accessors::get::TryGetContext, handles_loadout::skills::Skills};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

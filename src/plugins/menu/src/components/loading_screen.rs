@@ -1,9 +1,6 @@
 use crate::traits::{LoadUi, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::traits::{
-	handles_load_tracking::{AssetsProgress, DependenciesProgress, Progress},
-	handles_localization::{Localize, LocalizeToken},
-};
+use common::prelude::*;
 use std::marker::PhantomData;
 
 #[derive(Component)]

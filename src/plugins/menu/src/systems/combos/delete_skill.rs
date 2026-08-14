@@ -3,14 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryGetContextMut, View},
-		handles_loadout::combos::{Combos, UpdateCombos},
-		handles_player::PlayerEntity,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl DeleteSkill {
 	pub(crate) fn from_combos<TPlayer, TLoadout, TId>(
@@ -52,11 +45,6 @@ fn pressed((.., interaction): &(&DeleteSkill, &Interaction)) -> bool {
 mod tests {
 	use super::*;
 	use crate::testing::{_Player, _PlayerParam};
-	use common::{
-		CommonPlugin,
-		tools::action_key::slot::{HandSlot, SlotKey},
-		traits::handles_loadout::combos::Combo,
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};

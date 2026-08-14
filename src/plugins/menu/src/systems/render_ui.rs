@@ -1,11 +1,10 @@
-use std::ops::Deref;
-
 use crate::traits::insert_ui_content::InsertUiContent;
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
+use common::prelude::*;
+use std::ops::Deref;
 
 impl<T> RenderUi for T where T: InsertUiContent + Component {}
 
@@ -32,7 +31,6 @@ pub(crate) trait RenderUi: InsertUiContent + Component + Sized {
 mod tests {
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp, assert_children_count};

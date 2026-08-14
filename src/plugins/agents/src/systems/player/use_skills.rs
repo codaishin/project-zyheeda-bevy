@@ -3,18 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	tools::action_key::{
-		slot::{HandSlot, SlotKey},
-		targeting::TerrainTargeting,
-	},
-	traits::{
-		accessors::get::TryGetContextMut,
-		handles_input::{GetAllInputStates, InputState},
-		handles_loadout::{HeldSkills, HeldSkillsMut, skills::Skills},
-		handles_skill_physics::{Cursor, InitializedAgent, SkillTarget, Target, TargetMut},
-	},
-};
+use common::prelude::*;
 
 impl Player {
 	pub(crate) fn use_skills<TInput, TPhysics, TLoadout>(
@@ -74,18 +63,6 @@ impl Player {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		tools::action_key::{
-			ActionKey,
-			slot::{HandSlot, SlotKey},
-		},
-		traits::{
-			handles_input::InputState,
-			handles_loadout::HeldSkills,
-			handles_skill_physics::{SkillTarget, Target},
-			iteration::IterFinite,
-		},
-	};
 	use mockall::automock;
 	use std::collections::{HashMap, HashSet};
 	use test_case::test_case;
@@ -227,7 +204,6 @@ mod tests {
 
 	mod terrain_targeting {
 		use super::*;
-		use common::tools::action_key::targeting::TerrainTargeting;
 		use test_case::test_case;
 
 		#[test_case(InputState::just_pressed(); "on just pressed")]

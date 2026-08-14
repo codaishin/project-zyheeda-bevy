@@ -24,7 +24,7 @@ pub(crate) mod ui_overlay;
 
 use bevy::prelude::*;
 use combo_skill_button::Horizontal;
-use common::{tools::action_key::slot::SlotKey, traits::handles_loadout::LoadoutKey};
+use common::prelude::*;
 use std::marker::PhantomData;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]

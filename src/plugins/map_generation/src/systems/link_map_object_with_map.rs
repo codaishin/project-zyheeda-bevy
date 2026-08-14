@@ -3,11 +3,7 @@ use crate::components::map::{
 	objects::{MapObject, MapObjectOf},
 };
 use bevy::prelude::*;
-use common::{
-	errors::{ErrorData, Level},
-	traits::accessors::get::TryApplyOn,
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::fmt::Display;
 
 impl MapObject {

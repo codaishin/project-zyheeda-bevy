@@ -7,10 +7,8 @@ use bevy::{
 	prelude::*,
 };
 use common::{
-	components::persistent_entity::PersistentEntity,
 	error_logger::{GlobalErrorLogger, Log},
-	errors::{ErrorData, Level},
-	traits::{accessors::get::View, handles_player::PlayerEntity},
+	prelude::*,
 };
 use std::{fmt::Display, iter::Copied, time::Duration};
 

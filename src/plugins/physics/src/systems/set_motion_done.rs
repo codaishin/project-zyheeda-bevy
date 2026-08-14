@@ -3,10 +3,7 @@ use crate::components::{
 	motion_controller::{MotionController, OldTranslation},
 };
 use bevy::prelude::*;
-use common::{
-	traits::{accessors::get::TryApplyOn, handles_physics::CharacterMotion},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::time::Duration;
 
 impl MotionController {
@@ -69,14 +66,9 @@ fn is_done(motion: &CharacterMotion, transform: &Transform, delta: Duration) -> 
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
-	use std::f32::consts::PI;
-
 	use super::*;
 	use crate::components::{character_motion::IsInMotion, motion_controller::MotionControllerOf};
-	use common::{
-		tools::{UnitsPerSecond, speed::Speed},
-		traits::handles_physics::CharacterMotion,
-	};
+	use std::f32::consts::PI;
 	use testing::{IsChanged, SingleThreadedApp};
 
 	fn setup(delta: Duration) -> App {

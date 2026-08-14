@@ -31,7 +31,7 @@ impl MouseOverride {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::ActionKey;
+	use common::prelude::*;
 	use std::ops::DerefMut;
 	use testing::{IsChanged, SingleThreadedApp};
 

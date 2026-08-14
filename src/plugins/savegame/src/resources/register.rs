@@ -4,11 +4,7 @@ use crate::{
 	file_io::FileIO,
 };
 use bevy::prelude::*;
-use common::traits::{
-	handles_saving::SavableComponent,
-	load_asset::LoadAsset,
-	thread_safe::ThreadSafe,
-};
+use common::prelude::*;
 use std::{
 	any::TypeId,
 	collections::HashSet,

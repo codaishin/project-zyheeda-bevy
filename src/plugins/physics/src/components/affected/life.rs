@@ -1,6 +1,6 @@
 use crate::systems::insert_affected::AffectedComponent;
 use bevy::prelude::*;
-use common::{attributes::health::Health, traits::accessors::get::View};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 

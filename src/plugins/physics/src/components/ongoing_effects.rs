@@ -3,10 +3,7 @@ use crate::components::{
 	effects::{force::ForceEffect, gravity::GravityEffect, health_damage::HealthDamageEffect},
 };
 use bevy::prelude::{Component, default};
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::handles_saving::{SavableComponent, UniqueComponentId},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 

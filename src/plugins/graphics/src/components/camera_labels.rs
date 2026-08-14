@@ -18,12 +18,7 @@ use bevy::{
 	prelude::*,
 	render::extract_component::ExtractComponent,
 };
-use common::{
-	errors::Unreachable,
-	tools::pixel::Pixel,
-	traits::prefab::{Prefab, PrefabEntityCommands},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 

@@ -1,18 +1,12 @@
 use crate::components::skill::{CreatedFrom, Skill};
-use common::{
-	errors::Unreachable,
-	traits::{
-		handles_custom_assets::TryLoadFrom,
-		handles_skill_physics::{Effect, SkillCaster, SkillMount, SkillShape},
-	},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct SkillDto {
 	pub(crate) shape: SkillShape,
-	pub(crate) contact_effects: Vec<Effect>,
-	pub(crate) projection_effects: Vec<Effect>,
+	pub(crate) contact_effects: Vec<SkillEffect>,
+	pub(crate) projection_effects: Vec<SkillEffect>,
 	pub(crate) caster: SkillCaster,
 	pub(crate) mount: SkillMount,
 }

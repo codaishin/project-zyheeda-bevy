@@ -5,6 +5,7 @@ pub mod effects;
 pub mod error_logger;
 pub mod errors;
 pub mod observers;
+pub mod prelude;
 pub mod resources;
 pub mod states;
 pub mod system_params;

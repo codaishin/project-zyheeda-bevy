@@ -14,13 +14,7 @@ use crate::components::{
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
-use common::{
-	errors::Unreachable,
-	traits::{
-		handles_physics::physical_bodies::{Blocker, BodyConfig, PhysicsType, Shape},
-		prefab::{Prefab, PrefabEntityCommands},
-	},
-};
+use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(Component, Debug, PartialEq)]
@@ -104,13 +98,6 @@ impl Prefab<()> for Body {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		tools::Units,
-		traits::{
-			handles_physics::physical_bodies::{Blocker, BodyConfig, Shape, ShapeParameters},
-			prefab::AddPrefabObserver,
-		},
-	};
 	use std::collections::HashSet;
 	use testing::SingleThreadedApp;
 
@@ -125,7 +112,6 @@ mod tests {
 	mod body {
 		use super::*;
 		use crate::components::collision_domains::Physical;
-		use common::traits::handles_physics::physical_bodies::Core;
 
 		mod agent {
 			use super::*;
@@ -317,7 +303,6 @@ mod tests {
 	mod sub_frames {
 		use super::*;
 		use crate::components::collider::ColliderOf;
-		use common::traits::handles_physics::physical_bodies::InteractiveFrame;
 		use testing::assert_children_count;
 
 		#[test]

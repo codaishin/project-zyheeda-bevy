@@ -6,16 +6,7 @@ pub(crate) mod void_sphere;
 
 use crate::components::enemy::attack_config::EnemyAttackConfig;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	components::persistent_entity::PersistentEntity,
-	errors::Unreachable,
-	tools::Units,
-	traits::{
-		accessors::get::TryGetContextMut,
-		handles_graphics::{HasNoRole, Role, SetRole},
-		prefab::{Prefab, PrefabEntityCommands},
-	},
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 

@@ -2,13 +2,7 @@ mod configure_movement;
 
 use crate::components::config::Config;
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::{
-	traits::{
-		accessors::get::{GetMut, TryGetContextMut},
-		handles_movement::NotConfiguredMovement,
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
-};
+use common::prelude::*;
 
 #[derive(SystemParam)]
 pub struct MovementConfigParamMut<'w, 's> {

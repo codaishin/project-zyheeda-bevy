@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::tools::UnitsPerSecond;
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform)]

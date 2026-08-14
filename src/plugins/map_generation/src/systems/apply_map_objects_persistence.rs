@@ -6,11 +6,7 @@ use crate::components::{
 	spawned_from::SpawnedFrom,
 };
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::accessors::get::TryApplyOn,
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl Map {
 	pub(crate) fn apply_map_objects_persistence(
@@ -45,7 +41,6 @@ mod tests {
 		},
 		spawned_from::SpawnedFrom,
 	};
-	use common::components::persistent_entity::PersistentEntity;
 	use std::collections::HashSet;
 	use testing::{IsChanged, SingleThreadedApp};
 

@@ -1,5 +1,5 @@
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{tools::path::Path, traits::load_asset::LoadAsset};
+use common::{prelude::*, tools::path::Path};
 
 impl<T> BeginLoadingResource for T where T: Asset {}
 
@@ -28,7 +28,7 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::load_asset::mock::MockAssetServer;
+	use common::traits::load_asset::mock_asset_loader::MockAssetServer;
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath, Debug, PartialEq)]

@@ -4,7 +4,7 @@ use crate::{
 	traits::colors::{HasPanelColors, PanelColors},
 };
 use bevy::prelude::*;
-use common::traits::accessors::{get::View, set::Setter};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(UILabel)]

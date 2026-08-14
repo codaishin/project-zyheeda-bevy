@@ -3,10 +3,7 @@ use bevy::{
 	animation::{AnimatedBy, AnimationTargetId},
 	prelude::*,
 };
-use common::{
-	traits::{accessors::get::TryApplyOn, wrap_handle::GetHandle},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl SetupAnimations {
 	#[allow(clippy::type_complexity)]
@@ -48,7 +45,6 @@ impl SetupAnimations {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_animations::AnimationClips;
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Component)]

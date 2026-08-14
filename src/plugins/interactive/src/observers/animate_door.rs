@@ -1,9 +1,6 @@
 use crate::components::{door::Door, interactive_state::IsActive};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::TryGetContextMut,
-	handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
-};
+use common::prelude::*;
 use zyheeda_core::collections::ordered::OrderedSet;
 
 impl Door {
@@ -62,7 +59,6 @@ impl From<OpenClose> for AnimationPriority {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::traits::handles_animations::{ActiveAnimations, AnimationKey, AnimationPriority};
 	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 	use zyheeda_core::collections::ordered::OrderedSet;

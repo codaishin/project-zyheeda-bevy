@@ -214,7 +214,7 @@ impl<'a, T, TEntity> TryApplyOn<'a, TEntity> for T where T: GetMut<TEntity> + 'a
 ///
 /// # Example
 /// ```
-/// use common::traits::accessors::get::{ViewField};
+/// use common::prelude::*;
 ///
 /// // Small types can be returned by value.
 /// #[derive(Clone, Copy)]
@@ -260,7 +260,7 @@ pub trait ViewField {
 ///
 /// # Example
 /// ```
-/// use common::traits::accessors::get::{ViewField, View};
+/// use common::prelude::*;
 ///
 /// #[derive(Debug, PartialEq)]
 /// struct MyField;
@@ -293,7 +293,7 @@ where
 /// Useful when you want to name the retrieved property directly on the call.
 ///
 /// ```
-/// use common::traits::accessors::get::{ViewField, View, ViewOf};
+/// use common::prelude::*;
 ///
 /// #[derive(Debug, PartialEq)]
 /// struct MyField;

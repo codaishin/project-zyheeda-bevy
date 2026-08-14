@@ -4,10 +4,7 @@ use crate::components::{
 	map_agents::{GridAgent, GridAgentOf},
 };
 use bevy::prelude::*;
-use common::{
-	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl GridAgent {
 	#[allow(clippy::type_complexity)]
@@ -36,7 +33,6 @@ impl GridAgent {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::register_persistent_entities::RegisterPersistentEntities;
 	use testing::{IsChanged, SingleThreadedApp};
 
 	struct _Graph;

@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use common::{
-	tools::UnitsPerSecond,
-	traits::handles_movement::{MovementSpeed, RequiredClearance, SpeedToggle},
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::ops::Index;

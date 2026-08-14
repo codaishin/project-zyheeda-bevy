@@ -1,45 +1,45 @@
 use crate::{tools::action_key::slot::SlotKey, traits::accessors::get::View};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct EssenceSlot(pub SlotKey);
+pub struct VisibleEssenceSlot(pub SlotKey);
 
-impl From<SlotKey> for EssenceSlot {
+impl From<SlotKey> for VisibleEssenceSlot {
 	fn from(slot_key: SlotKey) -> Self {
 		Self(slot_key)
 	}
 }
 
-impl View<SlotKey> for EssenceSlot {
+impl View<SlotKey> for VisibleEssenceSlot {
 	fn view(&self) -> SlotKey {
 		self.0
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct HandSlot(pub SlotKey);
+pub struct VisibleHandSlot(pub SlotKey);
 
-impl From<SlotKey> for HandSlot {
+impl From<SlotKey> for VisibleHandSlot {
 	fn from(slot_key: SlotKey) -> Self {
 		Self(slot_key)
 	}
 }
 
-impl View<SlotKey> for HandSlot {
+impl View<SlotKey> for VisibleHandSlot {
 	fn view(&self) -> SlotKey {
 		self.0
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct ForearmSlot(pub SlotKey);
+pub struct VisibleForearmSlot(pub SlotKey);
 
-impl From<SlotKey> for ForearmSlot {
+impl From<SlotKey> for VisibleForearmSlot {
 	fn from(slot_key: SlotKey) -> Self {
 		Self(slot_key)
 	}
 }
 
-impl View<SlotKey> for ForearmSlot {
+impl View<SlotKey> for VisibleForearmSlot {
 	fn view(&self) -> SlotKey {
 		self.0
 	}

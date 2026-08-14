@@ -1,4 +1,4 @@
-use common::traits::handles_input::GetAllInputs;
+use common::prelude::*;
 
 pub(crate) trait UpdateKeyBindings {
 	fn update_key_bindings<TInput>(&mut self, input: &TInput)

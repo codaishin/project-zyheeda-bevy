@@ -1,5 +1,5 @@
 use crate::traits::{file_exists::FileExists, read_file::ReadFile, write_file::WriteFile};
-use common::errors::{ErrorData, Level};
+use common::prelude::*;
 use std::{
 	ffi::OsStr,
 	fmt::Display,

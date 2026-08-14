@@ -3,7 +3,7 @@ use crate::{
 	resources::camera_parameters::CameraParameters,
 };
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl CameraParameters {
 	pub(crate) fn apply_changes(

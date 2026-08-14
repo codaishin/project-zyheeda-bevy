@@ -7,16 +7,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::{Get, TryApplyOn, TryGetContext, View},
-		handles_loadout::combos::{Combos, NextConfiguredKeys},
-		handles_player::PlayerEntity,
-		thread_safe::ThreadSafe,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl KeySelectDropdownCommand<AppendSkillCommand> {
 	pub(crate) fn insert_dropdown<TPlayer, TLoadout>(
@@ -74,7 +65,6 @@ mod tests {
 		components::key_select_dropdown_command::ExcludeKeys,
 		testing::{_Player, _PlayerParam},
 	};
-	use common::{CommonPlugin, tools::action_key::slot::HandSlot};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashSet;

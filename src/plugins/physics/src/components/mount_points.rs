@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::{tools::bone_name::BoneName, traits::thread_safe::ThreadSafe};
+use common::prelude::*;
 use std::{collections::HashMap, hash::Hash};
 
 #[derive(Component, Debug, PartialEq)]

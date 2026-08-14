@@ -15,11 +15,7 @@ use std::fmt::Debug;
 use crate::{components::combo_overview::ComboSkill, tools::Layout};
 use bevy::prelude::*;
 use build_combo_tree_layout::ComboTreeLayout;
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::load_asset::LoadAsset,
-	zyheeda_commands::ZyheedaEntityCommands,
-};
+use common::prelude::*;
 
 pub(crate) trait UpdateCombosView<TId>
 where

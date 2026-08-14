@@ -7,10 +7,7 @@ use crate::{
 	traits::{GetAllActiveAnimations, animation_graph::GetNodeMut},
 };
 use bevy::prelude::*;
-use common::traits::{
-	handles_animations::{AnimationClips, DirForwardPitch},
-	wrap_handle::{GetHandle, WrapHandle},
-};
+use common::prelude::*;
 
 impl<T> SetPitchAnimationWeights for T where T: Component + GetAllActiveAnimations {}
 
@@ -110,19 +107,6 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::animation_dispatch::AnimationPlayerOf;
-	use common::{
-		tools::action_key::slot::SlotKey,
-		traits::{
-			handles_animations::{
-				Animation,
-				AnimationKey,
-				ForwardPitch,
-				PitchedForward,
-				SkillAnimation,
-			},
-			wrap_handle::{GetHandle, WrapHandle},
-		},
-	};
 	use std::{collections::HashMap, slice::Iter};
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, assert_eq_approx, new_handle};

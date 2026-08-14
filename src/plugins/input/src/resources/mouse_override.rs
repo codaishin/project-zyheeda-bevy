@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::{tools::action_key::ActionKey, traits::handles_input::InputState};
+use common::prelude::*;
 
 #[derive(Resource, Default, Debug, PartialEq)]
 pub(crate) enum MouseOverride {

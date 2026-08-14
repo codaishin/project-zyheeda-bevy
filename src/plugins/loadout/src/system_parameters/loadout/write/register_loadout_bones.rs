@@ -2,14 +2,7 @@ use crate::{
 	components::slot_definitions::SlotDefinitions,
 	system_parameters::loadout::LoadoutPrep,
 };
-use common::{
-	tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName},
-	traits::{
-		accessors::get::{GetMut, TryGetContextMut},
-		handles_loadout::register_loadout_bones::{NoBonesRegistered, RegisterLoadoutBones},
-	},
-	zyheeda_commands::ZyheedaEntityCommands,
-};
+use common::prelude::*;
 use std::collections::HashMap;
 
 impl TryGetContextMut<NoBonesRegistered> for LoadoutPrep<'static, 'static> {
@@ -57,7 +50,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::load_asset::mock::MockAssetServer;
+	use common::traits::load_asset::mock_asset_loader::MockAssetServer;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

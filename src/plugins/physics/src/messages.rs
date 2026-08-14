@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::handles_physics::TimeOfImpact;
+use common::prelude::*;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Ray(pub Ray3d, pub TimeOfImpact);

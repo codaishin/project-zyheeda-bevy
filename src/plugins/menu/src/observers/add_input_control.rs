@@ -1,10 +1,6 @@
 use crate::components::quickbar_panel::QuickbarPanel;
 use bevy::prelude::*;
-use common::{
-	tools::action_key::ActionKey,
-	traits::accessors::get::TryApplyOn,
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl QuickbarPanel {
 	pub(crate) fn add_input_control<TActionKeyButton>(
@@ -29,7 +25,6 @@ impl QuickbarPanel {
 mod tests {
 	use super::*;
 	use crate::tools::PanelState;
-	use common::tools::action_key::{ActionKey, slot::HandSlot};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]

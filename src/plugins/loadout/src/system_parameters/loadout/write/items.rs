@@ -3,16 +3,7 @@ use crate::{
 	system_parameters::loadout::LoadoutWriter,
 };
 use bevy::prelude::*;
-use common::{
-	tools::inventory_key::InventoryKey,
-	traits::{
-		accessors::get::TryGetContextMut,
-		handles_loadout::{
-			LoadoutKey,
-			items::{Items, SwapItems},
-		},
-	},
-};
+use common::prelude::*;
 
 impl TryGetContextMut<Items> for LoadoutWriter<'static, 'static> {
 	type TContext<'ctx> = ItemsMut<'ctx>;
@@ -82,11 +73,10 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{combos::Combos, queue::Queue},
+		components::{combos::CombosInternal, queue::Queue},
 		skills::Skill,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::tools::action_key::slot::SlotKey;
 	use std::ops::Deref;
 	use testing::{IsChanged, SingleThreadedApp, new_handle};
 
@@ -118,7 +108,7 @@ mod tests {
 				.spawn((
 					Slots::from([(SlotKey(11), Some(slot_item.clone()))]),
 					Inventory::from([None, Some(inventory_item.clone())]),
-					Combos::default(),
+					CombosInternal::default(),
 					Queue::default(),
 				))
 				.id();
@@ -141,7 +131,6 @@ mod tests {
 
 	mod swap {
 		use super::*;
-		use common::traits::thread_safe::ThreadSafe;
 		use test_case::test_case;
 
 		#[test]
@@ -154,7 +143,7 @@ mod tests {
 				.spawn((
 					Slots::default(),
 					Inventory::from([Some(a.clone()), Some(b.clone())]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -186,7 +175,7 @@ mod tests {
 				.spawn((
 					Slots::default(),
 					Inventory::from([Some(a.clone()), Some(b.clone())]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -218,7 +207,7 @@ mod tests {
 				.spawn((
 					Slots::default(),
 					Inventory::from([Some(a.clone()), Some(b.clone())]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -250,7 +239,7 @@ mod tests {
 				.spawn((
 					Slots::default(),
 					Inventory::from([Some(a.clone()), Some(b.clone()), None, None]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -281,7 +270,7 @@ mod tests {
 						(SlotKey(42), Some(b.clone())),
 					]),
 					Inventory::default(),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -312,7 +301,7 @@ mod tests {
 				.spawn((
 					Slots::from([(SlotKey(11), Some(item.clone()))]),
 					Inventory::default(),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -347,7 +336,7 @@ mod tests {
 				.spawn((
 					Slots::from([(SlotKey(42), Some(a.clone()))]),
 					Inventory::from([None, Some(b.clone())]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -384,7 +373,7 @@ mod tests {
 				.spawn((
 					Slots::from([(SlotKey(42), Some(item.clone()))]),
 					Inventory::from([None, None]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -421,7 +410,7 @@ mod tests {
 				.spawn((
 					Slots::from([(SlotKey(42), Some(item.clone()))]),
 					Inventory::from([None, None]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -458,7 +447,7 @@ mod tests {
 				.spawn((
 					Slots::from([(SlotKey(42), Some(item.clone()))]),
 					Inventory::from([None, None, None, None]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -495,7 +484,7 @@ mod tests {
 				.spawn((
 					Slots::default(),
 					Inventory::from([None, Some(item.clone())]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 
@@ -531,7 +520,7 @@ mod tests {
 				.spawn((
 					Slots::from([(SlotKey(11), Some(new_handle()))]),
 					Inventory::from([None, None, Some(new_handle()), None]),
-					Combos::default(),
+					CombosInternal::default(),
 				))
 				.id();
 			app.add_systems(

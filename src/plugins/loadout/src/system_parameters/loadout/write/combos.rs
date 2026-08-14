@@ -1,17 +1,11 @@
 use crate::{
-	components::combos::Combos,
+	components::combos::CombosInternal,
 	skills::{Skill, SkillId},
 	system_parameters::loadout::LoadoutWriter,
 	traits::combos::UpdateComboSkills,
 };
 use bevy::prelude::*;
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::TryGetContextMut,
-		handles_loadout::combos::{Combo, Combos as CombosMarker, UpdateCombos},
-	},
-};
+use common::{prelude::*, traits::handles_loadout::combos::Combos as CombosMarker};
 
 impl TryGetContextMut<CombosMarker> for LoadoutWriter<'static, 'static> {
 	type TContext<'ctx> = CombosMut<'ctx>;
@@ -30,7 +24,7 @@ impl TryGetContextMut<CombosMarker> for LoadoutWriter<'static, 'static> {
 }
 
 pub struct CombosMut<'ctx> {
-	combos: Mut<'ctx, Combos>,
+	combos: Mut<'ctx, CombosInternal>,
 	skills: &'ctx Assets<Skill>,
 }
 

@@ -3,14 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryApplyOn, TryGetContextMut, View},
-		handles_loadout::items::{Items, SwapItems},
-		handles_player::PlayerEntity,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 pub fn drop_item<TPlayer, TLoadout>(
 	mut commands: ZyheedaCommands,
@@ -61,11 +54,6 @@ mod tests {
 	use bevy::{
 		app::{App, Update},
 		ui::Interaction,
-	};
-	use common::{
-		CommonPlugin,
-		tools::action_key::slot::SlotKey,
-		traits::handles_loadout::LoadoutKey,
 	};
 	use testing::{SingleThreadedApp, set_input};
 

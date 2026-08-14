@@ -2,7 +2,7 @@ pub(crate) mod get_mount_point;
 
 use crate::components::mount_points::{MountPoints, MountPointsDefinition};
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::traits::thread_safe::ThreadSafe;
+use common::prelude::*;
 use std::hash::Hash;
 
 #[derive(SystemParam, Debug)]

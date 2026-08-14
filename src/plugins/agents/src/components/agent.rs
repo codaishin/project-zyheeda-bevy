@@ -3,18 +3,7 @@ use crate::{
 	components::{agent_config::AgentConfig, enemy::void_sphere::VoidSphere, player::Player},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	errors::{ErrorData, Level},
-	systems::register_animations::AnimationsMarker,
-	traits::{
-		accessors::get::{TryGetContextMut, View},
-		handles_enemies::EnemyType,
-		handles_graphics::{HasNoRole, Role, SetRole},
-		handles_map_generation::{AgentType, GroundPosition, MapPrefabs, SetPrefab},
-		prefab::{Prefab, PrefabEntityCommands},
-	},
-	zyheeda_commands::ZyheedaEntityCommands,
-};
+use common::{prelude::*, systems::register_animations::AnimationsMarker};
 use macros::{SavableComponent, asset_path};
 use serde::{Deserialize, Serialize};
 use std::{fmt::Display, ops::DerefMut};

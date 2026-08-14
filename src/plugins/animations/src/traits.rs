@@ -4,7 +4,7 @@ pub(crate) mod player_idle;
 pub(crate) mod tuple_animation_player_transitions;
 
 use crate::components::animation_dispatch::AnimationState;
-use common::traits::handles_animations::{AnimationClips, AnimationKey, AnimationPriority};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 use zyheeda_core::math::f32_finite::F32Finite;
 

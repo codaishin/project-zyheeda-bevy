@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::handles_map_generation::AgentType;
+use common::prelude::*;
 
 #[derive(Component, Default, Debug, PartialEq, Clone)]
 #[component(immutable)]

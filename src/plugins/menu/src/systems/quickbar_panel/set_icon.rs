@@ -3,15 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryApplyOn, TryGetContext, View, ViewOf},
-		handles_loadout::skills::{ReadSkills, SkillIcon, SkillToken, Skills},
-		handles_localization::Token,
-		handles_player::PlayerEntity,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl QuickbarPanel {
 	pub(crate) fn set_icon<TPlayer, TLoadout>(
@@ -75,11 +67,6 @@ mod tests {
 		components::{icon::Icon, label::UILabel},
 		testing::{_Player, _PlayerParam},
 		tools::PanelState,
-	};
-	use common::{
-		CommonPlugin,
-		tools::{action_key::slot::HandSlot, skill_execution::SkillExecution},
-		traits::{accessors::get::View, handles_loadout::LoadoutKey, handles_localization::Token},
 	};
 	use std::collections::HashMap;
 	use testing::{IsChanged, SingleThreadedApp, new_handle};

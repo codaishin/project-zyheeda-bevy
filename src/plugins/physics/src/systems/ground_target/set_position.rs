@@ -1,22 +1,15 @@
-use crate::components::{ground_target::GroundTarget, target::Target};
+use crate::components::{ground_target::GroundTarget, target::SkillTargetInternal};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryApplyOn},
-		handles_physics::{MouseHover, MouseHoversOver, Raycast},
-		handles_skill_physics::SkillTarget,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl GroundTarget {
 	pub(crate) fn set_position<TRayCaster>(
 		mut cmd: ZyheedaCommands,
 		transforms: Query<&Transform>,
-		targets: Query<&Target>,
+		targets: Query<&SkillTargetInternal>,
 		ground_targets: Query<(Entity, &GroundTarget), Added<GroundTarget>>,
 		mut ray_caster: StaticSystemParam<TRayCaster>,
 	) where
@@ -26,7 +19,7 @@ impl GroundTarget {
 			let Some(caster) = cmd.get(&ground_target.caster.0) else {
 				continue;
 			};
-			let Ok(Target(Some(target))) = targets.get(caster) else {
+			let Ok(SkillTargetInternal(Some(target))) = targets.get(caster) else {
 				continue;
 			};
 
@@ -95,18 +88,8 @@ fn mouse_hover_translation(
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
-	use crate::components::target::Target;
-
 	use super::*;
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		tools::Units,
-		traits::{
-			handles_physics::MouseHoversOver,
-			handles_skill_physics::{Cursor, SkillCaster},
-			register_persistent_entities::RegisterPersistentEntities,
-		},
-	};
+	use crate::components::target::SkillTargetInternal;
 	use macros::NestedMocks;
 	use mockall::automock;
 	use std::f32::consts::PI;
@@ -148,8 +131,11 @@ mod tests {
 	fn set_to_cursor_terrain(cursor: Cursor) {
 		let mut app = setup();
 		let caster = SkillCaster::default();
-		app.world_mut()
-			.spawn((Transform::default(), *caster, Target::from(cursor)));
+		app.world_mut().spawn((
+			Transform::default(),
+			*caster,
+			SkillTargetInternal::from(cursor),
+		));
 		app.insert_resource(_RayCaster::new().with_mock(|mock| {
 			mock.expect_raycast()
 				.once()
@@ -181,8 +167,11 @@ mod tests {
 				scale: Vec3::splat(42.),
 			})
 			.id();
-		app.world_mut()
-			.spawn((Transform::default(), *caster, Target::from(cursor)));
+		app.world_mut().spawn((
+			Transform::default(),
+			*caster,
+			SkillTargetInternal::from(cursor),
+		));
 		app.insert_resource(_RayCaster::new().with_mock(|mock| {
 			mock.expect_raycast()
 				.once()
@@ -209,8 +198,11 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut()
-			.spawn((Transform::default(), *caster, Target::from(target)));
+		app.world_mut().spawn((
+			Transform::default(),
+			*caster,
+			SkillTargetInternal::from(target),
+		));
 		app.world_mut()
 			.spawn((Transform::from_xyz(3., 7., -1.), target));
 		let entity = app
@@ -231,8 +223,11 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut()
-			.spawn((Transform::default(), *caster, Target::from(target)));
+		app.world_mut().spawn((
+			Transform::default(),
+			*caster,
+			SkillTargetInternal::from(target),
+		));
 		app.world_mut().spawn((
 			Transform::from_xyz(3., 7., -1.).with_scale(Vec3::splat(42.)),
 			target,
@@ -255,8 +250,11 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut()
-			.spawn((Transform::default(), *caster, Target::from(target)));
+		app.world_mut().spawn((
+			Transform::default(),
+			*caster,
+			SkillTargetInternal::from(target),
+		));
 		app.world_mut()
 			.spawn((Transform::from_xyz(6., 0., 8.), target));
 		let entity = app
@@ -280,7 +278,7 @@ mod tests {
 		app.world_mut().spawn((
 			Transform::from_xyz(1., 0., 0.),
 			*caster,
-			Target::from(target),
+			SkillTargetInternal::from(target),
 		));
 		app.world_mut()
 			.spawn((Transform::from_xyz(7., 0., 8.), target));
@@ -302,7 +300,8 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut().spawn((*caster, Target::from(target)));
+		app.world_mut()
+			.spawn((*caster, SkillTargetInternal::from(target)));
 		app.world_mut()
 			.spawn((Transform::from_xyz(6., 0., 8.), target));
 		let entity = app
@@ -326,7 +325,7 @@ mod tests {
 		app.world_mut().spawn((
 			Transform::default().looking_to(Vec3::new(3., 0., 4.), Vec3::Y),
 			*caster,
-			Target::from(target),
+			SkillTargetInternal::from(target),
 		));
 		app.world_mut()
 			.spawn((Transform::from_xyz(1., 0., 1.), target));
@@ -349,8 +348,11 @@ mod tests {
 		let mut app = setup();
 		let caster = SkillCaster::default();
 		let target = PersistentEntity::default();
-		app.world_mut()
-			.spawn((Transform::default(), *caster, Target::from(target)));
+		app.world_mut().spawn((
+			Transform::default(),
+			*caster,
+			SkillTargetInternal::from(target),
+		));
 		app.world_mut()
 			.spawn((Transform::from_xyz(1., 0., 1.), target));
 		let entity = app

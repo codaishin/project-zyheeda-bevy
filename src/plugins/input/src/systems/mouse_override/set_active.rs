@@ -32,10 +32,7 @@ impl MouseOverride {
 mod tests {
 	use super::*;
 	use crate::resources::mouse_override::MouseOverride;
-	use common::{
-		tools::action_key::{ActionKey, slot::HandSlot},
-		traits::handles_input::InputState,
-	};
+	use common::prelude::*;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, fake_entity};
 

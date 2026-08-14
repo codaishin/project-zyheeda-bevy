@@ -2,7 +2,7 @@ use crate::{
 	materials::effect_material::{EffectFlag, EffectMaterial},
 	traits::modify_material::ModifyMaterial,
 };
-use common::effects::gravity::Gravity;
+use common::prelude::*;
 
 impl ModifyMaterial for Gravity {
 	fn modify_material(skill_material: &mut EffectMaterial) {

@@ -3,18 +3,7 @@ mod systems;
 mod traits;
 
 use bevy::prelude::*;
-use common::{
-	attributes::health::Health,
-	traits::{
-		after_plugin::AfterPlugin,
-		handles_agents::HandlesAgents,
-		handles_graphics::HandlesCameras,
-		handles_physics::HandlesLife,
-		ownership_relation::OwnershipRelation,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::{prelude::*, traits::ownership_relation::OwnershipRelation};
 use components::bar::Bar;
 use std::marker::PhantomData;
 use systems::{bar::bar, render_bar::render_bar};

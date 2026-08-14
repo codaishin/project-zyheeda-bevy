@@ -6,7 +6,7 @@ use bevy::{
 	},
 	prelude::*,
 };
-use common::traits::handles_input::{GetAllInputs, InputSetupChanged};
+use common::prelude::*;
 use std::ops::Deref;
 
 impl<T> SetKeyBindings for T where T: UpdateKeyBindings + Component<Mutability = Mutable> {}
@@ -33,7 +33,6 @@ pub(crate) trait SetKeyBindings:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::{ActionKey, user_input::UserInput};
 	use std::{any::type_name, fmt::Debug};
 	use testing::SingleThreadedApp;
 

@@ -4,14 +4,7 @@ use crate::{
 	traits::visualize_item::VisualizeItem,
 };
 use bevy::prelude::*;
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::{GetRef, TryApplyOn, View},
-		thread_safe::ThreadSafe,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::hash::Hash;
 
 impl<TKey> SlotVisualization<TKey>
@@ -42,7 +35,6 @@ mod tests {
 	use super::*;
 	use crate::{components::slots::Slots, item::Item};
 	use bevy::app::{App, Update};
-	use common::{tools::action_key::slot::SlotKey, traits::handles_localization::Token};
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Debug, PartialEq, Eq, Hash)]

@@ -1,5 +1,5 @@
 use super::EffectApplies;
-use crate::{attributes::health::Health, traits::handles_physics::Effect};
+use crate::{attributes::health::Health, traits::handles_physics::PhysicalEffect};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
@@ -15,6 +15,6 @@ impl HealthDamage {
 	}
 }
 
-impl Effect for HealthDamage {
+impl PhysicalEffect for HealthDamage {
 	type TTarget = Health;
 }

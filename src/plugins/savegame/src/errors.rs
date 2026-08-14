@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::errors::{ErrorData, Level};
+use common::prelude::*;
 use std::{
 	collections::{HashMap, HashSet},
 	fmt::Display,

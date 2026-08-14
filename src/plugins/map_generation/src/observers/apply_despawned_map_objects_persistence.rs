@@ -3,7 +3,7 @@ use crate::components::{
 	spawned_from::SpawnedFrom,
 };
 use bevy::prelude::*;
-use common::components::persistent_entity::PersistentEntity;
+use common::prelude::*;
 
 impl Map {
 	pub(crate) fn apply_despawned_map_objects_persistence(
@@ -27,7 +27,6 @@ impl Map {
 mod tests {
 	use super::*;
 	use crate::components::map::{MapObjectSource, objects::MapObjectOf};
-	use common::components::persistent_entity::PersistentEntity;
 	use std::collections::HashSet;
 	use testing::SingleThreadedApp;
 

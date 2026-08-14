@@ -1,6 +1,6 @@
 use crate::{
 	tools::Units,
-	traits::iteration::{Iter, IterFinite},
+	traits::iteration::{FiniteIter, IterFinite},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -145,11 +145,11 @@ impl IntoIterator for Blocker {
 }
 
 impl IterFinite for Blocker {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Blocker::Physical))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(Blocker::Physical))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
 			Blocker::Physical => Some(Blocker::Force),
 			Blocker::Force => Some(Blocker::Character),

@@ -1,6 +1,6 @@
 use crate::components::{animation_lookup::AnimationLookup, setup_animations::SetupAnimations};
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl SetupAnimations {
 	pub(crate) fn stop(
@@ -18,7 +18,6 @@ impl SetupAnimations {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_animations::AnimationClips;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

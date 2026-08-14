@@ -1,6 +1,6 @@
 use crate::{assets::agent_meta::AgentMeta, components::animate_idle::AnimateIdle};
 use bevy::prelude::*;
-use common::{components::persistent_entity::PersistentEntity, traits::accessors::get::View};
+use common::prelude::*;
 
 #[derive(Component, Clone, Debug, PartialEq, Default)]
 #[component(immutable)]

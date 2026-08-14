@@ -1,7 +1,4 @@
-use common::{
-	tools::{Index, pixel::Pixel},
-	traits::accessors::get::ViewField,
-};
+use common::prelude::*;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum PanelState {

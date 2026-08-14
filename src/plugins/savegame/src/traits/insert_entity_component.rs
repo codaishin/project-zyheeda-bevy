@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::{handles_saving::UniqueComponentId, load_asset::LoadAsset};
+use common::prelude::*;
 
 pub(crate) trait InsertEntityComponent<TLoadAsset>
 where

@@ -1,6 +1,6 @@
 use crate::components::GlobalZIndexTop;
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 pub(crate) fn adjust_global_z_index(
 	mut commands: ZyheedaCommands,

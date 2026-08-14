@@ -5,7 +5,7 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use common::traits::handles_physics::CharacterMotion;
+use common::prelude::*;
 use std::time::Duration;
 
 impl MotionController {
@@ -47,7 +47,6 @@ impl MotionController {
 mod tests {
 	use super::*;
 	use crate::components::motion_controller::MotionControllerOf;
-	use common::tools::{UnitsPerSecond, speed::Speed};
 	use testing::SingleThreadedApp;
 
 	fn setup(delta: Duration) -> App {

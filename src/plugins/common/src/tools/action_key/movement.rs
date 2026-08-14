@@ -2,7 +2,7 @@ use super::{ActionKey, user_input::UserInput};
 use crate::traits::{
 	handles_input::InvalidUserInput,
 	handles_localization::Token,
-	iteration::{Iter, IterFinite},
+	iteration::{FiniteIter, IterFinite},
 };
 use bevy::input::{keyboard::KeyCode, mouse::MouseButton};
 use serde::{Deserialize, Serialize};
@@ -63,11 +63,11 @@ impl From<MovementKey> for Token {
 }
 
 impl IterFinite for MovementKey {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Self::default()))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(Self::default()))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
 			MovementKey::Forward => Some(MovementKey::Backward),
 			MovementKey::Backward => Some(MovementKey::Left),

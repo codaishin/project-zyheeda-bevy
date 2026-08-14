@@ -6,13 +6,7 @@ use crate::{
 	traits::drain_invalid_inputs::DrainInvalidInputs,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{
-	errors::{ErrorData, Level},
-	tools::{
-		action_key::{ActionKey, user_input::UserInput},
-		path::Path,
-	},
-};
+use common::{prelude::*, tools::path::Path};
 use serde::Serialize;
 use std::{
 	collections::{HashMap, HashSet},

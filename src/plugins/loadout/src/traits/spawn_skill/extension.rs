@@ -1,24 +1,18 @@
-use crate::{skills::shape::OnSkillStop, traits::spawn_skill::SpawnSkill};
-use common::{
-	components::persistent_entity::PersistentEntity,
-	tools::action_key::slot::SlotKey,
-	traits::handles_skill_physics::{
-		Effect,
-		SkillCaster,
-		SkillMount,
-		SkillShape,
-		Spawn,
-		SpawnArgs,
-	},
-};
+use crate::{skills::shape::OnSkillStop, traits::spawn_skill::SpawnSkillInternal};
+use common::prelude::*;
 
-impl<T, TConfig> SpawnSkill<TConfig> for T
+impl<T, TConfig> SpawnSkillInternal<TConfig> for T
 where
-	T: Spawn,
+	T: SpawnSkill,
 	TConfig: SkillConfigData,
 {
-	fn spawn_skill(&mut self, config: TConfig, caster: SkillCaster, slot: SlotKey) -> OnSkillStop {
-		let skill = self.spawn(SpawnArgs {
+	fn spawn_skill_internal(
+		&mut self,
+		config: TConfig,
+		caster: SkillCaster,
+		slot: SlotKey,
+	) -> OnSkillStop {
+		let skill = self.spawn_skill(SpawnArgs {
 			shape: config.shape(),
 			mount: config.mount(slot),
 			contact_effects: config.contact_effects(),
@@ -33,8 +27,8 @@ where
 pub(crate) trait SkillConfigData {
 	fn mount(&self, slot: SlotKey) -> SkillMount;
 	fn shape(&self) -> &'_ SkillShape;
-	fn contact_effects(&self) -> &'_ [Effect];
-	fn projection_effects(&self) -> &'_ [Effect];
+	fn contact_effects(&self) -> &'_ [SkillEffect];
+	fn projection_effects(&self) -> &'_ [SkillEffect];
 	fn on_skill_stop(&self, skill: PersistentEntity) -> OnSkillStop;
 }
 
@@ -42,12 +36,6 @@ pub(crate) trait SkillConfigData {
 mod tests {
 	use super::*;
 	use bevy::prelude::default;
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		effects::force::Force,
-		tools::{Units, action_key::slot::SlotKey},
-		traits::handles_skill_physics::{Effect, SkillShape, ground_target::SphereAoE},
-	};
 	use macros::simple_mock;
 	use std::{sync::LazyLock, time::Duration};
 	use test_case::test_case;
@@ -55,8 +43,8 @@ mod tests {
 
 	struct _Config {
 		shape: SkillShape,
-		contact: Vec<Effect>,
-		projection: Vec<Effect>,
+		contact: Vec<SkillEffect>,
+		projection: Vec<SkillEffect>,
 		mount: fn(SlotKey) -> SkillMount,
 		on_skill_stop: fn(PersistentEntity) -> OnSkillStop,
 	}
@@ -90,11 +78,11 @@ mod tests {
 			&self.shape
 		}
 
-		fn contact_effects(&self) -> &'_ [Effect] {
+		fn contact_effects(&self) -> &'_ [SkillEffect] {
 			&self.contact
 		}
 
-		fn projection_effects(&self) -> &'_ [Effect] {
+		fn projection_effects(&self) -> &'_ [SkillEffect] {
 			&self.projection
 		}
 
@@ -105,8 +93,8 @@ mod tests {
 
 	simple_mock! {
 		_Spawn {}
-		impl Spawn for _Spawn {
-			fn spawn<'a>(&'a mut self, args: SpawnArgs<'a>) -> PersistentEntity;
+		impl SpawnSkill for _Spawn {
+			fn spawn_skill<'a>(&'a mut self, args: SpawnArgs<'a>) -> PersistentEntity;
 		}
 	}
 
@@ -121,11 +109,11 @@ mod tests {
 		let config = _Config { mount, ..default() };
 		let mut spawn = Mock_Spawn::new_mock(assert_mount(mount));
 
-		spawn.spawn_skill(config, *CASTER, SLOT);
+		spawn.spawn_skill_internal(config, *CASTER, SLOT);
 
 		fn assert_mount(mount: fn(SlotKey) -> SkillMount) -> impl FnMut(&mut Mock_Spawn) {
 			move |mock| {
-				mock.expect_spawn()
+				mock.expect_spawn_skill()
 					.once()
 					.withf(move |args| {
 						args == &SpawnArgs {
@@ -150,10 +138,10 @@ mod tests {
 			..default()
 		};
 		let mut spawn = Mock_Spawn::new_mock(move |mock| {
-			mock.expect_spawn().return_const(entity);
+			mock.expect_spawn_skill().return_const(entity);
 		});
 
-		let result = spawn.spawn_skill(config, *CASTER, SLOT);
+		let result = spawn.spawn_skill_internal(config, *CASTER, SLOT);
 
 		assert_eq!(on_skill_stop(entity), result);
 	}
@@ -161,17 +149,17 @@ mod tests {
 	#[test]
 	fn add_contact_effect() {
 		let config = _Config {
-			contact: vec![Effect::Force(Force)],
+			contact: vec![SkillEffect::Force(Force)],
 			..default()
 		};
 		let mut spawn = Mock_Spawn::new_mock(assert_added_effects);
 
-		spawn.spawn_skill(config, *CASTER, SLOT);
+		spawn.spawn_skill_internal(config, *CASTER, SLOT);
 
 		fn assert_added_effects(mock: &mut Mock_Spawn) {
-			mock.expect_spawn()
+			mock.expect_spawn_skill()
 				.once()
-				.withf(|args| args.contact_effects == [Effect::Force(Force)])
+				.withf(|args| args.contact_effects == [SkillEffect::Force(Force)])
 				.return_const(PersistentEntity::default());
 		}
 	}
@@ -179,17 +167,17 @@ mod tests {
 	#[test]
 	fn add_projection_effect() {
 		let config = _Config {
-			projection: vec![Effect::Force(Force)],
+			projection: vec![SkillEffect::Force(Force)],
 			..default()
 		};
 		let mut spawn = Mock_Spawn::new_mock(assert_added_effects);
 
-		spawn.spawn_skill(config, *CASTER, SLOT);
+		spawn.spawn_skill_internal(config, *CASTER, SLOT);
 
 		fn assert_added_effects(mock: &mut Mock_Spawn) {
-			mock.expect_spawn()
+			mock.expect_spawn_skill()
 				.once()
-				.withf(|args| args.projection_effects == [Effect::Force(Force)])
+				.withf(|args| args.projection_effects == [SkillEffect::Force(Force)])
 				.return_const(PersistentEntity::default());
 		}
 	}

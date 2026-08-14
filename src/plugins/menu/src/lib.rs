@@ -38,30 +38,13 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
-	resources::Shared,
+	prelude::*,
 	states::{
 		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
 		menu_state::MenuState,
 		save_state::SaveState,
 	},
-	tools::{action_key::ActionKey, path::Path},
-	traits::{
-		handles_graphics::HandlesCameras,
-		handles_input::{HandlesActionKeyButton, HandlesInput, HandlesInputMut},
-		handles_load_tracking::{
-			AssetsProgress,
-			DependenciesProgress,
-			HandlesLoadTracking,
-			LoadGroup,
-		},
-		handles_loadout::HandlesLoadout,
-		handles_localization::{HandlesLocalization, Token, localized::Localized},
-		handles_player::HandlesPlayer,
-		handles_saving::HandlesSaving,
-		prefab::AddPrefabObserver,
-		register_derived_component::RegisterDerivedComponent,
-		thread_safe::ThreadSafe,
-	},
+	tools::path::Path,
 };
 use components::{
 	button_interaction::ButtonInteraction,

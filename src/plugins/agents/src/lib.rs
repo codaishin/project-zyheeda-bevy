@@ -16,30 +16,9 @@ use crate::{
 };
 use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::{
+	prelude::*,
 	states::game_state::{GameState, LoadingEssentialAssets},
-	systems::{log::OnError, register_animations::RegisterAnimationsSystem},
-	traits::{
-		after_plugin::AfterPlugin,
-		delta::Delta,
-		handles_agents::HandlesAgents,
-		handles_animations::HandlesAnimations,
-		handles_custom_assets::HandlesCustomFolderAssets,
-		handles_enemies::HandlesEnemies,
-		handles_graphics::{HandlesCameras, HandlesGraphics},
-		handles_input::HandlesInput,
-		handles_interactive::HandlesInteractive,
-		handles_loadout::HandlesLoadout,
-		handles_map_generation::HandlesMapGeneration,
-		handles_movement::HandlesMovement,
-		handles_orientation::HandlesOrientation,
-		handles_physics::{HandlesInteractiveDetection, HandlesPhysicsConfig, HandlesRaycast},
-		handles_player::HandlesPlayer,
-		handles_saving::HandlesSaving,
-		handles_skill_physics::HandlesPhysicalSkillAgent,
-		prefab::AddPrefabObserver,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
+	systems::register_animations::RegisterAnimationsSystem,
 };
 use std::marker::PhantomData;
 use systems::void_sphere::ring_rotation::ring_rotation;

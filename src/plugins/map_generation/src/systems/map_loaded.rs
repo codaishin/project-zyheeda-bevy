@@ -1,6 +1,6 @@
 use crate::components::map::Map;
 use bevy::{prelude::*, world_serialization::WorldInstance};
-use common::{components::model::Model, traits::handles_load_tracking::Loaded};
+use common::prelude::*;
 
 impl Map {
 	pub(crate) fn is_loaded(
@@ -23,7 +23,6 @@ impl Map {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::components::model::Model;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]

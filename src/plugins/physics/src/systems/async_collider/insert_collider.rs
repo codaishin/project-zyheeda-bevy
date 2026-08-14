@@ -1,14 +1,7 @@
 use crate::components::async_collider::{AsyncCollider, ColliderType, Source};
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::*;
-use common::{
-	errors::{ErrorData, Level},
-	traits::{
-		accessors::get::{GetMut, TryApplyOn},
-		load_asset::LoadAsset,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::fmt::Display;
 
 impl AsyncCollider {
@@ -156,7 +149,7 @@ impl ErrorData for InsertColliderError {
 mod tests {
 	use super::*;
 	use bevy::asset::uuid::uuid;
-	use common::traits::load_asset::mock::MockAssetServer;
+	use common::traits::load_asset::mock_asset_loader::MockAssetServer;
 	use std::marker::PhantomData;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};

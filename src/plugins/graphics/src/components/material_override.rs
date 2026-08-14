@@ -6,10 +6,7 @@ use bevy::{
 	},
 	prelude::*,
 };
-use common::{
-	components::essence::Essence,
-	traits::register_derived_component::{DerivableFrom, InsertDerivedComponent},
-};
+use common::{components::essence::Essence, prelude::*};
 
 #[derive(Component, Debug, PartialEq, Clone, Default)]
 #[component(immutable)]

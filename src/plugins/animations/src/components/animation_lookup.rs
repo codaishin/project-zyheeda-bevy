@@ -1,12 +1,6 @@
 use crate::components::animation_dispatch::AnimationDispatch;
 use bevy::prelude::*;
-use common::traits::handles_animations::{
-	AffectedAnimationBones,
-	Animation,
-	AnimationClips,
-	AnimationKey,
-	AnimationMaskBits,
-};
+use common::prelude::*;
 use std::collections::HashMap;
 
 #[derive(Component, Debug, PartialEq)]
@@ -22,8 +16,6 @@ impl<TClips> AnimationLookup<TClips> {
 	where
 		T: Into<TClips>,
 	{
-		use common::traits::handles_animations::PlayMode;
-
 		Self {
 			animations: clips
 				.into_iter()

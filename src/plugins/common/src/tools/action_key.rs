@@ -19,7 +19,7 @@ use crate::{
 	traits::{
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
-		iteration::{Iter, IterFinite},
+		iteration::{FiniteIter, IterFinite},
 	},
 };
 use bevy::{reflect::TypePath, utils::default};
@@ -75,11 +75,11 @@ impl From<ActionKey> for Token {
 }
 
 impl IterFinite for ActionKey {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Self::default()))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(Self::default()))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		use ActionKey::*;
 
 		match current.0? {

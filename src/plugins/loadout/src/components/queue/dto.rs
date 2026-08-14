@@ -3,12 +3,7 @@ use crate::{
 	components::queue::{Queue, SkillElapsed, State},
 	skills::{QueuedSkill, Skill, SkillMode},
 };
-use common::{
-	dto::duration_in_seconds::DurationInSeconds,
-	errors::Unreachable,
-	tools::action_key::slot::SlotKey,
-	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 

@@ -4,7 +4,7 @@ use crate::{
 	traits::file_exists::FileExists,
 };
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::prelude::*;
 
 impl<TIO> Inspector<TIO>
 where

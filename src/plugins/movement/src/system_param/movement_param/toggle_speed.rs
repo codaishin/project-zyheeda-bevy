@@ -1,6 +1,6 @@
 use crate::system_param::movement_param::MovementContextMut;
 use bevy::prelude::*;
-use common::traits::handles_movement::{MovementSpeed, SpeedToggle, ToggleSpeed};
+use common::prelude::*;
 
 impl<TMotion> ToggleSpeed for MovementContextMut<'_, TMotion>
 where
@@ -27,13 +27,7 @@ mod tests {
 		system_param::movement_param::MovementParamMut,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		tools::UnitsPerSecond,
-		traits::{
-			accessors::get::TryGetContextMut,
-			handles_movement::{ConfiguredMovement as MovementMarker, MovementSpeed},
-		},
-	};
+	use common::traits::handles_movement::ConfiguredMovement as MovementMarker;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]

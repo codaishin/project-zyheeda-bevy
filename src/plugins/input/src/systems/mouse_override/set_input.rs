@@ -1,6 +1,6 @@
 use crate::resources::mouse_override::MouseOverride;
 use bevy::prelude::*;
-use common::traits::handles_input::InputState;
+use common::prelude::*;
 use std::ops::Deref;
 
 impl MouseOverride {
@@ -54,7 +54,6 @@ const MOUSE_LEFT: MouseButton = MouseButton::Left;
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::{ActionKey, slot::HandSlot};
 	use testing::{SingleThreadedApp, set_input};
 
 	fn setup() -> App {

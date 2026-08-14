@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::handles_game_states::ActivityState;
+use common::prelude::*;
 
 #[derive(States, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub(crate) struct Activity(pub(crate) ActivityState);

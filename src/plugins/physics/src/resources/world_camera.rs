@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::handles_physics::{MouseHover, MouseHoversOver};
+use common::prelude::*;
 use std::collections::HashMap;
 
 #[derive(Resource, Debug, PartialEq, Default)]

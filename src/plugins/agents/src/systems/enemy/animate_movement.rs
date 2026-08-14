@@ -1,13 +1,6 @@
 use crate::{components::enemy::Enemy, systems::player::animate_movement::Move};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	errors::Level,
-	traits::{
-		accessors::get::{ContextChanged, Logged, TryGetContext, TryGetContextMut, View},
-		handles_animations::{ActiveAnimationsMut, AnimationKey, Animations},
-		handles_movement::{Movement, MovementTarget},
-	},
-};
+use common::prelude::*;
 use zyheeda_core::prelude::OrderedSet;
 
 impl Enemy {
@@ -51,7 +44,6 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::systems::player::animate_movement::tests::{_Animations, _Movement};
-	use common::traits::{handles_animations::AnimationKey, handles_movement::MovementTarget};
 	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 

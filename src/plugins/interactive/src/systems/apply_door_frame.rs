@@ -3,18 +3,7 @@ use crate::{
 	components::{door::ApplyDoorFrame, door_meta_handle::DoorMetaHandle},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	traits::{
-		accessors::get::{TryApplyOn, TryGetContextMut},
-		handles_physics::{
-			ConfigureBody,
-			NoBodyConfigured,
-			TranslationOffsets,
-			physical_bodies::{BodyConfig, InteractiveFrame},
-		},
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl ApplyDoorFrame {
 	pub(crate) fn apply<TBody>(
@@ -56,10 +45,6 @@ impl ApplyDoorFrame {
 mod tests {
 	use super::*;
 	use crate::{assets::door_meta::DoorMeta, components::door_meta_handle::DoorMetaHandle};
-	use common::{
-		tools::Units,
-		traits::handles_physics::{TranslationOffsets, physical_bodies::ShapeParameters},
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp, new_handle};

@@ -1,17 +1,14 @@
 use crate::{
-	components::{mount_points::MountPointsDefinition, target::Target},
+	components::{mount_points::MountPointsDefinition, target::SkillTargetInternal},
 	system_params::skill_agent::SkillAgentInitializerContext,
 };
-use common::{
-	tools::bone_name::BoneName,
-	traits::handles_skill_physics::{Initialize, SkillMountBone},
-};
+use common::prelude::*;
 use std::collections::HashMap;
 
 impl Initialize for SkillAgentInitializerContext<'_> {
 	fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>) {
 		self.entity
-			.try_insert((MountPointsDefinition(definition), Target(None)));
+			.try_insert((MountPointsDefinition(definition), SkillTargetInternal(None)));
 	}
 }
 
@@ -19,14 +16,13 @@ impl Initialize for SkillAgentInitializerContext<'_> {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{components::target::Target, system_params::skill_agent::SkillAgentMut};
+	use crate::{
+		components::target::SkillTargetInternal,
+		system_params::skill_agent::SkillAgentMut,
+	};
 	use bevy::{
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
-	};
-	use common::{
-		tools::action_key::slot::SlotKey,
-		traits::{accessors::get::TryGetContextMut, handles_skill_physics::NotInitializedAgent},
 	};
 	use testing::SingleThreadedApp;
 
@@ -79,8 +75,8 @@ mod tests {
 			})?;
 
 		assert_eq!(
-			Some(&Target(None)),
-			app.world().entity(entity).get::<Target>(),
+			Some(&SkillTargetInternal(None)),
+			app.world().entity(entity).get::<SkillTargetInternal>(),
 		);
 		Ok(())
 	}

@@ -3,7 +3,7 @@ use crate::{
 	traits::{
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
-		iteration::{Iter, IterFinite},
+		iteration::{FiniteIter, IterFinite},
 	},
 };
 use bevy::input::keyboard::KeyCode;
@@ -52,11 +52,11 @@ impl TryFrom<ActionKey> for SaveKey {
 }
 
 impl IterFinite for SaveKey {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Self::QuickSave))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(Self::QuickSave))
 	}
 
-	fn next(Iter(current): &Iter<Self>) -> Option<Self> {
+	fn next(FiniteIter(current): &FiniteIter<Self>) -> Option<Self> {
 		match current.as_ref()? {
 			Self::QuickSave => Some(Self::QuickLoad),
 			Self::QuickLoad => None,

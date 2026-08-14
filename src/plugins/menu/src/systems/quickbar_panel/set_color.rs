@@ -10,16 +10,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	tools::skill_execution::SkillExecution,
-	traits::{
-		accessors::get::{Get, TryApplyOn, TryGetContext, View, ViewOf},
-		handles_input::MouseOverrideActive,
-		handles_loadout::skills::{ReadSkills, Skills},
-		handles_player::PlayerEntity,
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
-};
+use common::prelude::*;
 
 impl QuickbarPanel {
 	pub(crate) fn set_color<TPlayer, TActionKeyButton, TLoadout>(
@@ -108,17 +99,6 @@ mod tests {
 	use crate::{
 		components::{ColorOverride, dispatch_text_color::DispatchTextColor},
 		testing::{_Player, _PlayerParam},
-	};
-	use common::{
-		CommonPlugin,
-		tools::action_key::slot::HandSlot,
-		traits::{
-			handles_loadout::{
-				LoadoutKey,
-				skills::{SkillIcon, SkillToken},
-			},
-			handles_localization::Token,
-		},
 	};
 	use std::{collections::HashMap, marker::PhantomData, sync::LazyLock};
 	use testing::SingleThreadedApp;

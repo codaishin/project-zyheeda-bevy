@@ -1,11 +1,6 @@
 use crate::components::enemy::Enemy;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::{GetContext, TryGetContextMut, ViewOf},
-	handles_interactive::{Interactive, InteractiveState, SetInteractiveState},
-	handles_map_generation::InteractiveType,
-	handles_physics::{InteractionsOngoing, IterInteractions},
-};
+use common::prelude::*;
 
 impl Enemy {
 	pub(crate) fn open_doors<TPhysics, TInteractive>(
@@ -44,14 +39,6 @@ impl Enemy {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		tools::Units,
-		traits::{
-			accessors::get::View,
-			handles_interactive::InteractiveState,
-			handles_map_generation::InteractiveType,
-		},
-	};
 	use std::{iter::Copied, slice::Iter};
 	use testing::{IsChanged, SingleThreadedApp};
 

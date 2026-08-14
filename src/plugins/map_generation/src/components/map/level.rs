@@ -1,9 +1,6 @@
 use crate::components::map::Map;
 use bevy::prelude::*;
-use common::{
-	components::model::Model,
-	traits::handles_saving::{SavableComponent, UniqueComponentId},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]

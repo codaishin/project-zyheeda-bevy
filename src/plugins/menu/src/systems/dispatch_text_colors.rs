@@ -1,6 +1,6 @@
 use crate::components::dispatch_text_color::DispatchTextColor;
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl DispatchTextColor {
 	pub(crate) fn apply(

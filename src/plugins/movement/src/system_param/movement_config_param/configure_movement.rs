@@ -2,7 +2,7 @@ use crate::{
 	components::config::Config,
 	system_param::movement_config_param::MovementConfigContextMut,
 };
-use common::traits::handles_movement::{ConfigureMovement, MovementSpeed, RequiredClearance};
+use common::prelude::*;
 
 impl ConfigureMovement for MovementConfigContextMut<'_> {
 	fn configure(&mut self, speed: MovementSpeed, required_clearance: RequiredClearance) {
@@ -21,10 +21,6 @@ mod tests {
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
-	};
-	use common::{
-		tools::{Units, UnitsPerSecond},
-		traits::{accessors::get::TryGetContextMut, handles_movement::NotConfiguredMovement},
 	};
 	use testing::SingleThreadedApp;
 

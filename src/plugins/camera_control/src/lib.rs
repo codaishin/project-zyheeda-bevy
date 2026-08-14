@@ -4,18 +4,7 @@ mod traits;
 
 use crate::{components::camera_arm::CameraArm, systems::move_on_orbit::MoveArmsSystem};
 use bevy::prelude::*;
-use common::{
-	states::game_state::GameState,
-	traits::{
-		after_plugin::AfterPlugin,
-		handles_graphics::HandlesCameras,
-		handles_input::HandlesInput,
-		handles_player::HandlesPlayer,
-		handles_saving::HandlesSaving,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::{prelude::*, states::game_state::GameState};
 use std::marker::PhantomData;
 
 pub struct CameraControlPlugin<TDependencies>(PhantomData<TDependencies>);

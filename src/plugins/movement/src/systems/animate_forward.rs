@@ -1,9 +1,5 @@
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::{TryGetContextMut, View},
-	handles_animations::{Animations, GetMoveDirectionMut},
-	handles_physics::CharacterMotion,
-};
+use common::prelude::*;
 
 impl<T> SetForwardAnimationDirection for T where T: Component + View<CharacterMotion> {}
 
@@ -49,7 +45,6 @@ where
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::{tools::speed::Speed, traits::handles_animations::GetMoveDirection};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]

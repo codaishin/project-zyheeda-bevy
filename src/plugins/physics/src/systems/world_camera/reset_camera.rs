@@ -14,7 +14,7 @@ impl WorldCamera {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_physics::{MouseHover, MouseHoversOver};
+	use common::prelude::*;
 	use std::collections::HashMap;
 	use testing::SingleThreadedApp;
 

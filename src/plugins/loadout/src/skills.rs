@@ -4,20 +4,7 @@ pub(crate) mod shape;
 
 use crate::{skills::behaviors::SkillBehaviorConfig, traits::ReleaseSkill};
 use bevy::prelude::*;
-use common::{
-	tools::{
-		action_key::slot::SlotKey,
-		item_type::{CompatibleItems, ItemType},
-		path::Path,
-	},
-	traits::{
-		accessors::get::View,
-		handles_animations::SkillAnimation,
-		handles_custom_assets::AssetFolderPath,
-		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
-		handles_localization::Token,
-	},
-};
+use common::{prelude::*, tools::path::Path};
 use serde::{Deserialize, Serialize};
 use std::{
 	collections::HashSet,
@@ -170,8 +157,6 @@ pub enum RunSkillBehavior {
 #[cfg(test)]
 impl Default for RunSkillBehavior {
 	fn default() -> Self {
-		use common::traits::handles_skill_physics::{SkillShape, shield::Shield};
-
 		Self::OnActive(SkillBehaviorConfig::from_shape(SkillShape::Shield(Shield)))
 	}
 }

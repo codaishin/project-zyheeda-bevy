@@ -3,7 +3,6 @@ pub mod physical_bodies;
 use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
-	toi,
 	tools::{Units, speed::Speed},
 	traits::{
 		accessors::get::{GetContext, TryGetContextMut, View, ViewField},
@@ -17,6 +16,7 @@ use std::{
 	collections::HashSet,
 	ops::{Deref, DerefMut},
 };
+use zyheeda_core::prelude::*;
 
 pub trait HandlesRaycast {
 	type TRaycastMut: SystemParam
@@ -188,7 +188,7 @@ impl<T> HandlesAllPhysicalEffects for T where
 
 pub trait HandlesPhysicalEffect<TEffect>
 where
-	TEffect: Effect,
+	TEffect: PhysicalEffect,
 {
 	type TEffectComponent: Component;
 	type TAffectedComponent: Component;
@@ -206,7 +206,7 @@ impl<T> HandlesLife for T where
 {
 }
 
-pub trait Effect {
+pub trait PhysicalEffect {
 	type TTarget;
 }
 
@@ -257,9 +257,9 @@ pub struct TimeOfImpact(f32);
 impl TimeOfImpact {
 	pub const ZERO: Self = toi!(0.);
 
-	pub const fn try_from_f32(toi: f32) -> Result<Self, IsNaN> {
+	pub const fn try_from_f32(toi: f32) -> Result<Self, IsNaN<1>> {
 		if toi.is_nan() {
-			return Err(IsNaN);
+			return Err(IsNaN([toi]));
 		}
 
 		Ok(Self(toi))
@@ -273,7 +273,7 @@ impl From<Units> for TimeOfImpact {
 }
 
 impl TryFrom<f32> for TimeOfImpact {
-	type Error = IsNaN;
+	type Error = IsNaN<1>;
 
 	fn try_from(toi: f32) -> Result<Self, Self::Error> {
 		Self::try_from_f32(toi)
@@ -295,11 +295,13 @@ macro_rules! toi {
 		const TOI: $crate::traits::handles_physics::TimeOfImpact =
 			match $crate::traits::handles_physics::TimeOfImpact::try_from_f32($toi) {
 				Ok(toi) => toi,
-				Err(IsNaN) => panic!("invalid time of impact"),
+				Err(_) => panic!("invalid time of impact"),
 			};
 		TOI
 	}};
 }
+
+pub use toi;
 
 impl Eq for TimeOfImpact {}
 
@@ -316,8 +318,6 @@ impl Ord for TimeOfImpact {
 		})
 	}
 }
-
-pub struct IsNaN;
 
 #[derive(Debug, PartialEq)]
 pub struct SolidObjects {

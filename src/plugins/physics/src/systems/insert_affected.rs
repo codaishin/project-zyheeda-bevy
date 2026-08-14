@@ -1,9 +1,5 @@
 use bevy::prelude::*;
-use common::{
-	tools::attribute::AttributeOnSpawn,
-	traits::accessors::get::{TryApplyOn, View},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl<T> InsertAffected for T where T: AffectedComponent {}
 

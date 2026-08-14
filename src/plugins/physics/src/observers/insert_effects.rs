@@ -5,10 +5,7 @@ use crate::components::effects::{
 	health_damage::HealthDamageEffect,
 };
 use bevy::prelude::*;
-use common::{
-	traits::{accessors::get::GetMut, handles_skill_physics::Effect},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl Effects {
 	pub(crate) fn insert(
@@ -26,9 +23,9 @@ impl Effects {
 
 		for effect in effects {
 			match effect {
-				Effect::Force(effect) => entity.try_insert(ForceEffect(*effect)),
-				Effect::Gravity(effect) => entity.try_insert(GravityEffect(*effect)),
-				Effect::HealthDamage(effect) => entity.try_insert(HealthDamageEffect(*effect)),
+				SkillEffect::Force(effect) => entity.try_insert(ForceEffect(*effect)),
+				SkillEffect::Gravity(effect) => entity.try_insert(GravityEffect(*effect)),
+				SkillEffect::HealthDamage(effect) => entity.try_insert(HealthDamageEffect(*effect)),
 			};
 		}
 
@@ -39,11 +36,6 @@ impl Effects {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		effects::{EffectApplies, force::Force, gravity::Gravity, health_damage::HealthDamage},
-		tools::UnitsPerSecond,
-		traits::handles_skill_physics::Effect,
-	};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -59,9 +51,9 @@ mod tests {
 		let mut app = setup();
 
 		let entity = app.world_mut().spawn(Effects(vec![
-			Effect::Force(Force),
-			Effect::HealthDamage(HealthDamage(42., EffectApplies::Once)),
-			Effect::Gravity(Gravity {
+			SkillEffect::Force(Force),
+			SkillEffect::HealthDamage(HealthDamage(42., EffectApplies::Once)),
+			SkillEffect::Gravity(Gravity {
 				strength: UnitsPerSecond::from(11.),
 			}),
 		]));

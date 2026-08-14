@@ -1,6 +1,6 @@
 use crate::{states::activity::Activity, system_params::ui_states::UIStates};
 use bevy::{ecs::system::RunSystemOnce, prelude::*};
-use common::traits::handles_game_states::{ActivityState, UIState};
+use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(Resource)]

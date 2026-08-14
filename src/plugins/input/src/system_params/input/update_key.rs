@@ -1,9 +1,6 @@
 use crate::system_params::input::Input;
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{
-	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::handles_input::UpdateKey,
-};
+use common::prelude::*;
 
 impl<'w, 's, TKeyMap> UpdateKey for Input<'w, 's, ResMut<'static, TKeyMap>>
 where
@@ -19,11 +16,9 @@ where
 
 #[cfg(test)]
 mod tests {
-	use crate::resources::mouse_override::MouseOverride;
-
 	use super::*;
+	use crate::resources::mouse_override::MouseOverride;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::tools::action_key::user_input::UserInput;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};

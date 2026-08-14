@@ -11,6 +11,8 @@ macro_rules! vec_not_nan {
 	}};
 }
 
+pub use vec_not_nan;
+
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
 pub struct VecNotNan<const N: usize>(pub [F32NotNan; N]);
 
@@ -71,24 +73,6 @@ impl From<VecNotNan<2>> for Vec2 {
 impl From<&'_ VecNotNan<2>> for Vec2 {
 	fn from(vec: &VecNotNan<2>) -> Self {
 		Vec2::from(*vec)
-	}
-}
-
-#[derive(Debug)]
-pub struct IsNaN<const N: usize>(#[allow(unused)] [f32; N]);
-
-#[cfg(test)]
-impl<const N: usize> PartialEq for IsNaN<N> {
-	fn eq(&self, other: &Self) -> bool {
-		for (a, b) in self.0.iter().zip(other.0.iter()) {
-			if a == b || a.is_nan() && b.is_nan() {
-				continue;
-			}
-
-			return false;
-		}
-
-		true
 	}
 }
 

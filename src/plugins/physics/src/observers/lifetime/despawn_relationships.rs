@@ -1,6 +1,6 @@
 use crate::components::lifetime::TiedLifetimes;
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl TiedLifetimes {
 	pub(crate) fn despawn_relationships_on_remove(

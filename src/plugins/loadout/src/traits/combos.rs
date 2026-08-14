@@ -1,4 +1,4 @@
-use common::tools::action_key::slot::SlotKey;
+use common::prelude::*;
 
 pub(crate) trait UpdateComboSkills<TSkill> {
 	fn update_combo_skills<'a, TComboIter>(&'a mut self, combos: TComboIter)

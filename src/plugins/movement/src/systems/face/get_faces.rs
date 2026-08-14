@@ -1,6 +1,6 @@
 use crate::components::facing::{CanFace, SetFace, SetFaceOverride};
 use bevy::prelude::*;
-use common::traits::handles_orientation::Face;
+use common::prelude::*;
 
 impl SetFace {
 	#[allow(clippy::type_complexity)]

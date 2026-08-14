@@ -3,11 +3,7 @@ use crate::components::{
 	movement::{Movement, MovementPath},
 };
 use bevy::prelude::*;
-use common::traits::{
-	accessors::get::View,
-	handles_map_generation::GroundPosition,
-	handles_path_finding::ComputePath,
-};
+use common::prelude::*;
 use std::collections::VecDeque;
 
 type MoveComponents<TGetComputer> = (
@@ -68,7 +64,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::Units;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::collections::VecDeque;
@@ -132,8 +127,6 @@ mod tests {
 	}
 
 	mod path {
-		use common::traits::handles_movement::RequiredClearance;
-
 		use super::*;
 
 		#[test]

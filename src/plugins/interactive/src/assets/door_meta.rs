@@ -1,18 +1,8 @@
 use bevy::{platform::collections::HashMap, prelude::*};
 use common::{
+	prelude::*,
 	systems::register_animations::{AnimationConfig, AnimationKeyAndNames, AnimationMaskAndBones},
 	tools::path::Path,
-	traits::{
-		handles_animations::{
-			AffectedAnimationBones,
-			Animation,
-			AnimationKey,
-			AnimationMaskBits,
-			AnimationNames,
-		},
-		handles_custom_assets::{AssetFileExtensions, AssetFolderPath},
-		handles_physics::physical_bodies::ShapeParameters,
-	},
 };
 use macros::asset_path;
 use serde::{Deserialize, Serialize};

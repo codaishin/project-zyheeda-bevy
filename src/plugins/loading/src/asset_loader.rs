@@ -2,10 +2,7 @@ use bevy::{
 	asset::{Asset, AssetLoader, LoadContext, io::Reader},
 	reflect::TypePath,
 };
-use common::traits::{
-	handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
-	thread_safe::ThreadSafe,
-};
+use common::prelude::*;
 use serde::Deserialize;
 use serde_json::error::Error as SerdeJsonError;
 use std::{

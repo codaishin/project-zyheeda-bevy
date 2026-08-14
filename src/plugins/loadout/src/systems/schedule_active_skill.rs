@@ -6,15 +6,7 @@ use bevy::{
 	ecs::{component::Mutable, system::StaticSystemParam},
 	prelude::*,
 };
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::TryGetContextMut,
-		handles_orientation::{Face, Facing, OverrideFace},
-		state_duration::{StateMeta, UpdatedStates},
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 use std::time::Duration;
 
 #[derive(PartialEq)]
@@ -136,10 +128,6 @@ fn schedule_start<TSkillExecutor, TSkill>(
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::{
-		tools::action_key::slot::HandSlot,
-		traits::handles_skill_physics::{SkillShape, shield::Shield},
-	};
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, mock, predicate::eq};
 	use std::collections::HashSet;

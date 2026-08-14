@@ -3,13 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	tools::action_key::ActionKey,
-	traits::{
-		handles_input::{GetRawUserInput, RawInputState, UpdateKey},
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 
 impl<TAction> KeyBind<Rebinding<TAction>>
 where
@@ -36,7 +30,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::tools::action_key::user_input::UserInput;
 	use std::{any::type_name, collections::HashMap};
 	use testing::SingleThreadedApp;
 

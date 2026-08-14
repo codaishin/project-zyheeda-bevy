@@ -1,6 +1,6 @@
 use crate::{components::movement::Movement, system_param::movement_param::MovementContextMut};
 use bevy::ecs::component::Component;
-use common::traits::handles_movement::{MovementTarget, StartMovement};
+use common::prelude::*;
 
 const ALLOWED_ANGLE: f32 = 1_f32.to_radians();
 
@@ -39,11 +39,6 @@ mod tests {
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
-	};
-	use common::traits::{
-		accessors::get::TryGetContextMut,
-		handles_movement::ConfiguredMovement,
-		thread_safe::ThreadSafe,
 	};
 	use test_case::test_case;
 	use testing::{IsChanged, SingleThreadedApp};

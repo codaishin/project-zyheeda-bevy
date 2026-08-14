@@ -1,6 +1,6 @@
 use crate::resources::camera_render_target::CameraRenderTarget;
 use bevy::{camera::RenderTarget, prelude::*};
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl<T> InsertRenderTarget for T where T: Component {}
 

@@ -4,14 +4,7 @@ use bevy::{
 	prelude::*,
 };
 use bevy_rapier3d::prelude::*;
-use common::{
-	errors::Unreachable,
-	tools::Units,
-	traits::{
-		handles_physics::physical_bodies::{Shape, ShapeParameters},
-		prefab::{Prefab, PrefabEntityCommands, Reapply},
-	},
-};
+use common::prelude::*;
 use macros::asset_path;
 
 pub(crate) const TERRAIN_GROUP: Group = Group::GROUP_1;

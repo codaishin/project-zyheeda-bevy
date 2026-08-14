@@ -15,10 +15,7 @@ use bevy::{
 	},
 	prelude::*,
 };
-use common::{
-	tools::Focus,
-	traits::{handles_localization::Localize, thread_safe::ThreadSafe},
-};
+use common::prelude::*;
 
 pub(crate) fn dropdown_spawn_focused<TLocalization, TItem>(
 	focus: In<Focus>,
@@ -110,16 +107,11 @@ fn spawn_items<TLocalization, TItem>(
 
 #[cfg(test)]
 mod tests {
-
 	use super::*;
 	use crate::{
 		components::GlobalZIndexTop,
 		tools::Layout,
 		traits::insert_ui_content::InsertUiContent,
-	};
-	use common::{
-		tools::Index,
-		traits::handles_localization::{LocalizationResult, Token, localized::Localized},
 	};
 	use testing::SingleThreadedApp;
 

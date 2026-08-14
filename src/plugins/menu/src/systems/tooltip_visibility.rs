@@ -1,6 +1,6 @@
 use crate::components::tooltip::{TooltipContent, TooltipUiConfig};
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::prelude::*;
 use std::time::Duration;
 
 pub(crate) fn tooltip_visibility<TTime, T>(

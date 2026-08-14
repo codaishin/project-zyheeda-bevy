@@ -7,7 +7,7 @@ use crate::{
 	traits::{GetAllActiveAnimations, YoungestToOldestActiveAnimations},
 };
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
-use common::traits::handles_animations::{AnimationKey, AnimationPriority};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, fmt::Debug, iter::Rev};

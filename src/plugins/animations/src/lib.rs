@@ -18,16 +18,7 @@ use crate::{
 	},
 };
 use bevy::{prelude::*, world_serialization::WorldInstanceReady};
-use common::{
-	systems::link::to_target::LinkToTarget,
-	tools::plugin_system_set::PluginSystemSet,
-	traits::{
-		handles_animations::{AnimationClips, HandlesAnimations},
-		handles_saving::HandlesSaving,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 use components::animation_dispatch::AnimationDispatch;
 use std::marker::PhantomData;
 

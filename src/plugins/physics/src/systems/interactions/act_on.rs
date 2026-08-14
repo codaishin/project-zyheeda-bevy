@@ -8,11 +8,7 @@ use crate::{
 	traits::act_on::ActOn,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::accessors::get::Get,
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::time::Duration;
 
 type Components<'a, TActor, TTarget> = (
@@ -64,11 +60,6 @@ mod tests {
 	use super::*;
 	use crate::traits::update_blockers::UpdateBlockers;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		CommonPlugin,
-		components::persistent_entity::PersistentEntity,
-		traits::register_persistent_entities::RegisterPersistentEntities,
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::HashSet, sync::LazyLock};

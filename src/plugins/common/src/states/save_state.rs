@@ -1,4 +1,4 @@
-use crate::traits::iteration::{Iter, IterFinite};
+use crate::traits::iteration::{FiniteIter, IterFinite};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Eq, PartialEq, Debug, Hash, Serialize, Deserialize)]
@@ -9,11 +9,11 @@ pub enum SaveState {
 }
 
 impl IterFinite for SaveState {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Self::Save))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(Self::Save))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
 			Self::Save => Some(Self::AttemptLoad),
 			Self::AttemptLoad => Some(Self::Load),

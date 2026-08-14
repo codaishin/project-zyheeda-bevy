@@ -1,12 +1,6 @@
 use crate::resources::agents::prefab::PrefabRegister;
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::{
-	traits::{
-		accessors::get::TryGetContextMut,
-		handles_map_generation::{AgentType, InteractiveType, MapPrefabs, PrefabType, SetPrefab},
-	},
-	zyheeda_commands::ZyheedaEntityCommands,
-};
+use common::prelude::*;
 
 #[derive(SystemParam, Debug)]
 pub struct SetAgentPrefab<'w> {

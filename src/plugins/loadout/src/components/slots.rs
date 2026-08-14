@@ -8,22 +8,16 @@ use crate::{
 	systems::enqueue::held_slots::HeldSlots,
 };
 use bevy::{asset::Handle, prelude::*};
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::GetRef,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
-	},
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use std::{collections::HashMap, fmt::Debug};
 use zyheeda_core::prelude::*;
 
 #[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
 #[require(
-	SlotVisualization<HandSlot>,
-	SlotVisualization<ForearmSlot>,
-	SlotVisualization<EssenceSlot>,
+	SlotVisualization<VisibleHandSlot>,
+	SlotVisualization<VisibleForearmSlot>,
+	SlotVisualization<VisibleEssenceSlot>,
 	HeldSlots,
 )]
 #[savable_component(id = "slots", dto = SlotsDto)]

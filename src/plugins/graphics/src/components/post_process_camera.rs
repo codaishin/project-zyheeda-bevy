@@ -2,7 +2,7 @@ use bevy::{
 	prelude::*,
 	render::{extract_component::ExtractComponent, render_resource::ShaderType},
 };
-use common::tools::pixel::Pixel;
+use common::prelude::*;
 use macros::asset_path;
 
 #[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType)]

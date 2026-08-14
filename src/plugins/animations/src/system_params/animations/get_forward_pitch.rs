@@ -1,5 +1,5 @@
 use crate::system_params::animations::AnimationsContextMut;
-use common::traits::handles_animations::{DirForwardPitch, GetForwardPitch, GetForwardPitchMut};
+use common::prelude::*;
 
 impl GetForwardPitch for AnimationsContextMut<'_> {
 	fn get_forward_pitch(&self) -> Option<DirForwardPitch> {
@@ -28,10 +28,6 @@ mod tests {
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
-	};
-	use common::traits::{
-		accessors::get::TryGetContextMut,
-		handles_animations::{AnimationClips, Animations, ForwardPitch},
 	};
 	use testing::SingleThreadedApp;
 

@@ -1,19 +1,13 @@
 use crate::{
 	components::active_skill::ActiveSkill,
 	skills::shape::OnSkillStop,
-	traits::spawn_skill::SpawnSkill,
+	traits::spawn_skill::SpawnSkillInternal,
 };
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::{
-		handles_skill_physics::{Despawn, SkillCaster, SkillEntity},
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 
 impl<TConfig> ActiveSkill<TConfig>
 where
@@ -24,7 +18,7 @@ where
 		mut agents: Query<(Entity, &mut Self)>,
 		persistent_entities: Query<&PersistentEntity>,
 	) where
-		TSpawn: for<'w, 's> SystemParam<Item<'w, 's>: SpawnSkill<TConfig> + Despawn>,
+		TSpawn: for<'w, 's> SystemParam<Item<'w, 's>: SpawnSkillInternal<TConfig> + DespawnSkill>,
 	{
 		for (entity, mut skill_executer) in &mut agents {
 			match skill_executer.as_ref() {
@@ -33,14 +27,14 @@ where
 						continue;
 					};
 					let on_stop_skill =
-						spawn.spawn_skill(shape.clone(), SkillCaster(*entity), *slot_key);
+						spawn.spawn_skill_internal(shape.clone(), SkillCaster(*entity), *slot_key);
 					match on_stop_skill {
 						OnSkillStop::Ignore => *skill_executer = Self::Idle,
 						OnSkillStop::Stop(skill) => *skill_executer = Self::Stoppable(skill),
 					}
 				}
 				Self::Stop(skill) => {
-					spawn.despawn(SkillEntity(*skill));
+					spawn.despawn_skill(SkillEntity(*skill));
 					*skill_executer = Self::Idle
 				}
 				_ => {}
@@ -53,7 +47,6 @@ where
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::{CommonPlugin, tools::action_key::slot::SlotKey};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::sync::LazyLock;
@@ -68,35 +61,35 @@ mod tests {
 		mock: Mock_Spawner,
 	}
 
-	impl SpawnSkill<_Config> for ResMut<'_, _Spawner> {
-		fn spawn_skill(
+	impl SpawnSkillInternal<_Config> for ResMut<'_, _Spawner> {
+		fn spawn_skill_internal(
 			&mut self,
 			config: _Config,
 			caster: SkillCaster,
 			slot: SlotKey,
 		) -> OnSkillStop {
-			self.mock.spawn_skill(config, caster, slot)
+			self.mock.spawn_skill_internal(config, caster, slot)
 		}
 	}
 
-	impl Despawn for _Spawner {
-		fn despawn(&mut self, skill: SkillEntity) {
-			self.mock.despawn(skill);
+	impl DespawnSkill for _Spawner {
+		fn despawn_skill(&mut self, skill: SkillEntity) {
+			self.mock.despawn_skill(skill);
 		}
 	}
 
 	mock! {
 		_Spawner {}
-		impl SpawnSkill<_Config> for _Spawner {
-			fn spawn_skill(
+		impl SpawnSkillInternal<_Config> for _Spawner {
+			fn spawn_skill_internal(
 				&mut self,
 				config: _Config,
 				caster: SkillCaster,
 				slot: SlotKey,
 			) -> OnSkillStop;
 		}
-		impl Despawn for _Spawner {
-			fn despawn(&mut self, skill: SkillEntity) {}
+		impl DespawnSkill for _Spawner {
+			fn despawn_skill(&mut self, skill: SkillEntity) {}
 		}
 	}
 
@@ -134,11 +127,11 @@ mod tests {
 		app.update();
 
 		fn assert_call_spawn(mock: &mut Mock_Spawner) {
-			mock.expect_spawn_skill()
+			mock.expect_spawn_skill_internal()
 				.once()
 				.with(eq(_Config), eq(SkillCaster(*CASTER)), eq(SlotKey(11)))
 				.return_const(OnSkillStop::Ignore);
-			mock.expect_despawn().return_const(());
+			mock.expect_despawn_skill().return_const(());
 		}
 	}
 
@@ -146,8 +139,9 @@ mod tests {
 	#[test_case(OnSkillStop::Stop(*SKILL), ActiveSkill::Stoppable(*SKILL); "stoppable")]
 	fn set_started_to(on_skill_stop: OnSkillStop, expected: ActiveSkill<_Config>) {
 		let mut app = setup(_Spawner::new().with_mock(|mock| {
-			mock.expect_spawn_skill().return_const(on_skill_stop);
-			mock.expect_despawn().return_const(());
+			mock.expect_spawn_skill_internal()
+				.return_const(on_skill_stop);
+			mock.expect_despawn_skill().return_const(());
 		}));
 		let entity = app
 			.world_mut()
@@ -177,8 +171,9 @@ mod tests {
 		app.update();
 
 		fn assert_call_despawn(mock: &mut Mock_Spawner) {
-			mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
-			mock.expect_despawn()
+			mock.expect_spawn_skill_internal()
+				.return_const(OnSkillStop::Ignore);
+			mock.expect_despawn_skill()
 				.once()
 				.with(eq(SkillEntity(*SKILL)))
 				.return_const(());
@@ -188,8 +183,9 @@ mod tests {
 	#[test]
 	fn set_stopped_to_idle() {
 		let mut app = setup(_Spawner::new().with_mock(|mock| {
-			mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
-			mock.expect_despawn().return_const(());
+			mock.expect_spawn_skill_internal()
+				.return_const(OnSkillStop::Ignore);
+			mock.expect_despawn_skill().return_const(());
 		}));
 		let entity = app
 			.world_mut()
@@ -208,8 +204,9 @@ mod tests {
 	#[test_case(ActiveSkill::Stoppable(*SKILL); "stoppable")]
 	fn do_not_change(executor: ActiveSkill<_Config>) {
 		let mut app = setup(_Spawner::new().with_mock(|mock| {
-			mock.expect_spawn_skill().return_const(OnSkillStop::Ignore);
-			mock.expect_despawn().return_const(());
+			mock.expect_spawn_skill_internal()
+				.return_const(OnSkillStop::Ignore);
+			mock.expect_despawn_skill().return_const(());
 		}));
 		let entity = app.world_mut().spawn((*CASTER, executor)).id();
 

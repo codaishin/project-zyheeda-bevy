@@ -6,15 +6,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	errors::Unreachable,
-	states::game_state::GameState,
-	traits::{
-		accessors::get::View,
-		handles_localization::localized::Localized,
-		prefab::{Prefab, PrefabEntityCommands},
-	},
-};
+use common::{prelude::*, states::game_state::GameState};
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[component(immutable)]

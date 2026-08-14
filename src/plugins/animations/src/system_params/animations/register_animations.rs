@@ -4,17 +4,7 @@ use crate::{
 	traits::InsertClips,
 };
 use bevy::prelude::*;
-use common::traits::{
-	handles_animations::{
-		AffectedAnimationBones,
-		Animation,
-		AnimationClips,
-		AnimationKey,
-		AnimationMaskBits,
-		RegisterAnimations,
-	},
-	wrap_handle::WrapHandle,
-};
+use common::prelude::*;
 use std::collections::HashMap;
 
 impl<TGraph> RegisterAnimations for AnimationsRegisterContextMut<'_, TGraph>
@@ -62,21 +52,6 @@ mod tests {
 		system_params::animations::AnimationsParamMut,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		bit_mask_index,
-		tools::{action_key::slot::SlotKey, bone_name::BoneName},
-		traits::{
-			accessors::get::TryGetContextMut,
-			handles_animations::{
-				AffectedAnimationBones,
-				AnimationClips,
-				PlayMode,
-				SkillAnimation,
-				WithoutAnimations,
-			},
-			wrap_handle::GetHandle,
-		},
-	};
 	use std::{collections::HashSet, sync::LazyLock};
 	use testing::{SingleThreadedApp, new_handle};
 

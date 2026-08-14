@@ -1,6 +1,6 @@
 use crate::components::icon::Icon;
 use bevy::prelude::*;
-use common::traits::handles_localization::localized::Localized;
+use common::prelude::*;
 use std::sync::LazyLock;
 
 /// Display the localized text:

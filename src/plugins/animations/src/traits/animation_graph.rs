@@ -1,6 +1,6 @@
 use super::InsertClips;
 use bevy::prelude::*;
-use common::traits::handles_animations::{AnimationClips, Directional, PitchedForward};
+use common::prelude::*;
 
 impl<TGraph> InsertClips<AnimationClips<AnimationNodeIndex>> for TGraph
 where
@@ -115,7 +115,6 @@ impl GetNodeMut for AnimationGraph {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_animations::{ForwardPitch, PitchedForward};
 	use mockall::{mock, predicate::eq};
 	use testing::new_handle;
 
@@ -342,8 +341,6 @@ mod tests {
 
 	mod pitched_animation_asset {
 		#![allow(clippy::unwrap_used)]
-		use common::forward_pitch;
-
 		use super::*;
 		use std::sync::LazyLock;
 

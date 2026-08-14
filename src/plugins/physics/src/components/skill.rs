@@ -6,11 +6,7 @@ mod projection;
 
 use crate::components::{collider::ColliderRoot, skill::dto::SkillDto};
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	tools::{Units, UnitsPerSecond},
-	traits::handles_skill_physics::{Effect, SkillCaster, SkillMount, SkillShape},
-};
+use common::prelude::*;
 use macros::{SavableComponent, asset_path};
 use serde::{Deserialize, Serialize};
 
@@ -20,8 +16,8 @@ use serde::{Deserialize, Serialize};
 pub struct Skill {
 	pub(crate) created_from: CreatedFrom,
 	pub(crate) shape: SkillShape,
-	pub(crate) contact_effects: Vec<Effect>,
-	pub(crate) projection_effects: Vec<Effect>,
+	pub(crate) contact_effects: Vec<SkillEffect>,
+	pub(crate) projection_effects: Vec<SkillEffect>,
 	pub(crate) caster: SkillCaster,
 	pub(crate) mount: SkillMount,
 }

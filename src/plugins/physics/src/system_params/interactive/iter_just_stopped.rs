@@ -1,6 +1,6 @@
 use crate::system_params::interactive::JustStoppedInteractionsContext;
 use bevy::prelude::*;
-use common::traits::handles_physics::IterInteractions;
+use common::prelude::*;
 use std::{collections::hash_set::Iter, iter::Copied};
 
 impl IterInteractions for JustStoppedInteractionsContext {
@@ -29,7 +29,6 @@ mod tests {
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::*;
-	use common::traits::{accessors::get::GetContext, handles_physics::InteractionsJustStopped};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

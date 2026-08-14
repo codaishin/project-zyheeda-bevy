@@ -17,27 +17,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::ScheduleSystem, prelude::*, state::state::StateTransitionSystems};
-use common::{
-	errors::{ErrorData, Level},
-	systems::log::OnError,
-	tools::plugin_system_set::PluginSystemSet,
-	traits::{
-		handles_game_states::{
-			ActivityState,
-			AddGameStateSystem,
-			AutomaticGameStateTransitions,
-			GameState,
-			GameStateTransition,
-			HandlesGameStates,
-			NonPausedStates,
-			OnGameState,
-			TransitionsConfigError,
-			WithOptionalTransitions,
-		},
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 use std::{
 	collections::HashMap,
 	fmt::{Debug, Display},

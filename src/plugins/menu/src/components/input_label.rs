@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::tools::action_key::slot::HandSlot;
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Node = Self::node(), TextFont = Self::text_font())]

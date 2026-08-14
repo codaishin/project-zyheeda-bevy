@@ -1,5 +1,5 @@
 use crate::system_params::skill_agent::{SkillAgentContext, SkillAgentContextMut};
-use common::traits::handles_skill_physics::{SkillTarget, Target, TargetMut};
+use common::prelude::*;
 
 impl Target for SkillAgentContext<'_> {
 	fn target(&self) -> Option<&SkillTarget> {
@@ -24,19 +24,12 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::{
-		components::{mount_points::MountPointsDefinition, target::Target},
+		components::{mount_points::MountPointsDefinition, target::SkillTargetInternal},
 		system_params::skill_agent::{SkillAgent, SkillAgentMut},
 	};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
-	};
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		traits::{
-			accessors::get::{TryGetContext, TryGetContextMut},
-			handles_skill_physics::{InitializedAgent, SkillMountBone, Target as _},
-		},
 	};
 	use testing::SingleThreadedApp;
 
@@ -51,7 +44,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Entity(target_entity))),
+				SkillTargetInternal(Some(SkillTarget::Entity(target_entity))),
 				MountPointsDefinition::<SkillMountBone>::default(),
 			))
 			.id();
@@ -73,7 +66,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Entity(target_entity))),
+				SkillTargetInternal(Some(SkillTarget::Entity(target_entity))),
 				MountPointsDefinition::<SkillMountBone>::default(),
 			))
 			.id();
@@ -97,7 +90,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(None),
+				SkillTargetInternal(None),
 				MountPointsDefinition::<SkillMountBone>::default(),
 			))
 			.id();
@@ -113,8 +106,8 @@ mod tests {
 			Some(SkillTarget::Entity(target_entity)),
 			app.world()
 				.entity(entity)
-				.get::<Target>()
-				.and_then(|Target(target)| *target)
+				.get::<SkillTargetInternal>()
+				.and_then(|SkillTargetInternal(target)| *target)
 		);
 		Ok(())
 	}

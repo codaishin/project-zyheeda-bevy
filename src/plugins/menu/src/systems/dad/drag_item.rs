@@ -3,13 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryApplyOn, View},
-		handles_player::PlayerEntity,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 pub fn drag_item<TPlayer>(
 	mut commands: ZyheedaCommands,
@@ -45,7 +39,6 @@ mod tests {
 		testing::{_Player, _PlayerParam},
 	};
 	use bevy::app::{App, Update};
-	use common::{CommonPlugin, tools::action_key::slot::SlotKey};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

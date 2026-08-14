@@ -1,13 +1,6 @@
 use crate::{GetNormalizedName, components::spawner::Spawner};
 use bevy::{ecs::system::IntoObserverSystem, gltf::GltfMeshName, prelude::*};
-use common::{
-	traits::{
-		accessors::get::TryApplyOn,
-		handles_map_generation::PrefabType,
-		thread_safe::ThreadSafe,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::collections::HashMap;
 use zyheeda_core::strings::normalized_name::NormalizedName;
 
@@ -48,7 +41,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::{handles_enemies::EnemyType, handles_map_generation::AgentType};
 	use testing::SingleThreadedApp;
 
 	macro_rules! gltf_mesh_name {

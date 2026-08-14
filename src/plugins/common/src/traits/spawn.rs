@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 
-pub trait Spawn: Component {
-	fn spawn(commands: Commands);
+pub trait SpawnDefault: Component {
+	fn spawn_default(commands: Commands);
 }
 
-impl<T> Spawn for T
+impl<T> SpawnDefault for T
 where
 	T: Component + Default,
 {
-	fn spawn(mut commands: Commands) {
+	fn spawn_default(mut commands: Commands) {
 		commands.spawn(Self::default());
 	}
 }
@@ -24,7 +24,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, _Component::spawn);
+		app.add_systems(Update, _Component::spawn_default);
 
 		app
 	}

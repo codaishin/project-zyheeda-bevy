@@ -1,16 +1,7 @@
 use super::Item;
 use crate::components::model_render::ModelRender;
 use bevy::reflect::TypePath;
-use common::{
-	components::essence::Essence,
-	errors::Unreachable,
-	tools::item_type::ItemType,
-	traits::{
-		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
-		handles_localization::Token,
-		load_asset::LoadAsset,
-	},
-};
+use common::{components::essence::Essence, prelude::*};
 use serde::{Deserialize, Serialize};
 
 type SkillPath = String;

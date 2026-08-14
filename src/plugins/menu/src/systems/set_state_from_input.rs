@@ -3,14 +3,7 @@ use bevy::{
 	prelude::*,
 	state::state::FreelyMutableState,
 };
-use common::{
-	states::game_state::GameState,
-	tools::action_key::ActionKey,
-	traits::{
-		handles_input::{GetAllInputStates, InputState},
-		states::PlayState,
-	},
-};
+use common::{prelude::*, states::game_state::GameState, traits::states::PlayState};
 
 pub(crate) fn set_state_from_input<TState, TInput>(
 	input: StaticSystemParam<TInput>,
@@ -70,7 +63,7 @@ mod tests {
 		app::{App, Update},
 		state::app::{AppExtStates, StatesPlugin},
 	};
-	use common::{states::menu_state::MenuState, traits::iteration::IterFinite};
+	use common::states::menu_state::MenuState;
 	use macros::NestedMocks;
 	use mockall::automock;
 	use testing::{NestedMocks, SingleThreadedApp};

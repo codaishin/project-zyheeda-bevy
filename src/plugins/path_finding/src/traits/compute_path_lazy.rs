@@ -1,12 +1,4 @@
-use common::{
-	tools::Units,
-	traits::handles_map_generation::{
-		GraphGroundPosition,
-		GraphLineOfSight,
-		GraphObstacle,
-		GraphSuccessors,
-	},
-};
+use common::prelude::*;
 use std::hash::Hash;
 
 pub trait ComputePathLazy<TGraph>

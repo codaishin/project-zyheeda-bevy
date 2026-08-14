@@ -1,6 +1,6 @@
 use crate::resources::root_collisions::RootCollisions;
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::prelude::*;
 
 impl<T> RootCollisions<T>
 where

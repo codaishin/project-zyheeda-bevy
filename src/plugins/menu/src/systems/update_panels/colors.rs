@@ -4,10 +4,7 @@ use crate::{
 	traits::colors::HasPanelColors,
 };
 use bevy::prelude::*;
-use common::{
-	traits::accessors::get::{TryApplyOn, View},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 pub fn panel_colors<TPanel: Component + View<PanelState> + HasPanelColors>(
 	mut commands: ZyheedaCommands,

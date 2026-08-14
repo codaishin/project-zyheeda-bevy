@@ -1,9 +1,6 @@
 use crate::system_params::input::Input;
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::{
-	tools::action_key::user_input::UserInput,
-	traits::handles_input::{GetRawUserInput, RawInputState},
-};
+use common::prelude::*;
 
 impl<'w, 's, TKeyMap> GetRawUserInput for Input<'w, 's, TKeyMap>
 where

@@ -3,7 +3,7 @@ use crate::{
 	traits::{
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
-		iteration::{Iter, IterFinite},
+		iteration::{FiniteIter, IterFinite},
 	},
 };
 use bevy::prelude::*;
@@ -37,11 +37,11 @@ impl From<TerrainTargeting> for Token {
 }
 
 impl IterFinite for TerrainTargeting {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(TerrainTargeting))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(TerrainTargeting))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
 			TerrainTargeting => None,
 		}

@@ -2,7 +2,7 @@ use crate::{
 	components::roles::{Enemy, Player},
 	system_params::lights::RolesContextMut,
 };
-use common::traits::handles_graphics::{Role, SetRole};
+use common::prelude::*;
 
 impl SetRole for RolesContextMut<'_> {
 	fn set_role(&mut self, role: Role) {
@@ -24,7 +24,6 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{accessors::get::TryGetContextMut, handles_graphics::HasNoRole};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

@@ -8,20 +8,7 @@ use bevy::{
 	asset::{AssetPath, Handle},
 	reflect::TypePath,
 };
-use common::{
-	dto::duration_in_seconds::DurationInSeconds,
-	errors::Unreachable,
-	tools::{
-		item_type::{CompatibleItems, ItemType},
-		path::Path,
-	},
-	traits::{
-		handles_animations::SkillAnimation,
-		handles_custom_assets::{AssetFileExtensions, TryLoadFrom},
-		handles_localization::Token,
-		load_asset::LoadAsset,
-	},
-};
+use common::{prelude::*, tools::path::Path};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashSet, time::Duration};
 use uuid::Uuid;

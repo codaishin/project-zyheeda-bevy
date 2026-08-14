@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl<T> DespawnAll for T where T: Component {}
 

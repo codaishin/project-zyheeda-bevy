@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use bevy_rapier3d::{math::Real, prelude::*};
-use common::traits::handles_physics::{Raycast, Terrain, TimeOfImpact};
+use common::prelude::*;
 
 impl Raycast<Terrain> for RayCasterMut<'_, '_> {
 	fn raycast(&mut self, Terrain { ray }: Terrain) -> Option<TimeOfImpact> {
@@ -34,7 +34,6 @@ mod tests {
 		mesh::MeshPlugin,
 		scene::ScenePlugin,
 	};
-	use common::tools::Units;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

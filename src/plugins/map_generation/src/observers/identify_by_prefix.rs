@@ -1,5 +1,5 @@
 use bevy::{ecs::system::IntoObserverSystem, gltf::GltfMeshName, prelude::*};
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl<T> IdentifyByPrefix for T where T: Component + Default {}
 

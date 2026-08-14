@@ -4,10 +4,7 @@ use crate::components::{
 	model_render_layers::ModelRenderLayers,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	errors::Unreachable,
-	traits::prefab::{Prefab, PrefabEntityCommands},
-};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[component(immutable)]

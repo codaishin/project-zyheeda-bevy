@@ -16,11 +16,7 @@ use crate::{
 	observers::skill_prefab::ApplyMotionPrefab,
 };
 use bevy_rapier3d::prelude::*;
-use common::{
-	tools::Units,
-	traits::handles_skill_physics::{SkillShape, ground_target::SphereAoE},
-	zyheeda_commands::ZyheedaEntityCommands,
-};
+use common::prelude::*;
 
 impl ApplyMotionPrefab for Skill {
 	fn apply_motion_prefab(&self, entity: &mut ZyheedaEntityCommands) -> RigidBody {

@@ -6,10 +6,7 @@ use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
 	prelude::*,
 };
-use common::traits::{
-	accessors::get::{ContextChanged, TryGetContext, TryGetContextMut},
-	handles_graphics::Visual,
-};
+use common::prelude::*;
 
 #[derive(SystemParam)]
 pub struct HighlightParam<'w, 's> {

@@ -1,22 +1,12 @@
 use crate::skills::behaviors::SkillBehaviorConfig;
-use common::{
-	dto::duration_in_seconds::DurationInSeconds,
-	traits::handles_skill_physics::{
-		Effect,
-		SkillShape,
-		beam::Beam,
-		ground_target::SphereAoE,
-		projectile::Projectile,
-		shield::Shield,
-	},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct SkillBehaviorConfigDto {
 	shape: SpawnSkillDto,
-	contact: Vec<Effect>,
-	projection: Vec<Effect>,
+	contact: Vec<SkillEffect>,
+	projection: Vec<SkillEffect>,
 }
 
 impl From<SkillBehaviorConfigDto> for SkillBehaviorConfig {

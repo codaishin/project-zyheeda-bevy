@@ -7,10 +7,7 @@ use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
 	prelude::*,
 };
-use common::traits::{
-	accessors::get::{ContextChanged, GetContext, GetContextMut},
-	handles_graphics::CameraHandle,
-};
+use common::prelude::*;
 
 #[derive(SystemParam)]
 pub struct CameraParamMut<'w, 's> {

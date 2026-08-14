@@ -6,13 +6,7 @@ use bevy::{
 	},
 	prelude::*,
 };
-use common::{
-	errors::{ErrorData, Level},
-	traits::{
-		get_ray::GetCamRay,
-		handles_physics::{ChangedTargetRay, UpdateTargetRay},
-	},
-};
+use common::prelude::*;
 use std::fmt::Display;
 
 impl WorldPass {

@@ -3,14 +3,7 @@ use crate::components::{
 	movement::Movement,
 };
 use bevy::prelude::*;
-use common::{
-	tools::speed::Speed,
-	traits::{
-		accessors::get::{TryApplyOn, View},
-		handles_physics::CharacterMotion,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl Movement {
 	pub(crate) fn apply<TMotion>(
@@ -89,10 +82,6 @@ mod tests {
 	use crate::components::{
 		config::{Config, SpeedIndex},
 		movement::MovementPath,
-	};
-	use common::{
-		tools::{UnitsPerSecond, speed::Speed},
-		traits::handles_movement::{MovementSpeed, SpeedToggle},
 	};
 	use testing::{IsChanged, SingleThreadedApp};
 

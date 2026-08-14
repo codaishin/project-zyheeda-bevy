@@ -1,14 +1,14 @@
-pub struct Iter<TValue>(pub Option<TValue>);
+pub struct FiniteIter<TValue>(pub Option<TValue>);
 
 pub trait IterFinite: Copy
 where
 	Self: Sized,
 {
-	fn iterator() -> Iter<Self>;
-	fn next(current: &Iter<Self>) -> Option<Self>;
+	fn iterator() -> FiniteIter<Self>;
+	fn next(current: &FiniteIter<Self>) -> Option<Self>;
 }
 
-impl<TIterKey: IterFinite> Iterator for Iter<TIterKey> {
+impl<TIterKey: IterFinite> Iterator for FiniteIter<TIterKey> {
 	type Item = TIterKey;
 
 	fn next(&mut self) -> Option<Self::Item> {
@@ -54,11 +54,11 @@ mod tests {
 	struct _MyType(usize);
 
 	impl IterFinite for _MyType {
-		fn iterator() -> Iter<Self> {
-			Iter(Some(_MyType(0)))
+		fn iterator() -> FiniteIter<Self> {
+			FiniteIter(Some(_MyType(0)))
 		}
 
-		fn next(current: &Iter<Self>) -> Option<_MyType> {
+		fn next(current: &FiniteIter<Self>) -> Option<_MyType> {
 			match &current.0?.0 {
 				0 => Some(_MyType(1)),
 				1 => Some(_MyType(200)),

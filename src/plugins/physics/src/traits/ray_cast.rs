@@ -3,10 +3,7 @@ pub mod system_input;
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use common::{
-	errors::{ErrorData, Level},
-	traits::handles_physics::{IsNaN, TimeOfImpact},
-};
+use common::prelude::*;
 use zyheeda_core::prelude::Sorted;
 
 pub trait GetContinuousSortedRayCaster<TRayData> {
@@ -82,7 +79,7 @@ where
 		self.cast_ray_continuously(ray, |entity, intersection| {
 			match TimeOfImpact::try_from(intersection.time_of_impact) {
 				Ok(toi) => results.push(RayHit { entity, toi }),
-				Err(IsNaN) => invalid_intersections.push(intersection.point),
+				Err(_) => invalid_intersections.push(intersection.point),
 			};
 
 			true
@@ -101,7 +98,6 @@ mod tests {
 	use super::*;
 	use bevy::math::Vec3;
 	use bevy_rapier3d::parry::shape::FeatureId;
-	use common::toi;
 	use core::f32;
 	use testing::{assert_no_panic, fake_entity};
 

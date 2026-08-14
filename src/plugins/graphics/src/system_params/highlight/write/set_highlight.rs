@@ -2,7 +2,7 @@ use crate::{
 	components::{camera_labels::OutlinePass, model_render_layers::ModelRenderLayers},
 	system_params::highlight::HighlightContextMut,
 };
-use common::traits::handles_graphics::{Highlight, SetHighlight};
+use common::prelude::*;
 
 impl SetHighlight for HighlightContextMut<'_> {
 	fn set_highlight(&mut self, highlight: Highlight) {
@@ -30,7 +30,6 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{accessors::get::TryGetContextMut, handles_graphics::Visual};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

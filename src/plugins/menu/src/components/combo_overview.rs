@@ -21,19 +21,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::{
-	tools::{
-		action_key::slot::{HandSlot, SlotKey},
-		pixel::Pixel,
-	},
-	traits::{
-		accessors::get::{View, ViewOf},
-		handles_loadout::skills::{GetSkillId, SkillIcon, SkillToken},
-		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
-		load_asset::LoadAsset,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 use macros::asset_path;
 
 #[derive(Component, Debug, PartialEq)]
@@ -764,7 +752,7 @@ fn add_delete_button<TLocalization>(
 mod tests {
 	use super::*;
 	use crate::traits::build_combo_tree_layout::ComboTreeElement;
-	use common::{tools::action_key::slot::HandSlot, traits::load_asset::mock::MockAssetServer};
+	use common::traits::load_asset::mock_asset_loader::MockAssetServer;
 	use testing::new_handle;
 
 	#[test]

@@ -1,6 +1,6 @@
 use crate::components::ImageColorCommand;
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 pub(crate) fn image_color(
 	mut commands: ZyheedaCommands,

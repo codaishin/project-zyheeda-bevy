@@ -1,6 +1,6 @@
 use crate::{components::ImageColorCommand, traits::InsertContentOn};
 use bevy::prelude::*;
-use common::zyheeda_commands::ZyheedaEntityCommands;
+use common::prelude::*;
 
 pub(crate) struct Unusable;
 

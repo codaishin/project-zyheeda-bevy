@@ -6,7 +6,7 @@ use crate::{
 	systems::{tooltip::tooltip, tooltip_visibility::tooltip_visibility},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
+use common::prelude::*;
 
 pub(crate) trait AddTooltip {
 	fn add_tooltip<TLocalization, T>(&mut self) -> &mut Self

@@ -10,13 +10,7 @@ use crate::components::{
 	current_movement_direction::CurrentMovementDirection,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::{
-	traits::{
-		accessors::get::{GetMut, TryGetContextMut},
-		handles_animations::{AnimationClips, Animations, WithoutAnimations},
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
-};
+use common::prelude::*;
 
 #[derive(SystemParam)]
 pub struct AnimationsParamMut<'w, 's, TAnimationGraph = AnimationGraph>

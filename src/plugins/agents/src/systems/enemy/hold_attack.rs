@@ -1,10 +1,6 @@
 use crate::components::enemy::{Enemy, attack_phase::EnemyAttackPhase, attacking::Attacking};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::TryGetContextMut,
-	handles_loadout::{HeldSkillsMut, skills::Skills},
-	handles_skill_physics::{InitializedAgent, SkillTarget, TargetMut},
-};
+use common::prelude::*;
 
 impl Enemy {
 	pub(crate) fn hold_attack<TPhysics, TLoadout>(
@@ -50,14 +46,6 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::enemy::attack_phase::EnemyAttackPhase;
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		tools::action_key::slot::SlotKey,
-		traits::{
-			handles_loadout::HeldSkills,
-			handles_skill_physics::{SkillTarget, Target},
-		},
-	};
 	use std::{collections::HashSet, sync::LazyLock, time::Duration};
 	use testing::SingleThreadedApp;
 

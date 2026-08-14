@@ -3,19 +3,7 @@ use crate::{
 	system_parameters::loadout::LoadoutPrep,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{
-	tools::inventory_key::InventoryKey,
-	traits::{
-		accessors::get::{GetMut, TryApplyOn, TryGetContextMut},
-		handles_loadout::{
-			LoadoutKey,
-			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
-		},
-		load_asset::LoadAsset,
-		loadout::ItemName,
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
-};
+use common::prelude::*;
 
 impl InsertDefaultLoadout for DefaultLoadout<'_> {
 	fn insert_default_loadout<TItems>(&mut self, loadout: TItems)
@@ -101,10 +89,7 @@ mod tests {
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::{
-		tools::{action_key::slot::SlotKey, inventory_key::InventoryKey},
-		traits::load_asset::mock::MockAssetServer,
-	};
+	use common::traits::load_asset::mock_asset_loader::MockAssetServer;
 	use testing::{SingleThreadedApp, new_handle};
 
 	fn setup(server: MockAssetServer) -> App {

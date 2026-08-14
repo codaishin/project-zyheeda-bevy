@@ -1,14 +1,6 @@
 use crate::traits::compute_path_lazy::ComputePathLazy;
 use bevy::prelude::*;
-use common::{
-	tools::Units,
-	traits::{
-		handles_map_generation::{Graph, GroundPosition, NaivePath},
-		handles_path_finding::ComputePath,
-		register_derived_component::{DerivableFrom, InsertDerivedComponent},
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub struct Navigation<TMethod, TGraph> {
@@ -210,15 +202,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_map_generation::{
-		GraphGroundPosition,
-		GraphLineOfSight,
-		GraphNaivePath,
-		GraphNode,
-		GraphObstacle,
-		GraphSuccessors,
-		NaivePath,
-	};
 	use macros::simple_mock;
 	use mockall::predicate::eq;
 	use testing::Mock;

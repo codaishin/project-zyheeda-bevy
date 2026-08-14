@@ -1,6 +1,6 @@
 use crate::components::{child_meshes::ChildMeshes, model_render_layers::ModelRenderLayers};
 use bevy::{camera::visibility::RenderLayers, prelude::*};
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 type PassLayerOrChildMeshesChanged = Or<(Changed<ModelRenderLayers>, Changed<ChildMeshes>)>;
 

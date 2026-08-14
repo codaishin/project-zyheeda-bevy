@@ -1,22 +1,12 @@
 use crate::{
-	components::{combos::Combos, inventory::Inventory, queue::Queue, slots::Slots},
+	components::{combos::CombosInternal, inventory::Inventory, queue::Queue, slots::Slots},
 	item::Item,
 	skills::Skill,
 	system_parameters::loadout::LoadoutReader,
 	traits::peek_next::PeekNext,
 };
 use bevy::prelude::*;
-use common::{
-	tools::{inventory_key::InventoryKey, skill_execution::SkillExecution},
-	traits::{
-		accessors::get::{ContextChanged, TryGetContext, View},
-		handles_loadout::{
-			LoadoutKey,
-			skills::{ReadSkills, SkillIcon, SkillToken, Skills},
-		},
-		handles_localization::Token,
-	},
-};
+use common::prelude::*;
 use zyheeda_core::prelude::*;
 
 impl TryGetContext<Skills> for LoadoutReader<'static, 'static> {
@@ -43,7 +33,7 @@ pub struct SkillsView<'ctx> {
 	inventory: Ref<'ctx, Inventory>,
 	slots: Ref<'ctx, Slots>,
 	queue: Ref<'ctx, Queue>,
-	combos: Ref<'ctx, Combos>,
+	combos: Ref<'ctx, CombosInternal>,
 	items: &'ctx Assets<Item>,
 	skills: &'ctx Assets<Skill>,
 }
@@ -143,9 +133,8 @@ impl View<SkillExecution> for ReadSkill {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{components::combos::Combos, skills::Skill};
+	use crate::{components::combos::CombosInternal, skills::Skill};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::tools::{action_key::slot::SlotKey, inventory_key::InventoryKey};
 	use testing::{SingleThreadedApp, new_handle};
 
 	mod get_skill {
@@ -154,7 +143,6 @@ mod tests {
 			components::combo_node::ComboNode,
 			skills::{QueuedSkill, SkillMode},
 		};
-		use common::tools::item_type::{CompatibleItems, ItemType};
 
 		fn setup<const I: usize, const S: usize>(
 			items: [(&Handle<Item>, Item); I],
@@ -198,7 +186,7 @@ mod tests {
 				.spawn((
 					Inventory::from([None, None, None, Some(item_handle), None]),
 					Slots::default(),
-					Combos::default(),
+					CombosInternal::default(),
 					Queue::default(),
 				))
 				.id();
@@ -239,7 +227,7 @@ mod tests {
 				.spawn((
 					Inventory::default(),
 					Slots::from([(SlotKey(11), Some(item_handle))]),
-					Combos::default(),
+					CombosInternal::default(),
 					Queue::default(),
 				))
 				.id();
@@ -280,7 +268,7 @@ mod tests {
 				.spawn((
 					Inventory::default(),
 					Slots::from([(SlotKey(11), Some(item_handle))]),
-					Combos::default(),
+					CombosInternal::default(),
 					Queue::default().with_skills([
 						QueuedSkill {
 							key: SlotKey(42),
@@ -336,7 +324,7 @@ mod tests {
 				.spawn((
 					Inventory::default(),
 					Slots::from([(SlotKey(11), Some(item_handle))]),
-					Combos::default(),
+					CombosInternal::default(),
 					Queue::default().with_skills([QueuedSkill {
 						key: SlotKey(11),
 						skill: Skill {
@@ -385,7 +373,7 @@ mod tests {
 				.spawn((
 					Inventory::default(),
 					Slots::from([(SlotKey(11), Some(item_handle))]),
-					Combos::default(),
+					CombosInternal::default(),
 					Queue::default().with_skills([
 						QueuedSkill {
 							key: SlotKey(11),
@@ -447,7 +435,7 @@ mod tests {
 				.spawn((
 					Inventory::default(),
 					Slots::from([(SlotKey(11), Some(item_handle))]),
-					Combos::from(ComboNode::new([(
+					CombosInternal::from(ComboNode::new([(
 						SlotKey(11),
 						(
 							Skill {
@@ -482,7 +470,6 @@ mod tests {
 
 	mod skill {
 		use super::*;
-		use common::traits::accessors::get::ViewOf;
 
 		#[test]
 		fn get_token() {

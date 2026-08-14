@@ -1,9 +1,6 @@
 use super::KeyMap;
 use bevy::reflect::TypePath;
-use common::{
-	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::{handles_custom_assets::AssetFileExtensions, iteration::IterFinite},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::hash::Hash;
 
@@ -47,7 +44,6 @@ mod tests {
 	use super::*;
 	use crate::resources::key_map::KeyMapInternal;
 	use bevy::input::keyboard::KeyCode;
-	use common::{tools::action_key::camera_key::CameraKey, traits::handles_input::UpdateKey};
 	use testing::repeat_scope;
 
 	#[test]

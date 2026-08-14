@@ -10,20 +10,7 @@ use crate::{
 	systems::spawn_grid::TryFromTriangles,
 };
 use bevy::{math::InvalidDirectionError, prelude::*};
-use common::{
-	tools::{Units, vec_not_nan::VecNotNan},
-	traits::handles_map_generation::{
-		Graph,
-		GraphGroundPosition,
-		GraphLineOfSight,
-		GraphNaivePath,
-		GraphNode,
-		GraphObstacle,
-		GraphSuccessors,
-		GroundPosition,
-		NaivePath,
-	},
-};
+use common::prelude::*;
 use core::f32;
 use std::{
 	cmp::Ordering,
@@ -314,7 +301,6 @@ impl Display for TriangleEdgeError {
 mod test {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::vec_not_nan;
 
 	macro_rules! neighbors {
 		(node($($n:expr),* $(,)?)) => {

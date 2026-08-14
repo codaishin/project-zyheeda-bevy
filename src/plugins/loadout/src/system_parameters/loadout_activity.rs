@@ -3,10 +3,7 @@ mod write;
 
 use crate::{components::queue::Queue, systems::enqueue::held_slots::HeldSlots};
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::traits::{
-	accessors::get::{ContextChanged, TryGetContext, TryGetContextMut},
-	handles_loadout::skills::Skills,
-};
+use common::prelude::*;
 use zyheeda_core::prelude::*;
 
 #[derive(SystemParam)]
@@ -65,7 +62,6 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::tools::action_key::slot::SlotKey;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

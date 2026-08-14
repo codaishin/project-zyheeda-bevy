@@ -2,15 +2,7 @@ use crate::{
 	tools::{closed_list::ClosedList, g_scores::GScores, open_list::OpenList},
 	traits::compute_path_lazy::ComputePathLazy,
 };
-use common::{
-	tools::Units,
-	traits::handles_map_generation::{
-		GraphGroundPosition,
-		GraphLineOfSight,
-		GraphObstacle,
-		GraphSuccessors,
-	},
-};
+use common::prelude::*;
 use std::hash::Hash;
 
 pub struct ThetaStar {

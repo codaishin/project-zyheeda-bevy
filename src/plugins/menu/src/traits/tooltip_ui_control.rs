@@ -1,7 +1,7 @@
 use super::insert_ui_content::InsertUiContent;
 use crate::components::tooltip::{Tooltip, TooltipUiConfig};
 use bevy::prelude::*;
-use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
+use common::prelude::*;
 
 pub(crate) trait DespawnAllTooltips<TUI> {
 	fn despawn_all(

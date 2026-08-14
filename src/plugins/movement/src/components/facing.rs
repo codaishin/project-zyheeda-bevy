@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::handles_orientation::Face;
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 

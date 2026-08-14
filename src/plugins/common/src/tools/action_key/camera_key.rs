@@ -2,7 +2,7 @@ use super::{ActionKey, user_input::UserInput};
 use crate::traits::{
 	handles_input::InvalidUserInput,
 	handles_localization::Token,
-	iteration::{Iter, IterFinite},
+	iteration::{FiniteIter, IterFinite},
 };
 use bevy::input::mouse::MouseButton;
 use serde::{Deserialize, Serialize};
@@ -47,11 +47,11 @@ impl TryFrom<ActionKey> for CameraKey {
 }
 
 impl IterFinite for CameraKey {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Self::Rotate))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(Self::Rotate))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match &current.0? {
 			CameraKey::Rotate => None,
 		}

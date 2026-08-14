@@ -23,11 +23,7 @@ use bevy::{
 		view::ViewDepthTexture,
 	},
 };
-use common::{
-	errors::{ErrorData, Level},
-	systems::log::OnError,
-	traits::thread_safe::ThreadSafe,
-};
+use common::prelude::*;
 use std::{
 	fmt::{Debug, Display},
 	hash::Hash,

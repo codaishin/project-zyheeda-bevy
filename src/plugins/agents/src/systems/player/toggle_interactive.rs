@@ -3,15 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	tools::action_key::miscellaneous::Miscellaneous,
-	traits::{
-		accessors::get::{GetContext, TryGetContextMut, ViewOf},
-		handles_input::{GetInputState, InputState},
-		handles_interactive::{Interactive, InteractiveState, SetInteractiveState},
-		handles_physics::{InteractionsOngoing, IterInteractions},
-	},
-};
+use common::prelude::*;
 
 impl Player {
 	pub(crate) fn toggle_interactive<TInput, TPhysics, TInteractive>(
@@ -53,15 +45,6 @@ impl Player {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		tools::action_key::{ActionKey, miscellaneous::Miscellaneous},
-		traits::{
-			accessors::get::View,
-			handles_input::InputState,
-			handles_interactive::InteractiveState,
-			handles_map_generation::InteractiveType,
-		},
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{iter::Copied, slice::Iter};

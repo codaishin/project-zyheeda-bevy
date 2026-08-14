@@ -1,10 +1,6 @@
 use crate::components::{spawner::Spawner, spawner_active::SpawnerActive};
 use bevy::prelude::*;
-use common::traits::{
-	handles_load_tracking::Loaded,
-	handles_map_generation::PrefabType,
-	thread_safe::ThreadSafe,
-};
+use common::prelude::*;
 
 impl<T> Spawner<T>
 where
@@ -19,7 +15,6 @@ where
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::handles_map_generation::AgentType;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

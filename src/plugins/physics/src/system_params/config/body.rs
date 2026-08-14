@@ -5,11 +5,7 @@ use crate::{
 	},
 	system_params::config::ConfigContextMut,
 };
-use common::traits::handles_physics::{
-	ConfigureBody,
-	TranslationOffsets,
-	physical_bodies::BodyConfig,
-};
+use common::prelude::*;
 
 impl ConfigureBody for ConfigContextMut<'_> {
 	fn configure_body(&mut self, body: BodyConfig, offsets: TranslationOffsets) {
@@ -32,16 +28,6 @@ mod tests {
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
-	};
-	use common::{
-		tools::Units,
-		traits::{
-			accessors::get::TryGetContextMut,
-			handles_physics::{
-				NoBodyConfigured,
-				physical_bodies::{Core, Shape, ShapeParameters},
-			},
-		},
 	};
 	use testing::SingleThreadedApp;
 

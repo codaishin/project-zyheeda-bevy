@@ -1,5 +1,5 @@
 use crate::traits::{
-	iteration::{Iter as FiniteIter, IterFinite},
+	iteration::{FiniteIter, IterFinite},
 	thread_safe::ThreadSafe,
 };
 use bevy::{
@@ -100,20 +100,20 @@ pub struct GameStateCollection<'a> {
 }
 
 impl GameStateCollection<'_> {
-	pub fn iter(&self) -> Iter<'_> {
-		Iter {
+	pub fn iter(&self) -> GameStatesIter<'_> {
+		GameStatesIter {
 			activity: Some(&self.activity),
 			ui: self.ui.iter(),
 		}
 	}
 }
 
-pub struct Iter<'a> {
+pub struct GameStatesIter<'a> {
 	activity: Option<&'a ActivityState>,
 	ui: HashSetIter<'a, UIState>,
 }
 
-impl Iterator for Iter<'_> {
+impl Iterator for GameStatesIter<'_> {
 	type Item = GameState;
 
 	fn next(&mut self) -> Option<Self::Item> {

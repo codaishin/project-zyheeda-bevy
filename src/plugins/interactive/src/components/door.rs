@@ -3,18 +3,7 @@ use crate::{
 	components::{door_meta_handle::DoorMetaHandle, interactive::Interactive},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	components::{
-		model::{Model, SceneId, UseGltfLookup},
-		persistent_entity::PersistentEntity,
-	},
-	errors::Unreachable,
-	systems::register_animations::AnimationsMarker,
-	traits::{
-		handles_map_generation::InteractiveType,
-		prefab::{Prefab, PrefabEntityCommands},
-	},
-};
+use common::{prelude::*, systems::register_animations::AnimationsMarker};
 use macros::{SavableComponent, asset_path};
 use serde::{Deserialize, Serialize};
 

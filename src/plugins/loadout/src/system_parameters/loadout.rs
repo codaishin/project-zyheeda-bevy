@@ -3,7 +3,7 @@ pub(crate) mod write;
 
 use crate::{
 	components::{
-		combos::Combos,
+		combos::CombosInternal,
 		inventory::Inventory,
 		queue::Queue,
 		slot_definitions::SlotDefinitions,
@@ -13,7 +13,7 @@ use crate::{
 	skills::Skill,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::zyheeda_commands::ZyheedaCommands;
+use common::prelude::*;
 
 #[derive(SystemParam)]
 pub struct LoadoutReader<'w, 's> {
@@ -25,7 +25,7 @@ pub struct LoadoutReader<'w, 's> {
 type ReadComponents = (
 	Ref<'static, Slots>,
 	Ref<'static, Inventory>,
-	Ref<'static, Combos>,
+	Ref<'static, CombosInternal>,
 	Ref<'static, Queue>,
 );
 
@@ -33,7 +33,7 @@ type ReadComponents = (
 pub struct LoadoutWriter<'w, 's> {
 	slots: Query<'w, 's, &'static mut Slots>,
 	inventories: Query<'w, 's, &'static mut Inventory>,
-	combos: Query<'w, 's, &'static mut Combos>,
+	combos: Query<'w, 's, &'static mut CombosInternal>,
 	skills: Res<'w, Assets<Skill>>,
 }
 

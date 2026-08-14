@@ -19,20 +19,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::ColliderScale;
-use common::{
-	components::{insert_asset::InsertAsset, model::Model},
-	tools::Units,
-	traits::{
-		handles_physics::{PhysicalObject, physical_bodies::Blocker},
-		handles_skill_physics::{
-			SkillShape,
-			beam::Beam,
-			ground_target::SphereAoE,
-			projectile::Projectile,
-			shield::Shield,
-		},
-	},
-};
+use common::prelude::*;
 use std::f32::consts::PI;
 
 impl GetContactPrefab for Skill {

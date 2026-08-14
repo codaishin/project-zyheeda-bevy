@@ -1,9 +1,6 @@
 use crate::components::enemy::{Enemy, chasing::Chasing};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::{TryGetContextMut, View},
-	handles_movement::{ConfiguredMovement, MovementTarget, StartMovement, StopMovement},
-};
+use common::prelude::*;
 
 impl Enemy {
 	pub(crate) fn chase_player<TMovement>(
@@ -46,7 +43,6 @@ impl Enemy {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::Units, traits::handles_movement::MovementTarget};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use test_case::test_case;

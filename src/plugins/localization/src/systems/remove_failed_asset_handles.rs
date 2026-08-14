@@ -4,7 +4,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::traits::get_asset_load_state::GetAssetLoadState;
+use common::prelude::*;
 
 impl<T> RemoveFailedAssetHandles for T where
 	T: for<'w, 's> SystemParam<Item<'w, 's>: CurrentLocaleMut>

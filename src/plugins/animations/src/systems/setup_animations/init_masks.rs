@@ -3,7 +3,7 @@ use crate::{
 	traits::animation_graph::GetNodeMut,
 };
 use bevy::prelude::*;
-use common::traits::{thread_safe::ThreadSafe, wrap_handle::GetHandle};
+use common::prelude::*;
 use zyheeda_core::prelude::*;
 
 impl SetupAnimations {
@@ -37,7 +37,6 @@ impl SetupAnimations {
 mod tests {
 	use super::*;
 	use crate::components::animation_lookup::AnimationLookup;
-	use common::traits::handles_animations::{Animation, AnimationKey};
 	use std::{collections::HashMap, slice::Iter};
 	use testing::{SingleThreadedApp, new_handle};
 

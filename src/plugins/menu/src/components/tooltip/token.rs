@@ -1,7 +1,7 @@
 use super::{Tooltip, TooltipUiConfig};
 use crate::traits::{colors::PanelColors, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::traits::handles_localization::{Localize, Token, localized::Localized};
+use common::prelude::*;
 
 impl TooltipUiConfig for Token {
 	fn node() -> Node {

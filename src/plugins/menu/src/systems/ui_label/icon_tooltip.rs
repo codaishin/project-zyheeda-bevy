@@ -3,7 +3,7 @@ use crate::{
 	components::{icon::Icon, label::UILabel},
 };
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl UILabel {
 	pub(crate) fn icon_tooltip(
@@ -25,7 +25,6 @@ impl UILabel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_localization::localized::Localized;
 	use std::path::PathBuf;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};

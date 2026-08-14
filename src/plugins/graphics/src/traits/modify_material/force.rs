@@ -3,7 +3,7 @@ use crate::{
 	traits::modify_material::ModifyMaterial,
 };
 use bevy::color::palettes::css::LIGHT_CYAN;
-use common::effects::force::Force;
+use common::prelude::*;
 
 impl ModifyMaterial for Force {
 	fn modify_material(material: &mut EffectMaterial) {

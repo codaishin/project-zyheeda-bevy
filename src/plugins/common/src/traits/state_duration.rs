@@ -165,7 +165,7 @@ fn zero_duration_meta<TStateName: IterFinite + Copy + Clone + Eq + Hash + 'stati
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::iteration::Iter;
+	use crate::traits::iteration::FiniteIter;
 
 	#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	enum _State {
@@ -183,11 +183,11 @@ mod tests {
 	}
 
 	impl IterFinite for _State {
-		fn iterator() -> Iter<Self> {
-			Iter(Some(_State::A))
+		fn iterator() -> FiniteIter<Self> {
+			FiniteIter(Some(_State::A))
 		}
 
-		fn next(current: &Iter<Self>) -> Option<Self> {
+		fn next(current: &FiniteIter<Self>) -> Option<Self> {
 			match current.0? {
 				_State::A => Some(_State::B),
 				_State::B => Some(_State::C),

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::register_derived_component::{DerivableFrom, InsertDerivedComponent};
+use common::prelude::*;
 
 #[derive(Component, Default, Debug, PartialEq)]
 #[require(BackgroundColor = BackgroundColor(Color::srgba(0.5, 0.5, 0.5, 0.5)))]

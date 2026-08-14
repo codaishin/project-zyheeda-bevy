@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::{traits::handles_map_generation::PrefabType, zyheeda_commands::ZyheedaEntityCommands};
+use common::prelude::*;
 
 #[derive(Resource, Debug)]
 pub struct PrefabRegister<T>(pub(crate) fn(ZyheedaEntityCommands, T::TTranslation, T))

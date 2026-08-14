@@ -1,7 +1,7 @@
 use crate::{
 	attributes::effect_target::EffectTarget,
 	tools::UnitsPerSecond,
-	traits::handles_physics::Effect,
+	traits::handles_physics::PhysicalEffect,
 };
 use serde::{Deserialize, Serialize};
 
@@ -10,6 +10,6 @@ pub struct Gravity {
 	pub strength: UnitsPerSecond,
 }
 
-impl Effect for Gravity {
+impl PhysicalEffect for Gravity {
 	type TTarget = EffectTarget<Gravity>;
 }

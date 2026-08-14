@@ -3,7 +3,7 @@ use crate::{
 	traits::write_buffer::WriteBuffer,
 };
 use bevy::prelude::*;
-use common::components::persistent_entity::PersistentEntity;
+use common::prelude::*;
 use std::{
 	collections::HashMap,
 	sync::{Arc, Mutex},

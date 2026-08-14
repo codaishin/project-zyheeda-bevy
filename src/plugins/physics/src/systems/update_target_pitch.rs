@@ -1,23 +1,15 @@
 use crate::components::{
 	offset::{AimOffset, CenterOffset, ComputeOffsetTranslation},
-	target::{OldTargetPitch, Target},
+	target::{OldTargetPitch, SkillTargetInternal},
 };
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryApplyOn, TryGetContextMut},
-		handles_animations::{Animations, DirForwardPitch, ForwardPitch, GetForwardPitchMut},
-		handles_physics::{MouseHover, MouseHoversOver, Raycast},
-		handles_skill_physics::{Cursor, SkillTarget},
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::f32::consts::FRAC_PI_2;
 
-impl Target {
+impl SkillTargetInternal {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn update_pitch<TRayCast, TAnimations>(
 		mut commands: ZyheedaCommands,
@@ -113,15 +105,6 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::target::OldTargetPitch;
-	use common::{
-		CommonPlugin,
-		components::persistent_entity::PersistentEntity,
-		forward_pitch,
-		traits::{
-			handles_animations::{ForwardPitch, GetForwardPitch},
-			handles_skill_physics::{Cursor, SkillTarget},
-		},
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use test_case::test_case;
@@ -187,7 +170,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				Target::update_pitch::<ResMut<_RayCast>, Query<&mut _Animations>>,
+				SkillTargetInternal::update_pitch::<ResMut<_RayCast>, Query<&mut _Animations>>,
 				IsChanged::<_Animations>::detect,
 			)
 				.chain(),
@@ -202,7 +185,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(None),
+				SkillTargetInternal(None),
 				GlobalTransform::default(),
 				_Animations {
 					forward_pitch: Some(DirForwardPitch::Down(ForwardPitch::MAX)),
@@ -233,7 +216,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Entity(target_entity))),
+				SkillTargetInternal(Some(SkillTarget::Entity(target_entity))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -273,7 +256,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Entity(target_entity))),
+				SkillTargetInternal(Some(SkillTarget::Entity(target_entity))),
 				AimOffset(3.),
 				GlobalTransform::from_translation(translation),
 				_Animations {
@@ -314,7 +297,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Entity(target_entity))),
+				SkillTargetInternal(Some(SkillTarget::Entity(target_entity))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -351,7 +334,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
+				SkillTargetInternal(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -389,7 +372,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
+				SkillTargetInternal(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
 				AimOffset(3.),
 				_Animations {
@@ -431,7 +414,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
+				SkillTargetInternal(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -478,7 +461,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
+				SkillTargetInternal(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
 				AimOffset(3.),
 				_Animations {
@@ -527,7 +510,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
+				SkillTargetInternal(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -559,7 +542,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor(Cursor::Direction))),
+				SkillTargetInternal(Some(SkillTarget::Cursor(Cursor::Direction))),
 				GlobalTransform::default(),
 				_Animations {
 					forward_pitch: Some(DirForwardPitch::Up(ForwardPitch::MAX)),
@@ -589,7 +572,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
+				SkillTargetInternal(Some(SkillTarget::Cursor(Cursor::TerrainHover))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -620,7 +603,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				Target(Some(SkillTarget::Entity(target_entity))),
+				SkillTargetInternal(Some(SkillTarget::Entity(target_entity))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: None,
@@ -658,7 +641,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				OldTargetPitch(forward_pitch),
-				Target(Some(SkillTarget::Entity(target_entity))),
+				SkillTargetInternal(Some(SkillTarget::Entity(target_entity))),
 				GlobalTransform::from_translation(translation),
 				_Animations {
 					forward_pitch: Some(DirForwardPitch::Down(forward_pitch!(0.42))),

@@ -1,10 +1,10 @@
 pub(crate) mod extension;
 
 use crate::skills::shape::OnSkillStop;
-use common::{tools::action_key::slot::SlotKey, traits::handles_skill_physics::SkillCaster};
+use common::prelude::*;
 
-pub(crate) trait SpawnSkill<TSkillConfig> {
-	fn spawn_skill(
+pub(crate) trait SpawnSkillInternal<TSkillConfig> {
+	fn spawn_skill_internal(
 		&mut self,
 		config: TSkillConfig,
 		caster: SkillCaster,

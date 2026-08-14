@@ -5,13 +5,7 @@ use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{GetMut, TryGetContextMut},
-		handles_graphics::HasNoRole,
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
-};
+use common::prelude::*;
 
 #[derive(SystemParam)]
 pub struct RolesParamMut<'w, 's> {

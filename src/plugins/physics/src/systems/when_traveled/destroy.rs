@@ -1,10 +1,6 @@
 use crate::components::when_traveled::DestroyAfterDistanceTraveled;
 use bevy::prelude::*;
-use common::{
-	tools::{Done, Units},
-	traits::accessors::get::TryApplyOn,
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl DestroyAfterDistanceTraveled {
 	pub(crate) fn system(

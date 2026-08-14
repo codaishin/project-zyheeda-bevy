@@ -2,24 +2,9 @@ pub(crate) mod dto;
 
 use bevy::prelude::*;
 use common::{
+	prelude::*,
 	systems::register_animations::{AnimationConfig, AnimationKeyAndNames, AnimationMaskAndBones},
-	tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName, path::Path},
-	traits::{
-		accessors::get::View,
-		handles_animations::{
-			AffectedAnimationBones,
-			Animation,
-			AnimationKey,
-			AnimationMaskBits,
-			AnimationNames,
-		},
-		handles_custom_assets::AssetFolderPath,
-		handles_movement::{MovementSpeed, RequiredClearance},
-		handles_physics::{PhysicalDefaultAttributes, physical_bodies::InteractiveFrame},
-		handles_skill_physics::SkillMountBone,
-		loadout::ItemName,
-	},
-	zyheeda_commands::ZyheedaEntityCommands,
+	tools::path::Path,
 };
 use macros::asset_path;
 use serde::{Deserialize, Serialize};

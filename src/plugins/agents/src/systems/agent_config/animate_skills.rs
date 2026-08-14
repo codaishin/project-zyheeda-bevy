@@ -1,19 +1,6 @@
 use crate::components::agent_config::AgentConfig;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::{ContextChanged, TryGetContext, TryGetContextMut},
-		handles_animations::{
-			ActiveAnimationsMut,
-			AnimationKey,
-			AnimationPriority,
-			Animations,
-			SkillAnimation,
-		},
-		handles_loadout::{ActiveSkill, ActiveSkills, skills::Skills},
-	},
-};
+use common::prelude::*;
 
 impl AgentConfig {
 	pub(crate) fn animate_skills<TLoadout, TAnimations>(
@@ -77,13 +64,6 @@ mod tests {
 	use crate::{
 		assets::agent_meta::AgentMeta,
 		systems::player::animate_movement::tests::_Animations,
-	};
-	use common::{
-		tools::action_key::slot::SlotKey,
-		traits::{
-			handles_animations::{AnimationKey, AnimationPriority},
-			handles_loadout::{ActiveSkill, ActiveSkills},
-		},
 	};
 	use std::{collections::HashMap, iter::Copied, slice::Iter};
 	use testing::{SingleThreadedApp, new_handle};

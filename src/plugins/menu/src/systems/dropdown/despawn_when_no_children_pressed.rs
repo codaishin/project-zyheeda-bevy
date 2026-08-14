@@ -1,6 +1,6 @@
 use crate::components::dropdown::DropdownUI;
 use bevy::prelude::*;
-use common::tools::Focus;
+use common::prelude::*;
 
 pub(crate) fn dropdown_despawn_when_no_children_pressed<TItem: Sync + Send + 'static>(
 	focus: In<Focus>,

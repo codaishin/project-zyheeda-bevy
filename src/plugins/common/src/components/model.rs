@@ -166,7 +166,10 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::traits::{load_asset::mock::MockAssetServer, prefab::AddPrefabObserver};
+	use crate::traits::{
+		load_asset::mock_asset_loader::MockAssetServer,
+		prefab::AddPrefabObserver,
+	};
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
 

@@ -1,9 +1,6 @@
 use crate::components::camera_arm::CameraArm;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::traits::{
-	accessors::get::GetContextMut,
-	handles_graphics::{CameraHandle, CameraTransformMut},
-};
+use common::prelude::*;
 
 impl CameraArm {
 	pub(crate) fn apply_direction<TCamera>(
@@ -25,7 +22,6 @@ impl CameraArm {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::Units, traits::handles_graphics::CameraTransform};
 	use testing::SingleThreadedApp;
 
 	#[derive(Resource, Debug, PartialEq, Default)]

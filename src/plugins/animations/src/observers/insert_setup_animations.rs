@@ -1,6 +1,6 @@
 use crate::components::setup_animations::SetupAnimations;
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl SetupAnimations {
 	pub(crate) fn insert_when<TEvent>(trigger: On<TEvent>, mut commands: ZyheedaCommands)

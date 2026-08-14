@@ -1,6 +1,6 @@
 use crate::traits::orbit::{MoveArm, Vec2Radians};
 use bevy::prelude::*;
-use common::{self, tools::Units};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 

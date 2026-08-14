@@ -15,11 +15,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::traits::{
-	handles_localization::Localize,
-	mouse_position::MousePosition,
-	thread_safe::ThreadSafe,
-};
+use common::prelude::*;
 use std::ops::Deref;
 
 pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
@@ -78,7 +74,6 @@ mod tests {
 	use super::*;
 	use crate::{components::tooltip::TooltipUiConfig, traits::insert_ui_content::InsertUiContent};
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::traits::handles_localization::{LocalizationResult, Localize, Token};
 	use macros::NestedMocks;
 	use mockall::mock;
 	use testing::{NestedMocks, SingleThreadedApp};

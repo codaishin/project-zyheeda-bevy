@@ -3,7 +3,7 @@ use crate::{
 	traits::{
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
-		iteration::{Iter, IterFinite},
+		iteration::{FiniteIter, IterFinite},
 	},
 };
 use bevy::input::keyboard::KeyCode;
@@ -39,11 +39,11 @@ impl From<Miscellaneous> for Token {
 }
 
 impl IterFinite for Miscellaneous {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(Miscellaneous::Interact))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(Miscellaneous::Interact))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
 			Miscellaneous::Interact => None,
 		}

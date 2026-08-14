@@ -1,10 +1,6 @@
 use crate::components::lifetime::LifetimeTiedTo;
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::accessors::get::{Get, TryApplyOn, View},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl LifetimeTiedTo {
 	pub(crate) fn insert_on<T>(
@@ -31,7 +27,6 @@ impl LifetimeTiedTo {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::CommonPlugin;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]

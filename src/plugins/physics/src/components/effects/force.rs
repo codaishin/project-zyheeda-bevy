@@ -5,11 +5,7 @@ use crate::{
 	traits::update_blockers::UpdateBlockers,
 };
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	effects::force::Force,
-	traits::handles_physics::{HandlesPhysicalEffect, physical_bodies::Blocker},
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;

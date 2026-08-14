@@ -2,13 +2,10 @@ use crate::{
 	components::skill::{CreatedFrom, Skill},
 	system_params::skill_agent::SkillAgentMut,
 };
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::handles_skill_physics::{Spawn, SpawnArgs},
-};
+use common::prelude::*;
 
-impl Spawn for SkillAgentMut<'_, '_> {
-	fn spawn(&mut self, args: SpawnArgs) -> PersistentEntity {
+impl SpawnSkill for SkillAgentMut<'_, '_> {
+	fn spawn_skill(&mut self, args: SpawnArgs) -> PersistentEntity {
 		let persistent_entity = PersistentEntity::default();
 
 		self.commands.spawn((
@@ -30,15 +27,11 @@ impl Spawn for SkillAgentMut<'_, '_> {
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
-	use super::{Spawn, *};
+	use super::{SpawnSkill, *};
 	use crate::system_params::skill_agent::SkillAgentMut;
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
-	};
-	use common::{
-		CommonPlugin,
-		traits::handles_skill_physics::{SkillCaster, SkillMount, SkillShape, shield::Shield},
 	};
 	use std::sync::LazyLock;
 	use testing::{SingleThreadedApp, assert_count};
@@ -68,7 +61,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					p.spawn(*ARGS);
+					p.spawn_skill(*ARGS);
 				})?;
 
 			let mut skills = app
@@ -84,7 +77,7 @@ mod tests {
 
 			app.world_mut()
 				.run_system_once(move |mut p: SkillAgentMut| {
-					p.spawn(*ARGS);
+					p.spawn_skill(*ARGS);
 				})?;
 
 			let mut skills = app
@@ -115,7 +108,7 @@ mod tests {
 
 			let root = app
 				.world_mut()
-				.run_system_once(move |mut p: SkillAgentMut| p.spawn(*ARGS))?;
+				.run_system_once(move |mut p: SkillAgentMut| p.spawn_skill(*ARGS))?;
 
 			let mut skills = app.world_mut().query::<&PersistentEntity>();
 			let [skill] = assert_count!(1, skills.iter(app.world()));

@@ -7,7 +7,7 @@ use crate::components::{
 	model_render_layers::ModelRenderLayers,
 };
 use bevy::{ecs::system::ScheduleSystem, prelude::*};
-use common::systems::link::to_target::LinkToTarget;
+use common::prelude::*;
 
 type UnlinkedMeshes = (Added<Mesh3d>, Without<ChildMeshOf>);
 
