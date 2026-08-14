@@ -70,14 +70,11 @@ mod tests {
 		app::{App, Update},
 		state::app::{AppExtStates, StatesPlugin},
 	};
-	use common::{
-		states::menu_state::MenuState,
-		tools::is_not::IsNot,
-		traits::iteration::IterFinite,
-	};
+	use common::{states::menu_state::MenuState, traits::iteration::IterFinite};
 	use macros::NestedMocks;
 	use mockall::automock;
 	use testing::{NestedMocks, SingleThreadedApp};
+	use zyheeda_core::prelude::*;
 
 	#[derive(Default, Debug, PartialEq, States, Hash, Eq, Clone, Copy)]
 	enum _Wrapper {
