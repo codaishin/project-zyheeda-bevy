@@ -1,3 +1,31 @@
+/// Implement conversions of enums to and from the inner types of the listed
+/// enum variants.
+///
+/// # Example
+/// ```
+/// use zyheeda_core::prelude::*;
+///
+/// #[derive(Debug, PartialEq)]
+/// enum Animal {
+///   Cat(Cat),
+///   Dog(Dog),
+/// }
+///
+/// #[derive(Debug, PartialEq)]
+/// struct Dog;
+///
+/// #[derive(Debug, PartialEq)]
+/// struct Cat;
+///
+/// impl_enum_conversions!(Animal[
+///   Dog(Dog),
+///   Cat(Cat),
+/// ]);
+///
+/// assert_eq!(Animal::Dog(Dog), Animal::from(Dog));
+/// assert_eq!(Ok(Cat), Cat::try_from(Animal::Cat(Cat)));
+/// assert_eq!(Err(IsNot::target_type()), Cat::try_from(Animal::Dog(Dog)));
+/// ```
 #[macro_export]
 macro_rules! impl_enum_conversions {
 	($outer:ty[$($variant:ident($inner:ty)),+ $(,)?]) => {
@@ -73,6 +101,6 @@ mod tests {
 	where
 		TInner: TryFrom<_Outer, Error = IsNot<TInner>> + Debug + PartialEq,
 	{
-		assert_eq!(Err(IsNot::<TInner>::target_type()), TInner::try_from(outer));
+		assert_eq!(Err(IsNot::target_type()), TInner::try_from(outer));
 	}
 }
