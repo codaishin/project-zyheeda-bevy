@@ -148,29 +148,10 @@ pub enum GameState {
 	IngameUI(UIState),
 }
 
-macro_rules! game_state_conversions {
-	($wrapper:ident($inner:ty)) => {
-		impl From<$inner> for GameState {
-			fn from(value: $inner) -> Self {
-				Self::$wrapper(value)
-			}
-		}
-
-		impl TryFrom<GameState> for $inner {
-			type Error = IsNot<$inner>;
-
-			fn try_from(game_state: GameState) -> Result<$inner, Self::Error> {
-				match game_state {
-					GameState::$wrapper(inner) => Ok(inner),
-					_ => Err(IsNot::target_type()),
-				}
-			}
-		}
-	};
-}
-
-game_state_conversions!(Activity(ActivityState));
-game_state_conversions!(IngameUI(UIState));
+impl_enum_conversions!(GameState[
+	Activity(ActivityState),
+	IngameUI(UIState),
+]);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ActivityState {
