@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::tools::action_key::slot::SlotKey;
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;

@@ -5,16 +5,7 @@ mod traits;
 pub mod components;
 
 use bevy::prelude::*;
-use common::{
-	tools::plugin_system_set::PluginSystemSet,
-	traits::{
-		handles_map_generation::HandlesMapGeneration,
-		handles_path_finding::HandlesPathFinding,
-		register_derived_component::RegisterDerivedComponent,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 use components::navigation::Navigation;
 use methods::theta_star::ThetaStar;
 use std::marker::PhantomData;

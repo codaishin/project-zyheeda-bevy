@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::{accessors::get::View, handles_skill_physics::SkillMount},
-};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Transform, AnchorDirty)]

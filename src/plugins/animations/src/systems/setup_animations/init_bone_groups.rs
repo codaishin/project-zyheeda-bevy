@@ -1,13 +1,6 @@
 use crate::components::{animation_lookup::AnimationLookup, setup_animations::SetupAnimations};
 use bevy::{animation::AnimationTargetId, prelude::*};
-use common::{
-	tools::bone_name::BoneName,
-	traits::{
-		handles_animations::{AffectedAnimationBones, AnimationMaskBits},
-		iter_descendants_conditional::IterDescendantsConditional,
-		wrap_handle::GetHandle,
-	},
-};
+use common::prelude::*;
 use std::{
 	collections::{HashMap, HashSet},
 	iter,
@@ -116,10 +109,6 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::{animation::AnimationTargetId, platform::collections::HashMap as BevyHashMap};
-	use common::{
-		bit_mask_index,
-		traits::handles_animations::{AffectedAnimationBones, AnimationClips, AnimationMaskBits},
-	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
 

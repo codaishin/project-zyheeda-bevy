@@ -15,21 +15,9 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
+	prelude::*,
 	states::game_state::LoadingEssentialAssets,
-	systems::{log::OnError, register_animations::RegisterAnimationsSystem},
-	tools::plugin_system_set::PluginSystemSet,
-	traits::{
-		after_plugin::AfterPlugin,
-		handles_animations::HandlesAnimations,
-		handles_custom_assets::HandlesCustomFolderAssets,
-		handles_interactive::HandlesInteractive,
-		handles_map_generation::HandlesMapGeneration,
-		handles_physics::{HandlesInteractiveDetection, HandlesPhysicsConfig},
-		handles_saving::HandlesSaving,
-		prefab::AddPrefabObserver,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
+	systems::register_animations::RegisterAnimationsSystem,
 };
 use std::marker::PhantomData;
 

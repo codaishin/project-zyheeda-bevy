@@ -1,26 +1,20 @@
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::{
-		handles_animations::DirForwardPitch,
-		handles_skill_physics::{Cursor, SkillTarget},
-	},
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
 #[derive(SavableComponent, Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
 #[savable_component(id = "skill target")]
-pub(crate) struct Target(pub(crate) Option<SkillTarget>);
+pub(crate) struct SkillTargetInternal(pub(crate) Option<SkillTarget>);
 
-impl From<PersistentEntity> for Target {
+impl From<PersistentEntity> for SkillTargetInternal {
 	fn from(entity: PersistentEntity) -> Self {
 		Self(Some(SkillTarget::Entity(entity)))
 	}
 }
 
-impl From<Cursor> for Target {
+impl From<Cursor> for SkillTargetInternal {
 	fn from(cursor: Cursor) -> Self {
 		Self(Some(SkillTarget::Cursor(cursor)))
 	}

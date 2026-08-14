@@ -1,12 +1,5 @@
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	errors::{ErrorData, Level},
-	traits::{
-		accessors::get::TryGetContextMut,
-		handles_map_generation::{InteractiveType, MapPrefabs, SetPrefab},
-	},
-	zyheeda_commands::ZyheedaEntityCommands,
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;

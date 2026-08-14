@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		anchor::{Anchor, AnchorDirty, AnchorRotation},
 		offset::{CenterOffset, ComputeOffsetTranslation},
-		target::Target,
+		target::SkillTargetInternal,
 	},
 	system_params::mount_points_lookup::{MountPointsLookup, get_mount_point::MountPointError},
 	traits::get_mount_point::GetMountPoint,
@@ -11,16 +11,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	components::persistent_entity::PersistentEntity,
-	errors::{ErrorData, Level},
-	traits::{
-		accessors::get::{Get, TryApplyOn},
-		handles_physics::{HoverMode, MouseHover, MouseHoversOver, Raycast},
-		handles_skill_physics::{Cursor, SkillMount, SkillMountBone, SkillTarget},
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::fmt::Display;
 
 impl AnchorDirty {
@@ -30,7 +21,7 @@ impl AnchorDirty {
 		lookup: StaticSystemParam<MountPointsLookup<SkillMountBone>>,
 		ray_caster: StaticSystemParam<TRayCaster>,
 		agents: Query<(&Anchor, &mut Transform)>,
-		targets: Query<&Target>,
+		targets: Query<&SkillTargetInternal>,
 		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 	) -> Result<(), AnchorError<MountPointError<SkillMountBone>>>
 	where
@@ -47,7 +38,7 @@ impl AnchorDirty {
 		mut lookup: StaticSystemParam<TLookup>,
 		ray_caster: StaticSystemParam<TRayCaster>,
 		mut agents: Query<(&Anchor, &mut Transform)>,
-		targets: Query<&Target>,
+		targets: Query<&SkillTargetInternal>,
 		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 	) -> Result<(), AnchorError<TMountError>>
 	where
@@ -122,7 +113,7 @@ fn look_at_skill_target<TRayCaster, TMountError>(
 	mut anchor_transform: Mut<Transform>,
 	mut ray_caster: StaticSystemParam<TRayCaster>,
 	commands: ZyheedaCommands,
-	targets: Query<&Target>,
+	targets: Query<&SkillTargetInternal>,
 	transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 	attached_to: Entity,
 	mount: Entity,
@@ -130,7 +121,7 @@ fn look_at_skill_target<TRayCaster, TMountError>(
 where
 	TRayCaster: for<'w, 's> SystemParam<Item<'w, 's>: Raycast<MouseHover>>,
 {
-	let Ok(Target(Some(target))) = targets.get(attached_to) else {
+	let Ok(SkillTargetInternal(Some(target))) = targets.get(attached_to) else {
 		return Err(AnchorError::EntityWithoutTarget(attached_to));
 	};
 
@@ -218,15 +209,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		tools::action_key::slot::SlotKey,
-		traits::{
-			handles_physics::{HoverMode, MouseHoversOver},
-			handles_skill_physics::{Cursor, SkillMountBone},
-			register_persistent_entities::RegisterPersistentEntities,
-		},
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::{collections::HashMap, sync::LazyLock};
@@ -426,7 +408,7 @@ mod tests {
 			.spawn((
 				*AGENT,
 				GlobalTransform::default(),
-				Target(Some(SkillTarget::Entity(target))),
+				SkillTargetInternal(Some(SkillTarget::Entity(target))),
 			))
 			.id();
 		let mount_entity = app
@@ -467,7 +449,7 @@ mod tests {
 				.spawn((
 					*AGENT,
 					GlobalTransform::default(),
-					Target(Some(SkillTarget::Entity(target))),
+					SkillTargetInternal(Some(SkillTarget::Entity(target))),
 				))
 				.id();
 			let mount_entity = app
@@ -507,7 +489,7 @@ mod tests {
 				.spawn((
 					*AGENT,
 					GlobalTransform::default(),
-					Target(Some(SkillTarget::Cursor(cursor))),
+					SkillTargetInternal(Some(SkillTarget::Cursor(cursor))),
 				))
 				.id();
 			let mount_entity = app
@@ -550,7 +532,7 @@ mod tests {
 				.spawn((
 					*AGENT,
 					GlobalTransform::default(),
-					Target(Some(SkillTarget::Cursor(cursor))),
+					SkillTargetInternal(Some(SkillTarget::Cursor(cursor))),
 				))
 				.id();
 			let mount_entity = app
@@ -600,7 +582,7 @@ mod tests {
 				.spawn((
 					*AGENT,
 					GlobalTransform::default(),
-					Target(Some(SkillTarget::Cursor(cursor))),
+					SkillTargetInternal(Some(SkillTarget::Cursor(cursor))),
 				))
 				.id();
 			let mount_entity = app
@@ -653,7 +635,7 @@ mod tests {
 			app.world_mut().spawn((
 				*AGENT,
 				GlobalTransform::from_xyz(4., 11., 9.),
-				Target(Some(SkillTarget::Entity(target))),
+				SkillTargetInternal(Some(SkillTarget::Entity(target))),
 			));
 
 			app.world_mut().spawn((
@@ -685,7 +667,7 @@ mod tests {
 				.spawn((
 					*AGENT,
 					GlobalTransform::from_xyz(4., 11., 9.),
-					Target(Some(SkillTarget::Cursor(cursor))),
+					SkillTargetInternal(Some(SkillTarget::Cursor(cursor))),
 				))
 				.id();
 			app.insert_resource(_RayCaster::new().with_mock(|mock| {
@@ -721,7 +703,7 @@ mod tests {
 				.spawn((
 					*AGENT,
 					GlobalTransform::from_xyz(4., 11., 9.),
-					Target(Some(SkillTarget::Cursor(cursor))),
+					SkillTargetInternal(Some(SkillTarget::Cursor(cursor))),
 				))
 				.id();
 			let target = app
@@ -764,7 +746,7 @@ mod tests {
 				.spawn((
 					*AGENT,
 					GlobalTransform::from_xyz(4., 11., 9.),
-					Target(Some(SkillTarget::Cursor(cursor))),
+					SkillTargetInternal(Some(SkillTarget::Cursor(cursor))),
 				))
 				.id();
 			let target = app

@@ -2,8 +2,8 @@ use super::start_menu_button::StartMenuButton;
 use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::{
+	prelude::*,
 	states::{game_state::GameState, save_state::SaveState},
-	traits::handles_localization::{Localize, LocalizeToken},
 };
 
 #[derive(Component)]

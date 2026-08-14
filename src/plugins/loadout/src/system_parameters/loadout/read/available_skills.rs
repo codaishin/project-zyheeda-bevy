@@ -5,17 +5,7 @@ use crate::{
 	system_parameters::loadout::LoadoutReader,
 };
 use bevy::prelude::*;
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::{ContextChanged, TryGetContext, View},
-		handles_loadout::{
-			available_skills::{AvailableSkills, ReadAvailableSkills},
-			skills::{GetSkillId, SkillIcon, SkillToken},
-		},
-		handles_localization::Token,
-	},
-};
+use common::prelude::*;
 
 impl TryGetContext<AvailableSkills> for LoadoutReader<'static, 'static> {
 	type TContext<'ctx> = AvailableSkillsView<'ctx>;
@@ -128,15 +118,13 @@ impl GetSkillId<SkillId> for ReadAvailableSkill {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{components::combos::Combos, skills::Skill};
+	use crate::{components::combos::CombosInternal, skills::Skill};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::tools::action_key::slot::SlotKey;
 	use testing::{SingleThreadedApp, new_handle};
 
 	mod get_skills {
 		use super::*;
 		use crate::components::{inventory::Inventory, queue::Queue};
-		use common::tools::item_type::{CompatibleItems, ItemType};
 		use testing::assert_eq_unordered;
 		use uuid::Uuid;
 
@@ -206,7 +194,7 @@ mod tests {
 				.spawn((
 					Inventory::default(),
 					Slots::from([(SlotKey(44), Some(item_handle))]),
-					Combos::default(),
+					CombosInternal::default(),
 					Queue::default(),
 				))
 				.id();
@@ -238,7 +226,6 @@ mod tests {
 
 	mod skill {
 		use super::*;
-		use common::traits::accessors::get::ViewOf;
 		use uuid::Uuid;
 
 		#[test]

@@ -8,18 +8,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryApplyOn, TryGetContext, View, ViewOf},
-		handles_loadout::{
-			available_skills::{AvailableSkills, ReadAvailableSkills},
-			skills::{GetSkillId, SkillIcon, SkillToken},
-		},
-		handles_player::PlayerEntity,
-		thread_safe::ThreadSafe,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::fmt::Debug;
 
 impl<TLayout> SkillSelectDropdownCommand<TLayout> {
@@ -77,11 +66,6 @@ mod tests {
 	use crate::{
 		components::dropdown::Dropdown,
 		testing::{_Player, _PlayerParam},
-	};
-	use common::{
-		CommonPlugin,
-		tools::action_key::slot::{HandSlot, SlotKey},
-		traits::{accessors::get::View, handles_localization::Token},
 	};
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};

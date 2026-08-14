@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::handles_movement::MovementTarget;
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, ops::Deref};

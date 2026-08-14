@@ -22,11 +22,7 @@ use bevy::{
 		},
 	},
 };
-use common::{
-	errors::Unreachable,
-	traits::prefab::{Prefab, PrefabEntityCommands},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[relationship_target(relationship = LoSCameraOf, linked_spawn)]

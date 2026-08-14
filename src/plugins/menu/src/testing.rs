@@ -1,8 +1,5 @@
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::{accessors::get::View, handles_player::PlayerEntity},
-};
+use common::prelude::*;
 use std::sync::LazyLock;
 
 pub(crate) static PLAYER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);

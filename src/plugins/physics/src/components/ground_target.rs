@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::{tools::Units, traits::handles_skill_physics::SkillCaster};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct GroundTarget {

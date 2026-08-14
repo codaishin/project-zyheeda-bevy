@@ -3,14 +3,7 @@ use crate::{
 	traits::UIBarUpdate,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	traits::{
-		accessors::get::{GetContextMut, TryApplyOn, View, ViewField},
-		handles_graphics::{CameraHandle, ScreenPosition},
-		thread_safe::ThreadSafe,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 type NewBars<'a, TSource> = (Entity, &'a GlobalTransform, &'a TSource, &'a mut Bar);
 type OldBars<'a, TSource, TValue> = (

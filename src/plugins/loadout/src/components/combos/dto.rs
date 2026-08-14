@@ -1,23 +1,20 @@
 use crate::components::{
 	combo_node::{ComboNode, dto::ComboNodeDto},
-	combos::Combos,
+	combos::CombosInternal,
 };
 use bevy::prelude::*;
-use common::{
-	errors::Unreachable,
-	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub struct CombosDto {
+pub struct CombosInternalDto {
 	config: ComboNodeDto,
 	#[serde(skip_serializing_if = "Option::is_none")]
 	current: Option<ComboNodeDto>,
 }
 
-impl From<Combos> for CombosDto {
-	fn from(Combos { config, current }: Combos) -> Self {
+impl From<CombosInternal> for CombosInternalDto {
+	fn from(CombosInternal { config, current }: CombosInternal) -> Self {
 		Self {
 			config: ComboNodeDto::from(config),
 			current: current.map(ComboNodeDto::from),
@@ -25,11 +22,11 @@ impl From<Combos> for CombosDto {
 	}
 }
 
-impl TryLoadFrom<CombosDto> for Combos {
+impl TryLoadFrom<CombosInternalDto> for CombosInternal {
 	type TInstantiationError = Unreachable;
 
 	fn try_load_from<TLoadAsset>(
-		CombosDto { config, current }: CombosDto,
+		CombosInternalDto { config, current }: CombosInternalDto,
 		asset_server: &mut TLoadAsset,
 	) -> Result<Self, Self::TInstantiationError>
 	where

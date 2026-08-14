@@ -1,9 +1,6 @@
 use crate::resources::asset_folder::AssetFolder;
 use bevy::prelude::*;
-use common::traits::{
-	handles_custom_assets::AssetFolderPath,
-	load_folder_assets::LoadFolderAssets,
-};
+use common::prelude::*;
 
 pub(crate) fn begin_loading_folder_assets<
 	TAsset: Asset + AssetFolderPath,
@@ -23,7 +20,7 @@ mod tests {
 		app::{App, Update},
 		reflect::TypePath,
 	};
-	use common::{tools::path::Path, traits::load_folder_assets::mock::MockFolderAssetServer};
+	use common::{prelude::mock_folder_asset_loader::MockFolderAssetServer, tools::path::Path};
 	use testing::{SingleThreadedApp, new_handle};
 
 	#[derive(Asset, TypePath, Debug, PartialEq)]

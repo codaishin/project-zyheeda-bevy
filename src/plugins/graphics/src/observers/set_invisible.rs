@@ -1,6 +1,6 @@
 use crate::resources::standard_materials::StandardMaterials;
 use bevy::{ecs::system::IntoObserverSystem, gltf::GltfMaterialName, prelude::*};
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl StandardMaterials {
 	pub(crate) fn set_invisible_material(

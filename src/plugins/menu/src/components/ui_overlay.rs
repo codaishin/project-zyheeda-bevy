@@ -1,7 +1,7 @@
 use super::{Quickbar, input_label::InputLabel, quickbar_panel::QuickbarPanel};
 use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::{tools::action_key::slot::HandSlot, traits::iteration::IterFinite};
+use common::prelude::*;
 
 #[derive(Component)]
 #[require(Node = Self::full_screen())]

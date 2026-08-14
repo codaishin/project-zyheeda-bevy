@@ -3,14 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	tools::Units,
-	traits::{
-		accessors::get::{Get, TryApplyOn, View},
-		handles_player::PlayerEntity,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl CameraArm {
 	pub(crate) fn init_for<TPlayer>(
@@ -51,7 +44,6 @@ impl CameraArm {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::{CommonPlugin, components::persistent_entity::PersistentEntity};
 	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 

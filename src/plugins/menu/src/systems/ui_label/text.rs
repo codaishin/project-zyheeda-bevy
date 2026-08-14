@@ -3,13 +3,7 @@ use crate::components::{
 	label::{UILabel, UILabelText},
 };
 use bevy::prelude::*;
-use common::{
-	traits::{
-		accessors::get::TryApplyOn,
-		iter_descendants_conditional::IterDescendantsConditional,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl UILabel {
 	pub(crate) fn text(
@@ -41,7 +35,6 @@ type IconOrLabelChanged = Or<(Changed<Icon>, Changed<UILabel>)>;
 mod tests {
 	use super::*;
 	use crate::components::label::UILabelText;
-	use common::traits::handles_localization::localized::Localized;
 	use std::path::PathBuf;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};

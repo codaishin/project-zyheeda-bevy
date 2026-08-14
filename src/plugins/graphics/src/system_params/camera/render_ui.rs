@@ -1,6 +1,6 @@
 use crate::system_params::camera::CameraContextMut;
 use bevy::prelude::*;
-use common::traits::handles_graphics::RenderUi;
+use common::prelude::*;
 
 impl RenderUi for CameraContextMut<'_> {
 	fn render_ui(&mut self, ui: Entity) {
@@ -16,7 +16,6 @@ mod tests {
 		system_params::camera::CameraParamMut,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::{accessors::get::GetContextMut, handles_graphics::CameraHandle};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

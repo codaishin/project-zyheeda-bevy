@@ -4,7 +4,7 @@ use crate::{
 	resources::{los_image::LoSImageCubemap, standard_materials::StandardMaterials},
 };
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl StandardMaterials {
 	pub(crate) fn replace_with_lit_material(

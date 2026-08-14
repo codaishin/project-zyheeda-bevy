@@ -8,7 +8,7 @@ use crate::traits::{
 	ui_traits::{GetBackgroundColor, GetNode},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::traits::handles_localization::{Localize, LocalizeToken, Token};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
 #[require(Node = Self::node(), BackgroundColor = Self::background_color())]

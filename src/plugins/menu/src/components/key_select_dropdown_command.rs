@@ -1,9 +1,6 @@
 use crate::{AppendSkill, Dropdown, KeySelect, traits::GetComponent};
 use bevy::prelude::*;
-use common::{
-	tools::action_key::slot::{HandSlot, SlotKey},
-	traits::iteration::IterFinite,
-};
+use common::prelude::*;
 use std::{collections::HashSet, hash::Hash};
 
 #[derive(Component, Debug, PartialEq)]

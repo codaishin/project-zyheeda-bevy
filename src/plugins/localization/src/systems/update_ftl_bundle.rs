@@ -8,10 +8,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	errors::{ErrorData, Level},
-	traits::or_ok::OrOk,
-};
+use common::prelude::*;
 use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
 use fluent_syntax::parser::ParserError;
 use std::fmt::Display;

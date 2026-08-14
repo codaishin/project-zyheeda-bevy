@@ -1,5 +1,5 @@
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
-use common::components::persistent_entity::PersistentEntity;
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 

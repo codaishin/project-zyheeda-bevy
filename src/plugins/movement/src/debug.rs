@@ -1,6 +1,6 @@
 use crate::{MovementSystems, components::movement::Movement};
 use bevy::{color::palettes::css::LIGHT_CYAN, prelude::*};
-use common::traits::{accessors::get::View, handles_physics::CharacterMotion};
+use common::prelude::*;
 
 pub(crate) fn draw<TMotion>(app: &mut App)
 where

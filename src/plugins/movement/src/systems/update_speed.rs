@@ -1,13 +1,6 @@
 use crate::components::config::{Config, SpeedIndex};
 use bevy::prelude::*;
-use common::{
-	tools::speed::Speed,
-	traits::{
-		accessors::get::{TryApplyOn, View},
-		handles_physics::CharacterMotion,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl<T> UpdateSpeed for T where T: Component + From<CharacterMotion> + View<CharacterMotion> {}
 
@@ -41,10 +34,6 @@ pub(crate) trait UpdateSpeed:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		tools::UnitsPerSecond,
-		traits::handles_movement::{MovementSpeed, SpeedToggle},
-	};
 	use test_case::test_case;
 	use testing::{IsChanged, SingleThreadedApp};
 

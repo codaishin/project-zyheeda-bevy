@@ -2,7 +2,7 @@ use crate::{
 	components::interactive_state::IsActive,
 	system_params::interactive_param::InteractiveContextMut,
 };
-use common::traits::handles_interactive::{InteractiveState, SetInteractiveState};
+use common::prelude::*;
 
 impl SetInteractiveState for InteractiveContextMut<'_> {
 	fn set_interactive_state(&mut self, interactive_state: InteractiveState) {
@@ -24,11 +24,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{
-		accessors::get::TryGetContextMut,
-		handles_interactive::Interactive as InteractiveKey,
-		handles_map_generation::InteractiveType,
-	};
+	use common::traits::handles_interactive::Interactive as InteractiveKey;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

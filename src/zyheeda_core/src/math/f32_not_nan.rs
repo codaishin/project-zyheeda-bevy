@@ -7,9 +7,9 @@ pub struct F32NotNan(f32);
 impl F32NotNan {
 	pub const ZERO: Self = Self(0.);
 
-	pub const fn try_from_f32(value: f32) -> Result<Self, IsNaN> {
+	pub const fn try_from_f32(value: f32) -> Result<Self, IsNaN<1>> {
 		if value.is_nan() {
-			return Err(IsNaN);
+			return Err(IsNaN([value]));
 		}
 
 		Ok(Self(value))
@@ -31,7 +31,7 @@ macro_rules! f32_not_nan {
 pub use f32_not_nan;
 
 impl TryFrom<f32> for F32NotNan {
-	type Error = IsNaN;
+	type Error = IsNaN<1>;
 
 	fn try_from(value: f32) -> Result<Self, Self::Error> {
 		Self::try_from_f32(value)
@@ -85,10 +85,26 @@ impl PartialOrd for F32NotNan {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub struct IsNaN;
+#[derive(Debug, Clone)]
+pub struct IsNaN<const N: usize>(pub [f32; N]);
 
-impl IsNaN {
+impl<const N: usize> PartialEq for IsNaN<N> {
+	fn eq(&self, other: &Self) -> bool {
+		for (s, o) in self.0.iter().zip(other.0.iter()) {
+			if s.is_nan() && o.is_nan() {
+				continue;
+			}
+
+			if s != o {
+				return false;
+			}
+		}
+
+		true
+	}
+}
+
+impl<const N: usize> IsNaN<N> {
 	fn into_serde_error<TError>(self) -> TError
 	where
 		TError: serde::de::Error,
@@ -97,9 +113,10 @@ impl IsNaN {
 	}
 }
 
-impl Display for IsNaN {
+impl<const N: usize> Display for IsNaN<N> {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "The f32 value is not a number")
+		let IsNaN(values) = self;
+		write!(f, "{values:?}: contains elements that are not a number")
 	}
 }
 
@@ -123,7 +140,7 @@ mod tests {
 	fn try_from_error() {
 		let v = F32NotNan::try_from(f32::NAN);
 
-		assert_eq!(Err(IsNaN), v);
+		assert_eq!(Err(IsNaN([f32::NAN])), v);
 	}
 
 	#[test]

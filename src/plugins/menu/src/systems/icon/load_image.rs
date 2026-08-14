@@ -1,6 +1,6 @@
 use crate::components::icon::Icon;
 use bevy::{asset::LoadState, ecs::component::Mutable, prelude::*};
-use common::traits::{get_asset_load_state::GetAssetLoadState, load_asset::LoadAsset};
+use common::prelude::*;
 use std::path::PathBuf;
 
 impl Icon {
@@ -56,7 +56,7 @@ mod tests {
 		asset::{AssetLoadError, AssetPath, LoadState, UntypedAssetId, io::AssetReaderError},
 		platform::collections::HashMap,
 	};
-	use common::traits::load_asset::mock::MockAssetServer;
+	use common::traits::load_asset::mock_asset_loader::MockAssetServer;
 	use std::{path::PathBuf, sync::Arc};
 	use testing::{SingleThreadedApp, new_handle};
 

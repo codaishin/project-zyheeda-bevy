@@ -1,4 +1,4 @@
-use common::tools::{action_key::slot::SlotKey, item_type::ItemType};
+use common::prelude::*;
 
 pub(crate) trait PeekNextRecursive {
 	type TNext<'a>

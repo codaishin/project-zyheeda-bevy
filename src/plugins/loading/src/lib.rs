@@ -16,35 +16,12 @@ use crate::{
 use asset_loader::CustomAssetLoader;
 use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
 use common::{
+	prelude::*,
 	states::{
 		game_state::{LoadingEssentialAssets, LoadingGame},
 		transition_to_state,
 	},
 	tools::path::Path,
-	traits::{
-		handles_asset_resource_loading::HandlesAssetResourceLoading,
-		handles_custom_assets::{
-			AssetFileExtensions,
-			AssetFolderPath,
-			HandlesCustomAssets,
-			HandlesCustomFolderAssets,
-			TryLoadFrom,
-		},
-		handles_load_tracking::{
-			AssetsProgress,
-			DependenciesProgress,
-			HandlesLoadTracking,
-			LoadGroup,
-			LoadTrackingInApp,
-			LoadTrackingInSubApp,
-			Loaded,
-			Progress,
-			RunAfterLoadedInApp,
-		},
-		init_resource::InitResource,
-		remove_resource::RemoveResource,
-		thread_safe::ThreadSafe,
-	},
 };
 use resources::track::Track;
 use serde::Deserialize;

@@ -44,32 +44,32 @@ pub trait HandlesPhysicalSkillComponents {
 }
 
 pub trait HandlesNewPhysicalSkill {
-	type TSkillSpawnerMut: for<'w, 's> SystemParam<Item<'w, 's>: Spawn + Despawn>;
+	type TSkillSpawnerMut: for<'w, 's> SystemParam<Item<'w, 's>: SpawnSkill + DespawnSkill>;
 }
 
-pub trait Spawn {
-	fn spawn(&mut self, args: SpawnArgs<'_>) -> PersistentEntity;
+pub trait SpawnSkill {
+	fn spawn_skill(&mut self, args: SpawnArgs<'_>) -> PersistentEntity;
 }
 
-impl<T> Spawn for T
+impl<T> SpawnSkill for T
 where
-	T: DerefMut<Target: Spawn>,
+	T: DerefMut<Target: SpawnSkill>,
 {
-	fn spawn(&mut self, args: SpawnArgs<'_>) -> PersistentEntity {
-		self.deref_mut().spawn(args)
+	fn spawn_skill(&mut self, args: SpawnArgs<'_>) -> PersistentEntity {
+		self.deref_mut().spawn_skill(args)
 	}
 }
 
-pub trait Despawn {
-	fn despawn(&mut self, skill: SkillEntity);
+pub trait DespawnSkill {
+	fn despawn_skill(&mut self, skill: SkillEntity);
 }
 
-impl<T> Despawn for T
+impl<T> DespawnSkill for T
 where
-	T: DerefMut<Target: Despawn>,
+	T: DerefMut<Target: DespawnSkill>,
 {
-	fn despawn(&mut self, skill: SkillEntity) {
-		self.deref_mut().despawn(skill);
+	fn despawn_skill(&mut self, skill: SkillEntity) {
+		self.deref_mut().despawn_skill(skill);
 	}
 }
 
@@ -135,8 +135,8 @@ pub struct SkillEntity(pub PersistentEntity);
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub struct SpawnArgs<'a> {
 	pub shape: &'a SkillShape,
-	pub contact_effects: &'a [Effect],
-	pub projection_effects: &'a [Effect],
+	pub contact_effects: &'a [SkillEffect],
+	pub projection_effects: &'a [SkillEffect],
 	pub caster: SkillCaster,
 	pub mount: SkillMount,
 }
@@ -150,7 +150,7 @@ pub enum SkillShape {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-pub enum Effect {
+pub enum SkillEffect {
 	Force(Force),
 	Gravity(Gravity),
 	HealthDamage(HealthDamage),

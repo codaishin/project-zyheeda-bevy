@@ -12,7 +12,7 @@ use crate::traits::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
+use common::prelude::*;
 use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Clone)]
@@ -167,12 +167,6 @@ mod tests {
 	#![allow(clippy::expect_used)]
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::traits::handles_localization::{
-		LocalizationResult,
-		LocalizeToken,
-		Token,
-		localized::Localized,
-	};
 	use testing::{SingleThreadedApp, assert_children_count, assert_count, fake_entity};
 
 	impl TooltipUiConfig for () {}

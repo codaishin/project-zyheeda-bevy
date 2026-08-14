@@ -1,6 +1,6 @@
 use crate::system_params::camera::{CameraContext, CameraContextMut};
 use bevy::prelude::*;
-use common::traits::handles_graphics::{CameraTransform, CameraTransformMut};
+use common::prelude::*;
 
 impl CameraTransform for CameraContext<'_> {
 	fn camera_transform(&self) -> &Transform {
@@ -31,7 +31,6 @@ mod tests {
 		app::App,
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::traits::{accessors::get::GetContextMut, handles_graphics::CameraHandle};
 	use testing::SingleThreadedApp;
 
 	fn setup(camera: CameraParameters) -> App {
@@ -45,7 +44,6 @@ mod tests {
 	mod ctx {
 		use super::*;
 		use crate::system_params::camera::CameraParam;
-		use common::traits::accessors::get::GetContext;
 
 		#[test]
 		fn get_transform() -> Result<(), RunSystemError> {

@@ -9,10 +9,7 @@ use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
 	prelude::*,
 };
-use common::traits::{
-	accessors::get::{ContextChanged, GetContext},
-	handles_physics::{InteractionsJustStopped, InteractionsOngoing},
-};
+use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(SystemParam, Debug)]

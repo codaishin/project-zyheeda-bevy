@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::prelude::*;
 use std::marker::PhantomData;
 
 /// When present, the load group is considered to be loaded. This allows

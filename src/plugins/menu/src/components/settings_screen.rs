@@ -10,24 +10,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::{
-	states::menu_state::MenuState,
-	tools::action_key::{
-		ActionKey,
-		camera_key::CameraKey,
-		miscellaneous::Miscellaneous,
-		movement::MovementKey,
-		save_key::SaveKey,
-		slot::HandSlot,
-		targeting::TerrainTargeting,
-		user_input::UserInput,
-	},
-	traits::{
-		handles_input::GetAllInputs,
-		handles_localization::{Localize, LocalizeToken, Token},
-		iteration::IterFinite,
-	},
-};
+use common::{prelude::*, states::menu_state::MenuState};
 use key_bind::{KeyBind, action::Action, input::Input};
 use std::collections::HashMap;
 

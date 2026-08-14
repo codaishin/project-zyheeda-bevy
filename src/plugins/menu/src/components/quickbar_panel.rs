@@ -3,10 +3,7 @@ use crate::{
 	traits::colors::{ColorConfig, HasPanelColors, PanelColors},
 };
 use bevy::{color::Color, ecs::component::Component};
-use common::{
-	tools::action_key::slot::{HandSlot, SlotKey},
-	traits::accessors::get::View,
-};
+use common::prelude::*;
 
 #[derive(Component)]
 pub struct QuickbarPanel {
@@ -69,7 +66,6 @@ impl HasPanelColors for QuickbarPanel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::accessors::get::ViewOf;
 
 	#[test]
 	fn get_empty() {

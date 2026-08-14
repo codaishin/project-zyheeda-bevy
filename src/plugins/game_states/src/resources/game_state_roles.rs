@@ -1,6 +1,6 @@
 use crate::GameStatesPlugin;
 use bevy::prelude::*;
-use common::traits::handles_game_states::{GameState, NonPausedStates};
+use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(Resource, Debug, PartialEq)]

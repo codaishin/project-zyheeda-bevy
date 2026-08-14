@@ -1,6 +1,6 @@
 use crate::components::model_render_layers::ModelRenderLayers;
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 type NeedsModelRenderLayers = (
 	With<Visibility>,

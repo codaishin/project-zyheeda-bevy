@@ -7,10 +7,7 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::traits::{
-	handles_saving::{SavableComponent, UniqueComponentId},
-	load_asset::LoadAsset,
-};
+use common::prelude::*;
 use serde_json::{Error, Value};
 use std::collections::{HashMap, hash_map::Entry};
 
@@ -117,10 +114,6 @@ mod tests {
 	use super::*;
 	use crate::traits::write_file::WriteFile;
 	use bevy::asset::AssetPath;
-	use common::{
-		errors::Unreachable,
-		traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
-	};
 	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
 	use serde_json::{from_str, to_string};

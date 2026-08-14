@@ -14,17 +14,7 @@ use bevy::{
 	ecs::{relationship::RelatedSpawnerCommands, system::SystemParam},
 	prelude::*,
 };
-use common::{
-	states::game_state::GameState,
-	tools::Index,
-	traits::{
-		accessors::get::GetContextMut,
-		handles_graphics::{CameraHandle, RenderUi},
-		handles_localization::Localize,
-		iteration::IterFinite,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::{prelude::*, states::game_state::GameState};
 use std::{fmt::Debug, marker::PhantomData, time::Duration};
 
 #[derive(Component)]

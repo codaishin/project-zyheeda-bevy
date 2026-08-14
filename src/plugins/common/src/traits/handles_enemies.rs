@@ -2,7 +2,7 @@ use crate::{
 	components::persistent_entity::PersistentEntity,
 	traits::{
 		accessors::get::ViewField,
-		iteration::{Iter, IterFinite},
+		iteration::{FiniteIter, IterFinite},
 	},
 };
 use bevy::ecs::{query::QueryFilter, system::SystemParam};
@@ -22,11 +22,11 @@ pub enum EnemyType {
 }
 
 impl IterFinite for EnemyType {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(EnemyType::VoidSphere))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(EnemyType::VoidSphere))
 	}
 
-	fn next(Iter(current): &Iter<Self>) -> Option<Self> {
+	fn next(FiniteIter(current): &FiniteIter<Self>) -> Option<Self> {
 		match current.as_ref()? {
 			EnemyType::VoidSphere => None,
 		}

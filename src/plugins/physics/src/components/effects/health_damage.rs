@@ -4,11 +4,7 @@ use crate::{
 	traits::{act_on::ActOn, update_blockers::UpdateBlockers},
 };
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	effects::{EffectApplies, health_damage::HealthDamage},
-	traits::handles_physics::HandlesPhysicalEffect,
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
@@ -49,7 +45,6 @@ impl ActOn<Life> for HealthDamageEffect {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::attributes::health::Health;
 
 	#[test]
 	fn deal_damage_once() {

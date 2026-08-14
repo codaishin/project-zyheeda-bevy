@@ -3,13 +3,7 @@ mod default_attributes;
 
 use crate::components::{body::Body, default_attributes::DefaultAttributes};
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::{
-	traits::{
-		accessors::get::{GetMut, TryGetContextMut},
-		handles_physics::{NoBodyConfigured, NoDefaultAttributes},
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
-};
+use common::prelude::*;
 
 #[derive(SystemParam)]
 pub struct ConfigParamMut<'w, 's> {
@@ -60,7 +54,6 @@ pub struct ConfigContextMut<'ctx> {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::handles_physics::{PhysicalDefaultAttributes, physical_bodies::BodyConfig};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

@@ -9,7 +9,7 @@ use bevy::{
 	},
 	prelude::*,
 };
-use common::{tools::path::Path, traits::load_asset::LoadAsset};
+use common::{prelude::*, tools::path::Path};
 use std::path::PathBuf;
 
 impl<T> LoadRequestedAssetFile for T where
@@ -54,7 +54,7 @@ where
 mod test {
 	use super::*;
 	use crate::{assets::ftl::Ftl, resources::ftl_server::Locale};
-	use common::traits::load_asset::mock::MockAssetServer;
+	use common::traits::load_asset::mock_asset_loader::MockAssetServer;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
 	use unic_langid::{LanguageIdentifier, langid};

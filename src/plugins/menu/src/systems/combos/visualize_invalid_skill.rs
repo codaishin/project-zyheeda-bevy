@@ -6,18 +6,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryApplyOn, TryGetContext, View},
-		handles_loadout::{
-			available_skills::{AvailableSkills, ReadAvailableSkills},
-			skills::GetSkillId,
-		},
-		handles_player::PlayerEntity,
-		thread_safe::ThreadSafe,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::fmt::Debug;
 
 impl<TId> ComboSkillButton<DropdownTrigger, TId>
@@ -68,16 +57,6 @@ mod tests {
 	use crate::{
 		components::combo_overview::ComboSkill,
 		testing::{_Player, _PlayerParam},
-	};
-	use common::{
-		CommonPlugin,
-		tools::action_key::slot::{HandSlot, SlotKey},
-		traits::{
-			accessors::get::View,
-			handles_loadout::skills::{SkillIcon, SkillToken},
-			handles_localization::Token,
-		},
-		zyheeda_commands::ZyheedaEntityCommands,
 	};
 	use std::{collections::HashMap, marker::PhantomData, sync::LazyLock};
 	use testing::SingleThreadedApp;

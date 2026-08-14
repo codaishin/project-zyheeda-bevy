@@ -1,5 +1,5 @@
 use crate::{components::skill::Skill, observers::skill_prefab::GetLifetime};
-use common::traits::handles_skill_physics::{SkillShape, ground_target::SphereAoE};
+use common::prelude::*;
 use std::time::Duration;
 
 impl GetLifetime for Skill {

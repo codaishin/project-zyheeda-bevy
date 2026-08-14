@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::handles_saving::UniqueComponentId;
+use common::prelude::*;
 use std::{any::TypeId, collections::HashMap};
 
 #[derive(Resource, Debug, PartialEq)]

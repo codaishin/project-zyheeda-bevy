@@ -5,11 +5,7 @@ use crate::{
 	traits::{Flush, Schedule},
 };
 use bevy::prelude::*;
-use common::{
-	self,
-	components::persistent_entity::PersistentEntity,
-	tools::action_key::slot::SlotKey,
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 

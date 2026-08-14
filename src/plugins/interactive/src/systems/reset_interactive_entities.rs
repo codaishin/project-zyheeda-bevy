@@ -3,13 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{ContextChanged, GetContext, TryApplyOn},
-		handles_physics::{InteractionsOngoing, IterInteractions},
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl Interactive {
 	pub(crate) fn reset_when_no_interactions<TInteractions>(
@@ -42,7 +36,6 @@ impl Interactive {
 mod tests {
 	use super::*;
 	use crate::components::interactive_state::IsActive;
-	use common::traits::handles_map_generation::InteractiveType;
 	use std::{iter::Copied, ops::DerefMut, slice::Iter};
 	use testing::{SingleThreadedApp, fake_entity};
 

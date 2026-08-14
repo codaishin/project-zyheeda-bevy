@@ -1,10 +1,6 @@
 use crate::system_param::movement_param::{MotionState, MovementContext, MovementContextMut};
 use bevy::ecs::component::Component;
-use common::traits::{
-	accessors::get::View,
-	handles_movement::{MovementTarget, SpeedToggle},
-	handles_physics::CharacterMotion,
-};
+use common::prelude::*;
 
 impl<TMotion> View<Option<MovementTarget>> for MovementContext<'_, TMotion>
 where

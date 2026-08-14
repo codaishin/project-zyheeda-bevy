@@ -2,7 +2,7 @@ pub(crate) mod dto;
 
 use super::combo_node::ComboNode;
 use crate::{
-	CombosDto,
+	CombosInternalDto,
 	skills::Skill,
 	traits::{
 		SetNextCombo,
@@ -12,21 +12,18 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::{
-	tools::{action_key::slot::SlotKey, item_type::ItemType},
-	traits::handles_loadout::combos::{Combo, GetCombosOrdered, NextConfiguredKeys},
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use std::collections::HashSet;
 
 #[derive(Component, SavableComponent, PartialEq, Debug, Clone)]
-#[savable_component(id = "combos", dto = CombosDto)]
-pub struct Combos<TComboNode = ComboNode> {
+#[savable_component(id = "combos", dto = CombosInternalDto)]
+pub struct CombosInternal<TComboNode = ComboNode> {
 	config: TComboNode,
 	current: Option<TComboNode>,
 }
 
-impl<T> Combos<T> {
+impl<T> CombosInternal<T> {
 	pub fn new(config: T) -> Self {
 		Self {
 			config,
@@ -35,13 +32,13 @@ impl<T> Combos<T> {
 	}
 }
 
-impl<T> From<ComboNode<T>> for Combos<ComboNode<T>> {
+impl<T> From<ComboNode<T>> for CombosInternal<ComboNode<T>> {
 	fn from(value: ComboNode<T>) -> Self {
-		Combos::new(value)
+		CombosInternal::new(value)
 	}
 }
 
-impl Default for Combos {
+impl Default for CombosInternal {
 	fn default() -> Self {
 		Self {
 			config: ComboNode::default(),
@@ -50,13 +47,13 @@ impl Default for Combos {
 	}
 }
 
-impl<TComboNode> SetNextCombo<Option<TComboNode>> for Combos<TComboNode> {
+impl<TComboNode> SetNextCombo<Option<TComboNode>> for CombosInternal<TComboNode> {
 	fn set_next_combo(&mut self, value: Option<TComboNode>) {
 		self.current = value;
 	}
 }
 
-impl<TComboNode> PeekNextRecursive for Combos<TComboNode>
+impl<TComboNode> PeekNextRecursive for CombosInternal<TComboNode>
 where
 	for<'a> TComboNode:
 		PeekNextRecursive<TNext<'a> = &'a Skill, TRecursiveNode<'a> = &'a TComboNode> + 'a,
@@ -75,7 +72,7 @@ where
 		trigger: &SlotKey,
 		item_type: &ItemType,
 	) -> Option<(Self::TNext<'a>, Self::TRecursiveNode<'a>)> {
-		let Combos { config, current } = self;
+		let CombosInternal { config, current } = self;
 
 		current
 			.as_ref()
@@ -84,7 +81,7 @@ where
 	}
 }
 
-impl<'a, TComboNode> PeekNext<'a> for Combos<TComboNode>
+impl<'a, TComboNode> PeekNext<'a> for CombosInternal<TComboNode>
 where
 	Self: PeekNextRecursive<TNext<'a> = &'a Skill, TRecursiveNode<'a> = &'a TComboNode>,
 	TComboNode: 'a,
@@ -97,7 +94,7 @@ where
 	}
 }
 
-impl<TNode> GetCombosOrdered for Combos<TNode>
+impl<TNode> GetCombosOrdered for CombosInternal<TNode>
 where
 	TNode: GetCombosOrdered,
 {
@@ -108,7 +105,7 @@ where
 	}
 }
 
-impl<TNode> NextConfiguredKeys<SlotKey> for Combos<TNode>
+impl<TNode> NextConfiguredKeys<SlotKey> for CombosInternal<TNode>
 where
 	TNode: NextConfiguredKeys<SlotKey>,
 {
@@ -117,7 +114,7 @@ where
 	}
 }
 
-impl<TNode> UpdateComboSkills<Skill> for Combos<TNode>
+impl<TNode> UpdateComboSkills<Skill> for CombosInternal<TNode>
 where
 	TNode: UpdateComboSkills<Skill>,
 {
@@ -134,7 +131,6 @@ where
 mod tests {
 	use super::*;
 	use bevy::utils::default;
-	use common::{tools::action_key::slot::HandSlot, traits::handles_localization::Token};
 	use macros::simple_mock;
 	use mockall::predicate::eq;
 	use std::collections::HashMap;
@@ -168,7 +164,7 @@ mod tests {
 	fn return_skill() {
 		let trigger = SlotKey::from(HandSlot::Left);
 		let item_type = ItemType::ForceEssence;
-		let combos = Combos::new(_Next(HashMap::from([(
+		let combos = CombosInternal::new(_Next(HashMap::from([(
 			(trigger, item_type),
 			Skill {
 				token: Token::from("my skill"),
@@ -201,7 +197,7 @@ mod tests {
 				..default()
 			},
 		)]));
-		let mut combos = Combos::new(first);
+		let mut combos = CombosInternal::new(first);
 		combos.set_next_combo(Some(next));
 
 		let skill = combos
@@ -229,7 +225,7 @@ mod tests {
 			},
 		)]));
 		let next = _Next::default();
-		let mut combos = Combos::new(first);
+		let mut combos = CombosInternal::new(first);
 		combos.set_next_combo(Some(next));
 
 		let skill = combos
@@ -268,7 +264,7 @@ mod tests {
 			],
 			skill,
 		)]];
-		let combos = Combos::new(_ComboNode(combos_vec.clone()));
+		let combos = CombosInternal::new(_ComboNode(combos_vec.clone()));
 
 		assert_eq!(combos_vec, combos.combos_ordered())
 	}
@@ -285,7 +281,7 @@ mod tests {
 
 		#[test]
 		fn use_config_node() {
-			let combos = Combos::new(Mock_Node::new_mock(|mock| {
+			let combos = CombosInternal::new(Mock_Node::new_mock(|mock| {
 				mock.expect_next_keys()
 					.times(1)
 					.with(eq([
@@ -330,7 +326,7 @@ mod tests {
 
 		#[test]
 		fn use_config_node() {
-			let mut combos = Combos::new(_Node::default());
+			let mut combos = CombosInternal::new(_Node::default());
 
 			combos.update_combo_skills(
 				[(
@@ -357,7 +353,7 @@ mod tests {
 
 		#[test]
 		fn reset_current() {
-			let mut combos = Combos {
+			let mut combos = CombosInternal {
 				config: _Node::default(),
 				current: Some(_Node::default()),
 			};

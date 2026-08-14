@@ -3,10 +3,7 @@ use crate::{
 	resources::root_collisions::RootCollisions,
 };
 use bevy::prelude::*;
-use common::{
-	traits::{accessors::get::TryApplyOn, handles_physics::PhysicalObject::Fragile},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 pub(crate) fn apply_fragile_blocks(
 	mut commands: ZyheedaCommands,
@@ -31,6 +28,8 @@ fn is_fragile(
 	fragiles: &Query<(Entity, &Blockable)>,
 	blockers: &Query<&BlockerTypes>,
 ) -> Option<Entity> {
+	use PhysicalObject::Fragile;
+
 	let BlockerTypes(blocker) = blockers.get(*blocker).ok()?;
 	let Ok((entity, Blockable(Fragile { destroyed_by }))) = fragiles.get(*fragile) else {
 		return None;
@@ -42,10 +41,6 @@ fn is_fragile(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		tools::Units,
-		traits::handles_physics::{PhysicalObject::Beam, physical_bodies::Blocker},
-	};
 	use std::collections::HashSet;
 	use testing::SingleThreadedApp;
 
@@ -63,7 +58,7 @@ mod tests {
 		let mut app = setup();
 		let fragile = app
 			.world_mut()
-			.spawn(Blockable(Fragile {
+			.spawn(Blockable(PhysicalObject::Fragile {
 				destroyed_by: [Blocker::Physical].into(),
 			}))
 			.id();
@@ -86,7 +81,7 @@ mod tests {
 		let mut app = setup();
 		let fragile = app
 			.world_mut()
-			.spawn(Blockable(Beam {
+			.spawn(Blockable(PhysicalObject::Beam {
 				range: Units::from(1.),
 				blocked_by: [Blocker::Physical].into(),
 			}))
@@ -110,7 +105,7 @@ mod tests {
 		let mut app = setup();
 		let fragile = app
 			.world_mut()
-			.spawn(Blockable(Fragile {
+			.spawn(Blockable(PhysicalObject::Fragile {
 				destroyed_by: [Blocker::Physical].into(),
 			}))
 			.id();

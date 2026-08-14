@@ -10,17 +10,7 @@ use crate::{
 	system_params::input::Input,
 };
 use bevy::prelude::*;
-use common::{
-	states::game_state::LoadingEssentialAssets,
-	systems::log::OnError,
-	tools::{action_key::ActionKey, path::Path, plugin_system_set::PluginSystemSet},
-	traits::{
-		handles_asset_resource_loading::HandlesAssetResourceLoading,
-		handles_input::{HandlesActionKeyButton, HandlesInput, HandlesInputMut},
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::{prelude::*, states::game_state::LoadingEssentialAssets, tools::path::Path};
 use resources::{
 	asset_writer::AssetWriter,
 	key_map::{KeyMap, dto::KeyMapDto as KeyMapDtoGeneric},

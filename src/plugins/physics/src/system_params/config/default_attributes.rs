@@ -2,7 +2,7 @@ use crate::{
 	components::default_attributes::DefaultAttributes,
 	system_params::config::ConfigContextMut,
 };
-use common::traits::handles_physics::{ConfigureDefaultAttributes, PhysicalDefaultAttributes};
+use common::prelude::*;
 
 impl ConfigureDefaultAttributes for ConfigContextMut<'_> {
 	fn configure_default_attributes(&mut self, default: PhysicalDefaultAttributes) {
@@ -22,10 +22,6 @@ mod tests {
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
-	};
-	use common::{
-		attributes::{effect_target::EffectTarget, health::Health},
-		traits::{accessors::get::TryGetContextMut, handles_physics::NoDefaultAttributes},
 	};
 	use testing::SingleThreadedApp;
 

@@ -6,14 +6,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryApplyOn, TryGetContext, View},
-		handles_loadout::items::{Items, ReadItems},
-		handles_player::PlayerEntity,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl InventoryPanel {
 	pub(crate) fn set_label<TPlayer, TLoadout>(
@@ -62,14 +55,6 @@ mod tests {
 		components::{KeyedPanel, label::UILabel},
 		testing::{_Player, _PlayerParam},
 		tools::PanelState,
-	};
-	use common::{
-		CommonPlugin,
-		tools::action_key::slot::HandSlot,
-		traits::{
-			handles_loadout::{LoadoutKey, items::ItemToken},
-			handles_localization::Token,
-		},
 	};
 	use std::{collections::HashMap, sync::LazyLock};
 	use testing::SingleThreadedApp;

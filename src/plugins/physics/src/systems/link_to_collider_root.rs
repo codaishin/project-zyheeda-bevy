@@ -1,7 +1,7 @@
 use crate::components::collider::{ColliderOf, ColliderRoot};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl ColliderRoot {
 	pub(crate) fn link_children(

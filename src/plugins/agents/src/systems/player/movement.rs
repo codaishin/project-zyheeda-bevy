@@ -4,16 +4,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	tools::action_key::movement::MovementKey,
-	traits::{
-		accessors::get::{GetContext, TryGetContextMut},
-		handles_graphics::{CameraHandle, CameraTransform},
-		handles_input::{GetAllInputStates, InputState},
-		handles_movement::{ConfiguredMovement, StartMovement, StopMovement},
-		handles_physics::{MouseTerrainHover, MouseTerrainPoint, Raycast},
-	},
-};
+use common::prelude::*;
 
 impl Player {
 	pub(crate) fn movement<TInput, TRaycast, TMovement, TCamera>(
@@ -99,14 +90,6 @@ enum DirectionalMovement {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::{
-		tools::action_key::{ActionKey, movement::MovementKey},
-		traits::{
-			handles_input::InputState,
-			handles_movement::MovementTarget,
-			iteration::IterFinite,
-		},
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, mock, predicate::eq};
 	use test_case::test_case;

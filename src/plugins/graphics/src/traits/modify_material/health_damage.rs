@@ -3,7 +3,7 @@ use crate::{
 	traits::modify_material::ModifyMaterial,
 };
 use bevy::color::palettes::css::WHITE;
-use common::effects::health_damage::HealthDamage;
+use common::prelude::*;
 
 impl ModifyMaterial for HealthDamage {
 	fn modify_material(material: &mut EffectMaterial) {

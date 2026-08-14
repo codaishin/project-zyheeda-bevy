@@ -1,10 +1,6 @@
 use crate::components::bar::Bar;
 use bevy::ecs::system::{StaticSystemParam, SystemParam};
-use common::{
-	components::persistent_entity::PersistentEntity,
-	traits::accessors::get::TryApplyOn,
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl Bar {
 	pub(crate) fn add_to<TAgents>(agents: StaticSystemParam<TAgents>, mut commands: ZyheedaCommands)
@@ -25,7 +21,6 @@ impl Bar {
 mod tests {
 	use super::*;
 	use bevy::prelude::*;
-	use common::CommonPlugin;
 	use std::vec::IntoIter;
 	use testing::SingleThreadedApp;
 

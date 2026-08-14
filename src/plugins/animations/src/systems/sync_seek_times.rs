@@ -7,11 +7,7 @@ use crate::{
 	traits::{SetTo, UpdateAnimation},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::traits::{
-	handles_animations::AnimationKey,
-	thread_safe::ThreadSafe,
-	wrap_handle::{GetHandle, WrapHandle},
-};
+use common::prelude::*;
 use zyheeda_core::prelude::*;
 
 impl ChangedAnimations {
@@ -154,10 +150,6 @@ mod tests {
 		},
 		systems::write_animation_seek_state::tests::_Clips,
 		traits::{OldAnimationState, SetTo},
-	};
-	use common::traits::{
-		handles_animations::{Animation, AnimationKey},
-		wrap_handle::GetHandle,
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};

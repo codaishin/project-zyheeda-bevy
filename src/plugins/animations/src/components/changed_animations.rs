@@ -1,6 +1,6 @@
 use crate::traits::OldAnimationState;
 use bevy::prelude::*;
-use common::traits::handles_animations::AnimationKey;
+use common::prelude::*;
 use std::collections::{HashMap, HashSet};
 
 #[derive(Component, Debug, PartialEq, Default)]

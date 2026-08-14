@@ -4,17 +4,7 @@ use crate::{
 	system_params::ui_states::UIStatesMut,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::traits::{
-	handles_game_states::{
-		GameStateCollection,
-		GameStateCollectionMut,
-		GameStates,
-		GameStatesMut,
-		NextGameStates,
-		UIState,
-	},
-	iteration::IterFinite,
-};
+use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(SystemParam)]
@@ -99,7 +89,6 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		state::{app::StatesPlugin, state::FreelyMutableState},
 	};
-	use common::traits::handles_game_states::{ActivityState, UIState};
 	use std::marker::PhantomData;
 	use test_case::test_case;
 	use testing::SingleThreadedApp;

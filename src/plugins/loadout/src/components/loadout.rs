@@ -1,6 +1,6 @@
 use crate::components::{
 	active_skill::ActiveSkill,
-	combos::Combos,
+	combos::CombosInternal,
 	combos_time_out::CombosTimeOut,
 	queue::Queue,
 };
@@ -9,7 +9,7 @@ use std::time::Duration;
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(
-	Combos,
+	CombosInternal,
 	CombosTimeOut = CombosTimeOut::after(Duration::from_secs(2)),
 	Queue,
 	ActiveSkill,

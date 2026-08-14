@@ -7,7 +7,7 @@ mod traits;
 
 use crate::{
 	components::{
-		combos::dto::CombosDto,
+		combos::dto::CombosInternalDto,
 		combos_time_out::dto::CombosTimeOutDto,
 		queue::dto::QueueDto,
 		slot_definitions::SlotDefinitions,
@@ -27,24 +27,12 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
+	prelude::*,
 	states::game_state::{GameState, LoadingGame},
-	traits::{
-		after_plugin::AfterPlugin,
-		handles_custom_assets::{HandlesCustomAssets, HandlesCustomFolderAssets},
-		handles_load_tracking::HandlesLoadTracking,
-		handles_loadout::HandlesLoadout,
-		handles_orientation::HandlesOrientation,
-		handles_physics::{HandlesAllPhysicalEffects, HandlesRaycast},
-		handles_saving::HandlesSaving,
-		handles_skill_physics::HandlesSkillPhysics,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
-	},
 };
 use components::{
 	active_skill::ActiveSkill,
-	combos::Combos,
+	combos::CombosInternal,
 	combos_time_out::CombosTimeOut,
 	inventory::Inventory,
 	queue::Queue,
@@ -90,12 +78,12 @@ where
 		app.add_systems(
 			Update,
 			(
-				SlotVisualization::<HandSlot>::track_slots_for::<SlotDefinitions>,
-				SlotVisualization::<HandSlot>::visualize_items,
-				SlotVisualization::<ForearmSlot>::track_slots_for::<SlotDefinitions>,
-				SlotVisualization::<ForearmSlot>::visualize_items,
-				SlotVisualization::<EssenceSlot>::track_slots_for::<SlotDefinitions>,
-				SlotVisualization::<EssenceSlot>::visualize_items,
+				SlotVisualization::<VisibleHandSlot>::track_slots_for::<SlotDefinitions>,
+				SlotVisualization::<VisibleHandSlot>::visualize_items,
+				SlotVisualization::<VisibleForearmSlot>::track_slots_for::<SlotDefinitions>,
+				SlotVisualization::<VisibleForearmSlot>::visualize_items,
+				SlotVisualization::<VisibleEssenceSlot>::track_slots_for::<SlotDefinitions>,
+				SlotVisualization::<VisibleEssenceSlot>::visualize_items,
 			)
 				.chain(),
 		);
@@ -103,7 +91,7 @@ where
 
 	fn skill_execution(&self, app: &mut App) {
 		TSaveGame::register_savable_component::<CombosTimeOut>(app);
-		TSaveGame::register_savable_component::<Combos>(app);
+		TSaveGame::register_savable_component::<CombosInternal>(app);
 		TSaveGame::register_savable_component::<Queue>(app);
 		TSaveGame::register_savable_component::<ActiveSkill>(app);
 
@@ -111,8 +99,8 @@ where
 			Update,
 			(
 				Queue::enqueue_system::<Slots>,
-				Combos::update::<Queue>,
-				flush_skill_combos::<Combos, CombosTimeOut, Virtual, Queue>,
+				CombosInternal::update::<Queue>,
+				flush_skill_combos::<CombosInternal, CombosTimeOut, Virtual, Queue>,
 				schedule_active_skill::<Queue, TMovement::TFaceSystemParam, ActiveSkill, Virtual>,
 				ActiveSkill::<SkillBehaviorConfig>::execute::<TPhysics::TSkillSpawnerMut>,
 				Queue::flush_system,

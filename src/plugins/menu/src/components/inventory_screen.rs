@@ -5,14 +5,7 @@ use crate::{
 	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::{
-	tools::{action_key::slot::HandSlot, inventory_key::InventoryKey},
-	traits::{
-		handles_loadout::LoadoutKey,
-		handles_localization::{Localize, LocalizeToken, Token, localized::Localized},
-		iteration::{IterFinite, IterInfinite},
-	},
-};
+use common::prelude::*;
 
 #[derive(Component)]
 #[require(MenuBackground)]

@@ -4,7 +4,7 @@ use crate::{
 	traits::{
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
-		iteration::{Iter, IterFinite},
+		iteration::{FiniteIter, IterFinite},
 	},
 };
 use bevy::input::{keyboard::KeyCode, mouse::MouseButton};
@@ -77,11 +77,11 @@ impl TryFrom<ActionKey> for MenuState {
 }
 
 impl IterFinite for MenuState {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(MenuState::Inventory))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(MenuState::Inventory))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match &current.0? {
 			MenuState::Inventory => Some(MenuState::ComboOverview),
 			MenuState::ComboOverview => Some(MenuState::Settings),

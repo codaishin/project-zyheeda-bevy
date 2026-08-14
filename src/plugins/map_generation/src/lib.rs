@@ -26,20 +26,8 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::{
+	prelude::*,
 	states::game_state::{GameState, LoadingGame},
-	systems::log::OnError,
-	tools::plugin_system_set::PluginSystemSet,
-	traits::{
-		handles_enemies::EnemyType,
-		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
-		handles_map_generation::{AgentType, HandlesMapGeneration, InteractiveType},
-		handles_physics::{HandlesPhysicsConfig, HandlesRaycast},
-		handles_saving::HandlesSaving,
-		prefab::AddPrefabObserver,
-		spawn::Spawn,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
 };
 use components::grid::Grid;
 use std::marker::PhantomData;
@@ -99,7 +87,7 @@ where
 
 		app.init_resource::<PrefabRegister<AgentType>>()
 			.init_resource::<PrefabRegister<InteractiveType>>()
-			.add_systems(OnEnter(GameState::NewGame), Level::<0>::spawn)
+			.add_systems(OnEnter(GameState::NewGame), Level::<0>::spawn_default)
 			.add_prefab_observer::<MeshCollider, TPhysics::TConfigMut>()
 			.add_observer(Map::apply_despawned_map_objects_persistence)
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))

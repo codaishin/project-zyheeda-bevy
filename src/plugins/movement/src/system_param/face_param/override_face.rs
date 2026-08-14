@@ -1,5 +1,5 @@
 use crate::{components::facing::SetFaceOverride, system_param::face_param::FaceContextMut};
-use common::traits::handles_orientation::{Face, OverrideFace};
+use common::prelude::*;
 
 impl OverrideFace for FaceContextMut<'_> {
 	fn override_face(&mut self, face: Face) {
@@ -19,7 +19,6 @@ mod tests {
 		app::{App, Update},
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::traits::{accessors::get::TryGetContextMut, handles_orientation::Facing};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

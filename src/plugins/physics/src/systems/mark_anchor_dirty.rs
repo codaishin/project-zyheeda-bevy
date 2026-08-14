@@ -1,6 +1,6 @@
 use crate::components::anchor::{Anchor, AnchorDirty};
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl Anchor {
 	pub(crate) fn mark_dirty(
@@ -19,10 +19,6 @@ impl Anchor {
 mod tests {
 	use super::*;
 	use crate::components::anchor::AnchorDirty;
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		traits::handles_skill_physics::SkillMount,
-	};
 	use testing::{IsChanged, SingleThreadedApp};
 
 	fn setup() -> App {

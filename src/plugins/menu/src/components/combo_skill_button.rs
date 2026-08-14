@@ -4,10 +4,7 @@ use crate::{
 	traits::insert_ui_content::InsertUiContent,
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{handles_localization::Localize, thread_safe::ThreadSafe},
-};
+use common::prelude::*;
 use std::{fmt::Debug, marker::PhantomData};
 
 #[derive(Debug, Default, PartialEq, Clone)]

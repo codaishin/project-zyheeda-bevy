@@ -4,7 +4,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{Real, *};
-use common::traits::handles_physics::{Raycast, RaycastHit, SolidObjects};
+use common::prelude::*;
 
 impl Raycast<SolidObjects> for RayCasterMut<'_, '_> {
 	fn raycast(

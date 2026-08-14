@@ -1,6 +1,6 @@
 use crate::{components::movement::Movement, system_param::movement_param::MovementContextMut};
 use bevy::ecs::component::Component;
-use common::traits::handles_movement::StopMovement;
+use common::prelude::*;
 
 impl<TMotion> StopMovement for MovementContextMut<'_, TMotion>
 where
@@ -20,7 +20,6 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{accessors::get::TryGetContextMut, handles_movement::ConfiguredMovement};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]

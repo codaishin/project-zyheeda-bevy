@@ -1,6 +1,6 @@
 use crate::traits::is_released::IsReleased;
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) enum ButtonInteraction {

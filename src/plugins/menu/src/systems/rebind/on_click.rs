@@ -1,9 +1,6 @@
 use crate::{Input, KeyBind, Rebinding};
 use bevy::prelude::*;
-use common::{
-	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl<TAction> KeyBind<Input<TAction>>
 where
@@ -38,7 +35,6 @@ where
 mod tests {
 	use super::*;
 	use crate::Rebinding;
-	use common::tools::action_key::user_input::UserInput;
 	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Debug, PartialEq, Clone, Copy)]

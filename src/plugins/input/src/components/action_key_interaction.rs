@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use common::{
-	tools::action_key::ActionKey,
-	traits::{accessors::get::View, handles_input::MouseOverrideActive},
-};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Interaction)]

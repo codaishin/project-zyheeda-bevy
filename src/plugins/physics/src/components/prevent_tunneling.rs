@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use common::tools::Units;
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Velocity, GlobalTransform)]

@@ -4,7 +4,7 @@ use crate::{
 	traits::modify_material::ModifyMaterial,
 };
 use bevy::prelude::*;
-use common::traits::handles_physics::{Effect, HandlesPhysicalEffect};
+use common::prelude::*;
 
 impl EffectMaterialHandle {
 	pub(crate) fn modify_material<TPhysics, TEffect>(
@@ -12,7 +12,7 @@ impl EffectMaterialHandle {
 		materials: ResMut<Assets<EffectMaterial>>,
 	) where
 		TPhysics: HandlesPhysicalEffect<TEffect>,
-		TEffect: Effect + ModifyMaterial + 'static,
+		TEffect: PhysicalEffect + ModifyMaterial + 'static,
 	{
 		Self::modify_material_internal::<TPhysics::TEffectComponent, TEffect>(shaders, materials)
 	}

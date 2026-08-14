@@ -3,7 +3,7 @@ use crate::{
 	materials::lit_material::StandardLitMaterial,
 };
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl EffectMaterialHandle {
 	pub(crate) fn propagate_material(

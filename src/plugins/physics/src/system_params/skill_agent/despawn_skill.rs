@@ -1,11 +1,8 @@
 use crate::system_params::skill_agent::SkillAgentMut;
-use common::traits::{
-	accessors::get::GetMut,
-	handles_skill_physics::{Despawn, SkillEntity},
-};
+use common::prelude::*;
 
-impl Despawn for SkillAgentMut<'_, '_> {
-	fn despawn(&mut self, SkillEntity(entity): SkillEntity) {
+impl DespawnSkill for SkillAgentMut<'_, '_> {
+	fn despawn_skill(&mut self, SkillEntity(entity): SkillEntity) {
 		let Some(entity) = self.commands.get_mut(&entity) else {
 			return;
 		};
@@ -20,16 +17,11 @@ impl Despawn for SkillAgentMut<'_, '_> {
 
 #[cfg(test)]
 mod tests {
-	use super::{Despawn, *};
+	use super::{DespawnSkill, *};
 	use crate::components::skill::{CreatedFrom, Skill};
 	use bevy::{
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
-	};
-	use common::{
-		CommonPlugin,
-		components::persistent_entity::PersistentEntity,
-		traits::handles_skill_physics::{SkillCaster, SkillMount, SkillShape, shield::Shield},
 	};
 	use testing::SingleThreadedApp;
 
@@ -60,7 +52,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut p: SkillAgentMut| {
-				p.despawn(SkillEntity(persistent_entity));
+				p.despawn_skill(SkillEntity(persistent_entity));
 			})?;
 
 		assert!(app.world().get_entity(entity).is_err());
@@ -75,7 +67,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut p: SkillAgentMut| {
-				p.despawn(SkillEntity(persistent_entity));
+				p.despawn_skill(SkillEntity(persistent_entity));
 			})?;
 
 		assert!(app.world().get_entity(entity).is_ok());

@@ -5,7 +5,7 @@ use crate::{
 	traits::insert_entity_component::InsertEntityComponent,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::traits::load_asset::LoadAsset;
+use common::prelude::*;
 use std::{
 	collections::HashSet,
 	sync::{Arc, Mutex},
@@ -135,7 +135,6 @@ mod tests {
 		asset::AssetPath,
 		ecs::system::{RunSystemError, RunSystemOnce},
 	};
-	use common::traits::{handles_saving::UniqueComponentId, load_asset::LoadAsset};
 	use serde_json::{Value, json};
 	use std::{
 		collections::{HashMap, HashSet},

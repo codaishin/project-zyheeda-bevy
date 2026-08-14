@@ -1,10 +1,5 @@
 use bevy::prelude::*;
-use common::{
-	attributes::{effect_target::EffectTarget, health::Health},
-	effects::{force::Force, gravity::Gravity},
-	tools::attribute::AttributeOnSpawn,
-	traits::{accessors::get::View, handles_physics::PhysicalDefaultAttributes},
-};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct DefaultAttributes(pub(crate) PhysicalDefaultAttributes);

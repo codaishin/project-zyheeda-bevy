@@ -2,17 +2,13 @@ pub(crate) mod dto;
 
 use crate::{skills::shape::OnSkillStop, traits::spawn_skill::extension::SkillConfigData};
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	tools::action_key::slot::SlotKey,
-	traits::handles_skill_physics::{Effect, SkillMount, SkillShape},
-};
+use common::prelude::*;
 
 #[derive(PartialEq, Debug, Clone)]
 pub struct SkillBehaviorConfig {
 	pub(crate) shape: SkillShape,
-	pub(crate) contact: Vec<Effect>,
-	pub(crate) projection: Vec<Effect>,
+	pub(crate) contact: Vec<SkillEffect>,
+	pub(crate) projection: Vec<SkillEffect>,
 }
 
 impl SkillBehaviorConfig {
@@ -38,11 +34,11 @@ impl SkillConfigData for SkillBehaviorConfig {
 		&self.shape
 	}
 
-	fn contact_effects(&self) -> &'_ [Effect] {
+	fn contact_effects(&self) -> &'_ [SkillEffect] {
 		&self.contact
 	}
 
-	fn projection_effects(&self) -> &'_ [Effect] {
+	fn projection_effects(&self) -> &'_ [SkillEffect] {
 		&self.projection
 	}
 

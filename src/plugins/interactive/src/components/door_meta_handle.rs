@@ -1,6 +1,6 @@
 use crate::assets::door_meta::DoorMeta;
 use bevy::prelude::*;
-use common::traits::accessors::get::View;
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct DoorMetaHandle(pub(crate) Handle<DoorMeta>);

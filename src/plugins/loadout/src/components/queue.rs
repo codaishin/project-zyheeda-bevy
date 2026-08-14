@@ -7,7 +7,7 @@ use crate::{
 	traits::{Enqueue, Flush, GetActiveSkill, GetSkillBehavior, IterAddedMut, IterHoldingMut},
 };
 use bevy::prelude::*;
-use common::{tools::action_key::slot::SlotKey, traits::state_duration::StateDuration};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -212,7 +212,6 @@ mod test_queue_collection {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::utils::default;
-	use common::traits::handles_localization::Token;
 
 	#[test]
 	fn enqueue_one_skill() {
@@ -690,8 +689,6 @@ mod test_queue_collection {
 #[cfg(test)]
 mod test_queue_active_skill {
 	#![allow(clippy::unwrap_used)]
-	use common::traits::handles_skill_physics::{SkillShape, shield::Shield};
-
 	use super::*;
 	use crate::skills::{RunSkillBehavior, behaviors::SkillBehaviorConfig};
 

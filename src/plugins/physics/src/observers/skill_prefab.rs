@@ -9,11 +9,7 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use common::{
-	components::{lifetime::Lifetime, model::Model, persistent_entity::PersistentEntity},
-	traits::{accessors::get::GetMut, handles_physics::PhysicalObject},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
-};
+use common::prelude::*;
 use std::time::Duration;
 
 impl<T> SkillPrefab for T where
@@ -136,18 +132,6 @@ mod tests {
 		persistent_root::PersistentRoot,
 		skill::SkillContactRoot,
 		skill_transform::SkillTransformOf,
-	};
-	use common::{
-		components::{model::Model, persistent_entity::PersistentEntity},
-		effects::force::Force,
-		tools::Units,
-		traits::{
-			handles_physics::{
-				PhysicalObject,
-				physical_bodies::{Shape, ShapeParameters},
-			},
-			handles_skill_physics::Effect,
-		},
 	};
 	use std::{collections::HashSet, sync::LazyLock};
 	use testing::{SingleThreadedApp, assert_children_count};
@@ -459,13 +443,13 @@ mod tests {
 					_Skill::default_object(),
 					_Skill::default_model(),
 					_Skill::default_contact_collider(),
-					Effects(vec![Effect::Force(Force)]),
+					Effects(vec![SkillEffect::Force(Force)]),
 				),
 				..default()
 			});
 
 			assert_eq!(
-				Some(&Effects(vec![Effect::Force(Force)])),
+				Some(&Effects(vec![SkillEffect::Force(Force)])),
 				skill.get::<Effects>(),
 			);
 		}
@@ -606,7 +590,7 @@ mod tests {
 					projection: (
 						_Skill::default_model(),
 						_Skill::default_projection_collider(),
-						Effects(vec![Effect::Force(Force)]),
+						Effects(vec![SkillEffect::Force(Force)]),
 					),
 					..default()
 				})
@@ -614,7 +598,7 @@ mod tests {
 
 			let [.., projection] = assert_children_count!(3, app, skill);
 			assert_eq!(
-				Some(&Effects(vec![Effect::Force(Force)])),
+				Some(&Effects(vec![SkillEffect::Force(Force)])),
 				projection.get::<Effects>(),
 			);
 		}

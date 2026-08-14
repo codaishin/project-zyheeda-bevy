@@ -3,10 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{accessors::get::TryApplyOn, handles_input::GetInput, handles_localization::Token},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::{ops::Deref, path::PathBuf};
 
 impl InputLabel {
@@ -42,10 +39,6 @@ mod tests {
 	use super::*;
 	use crate::components::icon::Icon;
 	use bevy::app::{App, Update};
-	use common::{
-		tools::action_key::{ActionKey, slot::HandSlot, user_input::UserInput},
-		traits::handles_localization::Token,
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::path::PathBuf;

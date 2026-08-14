@@ -5,7 +5,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::traits::handles_localization::Localize;
+use common::prelude::*;
 
 pub(crate) fn update_children<TComponent, TLocalization>(
 	mut commands: Commands,
@@ -31,7 +31,6 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use common::traits::handles_localization::{LocalizationResult, Token, localized::Localized};
 	use testing::{SingleThreadedApp, assert_children_count};
 
 	#[derive(Component, Debug, PartialEq)]

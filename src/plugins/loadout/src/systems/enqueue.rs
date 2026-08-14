@@ -6,10 +6,7 @@ use crate::{
 	traits::{Enqueue, IterHoldingMut, ReleaseSkill},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::accessors::get::{GetRef, View},
-};
+use common::prelude::*;
 use held_slots::HeldSlots;
 
 impl<T> EnqueueSystem for T where
@@ -72,7 +69,6 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{tools::action_key::slot::HandSlot, traits::handles_localization::Token};
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, predicate::eq};
 	use std::collections::HashMap;

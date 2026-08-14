@@ -3,7 +3,7 @@ use crate::{
 	system_params::game_states_read::GameStatesRead,
 };
 use bevy::prelude::*;
-use common::traits::handles_game_states::GameStates;
+use common::prelude::*;
 
 impl GameStateRoles {
 	pub(crate) fn pause(
@@ -34,7 +34,6 @@ mod tests {
 		system_params::ui_states::UIStates,
 	};
 	use bevy::{state::app::StatesPlugin, time::TimePlugin};
-	use common::traits::handles_game_states::{ActivityState, GameState, NonPausedStates, UIState};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

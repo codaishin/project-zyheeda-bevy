@@ -117,7 +117,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::mesh_grid_graph::test::neighbors;
-	use common::vec_not_nan;
+	use common::prelude::*;
 
 	#[test]
 	fn set_first_border_node() {

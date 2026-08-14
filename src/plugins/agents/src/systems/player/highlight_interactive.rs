@@ -3,11 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::traits::{
-	accessors::get::{ContextChanged, GetContext, TryGetContextMut},
-	handles_graphics::{Highlight, SetHighlight, Visual},
-	handles_physics::{InteractionsJustStopped, InteractionsOngoing, IterInteractions},
-};
+use common::prelude::*;
 
 impl Player {
 	pub(crate) fn highlight_interactive<TPhysics, TGraphics>(
@@ -58,10 +54,6 @@ impl Player {
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{SystemParam, SystemParamItem};
-	use common::traits::{
-		accessors::get::ContextChanged,
-		handles_graphics::{GetHighlight, Highlight},
-	};
 	use std::{collections::HashMap, iter::Copied, slice::Iter};
 	use testing::SingleThreadedApp;
 

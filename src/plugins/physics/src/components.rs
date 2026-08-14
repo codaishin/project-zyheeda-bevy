@@ -36,7 +36,7 @@ use bevy_rapier3d::{
 	pipeline::{QueryFilter, QueryFilterFlags},
 };
 
-use common::traits::handles_physics::TimeOfImpact;
+use common::prelude::*;
 #[cfg(test)]
 use testing::ApproxEqual;
 

@@ -16,7 +16,7 @@ pub trait LoadAsset {
 /// <div class="warning">
 ///   DO NOT USE FOR PRODUCTION CODE!!! ONLY FOR TESTS!!!
 /// </div>
-pub mod mock {
+pub mod mock_asset_loader {
 	use super::*;
 	use bevy::asset::io::AssetSourceId;
 	use std::path::PathBuf;

@@ -6,13 +6,7 @@ use bevy::{
 	ecs::system::{SystemParam, SystemParamItem},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::{ContextChanged, GetMut, TryGetContext, TryGetContextMut},
-		handles_interactive::{Interactive as InteractiveKey, InteractiveState},
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
-};
+use common::{prelude::*, traits::handles_interactive::Interactive as InteractiveKey};
 
 #[derive(SystemParam)]
 pub struct InteractiveParam<'w, 's> {

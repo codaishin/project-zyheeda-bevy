@@ -13,13 +13,7 @@ use crate::components::{
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
-use common::{
-	errors::{ErrorData, Level},
-	traits::{
-		handles_physics::physical_bodies::Shape,
-		prefab::{Prefab, PrefabEntityCommands},
-	},
-};
+use common::prelude::*;
 use std::fmt::Display;
 
 #[derive(Component, Debug, PartialEq)]
@@ -115,10 +109,6 @@ mod tests {
 	use crate::components::{
 		collider::{ColliderShape, MOUSE_HOVERABLE_GROUP},
 		collision_domains::Physical,
-	};
-	use common::{
-		tools::Units,
-		traits::{handles_physics::physical_bodies::ShapeParameters, prefab::AddPrefabObserver},
 	};
 	use testing::SingleThreadedApp;
 

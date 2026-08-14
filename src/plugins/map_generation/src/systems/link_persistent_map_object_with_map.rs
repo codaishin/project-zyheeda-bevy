@@ -3,12 +3,7 @@ use crate::components::map::{
 	objects::{MapObjectOf, PersistentMapObject},
 };
 use bevy::prelude::*;
-use common::{
-	components::persistent_entity::PersistentEntity,
-	errors::{ErrorData, Level},
-	traits::accessors::get::{Get, TryApplyOn},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::{fmt::Display, time::Duration};
 
 impl PersistentMapObject {
@@ -91,7 +86,6 @@ mod tests {
 	use super::*;
 	use crate::components::map::{Map, objects::MapObjectOf};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{CommonPlugin, components::persistent_entity::PersistentEntity};
 	use testing::{IsChanged, SingleThreadedApp};
 
 	fn setup() -> App {

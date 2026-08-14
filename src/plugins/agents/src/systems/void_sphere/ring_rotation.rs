@@ -29,7 +29,7 @@ mod tests {
 		app::{App, Update},
 		transform::components::Transform,
 	};
-	use common::tools::UnitsPerSecond;
+	use common::prelude::*;
 
 	#[test]
 	fn rotate_ring_a() {

@@ -1,6 +1,6 @@
 use crate::system_param::movement_param::{MotionState, MovementContext, MovementParam};
 use bevy::prelude::*;
-use common::traits::accessors::get::ContextChanged;
+use common::prelude::*;
 use std::collections::HashSet;
 
 impl<TMotion> ContextChanged for MovementContext<'_, TMotion>
@@ -49,7 +49,6 @@ pub(crate) struct JustRemovedMovements(pub(crate) HashSet<Entity>);
 mod tests {
 	use super::*;
 	use crate::{components::config::SpeedIndex, system_param::movement_param::MovementParam};
-	use common::traits::{accessors::get::TryGetContext, handles_movement::Movement};
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]

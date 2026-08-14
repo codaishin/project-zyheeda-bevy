@@ -4,7 +4,7 @@ use crate::{
 	resources::camera_render_target::CameraRenderTarget,
 };
 use bevy::prelude::*;
-use common::{traits::accessors::get::GetMut, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl EffectMaterialHandle {
 	pub(crate) fn add_to<TComponent>(

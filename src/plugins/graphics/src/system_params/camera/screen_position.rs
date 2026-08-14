@@ -1,6 +1,6 @@
 use crate::system_params::camera::CameraContextMut;
 use bevy::prelude::*;
-use common::traits::handles_graphics::ScreenPosition;
+use common::prelude::*;
 
 impl ScreenPosition for CameraContextMut<'_> {
 	fn screen_position(&self, translation: Vec3) -> Option<Vec2> {

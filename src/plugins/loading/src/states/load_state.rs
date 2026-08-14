@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use common::traits::{
-	handles_load_tracking::{IsProcessing, Progress},
-	thread_safe::ThreadSafe,
-};
+use common::prelude::*;
 use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 
 #[derive(States)]

@@ -1,6 +1,6 @@
 use crate::{resources::asset_folder::AssetFolder, traits::is_fully_loaded::IsFullyLoaded};
 use bevy::prelude::*;
-use common::traits::handles_load_tracking::Loaded;
+use common::prelude::*;
 
 pub(crate) fn is_loaded<TAsset>(
 	server: Res<AssetServer>,

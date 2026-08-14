@@ -1,13 +1,6 @@
 use crate::components::facing::SetFace;
 use bevy::prelude::*;
-use common::{
-	traits::{
-		accessors::get::{TryApplyOn, View},
-		handles_orientation::Face,
-		handles_physics::CharacterMotion,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl<T> SetFaceSystem for T where T: Component + View<CharacterMotion> {}
 
@@ -45,7 +38,6 @@ pub(crate) trait SetFaceSystem: Component + View<CharacterMotion> + Sized {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::tools::speed::Speed;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component)]

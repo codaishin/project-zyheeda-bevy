@@ -2,10 +2,7 @@ use crate::{
 	ActiveSkill,
 	skills::behaviors::{SkillBehaviorConfig, dto::SkillBehaviorConfigDto},
 };
-use common::{
-	errors::Unreachable,
-	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
-};
+use common::prelude::*;
 
 impl From<ActiveSkill> for ActiveSkill<SkillBehaviorConfigDto> {
 	fn from(value: ActiveSkill) -> Self {
@@ -49,11 +46,6 @@ impl TryLoadFrom<ActiveSkill<SkillBehaviorConfigDto>> for ActiveSkill {
 mod tests {
 	use super::*;
 	use bevy::{asset::AssetPath, prelude::*};
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		tools::action_key::slot::{HandSlot, SlotKey},
-		traits::handles_skill_physics::{SkillShape, shield::Shield},
-	};
 	use test_case::test_case;
 
 	fn start_spawn_shield() -> ActiveSkill {

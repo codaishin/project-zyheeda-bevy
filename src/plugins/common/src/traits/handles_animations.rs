@@ -299,6 +299,8 @@ macro_rules! forward_pitch {
 	}};
 }
 
+pub use forward_pitch;
+
 impl ForwardPitch {
 	pub const MAX: Self = Self(1.);
 }
@@ -458,6 +460,8 @@ macro_rules! bit_mask_index {
 		INDEX
 	}};
 }
+
+pub use bit_mask_index;
 
 impl BitMaskIndex {
 	const MAX_BIT_INDEX: u8 = 63;

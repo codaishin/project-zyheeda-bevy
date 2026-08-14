@@ -1,5 +1,5 @@
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::traits::handles_localization::Localize;
+use common::prelude::*;
 
 pub trait InsertUiContent {
 	fn insert_ui_content<TLocalization>(

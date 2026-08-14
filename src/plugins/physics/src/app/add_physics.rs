@@ -5,10 +5,7 @@ use crate::{
 	traits::act_on::ActOn,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::traits::{
-	delta::Delta,
-	handles_saving::{HandlesSaving, SavableComponent},
-};
+use common::prelude::*;
 
 pub(crate) trait AddPhysics {
 	fn add_physics<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self

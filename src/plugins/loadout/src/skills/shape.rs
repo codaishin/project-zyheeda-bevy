@@ -1,4 +1,4 @@
-use common::components::persistent_entity::PersistentEntity;
+use common::prelude::*;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum OnSkillStop {

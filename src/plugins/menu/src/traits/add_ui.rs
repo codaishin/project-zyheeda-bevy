@@ -1,12 +1,7 @@
 use super::{LoadUi, insert_ui_content::InsertUiContent};
 use crate::systems::{despawn::despawn, spawn::spawn, update_children::update_children};
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::traits::{
-	accessors::get::GetContextMut,
-	handles_graphics::{CameraHandle, RenderUi},
-	handles_localization::Localize,
-	thread_safe::ThreadSafe,
-};
+use common::prelude::*;
 
 pub(crate) trait AddUI<TState> {
 	fn add_ui<TComponent, TLocalizationServer, TUICamera>(&mut self, on_state: TState) -> &mut Self

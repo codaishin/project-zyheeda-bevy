@@ -1,12 +1,6 @@
 use crate::system_params::input::Input;
 use bevy::ecs::system::SystemParam;
-use common::{
-	tools::action_key::ActionKey,
-	traits::{
-		handles_input::{GetAllInputStates, GetInputState, InputState},
-		iteration::{Iter as VariationsIter, IterFinite},
-	},
-};
+use common::prelude::*;
 
 impl<TKeyMap> GetAllInputStates for Input<'_, '_, TKeyMap>
 where
@@ -26,7 +20,7 @@ where
 
 struct Iter<'a, TInput, TAction> {
 	input: &'a TInput,
-	actions: VariationsIter<TAction>,
+	actions: FiniteIter<TAction>,
 }
 
 impl<'a, TInput, TAction> Iterator for Iter<'a, TInput, TAction>
@@ -61,11 +55,11 @@ mod tests {
 	struct _Action;
 
 	impl IterFinite for _Action {
-		fn iterator() -> VariationsIter<Self> {
-			VariationsIter(Some(_Action))
+		fn iterator() -> FiniteIter<Self> {
+			FiniteIter(Some(_Action))
 		}
 
-		fn next(_: &VariationsIter<Self>) -> Option<Self> {
+		fn next(_: &FiniteIter<Self>) -> Option<Self> {
 			None
 		}
 	}

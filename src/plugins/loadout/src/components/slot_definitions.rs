@@ -1,9 +1,6 @@
 use crate::systems::slot::visualization::track_slots::GetSlotDefinition;
 use bevy::prelude::*;
-use common::{
-	tools::{action_key::slot::SlotKey, bone_name::BoneName, mesh_name::MeshName},
-	traits::visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
-};
+use common::prelude::*;
 use std::{collections::HashMap, ops::Deref};
 
 #[derive(Component, Debug, PartialEq, Default)]
@@ -13,20 +10,20 @@ pub(crate) struct SlotDefinitions {
 	pub(crate) essences: HashMap<MeshName, SlotKey>,
 }
 
-impl GetSlotDefinition<ForearmSlot> for SlotDefinitions {
-	fn get_slot_definition(&self, name: &str) -> Option<ForearmSlot> {
-		self.forearms.get(name).copied().map(ForearmSlot)
+impl GetSlotDefinition<VisibleForearmSlot> for SlotDefinitions {
+	fn get_slot_definition(&self, name: &str) -> Option<VisibleForearmSlot> {
+		self.forearms.get(name).copied().map(VisibleForearmSlot)
 	}
 }
 
-impl GetSlotDefinition<HandSlot> for SlotDefinitions {
-	fn get_slot_definition(&self, name: &str) -> Option<HandSlot> {
-		self.hands.get(name).copied().map(HandSlot)
+impl GetSlotDefinition<VisibleHandSlot> for SlotDefinitions {
+	fn get_slot_definition(&self, name: &str) -> Option<VisibleHandSlot> {
+		self.hands.get(name).copied().map(VisibleHandSlot)
 	}
 }
 
-impl GetSlotDefinition<EssenceSlot> for SlotDefinitions {
-	fn get_slot_definition(&self, name: &str) -> Option<EssenceSlot> {
+impl GetSlotDefinition<VisibleEssenceSlot> for SlotDefinitions {
+	fn get_slot_definition(&self, name: &str) -> Option<VisibleEssenceSlot> {
 		let mut best_match: Option<(&MeshName, &SlotKey)> = None;
 
 		for (mesh_name, slot_key) in &self.essences {
@@ -41,7 +38,7 @@ impl GetSlotDefinition<EssenceSlot> for SlotDefinitions {
 			best_match = Some((mesh_name, slot_key));
 		}
 
-		best_match.map(|(.., slot_key)| EssenceSlot(*slot_key))
+		best_match.map(|(.., slot_key)| VisibleEssenceSlot(*slot_key))
 	}
 }
 
@@ -59,9 +56,9 @@ mod tests {
 				..default()
 			};
 
-			let slot = GetSlotDefinition::<ForearmSlot>::get_slot_definition(&slots, "bone");
+			let slot = GetSlotDefinition::<VisibleForearmSlot>::get_slot_definition(&slots, "bone");
 
-			assert_eq!(Some(ForearmSlot(SlotKey(11))), slot);
+			assert_eq!(Some(VisibleForearmSlot(SlotKey(11))), slot);
 		}
 
 		#[test]
@@ -71,7 +68,8 @@ mod tests {
 				..default()
 			};
 
-			let slot = GetSlotDefinition::<ForearmSlot>::get_slot_definition(&slots, "other bone");
+			let slot =
+				GetSlotDefinition::<VisibleForearmSlot>::get_slot_definition(&slots, "other bone");
 
 			assert_eq!(None, slot);
 		}
@@ -87,9 +85,9 @@ mod tests {
 				..default()
 			};
 
-			let slot = GetSlotDefinition::<HandSlot>::get_slot_definition(&slots, "bone");
+			let slot = GetSlotDefinition::<VisibleHandSlot>::get_slot_definition(&slots, "bone");
 
-			assert_eq!(Some(HandSlot(SlotKey(11))), slot);
+			assert_eq!(Some(VisibleHandSlot(SlotKey(11))), slot);
 		}
 
 		#[test]
@@ -99,7 +97,8 @@ mod tests {
 				..default()
 			};
 
-			let slot = GetSlotDefinition::<HandSlot>::get_slot_definition(&slots, "other bone");
+			let slot =
+				GetSlotDefinition::<VisibleHandSlot>::get_slot_definition(&slots, "other bone");
 
 			assert_eq!(None, slot);
 		}
@@ -117,9 +116,9 @@ mod tests {
 				..default()
 			};
 
-			let slot = GetSlotDefinition::<EssenceSlot>::get_slot_definition(&slots, "bone");
+			let slot = GetSlotDefinition::<VisibleEssenceSlot>::get_slot_definition(&slots, "bone");
 
-			assert_eq!(Some(EssenceSlot(SlotKey(11))), slot);
+			assert_eq!(Some(VisibleEssenceSlot(SlotKey(11))), slot);
 		}
 
 		#[test]
@@ -129,7 +128,8 @@ mod tests {
 				..default()
 			};
 
-			let slot = GetSlotDefinition::<EssenceSlot>::get_slot_definition(&slots, "other bone");
+			let slot =
+				GetSlotDefinition::<VisibleEssenceSlot>::get_slot_definition(&slots, "other bone");
 
 			assert_eq!(None, slot);
 		}
@@ -141,10 +141,12 @@ mod tests {
 				..default()
 			};
 
-			let slot =
-				GetSlotDefinition::<EssenceSlot>::get_slot_definition(&slots, "bone.some_material");
+			let slot = GetSlotDefinition::<VisibleEssenceSlot>::get_slot_definition(
+				&slots,
+				"bone.some_material",
+			);
 
-			assert_eq!(Some(EssenceSlot(SlotKey(11))), slot);
+			assert_eq!(Some(VisibleEssenceSlot(SlotKey(11))), slot);
 		}
 
 		#[test]
@@ -154,12 +156,12 @@ mod tests {
 				..default()
 			};
 
-			let slot = GetSlotDefinition::<EssenceSlot>::get_slot_definition(
+			let slot = GetSlotDefinition::<VisibleEssenceSlot>::get_slot_definition(
 				&slots,
 				"bone.L.some_material",
 			);
 
-			assert_eq!(Some(EssenceSlot(SlotKey(11))), slot);
+			assert_eq!(Some(VisibleEssenceSlot(SlotKey(11))), slot);
 		}
 
 		#[test]
@@ -173,12 +175,12 @@ mod tests {
 					..default()
 				};
 
-				let slot = GetSlotDefinition::<EssenceSlot>::get_slot_definition(
+				let slot = GetSlotDefinition::<VisibleEssenceSlot>::get_slot_definition(
 					&slots,
 					"bone.L.some_material",
 				);
 
-				assert_eq!(Some(EssenceSlot(SlotKey(12))), slot);
+				assert_eq!(Some(VisibleEssenceSlot(SlotKey(12))), slot);
 			});
 		}
 	}

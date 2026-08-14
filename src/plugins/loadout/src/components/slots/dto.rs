@@ -1,10 +1,6 @@
 use crate::components::slots::Slots;
 use bevy::asset::AssetPath;
-use common::{
-	errors::Unreachable,
-	tools::action_key::slot::SlotKey,
-	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]

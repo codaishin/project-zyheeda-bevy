@@ -1,5 +1,5 @@
 use crate::traits::update_blockers::UpdateBlockers;
-use common::components::persistent_entity::PersistentEntity;
+use common::prelude::*;
 use std::time::Duration;
 
 pub(crate) trait ActOn<TTarget>: UpdateBlockers {

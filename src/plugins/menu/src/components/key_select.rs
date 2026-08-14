@@ -5,7 +5,7 @@ use super::{
 };
 use crate::traits::{GetComponent, GetKey, insert_ui_content::InsertUiContent};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::tools::action_key::slot::{HandSlot, SlotKey};
+use common::prelude::*;
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct AppendSkill {

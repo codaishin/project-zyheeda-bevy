@@ -3,14 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::TryApplyOn,
-		handles_localization::{Localize, Token},
-		thread_safe::ThreadSafe,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl UILabel {
 	pub(crate) fn localize<TLocalizer>(
@@ -36,11 +29,6 @@ impl UILabel {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_localization::{
-		LocalizationResult,
-		Localize,
-		localized::Localized,
-	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};

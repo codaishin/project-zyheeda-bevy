@@ -1,11 +1,6 @@
 use crate::systems::{apply_pull::PullAbleByGravity, insert_affected::AffectedComponent};
 use bevy::prelude::*;
-use common::{
-	attributes::effect_target::EffectTarget,
-	components::persistent_entity::PersistentEntity,
-	effects::gravity::Gravity,
-	tools::UnitsPerSecond,
-};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::vec::Drain;

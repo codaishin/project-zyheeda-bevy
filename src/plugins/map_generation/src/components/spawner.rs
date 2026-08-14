@@ -1,6 +1,6 @@
 use crate::components::{map::objects::MapObject, spawner_active::SpawnerActive};
 use bevy::prelude::*;
-use common::traits::handles_map_generation::PrefabType;
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(SpawnerActive, MapObject)]

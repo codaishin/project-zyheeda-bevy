@@ -4,7 +4,7 @@ pub(crate) mod objects;
 
 use crate::components::map::objects::MapObjects;
 use bevy::prelude::*;
-use common::components::persistent_entity::PersistentEntity;
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 use std::{borrow::Borrow, collections::HashSet};

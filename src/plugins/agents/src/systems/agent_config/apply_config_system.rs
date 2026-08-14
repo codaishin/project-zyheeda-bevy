@@ -9,30 +9,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	components::model::{Model, SceneId, UseGltfLookup},
-	tools::{Units, action_key::slot::SlotKey, inventory_key::InventoryKey},
-	traits::{
-		accessors::get::{TryApplyOn, TryGetContextMut},
-		handles_loadout::{
-			LoadoutKey,
-			insert_default_loadout::{InsertDefaultLoadout, NotLoadedOut},
-			register_loadout_bones::{NoBonesRegistered, RegisterLoadoutBones},
-		},
-		handles_movement::{ConfigureMovement, NotConfiguredMovement},
-		handles_physics::{
-			ConfigureBody,
-			ConfigureDefaultAttributes,
-			NoBodyConfigured,
-			NoDefaultAttributes,
-			TranslationOffsets,
-			physical_bodies::{Blocker, BodyConfig, Core, PhysicsType, Shape, ShapeParameters},
-		},
-		handles_skill_physics::{Initialize, NotInitializedAgent},
-		loadout::ItemName,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::{collections::HashSet, iter::Enumerate, slice::Iter};
 
 impl ApplyAgentConfig {
@@ -188,23 +165,6 @@ mod tests {
 	use crate::{
 		assets::agent_meta::{Bones, Loadout},
 		components::agent::AgentTransformDirty,
-	};
-	use common::{
-		attributes::{effect_target::EffectTarget, health::Health},
-		tools::{
-			Units,
-			UnitsPerSecond,
-			action_key::slot::SlotKey,
-			bone_name::BoneName,
-			inventory_key::InventoryKey,
-			mesh_name::MeshName,
-		},
-		traits::{
-			handles_movement::{MovementSpeed, RequiredClearance},
-			handles_physics::{PhysicalDefaultAttributes, physical_bodies::BodyConfig},
-			handles_skill_physics::SkillMountBone,
-		},
-		zyheeda_commands::ZyheedaEntityCommands,
 	};
 	use macros::{NestedMocks, simple_mock};
 	use mockall::{automock, mock, predicate::eq};
@@ -699,8 +659,6 @@ mod tests {
 	}
 
 	mod physics {
-		use common::traits::handles_physics::physical_bodies::{InteractiveFrame, ShapeParameters};
-
 		use super::*;
 		use crate::assets::agent_meta::HeightLevels;
 

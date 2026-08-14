@@ -4,17 +4,7 @@ use crate::{
 	system_parameters::loadout::LoadoutReader,
 };
 use bevy::prelude::*;
-use common::{
-	tools::inventory_key::InventoryKey,
-	traits::{
-		accessors::get::{ContextChanged, TryGetContext, View},
-		handles_loadout::{
-			LoadoutKey,
-			items::{ItemToken, Items, ReadItems},
-		},
-		handles_localization::Token,
-	},
-};
+use common::prelude::*;
 
 impl TryGetContext<Items> for LoadoutReader<'static, 'static> {
 	type TContext<'ctx> = ItemsView<'ctx>;
@@ -82,9 +72,8 @@ impl View<ItemToken> for ReadItem {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{components::combos::Combos, skills::Skill};
+	use crate::{components::combos::CombosInternal, skills::Skill};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::tools::{action_key::slot::SlotKey, inventory_key::InventoryKey};
 	use testing::{SingleThreadedApp, new_handle};
 
 	mod get_item {
@@ -118,7 +107,7 @@ mod tests {
 				.spawn((
 					Slots::from([(SlotKey(11), Some(handle))]),
 					Inventory::default(),
-					Combos::default(),
+					CombosInternal::default(),
 					Queue::default(),
 				))
 				.id();
@@ -150,7 +139,7 @@ mod tests {
 				.spawn((
 					Slots::default(),
 					Inventory::from([None, None, None, Some(handle), None]),
-					Combos::default(),
+					CombosInternal::default(),
 					Queue::default(),
 				))
 				.id();

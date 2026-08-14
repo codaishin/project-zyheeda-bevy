@@ -5,7 +5,7 @@ use crate::{
 	traits::{AdvanceCombo, IterAddedMut},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::traits::accessors::get::GetRef;
+use common::prelude::*;
 
 impl<T> ComboQueueUpdate for T where T: Component<Mutability = Mutable> + AdvanceCombo {}
 
@@ -54,13 +54,6 @@ mod tests {
 	use super::*;
 	use crate::{components::slots::Slots, item::Item, skills::Skill};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		tools::{
-			action_key::slot::{HandSlot, SlotKey},
-			item_type::ItemType,
-		},
-		traits::handles_localization::Token,
-	};
 	use macros::NestedMocks;
 	use mockall::{mock, predicate::eq};
 	use std::collections::HashMap;

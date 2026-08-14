@@ -1,6 +1,6 @@
 use crate::{components::blocker_types::BlockerTypes, traits::update_blockers::UpdateBlockers};
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl<T> UpdateBlockersObserver for T where T: Component + UpdateBlockers {}
 
@@ -33,7 +33,6 @@ pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::handles_physics::physical_bodies::Blocker;
 
 	#[derive(Component)]
 	struct _Effect(Blocker);

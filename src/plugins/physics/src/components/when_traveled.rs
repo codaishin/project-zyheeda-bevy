@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::tools::Units;
+use common::prelude::*;
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct WhenTraveled {

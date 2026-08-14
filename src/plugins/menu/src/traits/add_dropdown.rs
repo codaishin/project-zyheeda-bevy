@@ -10,7 +10,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::traits::{handles_localization::Localize, thread_safe::ThreadSafe};
+use common::prelude::*;
 
 pub(crate) trait AddDropdown {
 	fn add_dropdown<TLocalization, TItem>(&mut self) -> &mut Self

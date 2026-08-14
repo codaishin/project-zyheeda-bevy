@@ -4,7 +4,7 @@ use crate::traits::{
 	ui_traits::{GetBackgroundColor, GetNode},
 };
 use bevy::prelude::*;
-use common::{tools::action_key::user_input::UserInput, traits::handles_localization::Token};
+use common::prelude::*;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct Input<TAction> {

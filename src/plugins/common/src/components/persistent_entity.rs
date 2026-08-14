@@ -20,12 +20,7 @@ use uuid::Uuid;
 /// # Example
 /// ```
 /// use bevy::prelude::*;
-/// use common::{
-///   components::persistent_entity::PersistentEntity,
-///   traits::register_persistent_entities::RegisterPersistentEntities,
-///   traits::accessors::get::GetMut,
-///   zyheeda_commands::ZyheedaCommands,
-/// };
+/// use common::prelude::*;
 ///
 /// #[derive(Component)]
 /// struct Seeker {

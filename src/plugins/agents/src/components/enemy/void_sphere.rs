@@ -12,22 +12,7 @@ use bevy::{
 	transform::components::Transform,
 	utils::default,
 };
-use common::{
-	components::insert_asset::InsertAsset,
-	errors::Unreachable,
-	tools::{Units, UnitsPerSecond, action_key::slot::SlotKey, bone_name::BoneName},
-	traits::{
-		handles_enemies::EnemyType,
-		handles_map_generation::AgentType,
-		handles_movement::{MovementSpeed, RequiredClearance},
-		handles_physics::{
-			PhysicalDefaultAttributes,
-			physical_bodies::{InteractiveFrame, ShapeParameters},
-		},
-		handles_skill_physics::SkillMountBone,
-		prefab::{Prefab, PrefabEntityCommands},
-	},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, sync::LazyLock, time::Duration};
 

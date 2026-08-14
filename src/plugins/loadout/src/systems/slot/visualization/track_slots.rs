@@ -1,6 +1,6 @@
 use crate::components::slots::visualization::SlotVisualization;
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::prelude::*;
 use std::hash::Hash;
 
 impl<TSlot> SlotVisualization<TSlot>

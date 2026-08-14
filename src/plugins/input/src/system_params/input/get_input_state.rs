@@ -1,12 +1,6 @@
 use crate::{resources::mouse_override::MouseOverride, system_params::input::Input};
 use bevy::{ecs::system::SystemParam, input::ButtonInput, prelude::*};
-use common::{
-	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::{
-		handles_input::{GetInput, GetInputState, InputState},
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 use std::{hash::Hash, ops::Deref};
 
 impl<'w, 's, TKeyMap> GetInputState for Input<'w, 's, TKeyMap>
@@ -87,7 +81,6 @@ where
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::tools::action_key::user_input::UserInput;
 	use macros::NestedMocks;
 	use mockall::automock;
 	use test_case::test_case;
@@ -212,7 +205,6 @@ mod tests {
 
 	mod mouse_override {
 		use super::*;
-		use common::tools::action_key::slot::HandSlot;
 		use test_case::test_case;
 		use testing::fake_entity;
 

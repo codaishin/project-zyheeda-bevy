@@ -32,7 +32,7 @@ use crate::{
 		motion_controller::{MotionController, MotionControllerOf},
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
-		target::Target,
+		target::SkillTargetInternal,
 		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
 	},
@@ -55,29 +55,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-use common::{
-	systems::log::OnError,
-	tools::plugin_system_set::PluginSystemSet,
-	traits::{
-		delta::Delta,
-		handles_animations::HandlesAnimations,
-		handles_physics::{
-			HandlesInteractiveDetection,
-			HandlesMotion,
-			HandlesPhysicsConfig,
-			HandlesRaycast,
-		},
-		handles_saving::HandlesSaving,
-		handles_skill_physics::{
-			HandlesNewPhysicalSkill,
-			HandlesPhysicalSkillAgent,
-			HandlesPhysicalSkillComponents,
-		},
-		prefab::AddPrefabObserver,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 use components::effects::{gravity::GravityEffect, health_damage::HealthDamageEffect};
 use std::{marker::PhantomData, time::Duration};
 use systems::interactions::apply_fragile_blocks::apply_fragile_blocks;
@@ -112,7 +90,7 @@ where
 
 		TSaveGame::register_savable_component::<ApplyMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
-		TSaveGame::register_savable_component::<Target>(app);
+		TSaveGame::register_savable_component::<SkillTargetInternal>(app);
 		TSaveGame::register_savable_component::<LinearVelocity>(app);
 		TSaveGame::register_savable_component::<CharacterGravity>(app);
 
@@ -175,7 +153,7 @@ where
 			// Animations
 			.add_systems(
 				Update,
-				Target::update_pitch::<RayCasterMut, TAnimations::TAnimationsMut>
+				SkillTargetInternal::update_pitch::<RayCasterMut, TAnimations::TAnimationsMut>
 					.in_set(PhysicsSystems::Resolve),
 			)
 			// Skills

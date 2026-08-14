@@ -1,6 +1,6 @@
 use crate::system_params::animations::AnimationsContextMut;
 use bevy::prelude::*;
-use common::traits::handles_animations::{GetMoveDirection, GetMoveDirectionMut};
+use common::prelude::*;
 
 impl GetMoveDirection for AnimationsContextMut<'_> {
 	fn get_move_direction(&self) -> Option<Dir3> {
@@ -30,10 +30,6 @@ mod tests {
 		animation::graph::AnimationGraph,
 		asset::Assets,
 		ecs::system::{RunSystemError, RunSystemOnce},
-	};
-	use common::traits::{
-		accessors::get::TryGetContextMut,
-		handles_animations::{AnimationClips, Animations},
 	};
 	use testing::SingleThreadedApp;
 

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::traits::{accessors::get::View, handles_physics::CharacterMotion};
+use common::prelude::*;
 use macros::SavableComponent;
 use serde::{Deserialize, Serialize};
 

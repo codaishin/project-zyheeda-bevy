@@ -5,7 +5,7 @@ use crate::{
 		accessors::get::ViewField,
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
-		iteration::{Iter, IterFinite},
+		iteration::{FiniteIter, IterFinite},
 	},
 };
 use bevy::prelude::*;
@@ -63,11 +63,11 @@ impl From<HandSlot> for Token {
 }
 
 impl IterFinite for HandSlot {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(HandSlot::Left))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(HandSlot::Left))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
 			HandSlot::Left => Some(HandSlot::Right),
 			HandSlot::Right => None,

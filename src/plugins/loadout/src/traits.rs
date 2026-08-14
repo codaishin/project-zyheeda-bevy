@@ -10,10 +10,7 @@ pub(crate) mod spawn_skill;
 pub(crate) mod visualize_item;
 
 use crate::skills::{RunSkillBehavior, Skill};
-use common::{
-	tools::{action_key::slot::SlotKey, item_type::ItemType},
-	traits::state_duration::UpdatedStates,
-};
+use common::prelude::*;
 
 pub(crate) trait Enqueue<TItem> {
 	fn enqueue(&mut self, item: TItem);

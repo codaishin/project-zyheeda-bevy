@@ -31,7 +31,6 @@ pub mod handles_player;
 pub mod handles_saving;
 pub mod handles_skill_physics;
 pub mod init_resource;
-pub mod insert;
 pub mod iter_descendants_conditional;
 pub mod iteration;
 pub mod load_asset;

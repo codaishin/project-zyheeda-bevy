@@ -3,14 +3,7 @@ use crate::{
 	traits::UIBarColors,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	components::ui_node_for::UiNodeFor,
-	traits::{
-		accessors::get::GetContextMut,
-		handles_graphics::{CameraHandle, RenderUi},
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 
 const BASE_DIMENSIONS: Vec2 = Vec2::new(100., 10.);
 

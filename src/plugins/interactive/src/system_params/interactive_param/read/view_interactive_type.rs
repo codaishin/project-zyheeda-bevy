@@ -1,5 +1,5 @@
 use crate::system_params::interactive_param::InteractiveContext;
-use common::traits::{accessors::get::View, handles_map_generation::InteractiveType};
+use common::prelude::*;
 
 impl View<InteractiveType> for InteractiveContext<'_> {
 	fn view(&self) -> InteractiveType {
@@ -18,10 +18,7 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{
-		accessors::get::{TryGetContext, ViewOf},
-		handles_interactive::Interactive as InteractiveKey,
-	};
+	use common::traits::handles_interactive::Interactive as InteractiveKey;
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 

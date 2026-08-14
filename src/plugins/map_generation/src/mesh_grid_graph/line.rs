@@ -122,7 +122,7 @@ impl Iterator for IterSuccessorsOrdered {
 mod tests {
 	use super::*;
 	use crate::mesh_grid_graph::test::neighbors;
-	use common::vec_not_nan;
+	use common::prelude::*;
 
 	/// ```
 	/// a — n1

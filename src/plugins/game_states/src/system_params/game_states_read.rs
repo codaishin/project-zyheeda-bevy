@@ -1,6 +1,6 @@
 use crate::resources::game_state_context::GameStateContext;
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::traits::handles_game_states::{GameStateCollection, GameStates};
+use common::prelude::*;
 
 #[derive(SystemParam)]
 pub struct GameStatesRead<'w> {

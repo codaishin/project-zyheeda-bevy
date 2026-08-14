@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use common::tools::action_key::slot::SlotKey;
+use common::prelude::*;
 use std::{
 	collections::{HashSet, hash_set::Iter},
 	ops::{Deref, DerefMut},

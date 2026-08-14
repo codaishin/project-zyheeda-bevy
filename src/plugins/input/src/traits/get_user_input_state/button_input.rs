@@ -1,6 +1,6 @@
 use super::GetUserInputState;
 use bevy::prelude::*;
-use common::{tools::action_key::user_input::UserInput, traits::handles_input::InputState};
+use common::prelude::*;
 
 impl GetUserInputState for ButtonInput<UserInput> {
 	fn get_user_input_state(&self, user_input: UserInput) -> InputState {

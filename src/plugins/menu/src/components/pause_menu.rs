@@ -3,7 +3,7 @@ use crate::{
 	traits::{LoadUi, insert_ui_content::InsertUiContent},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::traits::handles_localization::{Localize, LocalizeToken};
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(MenuBackground)]

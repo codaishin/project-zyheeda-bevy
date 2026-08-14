@@ -1,9 +1,6 @@
 use crate::components::inventory::Inventory;
 use bevy::prelude::*;
-use common::{
-	errors::Unreachable,
-	traits::{handles_custom_assets::TryLoadFrom, load_asset::LoadAsset},
-};
+use common::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
@@ -59,7 +56,7 @@ impl TryLoadFrom<InventoryDto> for Inventory {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::load_asset::mock::MockAssetServer;
+	use common::traits::load_asset::mock_asset_loader::MockAssetServer;
 	use testing::new_handle;
 
 	#[test]

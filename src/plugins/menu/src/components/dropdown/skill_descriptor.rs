@@ -10,7 +10,7 @@ use crate::{
 	traits::{GetLayout, GetRootNode},
 };
 use bevy::prelude::*;
-use common::traits::thread_safe::ThreadSafe;
+use common::prelude::*;
 
 impl<TId> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TId>>
 where

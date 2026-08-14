@@ -2,7 +2,7 @@ mod dto;
 
 use crate::{components::inventory::dto::InventoryDto, item::Item};
 use bevy::prelude::*;
-use common::tools::inventory_key::InventoryKey;
+use common::prelude::*;
 use macros::SavableComponent;
 use std::iter::Enumerate;
 use zyheeda_core::prelude::*;

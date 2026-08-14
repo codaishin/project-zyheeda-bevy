@@ -3,10 +3,7 @@ use crate::{
 	materials::essence_material::EssenceMaterial,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
-use common::{
-	traits::{accessors::get::TryApplyOn, add_asset::AddAsset},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 impl MaterialOverride {
 	pub(crate) fn update_essence_shader(

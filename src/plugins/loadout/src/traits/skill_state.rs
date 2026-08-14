@@ -1,12 +1,12 @@
 use crate::skills::SkillState;
-use common::traits::iteration::{Iter, IterFinite};
+use common::prelude::*;
 
 impl IterFinite for SkillState {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(SkillState::Aim))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(SkillState::Aim))
 	}
 
-	fn next(current: &Iter<Self>) -> Option<Self> {
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
 			SkillState::Aim => Some(SkillState::Active),
 			SkillState::Active => None,

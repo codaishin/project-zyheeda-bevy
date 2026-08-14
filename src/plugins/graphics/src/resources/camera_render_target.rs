@@ -8,7 +8,7 @@ use bevy::{
 		render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 	},
 };
-use common::traits::thread_safe::ThreadSafe;
+use common::prelude::*;
 use std::marker::PhantomData;
 
 #[derive(Resource, Debug, PartialEq, Clone, ExtractResource)]

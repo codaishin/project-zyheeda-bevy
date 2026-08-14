@@ -6,7 +6,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{tools::path::Path, traits::load_folder_assets::LoadFolderAssets};
+use common::{prelude::*, tools::path::Path};
 use std::path::PathBuf;
 
 impl<T> LoadRequestedAssetFolder for T where
@@ -51,7 +51,7 @@ where
 mod test {
 	use super::*;
 	use crate::resources::ftl_server::Locale;
-	use common::traits::load_folder_assets::mock::MockFolderAssetServer;
+	use common::traits::load_folder_assets::mock_folder_asset_loader::MockFolderAssetServer;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
 	use unic_langid::{LanguageIdentifier, langid};

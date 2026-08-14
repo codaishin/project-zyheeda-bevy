@@ -11,16 +11,7 @@ use crate::{
 };
 use assets::ftl::{Ftl, loader::FtlLoader};
 use bevy::prelude::*;
-use common::{
-	states::game_state::LoadingEssentialAssets,
-	systems::log::OnError,
-	tools::path::Path,
-	traits::{
-		handles_load_tracking::{AssetsProgress, HandlesLoadTracking, LoadTrackingInApp},
-		handles_localization::HandlesLocalization,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::{prelude::*, states::game_state::LoadingEssentialAssets, tools::path::Path};
 use resources::ftl_server::FtlServer;
 use std::marker::PhantomData;
 use systems::{

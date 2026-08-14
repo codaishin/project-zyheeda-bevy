@@ -2,17 +2,7 @@ pub(crate) mod dto;
 
 use crate::traits::drain_invalid_inputs::DrainInvalidInputs;
 use bevy::prelude::*;
-use common::{
-	errors::{ErrorData, Level},
-	tools::action_key::{ActionKey, user_input::UserInput},
-	traits::{
-		handles_custom_assets::TryLoadFrom,
-		handles_input::{GetInput, InvalidUserInput, UpdateKey},
-		iteration::IterFinite,
-		load_asset::LoadAsset,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::prelude::*;
 use dto::KeyMapDto;
 use std::{
 	collections::{
@@ -402,7 +392,6 @@ impl<'a> Iterate<'a> for KeyMap {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::traits::iteration::{Iter, IterFinite};
 
 	#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 	enum _AllActions {
@@ -420,11 +409,11 @@ mod tests {
 	}
 
 	impl IterFinite for _AllActions {
-		fn iterator() -> Iter<Self> {
-			Iter(Some(_AllActions::A))
+		fn iterator() -> FiniteIter<Self> {
+			FiniteIter(Some(_AllActions::A))
 		}
 
-		fn next(current: &Iter<Self>) -> Option<Self> {
+		fn next(current: &FiniteIter<Self>) -> Option<Self> {
 			match current.0? {
 				_AllActions::A => Some(_AllActions::B),
 				_AllActions::B => None,
@@ -641,11 +630,11 @@ mod tests {
 			}
 
 			impl IterFinite for _FaultyAction {
-				fn iterator() -> Iter<Self> {
-					Iter(Some(_FaultyAction::A))
+				fn iterator() -> FiniteIter<Self> {
+					FiniteIter(Some(_FaultyAction::A))
 				}
 
-				fn next(current: &Iter<Self>) -> Option<Self> {
+				fn next(current: &FiniteIter<Self>) -> Option<Self> {
 					match current.0? {
 						_FaultyAction::A => Some(_FaultyAction::B),
 						_FaultyAction::B => Some(_FaultyAction::C),
@@ -695,11 +684,11 @@ mod tests {
 			}
 
 			impl IterFinite for _FaultyAction {
-				fn iterator() -> Iter<Self> {
-					Iter(Some(_FaultyAction::A))
+				fn iterator() -> FiniteIter<Self> {
+					FiniteIter(Some(_FaultyAction::A))
 				}
 
-				fn next(current: &Iter<Self>) -> Option<Self> {
+				fn next(current: &FiniteIter<Self>) -> Option<Self> {
 					match current.0? {
 						_FaultyAction::A => Some(_FaultyAction::B),
 						_FaultyAction::B => Some(_FaultyAction::C),

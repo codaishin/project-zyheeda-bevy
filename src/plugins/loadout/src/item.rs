@@ -6,16 +6,7 @@ use crate::{
 	traits::visualize_item::VisualizeItem,
 };
 use bevy::prelude::*;
-use common::{
-	components::{essence::Essence, model::Model},
-	tools::{item_type::ItemType, path::Path},
-	traits::{
-		accessors::get::View,
-		handles_custom_assets::AssetFolderPath,
-		handles_localization::Token,
-		visible_slots::{EssenceSlot, ForearmSlot, HandSlot},
-	},
-};
+use common::{components::essence::Essence, prelude::*, tools::path::Path};
 
 #[derive(Debug, PartialEq, Default, Clone, Asset, TypePath)]
 pub struct Item {
@@ -44,7 +35,7 @@ impl AssetFolderPath for Item {
 	}
 }
 
-impl VisualizeItem for EssenceSlot {
+impl VisualizeItem for VisibleEssenceSlot {
 	type TComponent = Essence;
 
 	fn visualize(item: Option<&Item>) -> Self::TComponent {
@@ -55,7 +46,7 @@ impl VisualizeItem for EssenceSlot {
 	}
 }
 
-impl VisualizeItem for ForearmSlot {
+impl VisualizeItem for VisibleForearmSlot {
 	type TComponent = Model;
 
 	fn visualize(item: Option<&Item>) -> Self::TComponent {
@@ -69,7 +60,7 @@ impl VisualizeItem for ForearmSlot {
 	}
 }
 
-impl VisualizeItem for HandSlot {
+impl VisualizeItem for VisibleHandSlot {
 	type TComponent = Model;
 
 	fn visualize(item: Option<&Item>) -> Self::TComponent {

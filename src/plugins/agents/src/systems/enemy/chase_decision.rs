@@ -3,7 +3,7 @@ use crate::components::{
 	player::Player,
 };
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl Enemy {
 	pub(crate) fn chase_decision(
@@ -44,14 +44,12 @@ impl Enemy {
 
 #[cfg(test)]
 mod tests {
-	use std::sync::LazyLock;
-
 	use super::*;
 	use crate::components::{
 		enemy::{attacking::Attacking, chasing::Chasing},
 		player::Player,
 	};
-	use common::{components::persistent_entity::PersistentEntity, tools::Units};
+	use std::sync::LazyLock;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

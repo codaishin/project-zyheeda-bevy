@@ -15,25 +15,12 @@ use crate::{
 };
 use bevy::{ecs::system::ScheduleSystem, prelude::*};
 use common::{
-	components::{
-		child_of_persistent::ChildOfPersistent,
-		lifetime::Lifetime,
-		persistent_entity::PersistentEntity,
-	},
+	prelude::*,
 	states::{
 		game_state::GameState,
 		save_state::SaveState,
 		transition_to_previous,
 		transition_to_state,
-	},
-	systems::log::OnError,
-	tools::action_key::{ActionKey, save_key::SaveKey},
-	traits::{
-		after_plugin::AfterPlugin,
-		handles_input::HandlesInput,
-		handles_saving::{HandlesSaving, SavableComponent},
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
 	},
 };
 use context::SaveContext;

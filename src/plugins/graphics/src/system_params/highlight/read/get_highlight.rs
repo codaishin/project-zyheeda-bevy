@@ -2,7 +2,7 @@ use crate::{
 	components::{camera_labels::OutlinePass, model_render_layers::ModelRenderLayers},
 	system_params::highlight::HighlightContext,
 };
-use common::traits::handles_graphics::{GetHighlight, Highlight};
+use common::prelude::*;
 
 impl GetHighlight for HighlightContext<'_> {
 	fn get_highlight(&self) -> Highlight {
@@ -32,7 +32,6 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		prelude::*,
 	};
-	use common::traits::{accessors::get::TryGetContext, handles_graphics::Visual};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {

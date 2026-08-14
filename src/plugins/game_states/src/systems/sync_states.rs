@@ -4,10 +4,7 @@ use crate::{
 	system_params::ui_states::UIStates,
 };
 use bevy::prelude::*;
-use common::traits::{
-	handles_game_states::{ActivityState, UIState},
-	iteration::IterFinite,
-};
+use common::prelude::*;
 use std::collections::HashSet;
 
 impl GameStateContext {
@@ -32,7 +29,6 @@ mod tests {
 		system_params::ui_states::UIStates,
 	};
 	use bevy::state::{app::StatesPlugin, state::FreelyMutableState};
-	use common::traits::handles_game_states::{ActivityState, UIState};
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 

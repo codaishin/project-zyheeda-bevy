@@ -1,13 +1,6 @@
 use crate::components::player::Player;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	errors::Level,
-	traits::{
-		accessors::get::{ContextChanged, Logged, TryGetContext, TryGetContextMut, View, ViewOf},
-		handles_animations::{ActiveAnimationsMut, AnimationKey, AnimationPriority, Animations},
-		handles_movement::{CurrentMovement, Movement, MovementTarget, SpeedToggle},
-	},
-};
+use common::prelude::*;
 use zyheeda_core::prelude::OrderedSet;
 
 impl Player {
@@ -74,11 +67,6 @@ impl From<Move> for AnimationPriority {
 pub(crate) mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use common::traits::{
-		accessors::get::View,
-		handles_animations::{ActiveAnimations, AnimationKey, AnimationPriority},
-		handles_movement::MovementTarget,
-	};
 	use std::collections::HashMap;
 	use test_case::test_case;
 	use testing::SingleThreadedApp;

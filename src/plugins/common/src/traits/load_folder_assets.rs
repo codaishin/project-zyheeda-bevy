@@ -1,4 +1,4 @@
-pub mod asset_server;
+mod asset_server;
 
 use bevy::{
 	asset::{AssetPath, LoadedFolder},
@@ -16,9 +16,9 @@ pub trait LoadFolderAssets {
 /// <div class="warning">
 ///   DO NOT USE FOR PRODUCTION CODE!!! ONLY FOR TESTS!!!
 /// </div>
-pub mod mock {
+pub mod mock_folder_asset_loader {
 	use super::*;
-	use crate::traits::load_asset::mock::MockAssetPath;
+	use crate::traits::load_asset::mock_asset_loader::MockAssetPath;
 	use std::{
 		collections::HashMap,
 		sync::{Arc, RwLock},

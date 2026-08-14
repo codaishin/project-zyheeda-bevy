@@ -3,14 +3,7 @@ use bevy::{
 	ecs::{component::Mutable, system::StaticSystemParam},
 	prelude::*,
 };
-use common::{
-	traits::{
-		accessors::get::GetContextMut,
-		handles_graphics::{CameraHandle, RenderUi},
-		load_asset::LoadAsset,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 
 pub fn spawn<TComponent, TServer, TCamera>(
 	mut commands: ZyheedaCommands,

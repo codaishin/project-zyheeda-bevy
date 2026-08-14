@@ -3,7 +3,7 @@ use crate::components::{
 	spawner_active::SpawnerActive,
 };
 use bevy::{gltf::GltfMeshName, prelude::*};
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl SpawnerActive {
 	pub(crate) fn remove_from_disabled_sources(

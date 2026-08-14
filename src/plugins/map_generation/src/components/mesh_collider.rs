@@ -1,17 +1,5 @@
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{
-	errors::{ErrorData, Level},
-	traits::{
-		accessors::get::TryGetContextMut,
-		handles_physics::{
-			ConfigureBody,
-			NoBodyConfigured,
-			TranslationOffsets,
-			physical_bodies::{Blocker, BodyConfig, Core, PhysicsType, Shape},
-		},
-		prefab::{Prefab, PrefabEntityCommands},
-	},
-};
+use common::prelude::*;
 use std::{collections::HashSet, fmt::Display};
 
 #[derive(Component, Debug, PartialEq, Default)]

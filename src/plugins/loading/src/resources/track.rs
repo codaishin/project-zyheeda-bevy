@@ -1,5 +1,5 @@
 use bevy::{prelude::*, render::MainWorld, state::state::FreelyMutableState};
-use common::traits::{handles_load_tracking::Loaded, thread_safe::ThreadSafe};
+use common::prelude::*;
 use std::{
 	any::{TypeId, type_name},
 	collections::HashMap,

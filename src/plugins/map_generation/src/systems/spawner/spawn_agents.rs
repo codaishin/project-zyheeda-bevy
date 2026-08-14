@@ -9,14 +9,7 @@ use crate::{
 	resources::agents::prefab::PrefabRegister,
 };
 use bevy::{gltf::GltfMeshName, prelude::*};
-use common::{
-	traits::{
-		accessors::get::TryApplyOn,
-		handles_map_generation::PrefabType,
-		thread_safe::ThreadSafe,
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
-};
+use common::prelude::*;
 
 impl<T> Spawner<T>
 where
@@ -55,13 +48,6 @@ where
 mod tests {
 	use super::*;
 	use crate::components::{map::objects::MapObjectOf, spawned_from::SpawnedFrom};
-	use common::{
-		components::persistent_entity::PersistentEntity,
-		traits::{
-			handles_enemies::EnemyType,
-			handles_map_generation::{AgentType, GroundPosition},
-		},
-	};
 	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Component, Debug, PartialEq)]

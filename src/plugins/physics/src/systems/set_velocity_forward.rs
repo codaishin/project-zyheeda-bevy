@@ -1,6 +1,6 @@
 use crate::components::{set_velocity_forward::SetVelocityForward, velocity::LinearVelocity};
 use bevy::prelude::*;
-use common::{traits::accessors::get::TryApplyOn, zyheeda_commands::ZyheedaCommands};
+use common::prelude::*;
 
 impl SetVelocityForward {
 	pub(crate) fn system(
@@ -21,10 +21,6 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{
-		tools::UnitsPerSecond,
-		traits::register_persistent_entities::RegisterPersistentEntities,
-	};
 	use testing::{SingleThreadedApp, assert_eq_approx};
 
 	fn setup() -> App {

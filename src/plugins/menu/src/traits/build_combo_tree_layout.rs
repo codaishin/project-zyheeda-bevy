@@ -1,15 +1,6 @@
 use crate::components::combo_overview::ComboSkill;
 use bevy::prelude::*;
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::View,
-		handles_loadout::{
-			combos::GetCombosOrdered,
-			skills::{GetSkillId, SkillIcon, SkillToken},
-		},
-	},
-};
+use common::prelude::*;
 use std::{collections::HashSet, fmt::Debug};
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -165,10 +156,6 @@ fn replace_symbols_at<TKey, TSkill>(
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		tools::action_key::slot::{HandSlot, SlotKey},
-		traits::{handles_loadout::combos::Combo, handles_localization::Token},
-	};
 	use testing::new_handle;
 	use uuid::Uuid;
 

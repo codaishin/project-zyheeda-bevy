@@ -4,15 +4,7 @@ use bevy::{
 	prelude::*,
 	ui::Interaction,
 };
-use common::{
-	traits::{
-		accessors::get::{Get, TryGetContextMut, View},
-		handles_loadout::combos::{Combos, UpdateCombos},
-		handles_player::PlayerEntity,
-		thread_safe::ThreadSafe,
-	},
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::fmt::Debug;
 
 impl<TLayout, TId> ComboSkillButton<DropdownItem<TLayout>, TId>
@@ -62,11 +54,6 @@ mod tests {
 	use crate::{
 		components::combo_overview::ComboSkill,
 		testing::{_Player, _PlayerParam},
-	};
-	use common::{
-		CommonPlugin,
-		tools::action_key::slot::{HandSlot, SlotKey},
-		traits::{handles_loadout::combos::Combo, handles_localization::Token},
 	};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};

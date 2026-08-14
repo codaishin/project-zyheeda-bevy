@@ -49,11 +49,7 @@ use bevy::{
 		view::ViewTarget,
 	},
 };
-use common::{
-	errors::{ErrorData, Level},
-	systems::log::OnError,
-	zyheeda_commands::ZyheedaCommands,
-};
+use common::prelude::*;
 use std::{fmt::Display, time::Duration};
 
 pub(crate) trait SetupPostProcessPipeline {

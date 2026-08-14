@@ -5,7 +5,7 @@ use crate::{
 	traits::{
 		automatic_transitions::{AutoTransitions, TransitionTo},
 		handles_load_tracking::LoadGroup,
-		iteration::{Iter, IterFinite},
+		iteration::{FiniteIter, IterFinite},
 		pause_control::PauseControl,
 		states::PlayState,
 	},
@@ -60,11 +60,11 @@ impl PauseControl for GameState {
 }
 
 impl IterFinite for GameState {
-	fn iterator() -> Iter<Self> {
-		Iter(Some(GameState::LoadingEssentialAssets))
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(GameState::LoadingEssentialAssets))
 	}
 
-	fn next(Iter(current): &Iter<Self>) -> Option<Self> {
+	fn next(FiniteIter(current): &FiniteIter<Self>) -> Option<Self> {
 		match current.as_ref()? {
 			GameState::LoadingEssentialAssets => Some(GameState::StartMenu),
 			GameState::StartMenu => Some(GameState::NewGame),

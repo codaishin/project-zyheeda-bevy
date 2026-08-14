@@ -3,19 +3,17 @@ mod initialize;
 mod spawn_new_skill;
 mod target;
 
-use crate::components::{mount_points::MountPointsDefinition, skill::Skill, target::Target};
-use bevy::{ecs::system::SystemParam, prelude::*};
-use common::{
-	traits::{
-		accessors::get::{ContextChanged, GetMut, TryGetContext, TryGetContextMut},
-		handles_skill_physics::{InitializedAgent, NotInitializedAgent, SkillMountBone},
-	},
-	zyheeda_commands::{ZyheedaCommands, ZyheedaEntityCommands},
+use crate::components::{
+	mount_points::MountPointsDefinition,
+	skill::Skill,
+	target::SkillTargetInternal,
 };
+use bevy::{ecs::system::SystemParam, prelude::*};
+use common::prelude::*;
 
 #[derive(SystemParam)]
 pub struct SkillAgent<'w, 's> {
-	targets: Query<'w, 's, Ref<'static, Target>>,
+	targets: Query<'w, 's, Ref<'static, SkillTargetInternal>>,
 }
 
 impl TryGetContext<InitializedAgent> for SkillAgent<'static, 'static> {
@@ -35,7 +33,7 @@ impl TryGetContext<InitializedAgent> for SkillAgent<'static, 'static> {
 pub struct SkillAgentMut<'w, 's> {
 	skills: Query<'w, 's, (), With<Skill>>,
 	mount_point_definitions: Query<'w, 's, (), With<MountPointsDefinition<SkillMountBone>>>,
-	targets: Query<'w, 's, &'static mut Target>,
+	targets: Query<'w, 's, &'static mut SkillTargetInternal>,
 	commands: ZyheedaCommands<'w, 's>,
 }
 
@@ -74,7 +72,7 @@ impl TryGetContextMut<InitializedAgent> for SkillAgentMut<'static, 'static> {
 }
 
 pub struct SkillAgentContext<'ctx> {
-	target: Ref<'ctx, Target>,
+	target: Ref<'ctx, SkillTargetInternal>,
 }
 
 impl ContextChanged for SkillAgentContext<'_> {
@@ -88,14 +86,13 @@ pub struct SkillAgentInitializerContext<'ctx> {
 }
 
 pub struct SkillAgentContextMut<'ctx> {
-	target: Mut<'ctx, Target>,
+	target: Mut<'ctx, SkillTargetInternal>,
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::handles_skill_physics::SkillMountBone;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -127,7 +124,7 @@ mod tests {
 		#[test]
 		fn get_context_when_mount_points_missing() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			let entity = app.world_mut().spawn(Target(None)).id();
+			let entity = app.world_mut().spawn(SkillTargetInternal(None)).id();
 
 			let ctx = app
 				.world_mut()
@@ -147,7 +144,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					MountPointsDefinition::<SkillMountBone>::default(),
-					Target(None),
+					SkillTargetInternal(None),
 				))
 				.id();
 
@@ -188,7 +185,7 @@ mod tests {
 		#[test]
 		fn mo_context_when_mount_points_missing() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			let entity = app.world_mut().spawn(Target(None)).id();
+			let entity = app.world_mut().spawn(SkillTargetInternal(None)).id();
 
 			let ctx = app
 				.world_mut()
@@ -208,7 +205,7 @@ mod tests {
 				.world_mut()
 				.spawn((
 					MountPointsDefinition::<SkillMountBone>::default(),
-					Target(None),
+					SkillTargetInternal(None),
 				))
 				.id();
 

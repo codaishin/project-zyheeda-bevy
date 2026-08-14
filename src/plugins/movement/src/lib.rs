@@ -19,23 +19,7 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::{
-	states::game_state::GameState,
-	tools::plugin_system_set::PluginSystemSet,
-	traits::{
-		after_plugin::AfterPlugin,
-		handles_animations::HandlesAnimations,
-		handles_input::HandlesInput,
-		handles_movement::HandlesMovement,
-		handles_orientation::HandlesOrientation,
-		handles_path_finding::HandlesPathFinding,
-		handles_physics::{HandlesAllPhysicalEffects, HandlesMotion, HandlesRaycast},
-		handles_saving::HandlesSaving,
-		handles_skill_physics::HandlesSkillPhysics,
-		system_set_definition::SystemSetDefinition,
-		thread_safe::ThreadSafe,
-	},
-};
+use common::{prelude::*, states::game_state::GameState};
 use components::facing::SetFaceOverride;
 use std::marker::PhantomData;
 use systems::face::execute_face::execute_face;

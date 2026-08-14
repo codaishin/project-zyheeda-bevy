@@ -1,17 +1,6 @@
-use crate::{components::combos::Combos, system_parameters::loadout::LoadoutReader};
+use crate::{components::combos::CombosInternal, system_parameters::loadout::LoadoutReader};
 use bevy::prelude::*;
-use common::{
-	tools::action_key::slot::SlotKey,
-	traits::{
-		accessors::get::{ContextChanged, TryGetContext},
-		handles_loadout::combos::{
-			Combo,
-			Combos as CombosMarker,
-			GetCombosOrdered,
-			NextConfiguredKeys,
-		},
-	},
-};
+use common::{prelude::*, traits::handles_loadout::combos::Combos as CombosMarker};
 use std::{collections::HashSet, ops::Deref};
 
 impl TryGetContext<CombosMarker> for LoadoutReader<'static, 'static> {
@@ -29,7 +18,7 @@ impl TryGetContext<CombosMarker> for LoadoutReader<'static, 'static> {
 
 #[derive(Debug)]
 pub struct CombosView<'a> {
-	combos: Ref<'a, Combos>,
+	combos: Ref<'a, CombosInternal>,
 }
 
 impl PartialEq for CombosView<'_> {
@@ -39,7 +28,7 @@ impl PartialEq for CombosView<'_> {
 }
 
 impl GetCombosOrdered for CombosView<'_> {
-	type TSkill = <Combos as GetCombosOrdered>::TSkill;
+	type TSkill = <CombosInternal as GetCombosOrdered>::TSkill;
 
 	fn combos_ordered(&self) -> Vec<Combo<SlotKey, Self::TSkill>> {
 		self.combos.combos_ordered()
@@ -65,7 +54,7 @@ mod tests {
 	use crate::{
 		components::{
 			combo_node::ComboNode,
-			combos::Combos,
+			combos::CombosInternal,
 			inventory::Inventory,
 			queue::Queue,
 			slots::Slots,
@@ -74,7 +63,6 @@ mod tests {
 		skills::Skill,
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::{tools::action_key::slot::SlotKey, traits::handles_localization::Token};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -94,7 +82,7 @@ mod tests {
 			.spawn((
 				Slots::default(),
 				Inventory::default(),
-				Combos::from(ComboNode::new([(
+				CombosInternal::from(ComboNode::new([(
 					SlotKey(42),
 					(
 						Skill {
@@ -109,7 +97,7 @@ mod tests {
 			.id();
 
 		app.world_mut().run_system_once(
-			move |loadout: LoadoutReader, combos: Query<Ref<Combos>>| {
+			move |loadout: LoadoutReader, combos: Query<Ref<CombosInternal>>| {
 				let ctx = LoadoutReader::try_get_context(&loadout, CombosMarker { entity });
 				let combos = combos.get(entity).unwrap();
 

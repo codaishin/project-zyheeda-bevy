@@ -7,10 +7,7 @@ use bevy::{
 	input::mouse::MouseMotion,
 	prelude::*,
 };
-use common::{
-	tools::action_key::camera_key::CameraKey,
-	traits::handles_input::{GetInputState, InputState},
-};
+use common::prelude::*;
 
 impl<T> MoveArmsSystem for T where T: Component<Mutability = Mutable> + MoveArm {}
 
@@ -39,7 +36,6 @@ mod tests {
 	use super::*;
 	use crate::traits::orbit::Vec2Radians;
 	use bevy::input::mouse::MouseMotion;
-	use common::{CommonPlugin, tools::action_key::ActionKey};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use test_case::test_case;

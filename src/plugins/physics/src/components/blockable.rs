@@ -1,6 +1,6 @@
 use crate::components::skill_transform::SkillTransforms;
 use bevy::prelude::*;
-use common::traits::handles_physics::PhysicalObject;
+use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Clone)]
 #[require(GlobalTransform, SkillTransforms)]

@@ -3,14 +3,7 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{
-	tools::action_key::movement::MovementKey,
-	traits::{
-		accessors::get::TryGetContextMut,
-		handles_input::{GetAllInputStates, InputState},
-		handles_movement::{ConfiguredMovement, ToggleSpeed},
-	},
-};
+use common::prelude::*;
 
 impl Player {
 	pub(crate) fn toggle_speed<TInput, TMovement>(
@@ -48,10 +41,6 @@ fn just_toggled((key, state): (MovementKey, InputState)) -> bool {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::{
-		tools::action_key::{ActionKey, movement::MovementKey},
-		traits::{handles_input::InputState, handles_movement::SpeedToggle, iteration::IterFinite},
-	};
 	use macros::NestedMocks;
 	use mockall::automock;
 	use testing::{NestedMocks, SingleThreadedApp};
