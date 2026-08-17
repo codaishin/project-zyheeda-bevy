@@ -8,7 +8,7 @@ pub use crate::{
 	},
 	conversion::is_not::IsNot,
 	errors::*,
-	macros::{all::*, any::*, enum_conversions::*, none::*, write_iter::*},
+	macros::{all::*, any::*, enum_conversions::impl_enum_conversions, none::*, write_iter::*},
 	math::{
 		f32_finite::{F32Finite, NotFinite, f32_finite},
 		f32_not_nan::{F32NotNan, IsNaN, f32_not_nan},
