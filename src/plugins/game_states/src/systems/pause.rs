@@ -11,12 +11,7 @@ impl GameStateRoles {
 		current: GameStatesRead,
 		roles: Res<GameStateRoles>,
 	) {
-		let any_pauses = current
-			.game_states()
-			.iter()
-			.any(|state| roles.is_pause_state(state));
-
-		if any_pauses {
+		if current.iter().any(|state| roles.is_pause_state(state)) {
 			time.pause();
 		} else {
 			time.unpause();

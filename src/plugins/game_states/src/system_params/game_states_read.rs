@@ -1,6 +1,7 @@
 use crate::resources::game_state_context::GameStateContext;
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::prelude::*;
+use std::collections::HashSet;
 
 #[derive(SystemParam)]
 pub struct GameStatesRead<'w> {
@@ -8,10 +9,11 @@ pub struct GameStatesRead<'w> {
 }
 
 impl GameStates for GameStatesRead<'_> {
-	fn game_states(&self) -> GameStateCollection<'_> {
-		GameStateCollection {
-			activity: self.current.activity,
-			ui: &self.current.ui,
-		}
+	fn activity(&self) -> ActivityState {
+		self.current.activity
+	}
+
+	fn ui(&self) -> &'_ HashSet<UIState> {
+		&self.current.ui
 	}
 }

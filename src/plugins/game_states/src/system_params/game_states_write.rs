@@ -12,67 +12,93 @@ pub struct GameStatesWrite<'w, 's> {
 	current: Res<'w, GameStateContext>,
 	activity: ResMut<'w, NextState<Activity>>,
 	ui: UIStatesMut<'w>,
-	next: Local<'s, Option<NextGameStates>>,
+	activity_change: Local<'s, Option<ActivityState>>,
+	ui_change: Local<'s, Option<HashSet<UIState>>>,
 }
 
-impl GameStates for GameStatesWrite<'_, '_> {
-	fn game_states(&self) -> GameStateCollection<'_> {
-		GameStateCollection {
-			activity: self.current.activity,
-			ui: &self.current.ui,
-		}
-	}
-}
-
-impl GameStatesMut for GameStatesWrite<'_, '_> {
-	fn game_states_mut(&mut self) -> GameStateCollectionMut<'_> {
-		GameStateCollectionMut {
-			current: GameStateCollection {
-				activity: self.current.activity,
-				ui: &self.current.ui,
-			},
-			next: self.next.get_or_insert(NextGameStates {
-				activity: self.current.activity,
-				ui: self.current.ui.clone(),
-			}),
-		}
-	}
-}
-
-impl Drop for GameStatesWrite<'_, '_> {
-	fn drop(&mut self) {
-		let Some(next) = self.next.take() else {
+impl GameStatesWrite<'_, '_> {
+	fn drain_activity_change(&mut self) {
+		let Some(activity) = self.activity_change.take() else {
 			return;
 		};
 
-		if next.activity != self.current.activity {
-			self.activity.set(Activity(next.activity));
+		if activity == self.current.activity {
+			return;
 		}
 
-		for state in UIState::iterator() {
-			match Change::of(&state, &self.current.ui, &next.ui) {
-				Some(Change::Added) => self.ui.set_on(state),
-				Some(Change::Removed) => self.ui.set_off(&state),
-				None => continue,
+		self.activity.set(Activity(activity));
+	}
+
+	fn drain_ui_change(&mut self) {
+		let Some(ui) = self.ui_change.take() else {
+			return;
+		};
+
+		let detect_change = |state| Change::of(state, &self.current.ui, &ui);
+		let changes = UIState::iterator().filter_map(detect_change);
+
+		for change in changes {
+			match change {
+				Change::Added(state) => self.ui.set_on(state),
+				Change::Removed(state) => self.ui.set_off(&state),
 			}
 		}
 	}
 }
 
+impl GameStates for GameStatesWrite<'_, '_> {
+	fn activity(&self) -> ActivityState {
+		self.current.activity
+	}
+
+	fn ui(&self) -> &'_ HashSet<UIState> {
+		&self.current.ui
+	}
+}
+
+impl GameStatesMut for GameStatesWrite<'_, '_> {
+	fn set_activity(&mut self, activity: ActivityState) {
+		*self.activity_change = Some(activity);
+	}
+
+	fn ui_mut(&mut self) -> &'_ mut HashSet<UIState> {
+		self.ui_change.get_or_insert(self.current.ui.clone())
+	}
+}
+
+impl Drop for GameStatesWrite<'_, '_> {
+	fn drop(&mut self) {
+		self.drain_activity_change();
+		self.drain_ui_change();
+	}
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct NextGameStates {
+	activity: ActivityState,
+	ui: HashSet<UIState>,
+}
+
+impl GameStatesMut for &mut NextGameStates {
+	fn set_activity(&mut self, activity: ActivityState) {
+		self.activity = activity;
+	}
+
+	fn ui_mut(&mut self) -> &'_ mut HashSet<UIState> {
+		&mut self.ui
+	}
+}
+
 enum Change {
-	Added,
-	Removed,
+	Added(UIState),
+	Removed(UIState),
 }
 
 impl Change {
-	fn of(
-		state: &UIState,
-		current: &HashSet<UIState>,
-		queued: &HashSet<UIState>,
-	) -> Option<Change> {
-		match (current.contains(state), queued.contains(state)) {
-			(true, false) => Some(Change::Removed),
-			(false, true) => Some(Change::Added),
+	fn of(state: UIState, current: &HashSet<UIState>, queued: &HashSet<UIState>) -> Option<Change> {
+		match (current.contains(&state), queued.contains(&state)) {
+			(true, false) => Some(Change::Removed(state)),
+			(false, true) => Some(Change::Added(state)),
 			_ => None,
 		}
 	}
@@ -122,83 +148,12 @@ mod tests {
 	}
 
 	#[test]
-	fn next_matches_current() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::NewGame;
-		app.world_mut().resource_mut::<GameStateContext>().ui =
-			HashSet::from([UIState::Hud, UIState::Settings]);
-
-		let queued = app
-			.world_mut()
-			.run_system_once(move |mut w: GameStatesWrite| w.game_states_mut().next.clone())?;
-
-		assert_eq!(
-			NextGameStates {
-				activity: ActivityState::NewGame,
-				ui: HashSet::from([UIState::Hud, UIState::Settings])
-			},
-			queued
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn next_matches_changed_current_state() -> Result<(), RunSystemError> {
-		#[derive(Resource, Debug, PartialEq)]
-		struct _Result(NextGameStates);
-
-		fn get_queued(mut w: GameStatesWrite, mut c: Commands) {
-			c.insert_resource(_Result(w.game_states_mut().next.clone()));
-		}
-
-		let mut app = setup();
-		app.add_systems(Update, get_queued);
-
-		app.update();
-		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::NewGame;
-		app.world_mut().resource_mut::<GameStateContext>().ui =
-			HashSet::from([UIState::Hud, UIState::Settings]);
-		app.update();
-
-		assert_eq!(
-			&_Result(NextGameStates {
-				activity: ActivityState::NewGame,
-				ui: HashSet::from([UIState::Hud, UIState::Settings])
-			}),
-			app.world().resource::<_Result>()
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn retrieving_next_multiple_times_retains_changes() -> Result<(), RunSystemError> {
-		let mut app = setup();
-
-		let queued = app
-			.world_mut()
-			.run_system_once(move |mut w: GameStatesWrite| {
-				w.game_states_mut().next.activity = ActivityState::NewGame;
-				w.game_states_mut().next.ui = HashSet::from([UIState::Hud, UIState::Settings]);
-				w.game_states_mut().next.clone()
-			})?;
-
-		assert_eq!(
-			NextGameStates {
-				activity: ActivityState::NewGame,
-				ui: HashSet::from([UIState::Hud, UIState::Settings])
-			},
-			queued
-		);
-		Ok(())
-	}
-
-	#[test]
 	fn set_activity() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWrite| {
-				w.game_states_mut().next.activity = ActivityState::Paused;
+				w.set_activity(ActivityState::Paused);
 			})?;
 
 		assert_state_eq!(
@@ -220,7 +175,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWrite| {
-				w.game_states_mut().next.ui.insert(state);
+				w.ui_mut().insert(state);
 			})?;
 
 		assert_state_eq!(
@@ -246,7 +201,7 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWrite| {
-				w.game_states_mut().next.ui.remove(&state);
+				w.ui_mut().remove(&state);
 			})?;
 
 		assert_state_eq!(
@@ -266,14 +221,78 @@ mod tests {
 		TState: FreelyMutableState,
 	{
 		let mut app = setup();
+		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::Play;
+		app.world_mut().resource_mut::<GameStateContext>().ui =
+			HashSet::from([UIState::Hud, UIState::Settings]);
 
 		app.world_mut().run_system_once(|mut p: GameStatesWrite| {
-			p.game_states_mut();
+			p.set_activity(ActivityState::Play);
+			*p.ui_mut() = HashSet::from([UIState::Hud, UIState::Settings]);
 		})?;
 
 		assert_state_eq!(
 			&NextState::<TState>::Unchanged,
 			app.world().resource::<NextState<TState>>()
+		);
+		Ok(())
+	}
+
+	fn execute_once(
+		exec: impl Fn(&mut GameStatesWrite),
+	) -> impl FnMut(GameStatesWrite, Local<bool>) {
+		move |mut p: GameStatesWrite, mut done: Local<bool>| {
+			if *done {
+				return;
+			}
+
+			exec(&mut p);
+			*done = true;
+		}
+	}
+
+	#[test]
+	fn do_not_repeat_stale_activity_change() -> Result<(), RunSystemError> {
+		let mut app = setup();
+
+		app.add_systems(
+			Update,
+			execute_once(|p| p.set_activity(ActivityState::Play)),
+		);
+		app.update();
+		app.update();
+
+		assert_state_eq!(
+			&NextState::<Activity>::Unchanged,
+			app.world().resource::<NextState<Activity>>()
+		);
+		Ok(())
+	}
+
+	#[test_case(UIState::Hud, PhantomData::<Hud>; "hud")]
+	#[test_case(UIState::Inventory, PhantomData::<Inventory>; "inventory")]
+	#[test_case(UIState::ComboOverview, PhantomData::<ComboOverview>; "combos")]
+	#[test_case(UIState::Settings, PhantomData::<Settings>; "settings")]
+	fn do_not_repeat_stale_ui_change<T>(
+		ui_state: UIState,
+		_: PhantomData<T>,
+	) -> Result<(), RunSystemError>
+	where
+		T: FreelyMutableState,
+	{
+		let mut app = setup();
+
+		app.add_systems(
+			Update,
+			execute_once(move |p| {
+				p.ui_mut().insert(ui_state);
+			}),
+		);
+		app.update();
+		app.update();
+
+		assert_state_eq!(
+			&NextState::<T>::Unchanged,
+			app.world().resource::<NextState<T>>()
 		);
 		Ok(())
 	}

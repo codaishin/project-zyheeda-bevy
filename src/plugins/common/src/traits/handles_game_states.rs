@@ -86,54 +86,40 @@ pub trait NonPausedStates {
 }
 
 pub trait GameStates {
-	fn game_states(&self) -> GameStateCollection<'_>;
+	fn activity(&self) -> ActivityState;
+	fn ui(&self) -> &'_ HashSet<UIState>;
 }
 
-pub trait GameStatesMut: GameStates {
-	fn game_states_mut(&mut self) -> GameStateCollectionMut<'_>;
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct GameStateCollection<'a> {
-	pub activity: ActivityState,
-	pub ui: &'a HashSet<UIState>,
-}
-
-impl GameStateCollection<'_> {
-	pub fn iter(&self) -> GameStatesIter<'_> {
-		GameStatesIter {
-			activity: Some(&self.activity),
-			ui: self.ui.iter(),
+pub trait IterGameStates: GameStates {
+	fn iter(&self) -> GameStateIter<'_> {
+		GameStateIter {
+			activity: Some(self.activity()),
+			ui: self.ui().iter(),
 		}
 	}
 }
 
-pub struct GameStatesIter<'a> {
-	activity: Option<&'a ActivityState>,
+impl<T> IterGameStates for T where T: GameStates {}
+
+pub struct GameStateIter<'a> {
+	activity: Option<ActivityState>,
 	ui: HashSetIter<'a, UIState>,
 }
 
-impl Iterator for GameStatesIter<'_> {
+impl Iterator for GameStateIter<'_> {
 	type Item = GameState;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		match self.activity.take().copied() {
+		match self.activity.take() {
 			Some(activity) => Some(GameState::Activity(activity)),
 			None => self.ui.next().copied().map(GameState::IngameUI),
 		}
 	}
 }
 
-#[derive(Debug, PartialEq)]
-pub struct GameStateCollectionMut<'a> {
-	pub current: GameStateCollection<'a>,
-	pub next: &'a mut NextGameStates,
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct NextGameStates {
-	pub activity: ActivityState,
-	pub ui: HashSet<UIState>,
+pub trait GameStatesMut {
+	fn set_activity(&mut self, activity: ActivityState);
+	fn ui_mut(&mut self) -> &'_ mut HashSet<UIState>;
 }
 
 #[derive(Debug, PartialEq)]
@@ -207,9 +193,24 @@ mod tests {
 
 	#[test]
 	fn iter_game_state_collection() {
-		let game_states = GameStateCollection {
+		struct _GameStates {
+			activity: ActivityState,
+			ui: HashSet<UIState>,
+		}
+
+		impl GameStates for &'_ _GameStates {
+			fn activity(&self) -> ActivityState {
+				self.activity
+			}
+
+			fn ui(&self) -> &'_ HashSet<UIState> {
+				&self.ui
+			}
+		}
+
+		let game_states = &_GameStates {
 			activity: ActivityState::Play,
-			ui: &HashSet::from([UIState::Hud, UIState::Settings]),
+			ui: HashSet::from([UIState::Hud, UIState::Settings]),
 		};
 
 		assert_eq!(

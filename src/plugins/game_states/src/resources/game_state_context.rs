@@ -4,7 +4,7 @@ use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(Resource)]
-pub(crate) struct GameStateContext {
+pub struct GameStateContext {
 	pub(crate) activity: ActivityState,
 	pub(crate) ui: HashSet<UIState>,
 }
