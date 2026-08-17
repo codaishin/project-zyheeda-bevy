@@ -9,11 +9,11 @@ pub struct GameStatesRead<'w> {
 }
 
 impl GameStates for GameStatesRead<'_> {
-	fn activity(&self) -> ActivityState {
+	fn activity(&self) -> Activity {
 		self.current.activity
 	}
 
-	fn ui(&self) -> &'_ HashSet<UIState> {
+	fn ui(&self) -> &'_ HashSet<IngameUI> {
 		&self.current.ui
 	}
 }

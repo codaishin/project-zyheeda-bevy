@@ -1,6 +1,6 @@
 use crate::{
 	resources::game_state_context::GameStateContext,
-	states::activity::Activity,
+	states::activity::ActivityState,
 	system_params::ui_states::UIStatesMut,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -10,10 +10,10 @@ use std::collections::HashSet;
 #[derive(SystemParam)]
 pub struct GameStatesWrite<'w, 's> {
 	current: Res<'w, GameStateContext>,
-	activity: ResMut<'w, NextState<Activity>>,
+	activity: ActivityStateMut<'w>,
 	ui: UIStatesMut<'w>,
-	activity_change: Local<'s, Option<SettableState>>,
-	ui_change: Local<'s, Option<HashSet<UIState>>>,
+	activity_change: Local<'s, Option<SettableActivity>>,
+	ui_change: Local<'s, Option<HashSet<IngameUI>>>,
 }
 
 impl GameStatesWrite<'_, '_> {
@@ -26,8 +26,7 @@ impl GameStatesWrite<'_, '_> {
 			return;
 		}
 
-		self.activity
-			.set(Activity(ActivityState::Settable(activity)));
+		self.activity.set(Activity::Settable(activity));
 	}
 
 	fn drain_ui_change(&mut self) {
@@ -36,7 +35,7 @@ impl GameStatesWrite<'_, '_> {
 		};
 
 		let detect_change = |state| Change::of(state, &self.current.ui, &ui);
-		let changes = UIState::iterator().filter_map(detect_change);
+		let changes = IngameUI::iterator().filter_map(detect_change);
 
 		for change in changes {
 			match change {
@@ -48,21 +47,21 @@ impl GameStatesWrite<'_, '_> {
 }
 
 impl GameStates for GameStatesWrite<'_, '_> {
-	fn activity(&self) -> ActivityState {
+	fn activity(&self) -> Activity {
 		self.current.activity
 	}
 
-	fn ui(&self) -> &'_ HashSet<UIState> {
+	fn ui(&self) -> &'_ HashSet<IngameUI> {
 		&self.current.ui
 	}
 }
 
 impl GameStatesMut for GameStatesWrite<'_, '_> {
-	fn set_activity(&mut self, activity: SettableState) {
+	fn set_activity(&mut self, activity: SettableActivity) {
 		*self.activity_change = Some(activity);
 	}
 
-	fn ui_mut(&mut self) -> &'_ mut HashSet<UIState> {
+	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
 		self.ui_change.get_or_insert(self.current.ui.clone())
 	}
 }
@@ -76,27 +75,42 @@ impl Drop for GameStatesWrite<'_, '_> {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct NextGameStates {
-	activity: SettableState,
-	ui: HashSet<UIState>,
+	activity: SettableActivity,
+	ui: HashSet<IngameUI>,
 }
 
 impl GameStatesMut for &mut NextGameStates {
-	fn set_activity(&mut self, activity: SettableState) {
+	fn set_activity(&mut self, activity: SettableActivity) {
 		self.activity = activity;
 	}
 
-	fn ui_mut(&mut self) -> &'_ mut HashSet<UIState> {
+	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
 		&mut self.ui
 	}
 }
 
+#[derive(SystemParam)]
+struct ActivityStateMut<'w> {
+	activity: ResMut<'w, NextState<ActivityState>>,
+}
+
+impl ActivityStateMut<'_> {
+	fn set(&mut self, activity: impl Into<ActivityState>) {
+		self.activity.set(activity.into());
+	}
+}
+
 enum Change {
-	Added(UIState),
-	Removed(UIState),
+	Added(IngameUI),
+	Removed(IngameUI),
 }
 
 impl Change {
-	fn of(state: UIState, current: &HashSet<UIState>, queued: &HashSet<UIState>) -> Option<Change> {
+	fn of(
+		state: IngameUI,
+		current: &HashSet<IngameUI>,
+		queued: &HashSet<IngameUI>,
+	) -> Option<Change> {
 		match (current.contains(&state), queued.contains(&state)) {
 			(true, false) => Some(Change::Removed(state)),
 			(false, true) => Some(Change::Added(state)),
@@ -124,7 +138,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(StatesPlugin);
-		app.init_state::<Activity>();
+		app.init_state::<ActivityState>();
 		UIStates::init(&mut app);
 		app.init_resource::<GameStateContext>();
 
@@ -154,21 +168,21 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWrite| {
-				w.set_activity(SettableState::Paused);
+				w.set_activity(SettableActivity::Paused);
 			})?;
 
 		assert_state_eq!(
-			&NextState::Pending(Activity(ActivityState::Settable(SettableState::Paused))),
-			app.world().resource::<NextState<Activity>>()
+			&NextState::Pending(ActivityState(Activity::Settable(SettableActivity::Paused))),
+			app.world().resource::<NextState<ActivityState>>()
 		);
 		Ok(())
 	}
 
-	#[test_case(UIState::Hud, Hud::On; "hud")]
-	#[test_case(UIState::Inventory, Inventory::On; "inventory")]
-	#[test_case(UIState::ComboOverview, ComboOverview::On; "combos")]
-	#[test_case(UIState::Settings, Settings::On; "settings")]
-	fn add_ui<TState>(state: UIState, expected: TState) -> Result<(), RunSystemError>
+	#[test_case(IngameUI::Hud, Hud::On; "hud")]
+	#[test_case(IngameUI::Inventory, Inventory::On; "inventory")]
+	#[test_case(IngameUI::ComboOverview, ComboOverview::On; "combos")]
+	#[test_case(IngameUI::Settings, Settings::On; "settings")]
+	fn add_ui<TState>(state: IngameUI, expected: TState) -> Result<(), RunSystemError>
 	where
 		TState: FreelyMutableState,
 	{
@@ -186,11 +200,11 @@ mod tests {
 		Ok(())
 	}
 
-	#[test_case(UIState::Hud, Hud::Off; "hud")]
-	#[test_case(UIState::Inventory, Inventory::Off; "inventory")]
-	#[test_case(UIState::ComboOverview, ComboOverview::Off; "combos")]
-	#[test_case(UIState::Settings, Settings::Off; "settings")]
-	fn remove_ui<TState>(state: UIState, expected: TState) -> Result<(), RunSystemError>
+	#[test_case(IngameUI::Hud, Hud::Off; "hud")]
+	#[test_case(IngameUI::Inventory, Inventory::Off; "inventory")]
+	#[test_case(IngameUI::ComboOverview, ComboOverview::Off; "combos")]
+	#[test_case(IngameUI::Settings, Settings::Off; "settings")]
+	fn remove_ui<TState>(state: IngameUI, expected: TState) -> Result<(), RunSystemError>
 	where
 		TState: FreelyMutableState,
 	{
@@ -212,7 +226,7 @@ mod tests {
 		Ok(())
 	}
 
-	#[test_case(PhantomData::<Activity>; "activity")]
+	#[test_case(PhantomData::<ActivityState>; "activity")]
 	#[test_case(PhantomData::<Hud>; "hud")]
 	#[test_case(PhantomData::<Inventory>; "inventory")]
 	#[test_case(PhantomData::<ComboOverview>; "combos")]
@@ -223,13 +237,13 @@ mod tests {
 	{
 		let mut app = setup();
 		app.world_mut().resource_mut::<GameStateContext>().activity =
-			ActivityState::Settable(SettableState::Play);
+			Activity::Settable(SettableActivity::Play);
 		app.world_mut().resource_mut::<GameStateContext>().ui =
-			HashSet::from([UIState::Hud, UIState::Settings]);
+			HashSet::from([IngameUI::Hud, IngameUI::Settings]);
 
 		app.world_mut().run_system_once(|mut p: GameStatesWrite| {
-			p.set_activity(SettableState::Play);
-			*p.ui_mut() = HashSet::from([UIState::Hud, UIState::Settings]);
+			p.set_activity(SettableActivity::Play);
+			*p.ui_mut() = HashSet::from([IngameUI::Hud, IngameUI::Settings]);
 		})?;
 
 		assert_state_eq!(
@@ -258,24 +272,24 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			execute_once(|p| p.set_activity(SettableState::Play)),
+			execute_once(|p| p.set_activity(SettableActivity::Play)),
 		);
 		app.update();
 		app.update();
 
 		assert_state_eq!(
-			&NextState::<Activity>::Unchanged,
-			app.world().resource::<NextState<Activity>>()
+			&NextState::<ActivityState>::Unchanged,
+			app.world().resource::<NextState<ActivityState>>()
 		);
 		Ok(())
 	}
 
-	#[test_case(UIState::Hud, PhantomData::<Hud>; "hud")]
-	#[test_case(UIState::Inventory, PhantomData::<Inventory>; "inventory")]
-	#[test_case(UIState::ComboOverview, PhantomData::<ComboOverview>; "combos")]
-	#[test_case(UIState::Settings, PhantomData::<Settings>; "settings")]
+	#[test_case(IngameUI::Hud, PhantomData::<Hud>; "hud")]
+	#[test_case(IngameUI::Inventory, PhantomData::<Inventory>; "inventory")]
+	#[test_case(IngameUI::ComboOverview, PhantomData::<ComboOverview>; "combos")]
+	#[test_case(IngameUI::Settings, PhantomData::<Settings>; "settings")]
 	fn do_not_repeat_stale_ui_change<T>(
-		ui_state: UIState,
+		ui_state: IngameUI,
 		_: PhantomData<T>,
 	) -> Result<(), RunSystemError>
 	where

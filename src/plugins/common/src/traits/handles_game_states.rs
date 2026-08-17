@@ -14,7 +14,7 @@ use std::{
 use zyheeda_core::prelude::*;
 
 pub trait HandlesGameStates:
-	AddGameStateSystem + AutomaticGameStateTransitions<ActivityState> + NonPausedStates
+	AddGameStateSystem + AutomaticActivityTransitions + NonPausedStates
 {
 	type TGameStates: SystemParam + GameStates;
 	type TGameStatesMut: SystemParam + GameStatesMut;
@@ -28,42 +28,39 @@ pub trait AddGameStateSystem {
 	);
 }
 
-pub trait AutomaticGameStateTransitions<T> {
-	type TOptionalTransitions<'a>: WithOptionalTransitions<T>;
+pub trait AutomaticActivityTransitions {
+	type TOptionalTransitions<'a>: WithOptionalActivityTransitions;
 
 	fn automatic_game_state_transitions(
 		app: &mut App,
-		from_state: T,
-		to_state: GameStateTransition<T>,
-	) -> Result<Self::TOptionalTransitions<'_>, TransitionsConfigError<T>>;
+		from_state: Activity,
+		to_state: ActivityTransition,
+	) -> Result<Self::TOptionalTransitions<'_>, TransitionsConfigError>;
 }
 
-pub trait WithOptionalTransitions<T> {
+pub trait WithOptionalActivityTransitions {
 	fn with_optional_transitions<TResult, M>(
 		self,
 		check: impl IntoSystem<(), Option<TResult>, M>,
-		transitions: HashMap<TResult, GameStateTransition<T>>,
-	) -> Result<(), TransitionsConfigError<T>>
+		transitions: HashMap<TResult, ActivityTransition>,
+	) -> Result<(), TransitionsConfigError>
 	where
 		TResult: PartialEq + Eq + Hash + ThreadSafe;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum GameStateTransition<T> {
-	To(T),
+pub enum ActivityTransition {
+	To(Activity),
 	ToPrevious,
 }
 
 #[derive(Debug, PartialEq)]
-pub enum TransitionsConfigError<TState> {
-	AlreadyConfigured(TState),
-	MayNotTransitionToSelf(TState),
+pub enum TransitionsConfigError {
+	AlreadyConfigured(Activity),
+	MayNotTransitionToSelf(Activity),
 }
 
-impl<TState> Display for TransitionsConfigError<TState>
-where
-	TState: Debug,
-{
+impl Display for TransitionsConfigError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			TransitionsConfigError::AlreadyConfigured(state) => {
@@ -80,14 +77,14 @@ where
 }
 
 pub trait NonPausedStates {
-	const DEFAULT: &[ActivityState] = &[ActivityState::Settable(SettableState::Play)];
+	const DEFAULT: &[Activity] = &[Activity::Settable(SettableActivity::Play)];
 
 	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>);
 }
 
 pub trait GameStates {
-	fn activity(&self) -> ActivityState;
-	fn ui(&self) -> &'_ HashSet<UIState>;
+	fn activity(&self) -> Activity;
+	fn ui(&self) -> &'_ HashSet<IngameUI>;
 }
 
 pub trait IterGameStates: GameStates {
@@ -102,8 +99,8 @@ pub trait IterGameStates: GameStates {
 impl<T> IterGameStates for T where T: GameStates {}
 
 pub struct GameStateIter<'a> {
-	activity: Option<ActivityState>,
-	ui: HashSetIter<'a, UIState>,
+	activity: Option<Activity>,
+	ui: HashSetIter<'a, IngameUI>,
 }
 
 impl Iterator for GameStateIter<'_> {
@@ -118,8 +115,8 @@ impl Iterator for GameStateIter<'_> {
 }
 
 pub trait GameStatesMut {
-	fn set_activity(&mut self, activity: SettableState);
-	fn ui_mut(&mut self) -> &'_ mut HashSet<UIState>;
+	fn set_activity(&mut self, activity: SettableActivity);
+	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI>;
 }
 
 #[derive(Debug, PartialEq)]
@@ -130,28 +127,28 @@ pub enum OnGameState {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum GameState {
-	Activity(ActivityState),
-	IngameUI(UIState),
+	Activity(Activity),
+	IngameUI(IngameUI),
 }
 
 impl_enum_conversions!(GameState[
-	Activity(ActivityState),
-	IngameUI(UIState),
+	Activity(Activity),
+	IngameUI(IngameUI),
 ]);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum ActivityState {
-	Settable(SettableState),
-	Derived(DerivedState),
+pub enum Activity {
+	Settable(SettableActivity),
+	Derived(DerivedActivity),
 }
 
-impl_enum_conversions!(ActivityState[
-	Settable(SettableState),
-	Derived(DerivedState),
+impl_enum_conversions!(Activity[
+	Settable(SettableActivity),
+	Derived(DerivedActivity),
 ]);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum SettableState {
+pub enum SettableActivity {
 	StartScreen,
 	NewGame,
 	Play,
@@ -161,30 +158,30 @@ pub enum SettableState {
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum DerivedState {
+pub enum DerivedActivity {
 	LoadingEssentialAssets,
 	LoadDependencies,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum UIState {
+pub enum IngameUI {
 	Hud,
 	Inventory,
 	ComboOverview,
 	Settings,
 }
 
-impl IterFinite for UIState {
+impl IterFinite for IngameUI {
 	fn iterator() -> FiniteIter<Self> {
-		FiniteIter(Some(UIState::Hud))
+		FiniteIter(Some(IngameUI::Hud))
 	}
 
 	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
-			UIState::Hud => Some(UIState::Inventory),
-			UIState::Inventory => Some(UIState::ComboOverview),
-			UIState::ComboOverview => Some(UIState::Settings),
-			UIState::Settings => None,
+			IngameUI::Hud => Some(IngameUI::Inventory),
+			IngameUI::Inventory => Some(IngameUI::ComboOverview),
+			IngameUI::ComboOverview => Some(IngameUI::Settings),
+			IngameUI::Settings => None,
 		}
 	}
 }
@@ -197,42 +194,42 @@ mod tests {
 	fn iter_ui_states() {
 		assert_eq!(
 			vec![
-				UIState::Hud,
-				UIState::Inventory,
-				UIState::ComboOverview,
-				UIState::Settings,
+				IngameUI::Hud,
+				IngameUI::Inventory,
+				IngameUI::ComboOverview,
+				IngameUI::Settings,
 			],
-			UIState::iterator().take(100).collect::<Vec<_>>()
+			IngameUI::iterator().take(100).collect::<Vec<_>>()
 		);
 	}
 
 	#[test]
 	fn iter_game_state_collection() {
 		struct _GameStates {
-			activity: ActivityState,
-			ui: HashSet<UIState>,
+			activity: Activity,
+			ui: HashSet<IngameUI>,
 		}
 
 		impl GameStates for &'_ _GameStates {
-			fn activity(&self) -> ActivityState {
+			fn activity(&self) -> Activity {
 				self.activity
 			}
 
-			fn ui(&self) -> &'_ HashSet<UIState> {
+			fn ui(&self) -> &'_ HashSet<IngameUI> {
 				&self.ui
 			}
 		}
 
 		let game_states = &_GameStates {
-			activity: ActivityState::Settable(SettableState::Play),
-			ui: HashSet::from([UIState::Hud, UIState::Settings]),
+			activity: Activity::Settable(SettableActivity::Play),
+			ui: HashSet::from([IngameUI::Hud, IngameUI::Settings]),
 		};
 
 		assert_eq!(
 			HashSet::from([
-				GameState::Activity(ActivityState::Settable(SettableState::Play)),
-				GameState::IngameUI(UIState::Hud),
-				GameState::IngameUI(UIState::Settings)
+				GameState::Activity(Activity::Settable(SettableActivity::Play)),
+				GameState::IngameUI(IngameUI::Hud),
+				GameState::IngameUI(IngameUI::Settings)
 			]),
 			game_states.iter().collect::<HashSet<_>>()
 		);

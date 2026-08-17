@@ -25,7 +25,7 @@ mod tests {
 	use crate::{
 		GameStatesPlugin,
 		resources::game_state_context::GameStateContext,
-		states::activity::Activity,
+		states::activity::ActivityState,
 		system_params::ui_states::UIStates,
 	};
 	use bevy::{state::app::StatesPlugin, time::TimePlugin};
@@ -37,7 +37,7 @@ mod tests {
 		app.add_plugins(StatesPlugin);
 		app.add_plugins(TimePlugin);
 		UIStates::init(&mut app);
-		app.init_state::<Activity>();
+		app.init_state::<ActivityState>();
 		app.init_resource::<GameStateContext>();
 		app.init_resource::<GameStateRoles>();
 		app.add_systems(Update, GameStateRoles::pause);
@@ -49,7 +49,7 @@ mod tests {
 	fn pause() {
 		let mut app = setup();
 		app.world_mut().resource_mut::<GameStateContext>().activity =
-			ActivityState::Settable(SettableState::Paused);
+			Activity::Settable(SettableActivity::Paused);
 
 		app.update();
 
@@ -63,11 +63,11 @@ mod tests {
 		app.world_mut()
 			.resource_mut::<GameStateRoles>()
 			.non_pause_states
-			.insert(GameState::Activity(ActivityState::Settable(
-				SettableState::Paused,
+			.insert(GameState::Activity(Activity::Settable(
+				SettableActivity::Paused,
 			)));
 		app.world_mut().resource_mut::<GameStateContext>().activity =
-			ActivityState::Settable(SettableState::Paused);
+			Activity::Settable(SettableActivity::Paused);
 
 		app.update();
 
@@ -94,15 +94,15 @@ mod tests {
 		app.world_mut()
 			.resource_mut::<GameStateRoles>()
 			.non_pause_states
-			.insert(GameState::Activity(ActivityState::Settable(
-				SettableState::Paused,
+			.insert(GameState::Activity(Activity::Settable(
+				SettableActivity::Paused,
 			)));
 		app.world_mut().resource_mut::<GameStateContext>().activity =
-			ActivityState::Settable(SettableState::Paused);
+			Activity::Settable(SettableActivity::Paused);
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
 			.ui
-			.insert(UIState::Hud);
+			.insert(IngameUI::Hud);
 
 		app.update();
 
@@ -117,15 +117,15 @@ mod tests {
 			.resource_mut::<GameStateRoles>()
 			.non_pause_states
 			.extend([
-				GameState::Activity(ActivityState::Settable(SettableState::Paused)),
-				GameState::IngameUI(UIState::Hud),
+				GameState::Activity(Activity::Settable(SettableActivity::Paused)),
+				GameState::IngameUI(IngameUI::Hud),
 			]);
 		app.world_mut().resource_mut::<GameStateContext>().activity =
-			ActivityState::Settable(SettableState::Paused);
+			Activity::Settable(SettableActivity::Paused);
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
 			.ui
-			.insert(UIState::Hud);
+			.insert(IngameUI::Hud);
 
 		app.update();
 

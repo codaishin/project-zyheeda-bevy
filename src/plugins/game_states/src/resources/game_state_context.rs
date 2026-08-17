@@ -1,18 +1,18 @@
-use crate::{states::activity::Activity, system_params::ui_states::UIStates};
+use crate::{states::activity::ActivityState, system_params::ui_states::UIStates};
 use bevy::{ecs::system::RunSystemOnce, prelude::*};
 use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(Resource)]
 pub struct GameStateContext {
-	pub(crate) activity: ActivityState,
-	pub(crate) ui: HashSet<UIState>,
+	pub(crate) activity: Activity,
+	pub(crate) ui: HashSet<IngameUI>,
 }
 
 impl FromWorld for GameStateContext {
 	fn from_world(world: &mut World) -> Self {
 		Self {
-			activity: ActivityState::from(world.resource::<State<Activity>>().get()),
+			activity: Activity::from(world.resource::<State<ActivityState>>().get()),
 			ui: world
 				.run_system_once(|p: UIStates| HashSet::from(&p))
 				.unwrap_or_default(),

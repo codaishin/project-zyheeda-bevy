@@ -16,12 +16,12 @@ pub(crate) struct UIStates<'w> {
 }
 
 impl UIStates<'_> {
-	pub(crate) fn is_on(&self, state: &UIState) -> bool {
+	pub(crate) fn is_on(&self, state: &IngameUI) -> bool {
 		match state {
-			UIState::Hud => self.hud.get() == &Hud::On,
-			UIState::Inventory => self.inventory.get() == &Inventory::On,
-			UIState::ComboOverview => self.combos.get() == &ComboOverview::On,
-			UIState::Settings => self.settings.get() == &Settings::On,
+			IngameUI::Hud => self.hud.get() == &Hud::On,
+			IngameUI::Inventory => self.inventory.get() == &Inventory::On,
+			IngameUI::ComboOverview => self.combos.get() == &ComboOverview::On,
+			IngameUI::Settings => self.settings.get() == &Settings::On,
 		}
 	}
 
@@ -45,34 +45,34 @@ impl UIStates<'static> {
 
 	pub(crate) fn on_enter<M>(
 		app: &mut App,
-		ui_state: UIState,
+		ui_state: IngameUI,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	) {
 		match ui_state {
-			UIState::Hud => app.add_systems(OnEnter(Hud::On), systems),
-			UIState::Inventory => app.add_systems(OnEnter(Inventory::On), systems),
-			UIState::ComboOverview => app.add_systems(OnEnter(ComboOverview::On), systems),
-			UIState::Settings => app.add_systems(OnEnter(Settings::On), systems),
+			IngameUI::Hud => app.add_systems(OnEnter(Hud::On), systems),
+			IngameUI::Inventory => app.add_systems(OnEnter(Inventory::On), systems),
+			IngameUI::ComboOverview => app.add_systems(OnEnter(ComboOverview::On), systems),
+			IngameUI::Settings => app.add_systems(OnEnter(Settings::On), systems),
 		};
 	}
 
 	pub(crate) fn on_exit<M>(
 		app: &mut App,
-		ui_state: UIState,
+		ui_state: IngameUI,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	) {
 		match ui_state {
-			UIState::Hud => app.add_systems(OnExit(Hud::On), systems),
-			UIState::Inventory => app.add_systems(OnExit(Inventory::On), systems),
-			UIState::ComboOverview => app.add_systems(OnExit(ComboOverview::On), systems),
-			UIState::Settings => app.add_systems(OnExit(Settings::On), systems),
+			IngameUI::Hud => app.add_systems(OnExit(Hud::On), systems),
+			IngameUI::Inventory => app.add_systems(OnExit(Inventory::On), systems),
+			IngameUI::ComboOverview => app.add_systems(OnExit(ComboOverview::On), systems),
+			IngameUI::Settings => app.add_systems(OnExit(Settings::On), systems),
 		};
 	}
 }
 
-impl From<&UIStates<'_>> for HashSet<UIState> {
+impl From<&UIStates<'_>> for HashSet<IngameUI> {
 	fn from(ui: &UIStates<'_>) -> Self {
-		HashSet::from_iter(UIState::iterator().filter(|s| ui.is_on(s)))
+		HashSet::from_iter(IngameUI::iterator().filter(|s| ui.is_on(s)))
 	}
 }
 
@@ -85,21 +85,21 @@ pub(crate) struct UIStatesMut<'w> {
 }
 
 impl UIStatesMut<'_> {
-	pub(crate) fn set_on(&mut self, ui: UIState) {
+	pub(crate) fn set_on(&mut self, ui: IngameUI) {
 		match ui {
-			UIState::Hud => self.hud.set(Hud::On),
-			UIState::Inventory => self.inventory.set(Inventory::On),
-			UIState::ComboOverview => self.combos.set(ComboOverview::On),
-			UIState::Settings => self.settings.set(Settings::On),
+			IngameUI::Hud => self.hud.set(Hud::On),
+			IngameUI::Inventory => self.inventory.set(Inventory::On),
+			IngameUI::ComboOverview => self.combos.set(ComboOverview::On),
+			IngameUI::Settings => self.settings.set(Settings::On),
 		}
 	}
 
-	pub(crate) fn set_off(&mut self, ui: &UIState) {
+	pub(crate) fn set_off(&mut self, ui: &IngameUI) {
 		match ui {
-			UIState::Hud => self.hud.set(Hud::Off),
-			UIState::Inventory => self.inventory.set(Inventory::Off),
-			UIState::ComboOverview => self.combos.set(ComboOverview::Off),
-			UIState::Settings => self.settings.set(Settings::Off),
+			IngameUI::Hud => self.hud.set(Hud::Off),
+			IngameUI::Inventory => self.inventory.set(Inventory::Off),
+			IngameUI::ComboOverview => self.combos.set(ComboOverview::Off),
+			IngameUI::Settings => self.settings.set(Settings::Off),
 		}
 	}
 }
