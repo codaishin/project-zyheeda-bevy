@@ -80,7 +80,7 @@ where
 }
 
 pub trait NonPausedStates {
-	const DEFAULT: &[ActivityState] = &[ActivityState::Play];
+	const DEFAULT: &[ActivityState] = &[ActivityState::Settable(SettableState::Play)];
 
 	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>);
 }
@@ -118,7 +118,7 @@ impl Iterator for GameStateIter<'_> {
 }
 
 pub trait GameStatesMut {
-	fn set_activity(&mut self, activity: ActivityState);
+	fn set_activity(&mut self, activity: SettableState);
 	fn ui_mut(&mut self) -> &'_ mut HashSet<UIState>;
 }
 
@@ -141,14 +141,29 @@ impl_enum_conversions!(GameState[
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum ActivityState {
-	LoadingEssentialAssets,
-	LoadDependencies,
+	Settable(SettableState),
+	Derived(DerivedState),
+}
+
+impl_enum_conversions!(ActivityState[
+	Settable(SettableState),
+	Derived(DerivedState),
+]);
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum SettableState {
 	StartScreen,
 	NewGame,
 	Play,
 	Paused,
 	Save,
 	Load,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum DerivedState {
+	LoadingEssentialAssets,
+	LoadDependencies,
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -209,13 +224,13 @@ mod tests {
 		}
 
 		let game_states = &_GameStates {
-			activity: ActivityState::Play,
+			activity: ActivityState::Settable(SettableState::Play),
 			ui: HashSet::from([UIState::Hud, UIState::Settings]),
 		};
 
 		assert_eq!(
 			HashSet::from([
-				GameState::Activity(ActivityState::Play),
+				GameState::Activity(ActivityState::Settable(SettableState::Play)),
 				GameState::IngameUI(UIState::Hud),
 				GameState::IngameUI(UIState::Settings)
 			]),

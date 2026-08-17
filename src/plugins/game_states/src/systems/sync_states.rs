@@ -47,12 +47,15 @@ mod tests {
 	#[test]
 	fn sync_activity() {
 		let mut app = setup();
-		app.insert_state(Activity(ActivityState::Play));
+		app.insert_state(Activity(ActivityState::Settable(SettableState::Play)));
 
 		app.update();
 
 		assert_eq!(
-			(ActivityState::Play, &HashSet::default()),
+			(
+				ActivityState::Settable(SettableState::Play),
+				&HashSet::default()
+			),
 			(
 				app.world().resource::<GameStateContext>().activity,
 				&app.world().resource::<GameStateContext>().ui,
@@ -96,16 +99,20 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let mut app = setup();
-		app.insert_state(Activity(ActivityState::Play));
+		app.insert_state(Activity(ActivityState::Settable(SettableState::Play)));
 		app.insert_state(Inventory::On);
 
 		app.update();
-		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::Save;
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			ActivityState::Settable(SettableState::Save);
 		app.world_mut().resource_mut::<GameStateContext>().ui = HashSet::from([UIState::Hud]);
 		app.update();
 
 		assert_eq!(
-			(ActivityState::Save, &HashSet::from([UIState::Hud])),
+			(
+				ActivityState::Settable(SettableState::Save),
+				&HashSet::from([UIState::Hud])
+			),
 			(
 				app.world().resource::<GameStateContext>().activity,
 				&app.world().resource::<GameStateContext>().ui
@@ -116,14 +123,14 @@ mod tests {
 	#[test]
 	fn act_again_if_activity_changed() {
 		let mut app = setup();
-		app.insert_state(Activity(ActivityState::Play));
+		app.insert_state(Activity(ActivityState::Settable(SettableState::Play)));
 
 		app.update();
-		app.insert_state(Activity(ActivityState::Paused));
+		app.insert_state(Activity(ActivityState::Settable(SettableState::Paused)));
 		app.update();
 
 		assert_eq!(
-			ActivityState::Paused,
+			ActivityState::Settable(SettableState::Paused),
 			app.world().resource::<GameStateContext>().activity,
 		);
 	}

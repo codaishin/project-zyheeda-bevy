@@ -6,7 +6,7 @@ pub(crate) struct Activity(pub(crate) ActivityState);
 
 impl Default for Activity {
 	fn default() -> Self {
-		Self(ActivityState::LoadingEssentialAssets)
+		Self(ActivityState::Derived(DerivedState::LoadingEssentialAssets))
 	}
 }
 

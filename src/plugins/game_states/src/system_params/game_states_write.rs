@@ -12,7 +12,7 @@ pub struct GameStatesWrite<'w, 's> {
 	current: Res<'w, GameStateContext>,
 	activity: ResMut<'w, NextState<Activity>>,
 	ui: UIStatesMut<'w>,
-	activity_change: Local<'s, Option<ActivityState>>,
+	activity_change: Local<'s, Option<SettableState>>,
 	ui_change: Local<'s, Option<HashSet<UIState>>>,
 }
 
@@ -26,7 +26,8 @@ impl GameStatesWrite<'_, '_> {
 			return;
 		}
 
-		self.activity.set(Activity(activity));
+		self.activity
+			.set(Activity(ActivityState::Settable(activity)));
 	}
 
 	fn drain_ui_change(&mut self) {
@@ -57,7 +58,7 @@ impl GameStates for GameStatesWrite<'_, '_> {
 }
 
 impl GameStatesMut for GameStatesWrite<'_, '_> {
-	fn set_activity(&mut self, activity: ActivityState) {
+	fn set_activity(&mut self, activity: SettableState) {
 		*self.activity_change = Some(activity);
 	}
 
@@ -75,12 +76,12 @@ impl Drop for GameStatesWrite<'_, '_> {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct NextGameStates {
-	activity: ActivityState,
+	activity: SettableState,
 	ui: HashSet<UIState>,
 }
 
 impl GameStatesMut for &mut NextGameStates {
-	fn set_activity(&mut self, activity: ActivityState) {
+	fn set_activity(&mut self, activity: SettableState) {
 		self.activity = activity;
 	}
 
@@ -153,11 +154,11 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWrite| {
-				w.set_activity(ActivityState::Paused);
+				w.set_activity(SettableState::Paused);
 			})?;
 
 		assert_state_eq!(
-			&NextState::Pending(Activity(ActivityState::Paused)),
+			&NextState::Pending(Activity(ActivityState::Settable(SettableState::Paused))),
 			app.world().resource::<NextState<Activity>>()
 		);
 		Ok(())
@@ -221,12 +222,13 @@ mod tests {
 		TState: FreelyMutableState,
 	{
 		let mut app = setup();
-		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::Play;
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			ActivityState::Settable(SettableState::Play);
 		app.world_mut().resource_mut::<GameStateContext>().ui =
 			HashSet::from([UIState::Hud, UIState::Settings]);
 
 		app.world_mut().run_system_once(|mut p: GameStatesWrite| {
-			p.set_activity(ActivityState::Play);
+			p.set_activity(SettableState::Play);
 			*p.ui_mut() = HashSet::from([UIState::Hud, UIState::Settings]);
 		})?;
 
@@ -256,7 +258,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			execute_once(|p| p.set_activity(ActivityState::Play)),
+			execute_once(|p| p.set_activity(SettableState::Play)),
 		);
 		app.update();
 		app.update();

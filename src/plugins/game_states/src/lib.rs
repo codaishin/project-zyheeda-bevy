@@ -284,19 +284,19 @@ mod tests {
 		let mut app = setup();
 		_ = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
-			GameStateTransition::To(ActivityState::Play),
+			ActivityState::Settable(SettableState::Paused),
+			GameStateTransition::To(ActivityState::Settable(SettableState::Play)),
 		);
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity(ActivityState::Paused));
+				state.set(Activity(ActivityState::Settable(SettableState::Paused)));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity(ActivityState::Play),
+			&Activity(ActivityState::Settable(SettableState::Play)),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -307,24 +307,24 @@ mod tests {
 		let mut app = setup();
 		_ = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
+			ActivityState::Settable(SettableState::Paused),
 			GameStateTransition::ToPrevious,
 		);
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity(ActivityState::Play));
+				state.set(Activity(ActivityState::Settable(SettableState::Play)));
 			})?;
 		app.update();
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity(ActivityState::Paused));
+				state.set(Activity(ActivityState::Settable(SettableState::Paused)));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity(ActivityState::Play),
+			&Activity(ActivityState::Settable(SettableState::Play)),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -335,24 +335,27 @@ mod tests {
 		let mut app = setup();
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
-			GameStateTransition::To(ActivityState::Play),
+			ActivityState::Settable(SettableState::Paused),
+			GameStateTransition::To(ActivityState::Settable(SettableState::Play)),
 		)
 		.unwrap();
 		_ = transitions.with_optional_transitions(
 			|| Some("new game"),
-			HashMap::from([("new game", GameStateTransition::To(ActivityState::NewGame))]),
+			HashMap::from([(
+				"new game",
+				GameStateTransition::To(ActivityState::Settable(SettableState::NewGame)),
+			)]),
 		);
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity(ActivityState::Paused));
+				state.set(Activity(ActivityState::Settable(SettableState::Paused)));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity(ActivityState::NewGame),
+			&Activity(ActivityState::Settable(SettableState::NewGame)),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -363,8 +366,8 @@ mod tests {
 		let mut app = setup();
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
-			GameStateTransition::To(ActivityState::Play),
+			ActivityState::Settable(SettableState::Paused),
+			GameStateTransition::To(ActivityState::Settable(SettableState::Play)),
 		)
 		.unwrap();
 		_ = transitions.with_optional_transitions(
@@ -374,18 +377,20 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity(ActivityState::StartScreen));
+				state.set(Activity(ActivityState::Settable(
+					SettableState::StartScreen,
+				)));
 			})?;
 		app.update();
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity(ActivityState::Paused));
+				state.set(Activity(ActivityState::Settable(SettableState::Paused)));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity(ActivityState::StartScreen),
+			&Activity(ActivityState::Settable(SettableState::StartScreen)),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -399,24 +404,27 @@ mod tests {
 		let mut app = setup();
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
-			GameStateTransition::To(ActivityState::Play),
+			ActivityState::Settable(SettableState::Paused),
+			GameStateTransition::To(ActivityState::Settable(SettableState::Play)),
 		)
 		.unwrap();
 		_ = transitions.with_optional_transitions(
 			move || result,
-			HashMap::from([("new game", GameStateTransition::To(ActivityState::NewGame))]),
+			HashMap::from([(
+				"new game",
+				GameStateTransition::To(ActivityState::Settable(SettableState::NewGame)),
+			)]),
 		);
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity(ActivityState::Paused));
+				state.set(Activity(ActivityState::Settable(SettableState::Paused)));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity(ActivityState::Play),
+			&Activity(ActivityState::Settable(SettableState::Play)),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -427,31 +435,38 @@ mod tests {
 		let mut app = setup();
 		GameStatesPlugin::add_game_state_systems(
 			&mut app,
-			OnGameState::Enter(GameState::Activity(ActivityState::Paused)),
+			OnGameState::Enter(GameState::Activity(ActivityState::Settable(
+				SettableState::Paused,
+			))),
 			|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity(ActivityState::StartScreen));
+				state.set(Activity(ActivityState::Settable(
+					SettableState::StartScreen,
+				)));
 			},
 		);
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
-			GameStateTransition::To(ActivityState::Play),
+			ActivityState::Settable(SettableState::Paused),
+			GameStateTransition::To(ActivityState::Settable(SettableState::Play)),
 		)
 		.unwrap();
 		_ = transitions.with_optional_transitions(
 			|| Some(true),
-			HashMap::from([(true, GameStateTransition::To(ActivityState::Save))]),
+			HashMap::from([(
+				true,
+				GameStateTransition::To(ActivityState::Settable(SettableState::Save)),
+			)]),
 		);
 
 		app.world_mut()
 			.run_system_once(|mut state: ResMut<NextState<Activity>>| {
-				state.set(Activity(ActivityState::Paused));
+				state.set(Activity(ActivityState::Settable(SettableState::Paused)));
 			})?;
 		app.update();
 		app.update();
 
 		assert_eq!(
-			&Activity(ActivityState::StartScreen),
+			&Activity(ActivityState::Settable(SettableState::StartScreen)),
 			app.world().resource::<State<Activity>>().get()
 		);
 		Ok(())
@@ -462,14 +477,14 @@ mod tests {
 		let mut app = setup();
 		_ = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
-			GameStateTransition::To(ActivityState::Play),
+			ActivityState::Settable(SettableState::Paused),
+			GameStateTransition::To(ActivityState::Settable(SettableState::Play)),
 		);
 
 		let result = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
-			GameStateTransition::To(ActivityState::Play),
+			ActivityState::Settable(SettableState::Paused),
+			GameStateTransition::To(ActivityState::Settable(SettableState::Play)),
 		);
 
 		let error = match result {
@@ -477,7 +492,9 @@ mod tests {
 			Err(error) => error,
 		};
 		assert_eq!(
-			TransitionsConfigError::AlreadyConfigured(ActivityState::Paused),
+			TransitionsConfigError::AlreadyConfigured(ActivityState::Settable(
+				SettableState::Paused
+			)),
 			error
 		);
 	}
@@ -488,8 +505,8 @@ mod tests {
 
 		let result = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
-			GameStateTransition::To(ActivityState::Paused),
+			ActivityState::Settable(SettableState::Paused),
+			GameStateTransition::To(ActivityState::Settable(SettableState::Paused)),
 		);
 
 		let error = match result {
@@ -497,7 +514,9 @@ mod tests {
 			Err(error) => error,
 		};
 		assert_eq!(
-			TransitionsConfigError::MayNotTransitionToSelf(ActivityState::Paused),
+			TransitionsConfigError::MayNotTransitionToSelf(ActivityState::Settable(
+				SettableState::Paused
+			)),
 			error
 		);
 	}
@@ -508,15 +527,18 @@ mod tests {
 
 		let transitions = GameStatesPlugin::automatic_game_state_transitions(
 			&mut app,
-			ActivityState::Paused,
-			GameStateTransition::To(ActivityState::Play),
+			ActivityState::Settable(SettableState::Paused),
+			GameStateTransition::To(ActivityState::Settable(SettableState::Play)),
 		)
 		.unwrap();
 		let result = transitions.with_optional_transitions(
 			|| Some("foo"),
 			HashMap::from([
 				("foo", GameStateTransition::ToPrevious),
-				("bar", GameStateTransition::To(ActivityState::Paused)),
+				(
+					"bar",
+					GameStateTransition::To(ActivityState::Settable(SettableState::Paused)),
+				),
 			]),
 		);
 
@@ -525,7 +547,9 @@ mod tests {
 			Err(error) => error,
 		};
 		assert_eq!(
-			TransitionsConfigError::MayNotTransitionToSelf(ActivityState::Paused),
+			TransitionsConfigError::MayNotTransitionToSelf(ActivityState::Settable(
+				SettableState::Paused
+			)),
 			error
 		);
 	}

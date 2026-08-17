@@ -48,7 +48,8 @@ mod tests {
 	#[test]
 	fn pause() {
 		let mut app = setup();
-		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::Paused;
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			ActivityState::Settable(SettableState::Paused);
 
 		app.update();
 
@@ -62,8 +63,11 @@ mod tests {
 		app.world_mut()
 			.resource_mut::<GameStateRoles>()
 			.non_pause_states
-			.insert(GameState::Activity(ActivityState::Paused));
-		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::Paused;
+			.insert(GameState::Activity(ActivityState::Settable(
+				SettableState::Paused,
+			)));
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			ActivityState::Settable(SettableState::Paused);
 
 		app.update();
 
@@ -90,8 +94,11 @@ mod tests {
 		app.world_mut()
 			.resource_mut::<GameStateRoles>()
 			.non_pause_states
-			.insert(GameState::Activity(ActivityState::Paused));
-		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::Paused;
+			.insert(GameState::Activity(ActivityState::Settable(
+				SettableState::Paused,
+			)));
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			ActivityState::Settable(SettableState::Paused);
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
 			.ui
@@ -110,10 +117,11 @@ mod tests {
 			.resource_mut::<GameStateRoles>()
 			.non_pause_states
 			.extend([
-				GameState::Activity(ActivityState::Paused),
+				GameState::Activity(ActivityState::Settable(SettableState::Paused)),
 				GameState::IngameUI(UIState::Hud),
 			]);
-		app.world_mut().resource_mut::<GameStateContext>().activity = ActivityState::Paused;
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			ActivityState::Settable(SettableState::Paused);
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
 			.ui
