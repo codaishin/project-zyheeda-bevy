@@ -3,7 +3,7 @@ use crate::traits::{
 	thread_safe::ThreadSafe,
 };
 use bevy::{
-	ecs::system::{ScheduleSystem, SystemParam},
+	ecs::system::{ReadOnlySystemParam, ScheduleSystem, StaticSystemParam, SystemParam},
 	prelude::*,
 };
 use std::{
@@ -16,8 +16,8 @@ use zyheeda_core::prelude::*;
 pub trait HandlesGameStates:
 	AddGameStateSystem + AutomaticActivityTransitions + NonPausedStates
 {
-	type TGameStates: SystemParam + GameStates;
-	type TGameStatesMut: SystemParam + GameStatesMut;
+	type TGameStates: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates>;
+	type TGameStatesMut: for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>;
 }
 
 pub trait AddGameStateSystem {
@@ -46,6 +46,25 @@ pub trait WithOptionalActivityTransitions {
 	) -> Result<(), TransitionsConfigError>
 	where
 		TResult: PartialEq + Eq + Hash + ThreadSafe;
+}
+
+pub trait InGameState: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates> + 'static {
+	fn in_game_state<T>(game_state: T) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
+	where
+		T: Into<GameState>,
+	{
+		let game_state = game_state.into();
+
+		IntoSystem::into_system(move |states: StaticSystemParam<Self>| match game_state {
+			GameState::Activity(activity) => states.activity() == activity,
+			GameState::IngameUI(ui) => states.ui().contains(&ui),
+		})
+	}
+}
+
+impl<T> InGameState for T where
+	T: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates> + 'static
+{
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -157,6 +176,18 @@ pub enum SettableActivity {
 	Load,
 }
 
+impl From<SettableActivity> for GameState {
+	fn from(value: SettableActivity) -> Self {
+		Self::from(Activity::from(value))
+	}
+}
+
+impl From<DerivedActivity> for GameState {
+	fn from(value: DerivedActivity) -> Self {
+		Self::from(Activity::from(value))
+	}
+}
+
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum DerivedActivity {
 	LoadingEssentialAssets,
@@ -190,48 +221,156 @@ impl IterFinite for IngameUI {
 mod tests {
 	use super::*;
 
-	#[test]
-	fn iter_ui_states() {
-		assert_eq!(
-			vec![
-				IngameUI::Hud,
-				IngameUI::Inventory,
-				IngameUI::ComboOverview,
-				IngameUI::Settings,
-			],
-			IngameUI::iterator().take(100).collect::<Vec<_>>()
-		);
+	mod enum_variants {
+		use super::*;
+
+		#[test]
+		fn iter_ui_states() {
+			assert_eq!(
+				vec![
+					IngameUI::Hud,
+					IngameUI::Inventory,
+					IngameUI::ComboOverview,
+					IngameUI::Settings,
+				],
+				IngameUI::iterator().take(100).collect::<Vec<_>>()
+			);
+		}
+
+		#[test]
+		fn iter_game_state_collection() {
+			struct _GameStates {
+				activity: Activity,
+				ui: HashSet<IngameUI>,
+			}
+
+			impl GameStates for &'_ _GameStates {
+				fn activity(&self) -> Activity {
+					self.activity
+				}
+
+				fn ui(&self) -> &'_ HashSet<IngameUI> {
+					&self.ui
+				}
+			}
+
+			let game_states = &_GameStates {
+				activity: Activity::Settable(SettableActivity::Play),
+				ui: HashSet::from([IngameUI::Hud, IngameUI::Settings]),
+			};
+
+			assert_eq!(
+				HashSet::from([
+					GameState::Activity(Activity::Settable(SettableActivity::Play)),
+					GameState::IngameUI(IngameUI::Hud),
+					GameState::IngameUI(IngameUI::Settings)
+				]),
+				game_states.iter().collect::<HashSet<_>>()
+			);
+		}
 	}
 
-	#[test]
-	fn iter_game_state_collection() {
-		struct _GameStates {
+	mod helper_system {
+		use super::*;
+		use testing::SingleThreadedApp;
+
+		#[derive(Resource)]
+		struct _States {
 			activity: Activity,
 			ui: HashSet<IngameUI>,
 		}
 
-		impl GameStates for &'_ _GameStates {
+		#[derive(SystemParam)]
+		struct _Param<'w> {
+			states: Res<'w, _States>,
+		}
+
+		impl GameStates for _Param<'_> {
 			fn activity(&self) -> Activity {
-				self.activity
+				self.states.activity
 			}
 
 			fn ui(&self) -> &'_ HashSet<IngameUI> {
-				&self.ui
+				&self.states.ui
 			}
 		}
 
-		let game_states = &_GameStates {
-			activity: Activity::Settable(SettableActivity::Play),
-			ui: HashSet::from([IngameUI::Hud, IngameUI::Settings]),
-		};
+		#[derive(Resource, Debug, PartialEq, Default)]
+		struct SystemRun(bool);
 
-		assert_eq!(
-			HashSet::from([
-				GameState::Activity(Activity::Settable(SettableActivity::Play)),
-				GameState::IngameUI(IngameUI::Hud),
-				GameState::IngameUI(IngameUI::Settings)
-			]),
-			game_states.iter().collect::<HashSet<_>>()
-		);
+		impl SystemRun {
+			fn check(run: ResMut<Self>) {
+				let Self(run) = run.into_inner();
+
+				*run = true;
+			}
+		}
+
+		fn setup<const N: usize>(activity: Activity, ui: [IngameUI; N]) -> App {
+			let mut app = App::new().single_threaded(Update);
+
+			app.init_resource::<SystemRun>();
+			app.insert_resource(_States {
+				activity,
+				ui: HashSet::from(ui),
+			});
+
+			app
+		}
+
+		#[test]
+		fn run_active() {
+			let mut app = setup(Activity::Settable(SettableActivity::Play), []);
+			app.add_systems(
+				Update,
+				SystemRun::check.run_if(_Param::<'static>::in_game_state(SettableActivity::Play)),
+			);
+
+			app.update();
+
+			assert_eq!(&SystemRun(true), app.world().resource::<SystemRun>());
+		}
+
+		#[test]
+		fn do_not_run_if_not_active() {
+			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
+			app.add_systems(
+				Update,
+				SystemRun::check.run_if(_Param::<'static>::in_game_state(SettableActivity::Play)),
+			);
+
+			app.update();
+
+			assert_eq!(&SystemRun(false), app.world().resource::<SystemRun>());
+		}
+
+		#[test]
+		fn run_if_ui_active() {
+			let mut app = setup(
+				Activity::Settable(SettableActivity::Paused),
+				[IngameUI::Hud],
+			);
+			app.add_systems(
+				Update,
+				SystemRun::check.run_if(_Param::<'static>::in_game_state(IngameUI::Hud)),
+			);
+
+			app.update();
+
+			assert_eq!(&SystemRun(true), app.world().resource::<SystemRun>());
+		}
+
+		#[test]
+		fn do_not_run_ingame_ui_not_active() {
+			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
+			app.add_systems(
+				Update,
+				SystemRun::check.run_if(_Param::<'static>::in_game_state(IngameUI::Hud)),
+			);
+
+			app.update();
+
+			assert_eq!(&SystemRun(false), app.world().resource::<SystemRun>());
+		}
 	}
 }
