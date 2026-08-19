@@ -16,7 +16,7 @@ use zyheeda_core::prelude::*;
 pub trait HandlesGameStates:
 	AddGameStateSystem + AutomaticActivityTransitions + NonPausedStates
 {
-	type TGameStates: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates>;
+	type TGameStates: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates> + GamePaused;
 	type TGameStatesMut: for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>;
 }
 
@@ -65,6 +65,10 @@ pub trait InGameState: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates>
 impl<T> InGameState for T where
 	T: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates> + 'static
 {
+}
+
+pub trait GamePaused {
+	fn game_paused() -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
