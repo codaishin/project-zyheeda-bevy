@@ -72,7 +72,10 @@ impl Plugin for GameStatesPlugin {
 			.init_resource::<GameStateRoles>()
 			.add_systems(
 				StateTransition,
-				(GameStateContext::sync_states, GameStateRoles::pause)
+				(
+					GameStateContext::sync_states,
+					GameStatesRead::game_paused().pipe(GameStateRoles::pause),
+				)
 					.chain()
 					.in_set(GameStateSystems)
 					.after(StateTransitionSystems::EnterSchedules),
