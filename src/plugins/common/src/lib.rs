@@ -32,7 +32,7 @@ use crate::{
 		register_persistent_entities::RegisterPersistentEntities,
 	},
 };
-use bevy::prelude::*;
+use bevy::{prelude::*, time::TimePlugin};
 use components::{insert_asset::InsertAsset, model::Model};
 
 pub struct CommonPlugin {
@@ -70,6 +70,10 @@ fn persistent_entities(app: &mut App) {
 }
 
 fn life_cycles(app: &mut App) {
+	if !app.is_plugin_added::<TimePlugin>() {
+		app.add_plugins(TimePlugin);
+	}
+
 	app.add_systems(Update, Lifetime::update::<Virtual>);
 }
 

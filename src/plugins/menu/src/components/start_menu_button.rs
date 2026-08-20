@@ -6,17 +6,29 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
-use common::{prelude::*, states::game_state::GameState};
+use common::prelude::*;
 
-#[derive(Component, Debug, PartialEq, Default)]
+#[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
 #[require(Button, Node = Self::node())]
 pub(crate) struct StartMenuButton {
 	pub(crate) label: Localized,
-	pub(crate) trigger_state: GameState,
+	pub(crate) trigger_state: SettableActivity,
 }
 
 impl StartMenuButton {
+	pub(crate) fn triggers(trigger_state: SettableActivity) -> Self {
+		Self {
+			trigger_state,
+			label: Localized::default(),
+		}
+	}
+
+	pub(crate) fn with_label(mut self, label: Localized) -> Self {
+		self.label = label;
+		self
+	}
+
 	fn node() -> Node {
 		Node {
 			width: Val::Px(300.0),
@@ -40,9 +52,7 @@ impl HasPanelColors for StartMenuButton {
 }
 
 impl TriggerState for StartMenuButton {
-	type TState = GameState;
-
-	fn trigger_state(&self) -> Self::TState {
+	fn trigger_state(&self) -> SettableActivity {
 		self.trigger_state
 	}
 }

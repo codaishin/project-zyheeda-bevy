@@ -1,6 +1,6 @@
 use super::game_state::GameState;
 use crate::{
-	tools::action_key::{ActionKey, user_input::UserInput},
+	tools::action_key::user_input::UserInput,
 	traits::{
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
@@ -17,18 +17,11 @@ pub enum MenuState {
 	Inventory,
 	ComboOverview,
 	Settings,
-	Paused,
 }
 
 impl From<MenuState> for GameState {
 	fn from(menu_state: MenuState) -> Self {
 		GameState::IngameMenu(menu_state)
-	}
-}
-
-impl From<MenuState> for ActionKey {
-	fn from(menu_state: MenuState) -> Self {
-		Self::Menu(menu_state)
 	}
 }
 
@@ -38,7 +31,6 @@ impl From<MenuState> for UserInput {
 			MenuState::Inventory => Self::from(KeyCode::KeyI),
 			MenuState::ComboOverview => Self::from(KeyCode::KeyK),
 			MenuState::Settings => Self::from(KeyCode::Escape),
-			MenuState::Paused => Self::from(KeyCode::KeyP),
 		}
 	}
 }
@@ -49,7 +41,6 @@ impl From<MenuState> for Token {
 			MenuState::Inventory => Token::from("menu-inventory"),
 			MenuState::ComboOverview => Token::from("menu-combos"),
 			MenuState::Settings => Token::from("menu-settings"),
-			MenuState::Paused => Token::from("menu-paused"),
 		}
 	}
 }
@@ -65,17 +56,6 @@ impl TryFrom<GameState> for MenuState {
 	}
 }
 
-impl TryFrom<ActionKey> for MenuState {
-	type Error = IsNot<MenuState>;
-
-	fn try_from(key: ActionKey) -> Result<Self, Self::Error> {
-		match key {
-			ActionKey::Menu(menu_state) => Ok(menu_state),
-			_ => Err(IsNot::target_type()),
-		}
-	}
-}
-
 impl IterFinite for MenuState {
 	fn iterator() -> FiniteIter<Self> {
 		FiniteIter(Some(MenuState::Inventory))
@@ -85,8 +65,7 @@ impl IterFinite for MenuState {
 		match &current.0? {
 			MenuState::Inventory => Some(MenuState::ComboOverview),
 			MenuState::ComboOverview => Some(MenuState::Settings),
-			MenuState::Settings => Some(MenuState::Paused),
-			MenuState::Paused => None,
+			MenuState::Settings => None,
 		}
 	}
 }
@@ -108,7 +87,6 @@ mod tests {
 				MenuState::Inventory,
 				MenuState::ComboOverview,
 				MenuState::Settings,
-				MenuState::Paused,
 			],
 			MenuState::iterator().take(100).collect::<Vec<_>>(),
 		);

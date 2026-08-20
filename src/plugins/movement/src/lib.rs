@@ -19,16 +19,24 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use common::{prelude::*, states::game_state::GameState};
+use common::prelude::*;
 use components::facing::SetFaceOverride;
 use std::marker::PhantomData;
 use systems::face::execute_face::execute_face;
 
 pub struct MovementPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing>
-	MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
+impl<TGameState, TInput, TSaveGame, TAnimations, TPhysics, TPathing>
+	MovementPlugin<(
+		TGameState,
+		TInput,
+		TSaveGame,
+		TAnimations,
+		TPhysics,
+		TPathing,
+	)>
 where
+	TGameState: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + SystemSetDefinition + HandlesAnimations,
@@ -42,6 +50,7 @@ where
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
+		_: &TGameState,
 		_: &TInput,
 		_: &TSaveGame,
 		_: &TAnimations,
@@ -52,9 +61,17 @@ where
 	}
 }
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing> Plugin
-	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
+impl<TGameState, TInput, TSaveGame, TAnimations, TPhysics, TPathing> Plugin
+	for MovementPlugin<(
+		TGameState,
+		TInput,
+		TSaveGame,
+		TAnimations,
+		TPhysics,
+		TPathing,
+	)>
 where
+	TGameState: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + SystemSetDefinition + HandlesAnimations,
@@ -92,7 +109,8 @@ where
 				.after_plugin(TAnimations::SYSTEMS)
 				.after_plugin(TPathing::SYSTEMS)
 				.after_plugin(TPhysics::SYSTEMS)
-				.run_if(in_state(GameState::Play)),
+				.after_plugin(TGameState::SYSTEMS)
+				.run_if(not(TGameState::game_paused())),
 		);
 	}
 }
@@ -110,18 +128,21 @@ impl<TDependencies> SystemSetDefinition for MovementPlugin<TDependencies> {
 	const SYSTEMS: PluginSystemSet<Self::TSystemSet> = PluginSystemSet::from_set(MovementSystems);
 }
 
-impl<TInput, TSaveGame, TAnimations, TPhysics, TPathing> HandlesMovement
-	for MovementPlugin<(TInput, TSaveGame, TAnimations, TPhysics, TPathing)>
+impl<TGameState, TInput, TSaveGame, TAnimations, TPhysics, TPathing> HandlesMovement
+	for MovementPlugin<(
+		TGameState,
+		TInput,
+		TSaveGame,
+		TAnimations,
+		TPhysics,
+		TPathing,
+	)>
 where
-	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
-	TSaveGame: ThreadSafe + HandlesSaving,
-	TAnimations: ThreadSafe + SystemSetDefinition + HandlesAnimations,
 	TPhysics: ThreadSafe
 		+ SystemSetDefinition
 		+ HandlesMotion
 		+ HandlesAllPhysicalEffects
 		+ HandlesRaycast,
-	TPathing: ThreadSafe + HandlesPathFinding,
 {
 	type TMovement = MovementParam<'static, 'static, TPhysics::TCharacterMotion>;
 	type TMovementMut = MovementParamMut<'static, 'static, TPhysics::TCharacterMotion>;

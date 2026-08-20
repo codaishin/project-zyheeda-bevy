@@ -4,14 +4,22 @@ mod traits;
 
 use crate::{components::camera_arm::CameraArm, systems::move_on_orbit::MoveArmsSystem};
 use bevy::prelude::*;
-use common::{prelude::*, states::game_state::GameState};
+use common::prelude::*;
 use std::marker::PhantomData;
 
 pub struct CameraControlPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TInput, TPhysics, TSavegame, TPlayers, TGraphics>
-	CameraControlPlugin<(TInput, TPhysics, TSavegame, TPlayers, TGraphics)>
+impl<TGameStates, TInput, TPhysics, TSavegame, TPlayers, TGraphics>
+	CameraControlPlugin<(
+		TGameStates,
+		TInput,
+		TPhysics,
+		TSavegame,
+		TPlayers,
+		TGraphics,
+	)>
 where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TPhysics: ThreadSafe + SystemSetDefinition,
 	TSavegame: ThreadSafe + HandlesSaving,
@@ -19,6 +27,7 @@ where
 	TGraphics: ThreadSafe + SystemSetDefinition + HandlesCameras,
 {
 	pub fn from_plugins(
+		_: &TGameStates,
 		_: &TInput,
 		_: &TPhysics,
 		_: &TSavegame,
@@ -29,9 +38,17 @@ where
 	}
 }
 
-impl<TInput, TPhysics, TSavegame, TPlayers, TGraphics> Plugin
-	for CameraControlPlugin<(TInput, TPhysics, TSavegame, TPlayers, TGraphics)>
+impl<TGameStates, TInput, TPhysics, TSavegame, TPlayers, TGraphics> Plugin
+	for CameraControlPlugin<(
+		TGameStates,
+		TInput,
+		TPhysics,
+		TSavegame,
+		TPlayers,
+		TGraphics,
+	)>
 where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TPhysics: ThreadSafe + SystemSetDefinition,
 	TSavegame: ThreadSafe + HandlesSaving,
@@ -46,15 +63,14 @@ where
 			(
 				CameraArm::init_for::<TPlayers::TPlayer>,
 				CameraArm::move_arms::<TInput::TInput>,
-				CameraArm::apply_direction::<TGraphics::TCameraMut>
-					.after_plugin(TPhysics::SYSTEMS)
-					.run_if(in_state(GameState::Play)),
+				CameraArm::apply_direction::<TGraphics::TCameraMut>.after_plugin(TPhysics::SYSTEMS),
 			)
 				.chain()
+				.after_plugin(TGameStates::SYSTEMS)
 				.after_plugin(TInput::SYSTEMS)
 				.after_plugin(TGraphics::SYSTEMS)
 				.after_plugin(TPhysics::SYSTEMS)
-				.run_if(in_state(GameState::Play)),
+				.run_if(not(TGameStates::game_paused())),
 		);
 	}
 }

@@ -32,20 +32,14 @@ use crate::{
 	},
 	systems::{
 		combos::update_combos_view::UpdateComboOverview,
-		start_menu_button::set_activity::Activity,
+		set_activity::set_activity,
+		start_menu_button::set_activity::UIActivity,
+		toggle_ui::toggle_ui,
 	},
 	visualization::unusable::Unusable,
 };
 use bevy::prelude::*;
-use common::{
-	prelude::*,
-	states::{
-		game_state::{GameState, LoadingEssentialAssets, LoadingGame},
-		menu_state::MenuState,
-		save_state::SaveState,
-	},
-	tools::path::Path,
-};
+use common::{prelude::*, states::menu_state::MenuState, tools::path::Path};
 use components::{
 	button_interaction::ButtonInteraction,
 	combo_overview::ComboOverview,
@@ -80,16 +74,17 @@ use systems::{
 	menus_unchangeable_when_present::MenusUnchangeableWhenPresent,
 	render_ui::RenderUi,
 	set_key_bindings::SetKeyBindings,
-	set_state_from_input::set_state_from_input,
 	trigger_on_release::TriggerOnRelease,
 	update_panels::colors::panel_colors,
 };
 use traits::{LoadUi, add_dropdown::AddDropdown, add_tooltip::AddTooltip, add_ui::AddUI};
+use zyheeda_core::hash_map;
 
 pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
+impl<TGameStates, TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
 	MenuPlugin<(
+		TGameStates,
 		TLoading,
 		TSavegame,
 		TInput,
@@ -99,6 +94,7 @@ impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
 		TLoadout,
 	)>
 where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TInput: ThreadSafe + HandlesActionKeyButton + HandlesInput + HandlesInputMut,
@@ -107,7 +103,9 @@ where
 	TPlayers: ThreadSafe + HandlesPlayer,
 	TLoadout: ThreadSafe + HandlesLoadout,
 {
+	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
+		_: &TGameStates,
 		_: &TLoading,
 		_: &TSavegame,
 		_: &TInput,
@@ -120,8 +118,9 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
+impl<TGameStates, TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
 	MenuPlugin<(
+		TGameStates,
 		TLoading,
 		TSavegame,
 		TInput,
@@ -131,6 +130,7 @@ impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
 		TLoadout,
 	)>
 where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TInput: ThreadSafe + HandlesActionKeyButton + HandlesInput + HandlesInputMut,
@@ -152,16 +152,27 @@ where
 
 	fn state_control(&self, app: &mut App) {
 		let changeable = in_state(MenusChangeable(true));
-		let loading_essentials = in_state(GameState::LoadingEssentialAssets);
-		let changeable_and_not_loading = changeable.and_then(not(loading_essentials));
+		let in_game =
+			TGameStates::in_game_state([SettableActivity::Play, SettableActivity::Paused]);
+		let changeable_and_in_game = changeable.and_then(in_game);
+
+		let set_activity = set_activity::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
+			ActionKey::Miscellaneous(Miscellaneous::Paused) => SettableActivity::Paused,
+			ActionKey::Save(SaveKey::QuickLoad) => SettableActivity::LoadCmd,
+			ActionKey::Save(SaveKey::QuickSave) => SettableActivity::SaveCmd,
+		});
+		let toggle_ui = toggle_ui::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
+			MenuState::ComboOverview => IngameUI::ComboOverview,
+			MenuState::Inventory => IngameUI::Inventory,
+			MenuState::Settings => IngameUI::Settings,
+		});
 
 		app.insert_state(MenusChangeable(true));
 		app.add_systems(
 			Update,
 			(
 				PreventMenuChange::menus_unchangeable_when_present,
-				set_state_from_input::<MenuState, TInput::TInput>
-					.run_if(changeable_and_not_loading),
+				(set_activity, toggle_ui).run_if(changeable_and_in_game),
 			)
 				.chain(),
 		);
@@ -171,30 +182,29 @@ where
 	where
 		TLoadGroup: LoadGroup + ThreadSafe,
 	{
-		let load_assets = TLoading::processing_state::<TLoadGroup, AssetsProgress>();
-		let load_dependencies = TLoading::processing_state::<TLoadGroup, DependenciesProgress>();
+		let load = TLoadGroup::LOAD_STATE;
+		let load_steps = [Activity::LoadAssets(load), Activity::LoadDependencies(load)];
 
-		app
-			.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
-				load_assets
-			)
-			.add_ui::<LoadingScreen<DependenciesProgress>, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
-				load_dependencies
-			);
+		for load_step in load_steps {
+			app
+				.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
+					load_step
+				);
+		}
 	}
 
 	fn start_menu(&self, app: &mut App) {
-		let start_menu = GameState::StartMenu;
-		let quick_load = GameState::Save(SaveState::AttemptLoad);
+		let start_menu = SettableActivity::StartScreen;
+		let load = SettableActivity::LoadCmd;
 		let enable_or_disable_quick_load_button = TSavegame::can_quick_load()
 			.pipe(|In(can_quick_load)| match can_quick_load {
-				true => Activity::Enable,
-				false => Activity::Disable,
+				true => UIActivity::Enable,
+				false => UIActivity::Disable,
 			})
-			.pipe(StartMenuButton::set_activity(quick_load));
+			.pipe(StartMenuButton::set_activity(load));
 
 		app.add_prefab_observer::<StartMenuButton, ()>()
-			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
+			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 				start_menu,
 			)
 			.add_systems(
@@ -202,23 +212,26 @@ where
 				(
 					enable_or_disable_quick_load_button,
 					panel_colors::<StartMenuButton>,
-					StartMenuButton::trigger_on_release,
+					StartMenuButton::trigger_on_release::<TGameStates::TGameStatesMut>,
 				)
 					.chain()
-					.run_if(in_state(start_menu)),
+					.run_if(TGameStates::in_game_state([start_menu]))
+					.after_plugin(TGameStates::SYSTEMS),
 			);
 	}
 
 	fn pause_menu(&self, app: &mut App) {
-		app.add_ui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
-			GameState::IngameMenu(MenuState::Paused),
+		app.add_ui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
+			SettableActivity::Paused,
 		);
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
-		let play = GameState::Play;
+		let hud = IngameUI::Hud;
 
-		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(play)
+		TGameStates::add_non_pause_state(app, IngameUI::Hud);
+
+		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(hud)
 			.add_observer(QuickbarPanel::add_input_control::<TInput::TActionKeyButton>)
 			.add_systems(
 				Update,
@@ -231,7 +244,7 @@ where
 					>,
 					panel_colors::<QuickbarPanel>,
 				)
-					.run_if(in_state(play)),
+					.run_if(TGameStates::in_game_state([hud])).after_plugin(TGameStates::SYSTEMS),
 			);
 	}
 
@@ -240,9 +253,9 @@ where
 		type HorizontalItem<TId> = ComboSkillButton<DropdownItem<Horizontal>, TId>;
 		type Trigger<TId> = ComboSkillButton<DropdownTrigger, TId>;
 
-		let combo_overview = GameState::IngameMenu(MenuState::ComboOverview);
+		let combo_overview = IngameUI::ComboOverview;
 
-		app.add_ui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
+		app.add_ui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 			combo_overview,
 		);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
@@ -288,14 +301,15 @@ where
 				>,
 			)
 				.chain()
-				.run_if(in_state(combo_overview)),
+				.run_if(TGameStates::in_game_state([combo_overview]))
+				.after_plugin(TGameStates::SYSTEMS),
 		);
 	}
 
 	fn inventory_screen(&self, app: &mut App) {
-		let inventory = GameState::IngameMenu(MenuState::Inventory);
+		let inventory = IngameUI::Inventory;
 
-		app.add_ui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
+		app.add_ui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 			inventory,
 		)
 		.add_systems(
@@ -307,7 +321,7 @@ where
 				drop_item::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
 			)
 				.chain()
-				.run_if(in_state(inventory)),
+				.run_if(TGameStates::in_game_state([inventory])).after_plugin(TGameStates::SYSTEMS),
 		);
 	}
 
@@ -316,11 +330,11 @@ where
 		type KeyBindInput = KeyBind<Input<ActionKey>>;
 		type KeyRebindInput = KeyBind<Rebinding<ActionKey>>;
 
-		let settings = GameState::IngameMenu(MenuState::Settings);
+		let settings = IngameUI::Settings;
 
 		app.register_required_components::<KeyBindInput, Interaction>()
 			.register_required_components::<KeyRebindInput, PreventMenuChange>()
-			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut>(
+			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 				settings,
 			)
 			.add_systems(
@@ -333,12 +347,15 @@ where
 					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
 					KeyRebindInput::rebind_apply::<TInput::TInputMut>,
 				)
-					.run_if(in_state(settings)),
+					.run_if(TGameStates::in_game_state([settings])).after_plugin(TGameStates::SYSTEMS),
 			);
 	}
 
 	fn general_systems(&self, app: &mut App) {
-		let ui_ready = not(in_state(GameState::LoadingEssentialAssets));
+		let ui_ready = not(TGameStates::in_game_state([
+			Activity::LoadAssets(LoadActivity::EssentialAssets),
+			Activity::LoadDependencies(LoadActivity::EssentialAssets),
+		]));
 
 		app.register_derived_component::<MenuBackground, Node>()
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
@@ -366,8 +383,9 @@ where
 	}
 }
 
-impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout> Plugin
+impl<TGameStates, TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout> Plugin
 	for MenuPlugin<(
+		TGameStates,
 		TLoading,
 		TSavegame,
 		TInput,
@@ -377,6 +395,7 @@ impl<TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout> 
 		TLoadout,
 	)>
 where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TInput: ThreadSafe + HandlesActionKeyButton + HandlesInput + HandlesInputMut,
@@ -400,12 +419,6 @@ where
 		self.general_systems(app);
 
 		#[cfg(debug_assertions)]
-		{
-			debug::setup_run_time_display::<
-				TLocalization::TLocalizationServer,
-				TGraphics::TCameraMut,
-			>(app);
-			debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
-		}
+		debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
 	}
 }

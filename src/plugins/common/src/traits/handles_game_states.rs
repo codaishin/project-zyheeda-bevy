@@ -1,6 +1,9 @@
-use crate::traits::{
-	iteration::{FiniteIter, IterFinite},
-	thread_safe::ThreadSafe,
+use crate::{
+	tools::iter_helpers::{first, next},
+	traits::{
+		iteration::{FiniteIter, IterFinite},
+		thread_safe::ThreadSafe,
+	},
 };
 use bevy::{
 	ecs::system::{ReadOnlySystemParam, ScheduleSystem, StaticSystemParam, SystemParam},
@@ -10,6 +13,7 @@ use std::{
 	collections::{HashMap, HashSet, hash_set::Iter as HashSetIter},
 	fmt::{Debug, Display},
 	hash::Hash,
+	ops::{Deref, DerefMut},
 };
 use zyheeda_core::prelude::*;
 
@@ -40,19 +44,25 @@ pub trait AddActivityTransitions {
 		TResult: PartialEq + Eq + Hash + ThreadSafe;
 }
 
+pub fn always() -> Option<()> {
+	Some(())
+}
+
 pub trait InGameState: HandlesGameStates {
-	fn in_game_state<T>(game_state: T) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
+	fn in_game_state<const N: usize, T>(
+		game_states: [T; N],
+	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
 	where
 		T: Into<GameState>,
 	{
-		let game_state = game_state.into();
+		let game_states = game_states.map(|s| s.into());
 
-		IntoSystem::into_system(
-			move |states: StaticSystemParam<Self::TGameStates>| match game_state {
-				GameState::Activity(activity) => states.activity() == activity,
-				GameState::IngameUI(ui) => states.ui().contains(&ui),
-			},
-		)
+		IntoSystem::into_system(move |states: StaticSystemParam<Self::TGameStates>| {
+			game_states.iter().any(|game_state| match game_state {
+				GameState::Activity(activity) => &states.activity() == activity,
+				GameState::IngameUI(ui) => states.ui().contains(ui),
+			})
+		})
 	}
 }
 
@@ -66,6 +76,7 @@ pub trait GamePaused {
 pub enum ActivityTransition {
 	To(Activity),
 	ToPrevious,
+	ToPreviousOf(Activity),
 }
 
 #[derive(Debug, PartialEq)]
@@ -101,6 +112,19 @@ pub trait GameStates {
 	fn ui(&self) -> &'_ HashSet<IngameUI>;
 }
 
+impl<T> GameStates for T
+where
+	T: Deref<Target: GameStates>,
+{
+	fn activity(&self) -> Activity {
+		self.deref().activity()
+	}
+
+	fn ui(&self) -> &'_ HashSet<IngameUI> {
+		self.deref().ui()
+	}
+}
+
 pub trait IterGameStates: GameStates {
 	fn iter(&self) -> GameStateIter<'_> {
 		GameStateIter {
@@ -133,6 +157,19 @@ pub trait GameStatesMut {
 	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI>;
 }
 
+impl<T> GameStatesMut for T
+where
+	T: DerefMut<Target: GameStatesMut>,
+{
+	fn set_activity(&mut self, activity: SettableActivity) {
+		self.deref_mut().set_activity(activity);
+	}
+
+	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
+		self.deref_mut().ui_mut()
+	}
+}
+
 #[derive(Debug, PartialEq)]
 pub enum OnGameState<T = GameState> {
 	Enter(T),
@@ -156,12 +193,33 @@ macro_rules! impl_on_game_state_conversions {
 	};
 }
 
-impl_on_game_state_conversions!(Activity, IngameUI, DerivedActivity, SettableActivity);
+impl_on_game_state_conversions!(
+	Activity,
+	IngameUI,
+	LoadActivity,
+	SettableActivity,
+	SaveGameActivity,
+);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum GameState {
 	Activity(Activity),
 	IngameUI(IngameUI),
+}
+
+impl IterFinite for GameState {
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(first(GameState::Activity))
+	}
+
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
+		use GameState::*;
+
+		match current.0? {
+			Activity(activity) => next(Activity, activity).or(first(IngameUI)),
+			IngameUI(ingame_ui) => next(IngameUI, ingame_ui),
+		}
+	}
 }
 
 impl_enum_conversions!(GameState[
@@ -171,14 +229,63 @@ impl_enum_conversions!(GameState[
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Activity {
+	SaveGame(SaveGameActivity),
+	LoadAssets(LoadActivity),
+	LoadDependencies(LoadActivity),
 	Settable(SettableActivity),
-	Derived(DerivedActivity),
+}
+
+impl Default for Activity {
+	fn default() -> Self {
+		Self::LoadAssets(LoadActivity::EssentialAssets)
+	}
+}
+
+impl IterFinite for Activity {
+	fn iterator() -> FiniteIter<Self> {
+		FiniteIter(Some(Self::SaveGame(SaveGameActivity::Save)))
+	}
+
+	fn next(current: &FiniteIter<Self>) -> Option<Self> {
+		use Activity::*;
+		use LoadActivity::*;
+		use SaveGameActivity::*;
+		use SettableActivity::*;
+
+		match current.0? {
+			SaveGame(Save) => Some(SaveGame(Load)),
+			SaveGame(Load) => Some(LoadAssets(EssentialAssets)),
+			LoadAssets(EssentialAssets) => Some(LoadAssets(Assets)),
+			LoadAssets(Assets) => Some(LoadDependencies(EssentialAssets)),
+			LoadDependencies(EssentialAssets) => Some(LoadDependencies(Assets)),
+			LoadDependencies(Assets) => Some(Settable(StartScreen)),
+			Settable(StartScreen) => Some(Settable(NewGame)),
+			Settable(NewGame) => Some(Settable(Play)),
+			Settable(Play) => Some(Settable(Paused)),
+			Settable(Paused) => Some(Settable(SaveCmd)),
+			Settable(SaveCmd) => Some(Settable(LoadCmd)),
+			Settable(LoadCmd) => None,
+		}
+	}
 }
 
 impl_enum_conversions!(Activity[
+	SaveGame(SaveGameActivity),
 	Settable(SettableActivity),
-	Derived(DerivedActivity),
+	LoadAssets(LoadActivity),
 ]);
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum SaveGameActivity {
+	Save,
+	Load,
+}
+
+impl From<SaveGameActivity> for GameState {
+	fn from(value: SaveGameActivity) -> Self {
+		Self::from(Activity::SaveGame(value))
+	}
+}
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum SettableActivity {
@@ -186,26 +293,26 @@ pub enum SettableActivity {
 	NewGame,
 	Play,
 	Paused,
-	Save,
-	Load,
+	SaveCmd,
+	LoadCmd,
 }
 
 impl From<SettableActivity> for GameState {
 	fn from(value: SettableActivity) -> Self {
-		Self::from(Activity::from(value))
-	}
-}
-
-impl From<DerivedActivity> for GameState {
-	fn from(value: DerivedActivity) -> Self {
-		Self::from(Activity::from(value))
+		Self::from(Activity::Settable(value))
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum DerivedActivity {
-	LoadingEssentialAssets,
-	LoadDependencies,
+pub enum LoadActivity {
+	EssentialAssets,
+	Assets,
+}
+
+impl From<LoadActivity> for GameState {
+	fn from(value: LoadActivity) -> Self {
+		Self::from(Activity::LoadAssets(value))
+	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -239,6 +346,27 @@ mod tests {
 		use super::*;
 
 		#[test]
+		fn iter_activity_states() {
+			assert_eq!(
+				vec![
+					Activity::SaveGame(SaveGameActivity::Save),
+					Activity::SaveGame(SaveGameActivity::Load),
+					Activity::LoadAssets(LoadActivity::EssentialAssets),
+					Activity::LoadAssets(LoadActivity::Assets),
+					Activity::LoadDependencies(LoadActivity::EssentialAssets),
+					Activity::LoadDependencies(LoadActivity::Assets),
+					Activity::Settable(SettableActivity::StartScreen),
+					Activity::Settable(SettableActivity::NewGame),
+					Activity::Settable(SettableActivity::Play),
+					Activity::Settable(SettableActivity::Paused),
+					Activity::Settable(SettableActivity::SaveCmd),
+					Activity::Settable(SettableActivity::LoadCmd),
+				],
+				Activity::iterator().take(100).collect::<Vec<_>>()
+			);
+		}
+
+		#[test]
 		fn iter_ui_states() {
 			assert_eq!(
 				vec![
@@ -248,6 +376,17 @@ mod tests {
 					IngameUI::Settings,
 				],
 				IngameUI::iterator().take(100).collect::<Vec<_>>()
+			);
+		}
+
+		#[test]
+		fn iter_game_sate() {
+			let activities = Activity::iterator().map(GameState::Activity);
+			let uis = IngameUI::iterator().map(GameState::IngameUI);
+
+			assert_eq!(
+				activities.chain(uis).collect::<Vec<_>>(),
+				GameState::iterator().take(100).collect::<Vec<_>>()
 			);
 		}
 
@@ -392,7 +531,7 @@ mod tests {
 			let mut app = setup(Activity::Settable(SettableActivity::Play), []);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state(SettableActivity::Play)),
+				SystemRun::check.run_if(_Plugin::in_game_state([SettableActivity::Play])),
 			);
 
 			app.update();
@@ -405,7 +544,7 @@ mod tests {
 			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state(SettableActivity::Play)),
+				SystemRun::check.run_if(_Plugin::in_game_state([SettableActivity::Play])),
 			);
 
 			app.update();
@@ -421,7 +560,7 @@ mod tests {
 			);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state(IngameUI::Hud)),
+				SystemRun::check.run_if(_Plugin::in_game_state([IngameUI::Hud])),
 			);
 
 			app.update();
@@ -434,7 +573,7 @@ mod tests {
 			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state(IngameUI::Hud)),
+				SystemRun::check.run_if(_Plugin::in_game_state([IngameUI::Hud])),
 			);
 
 			app.update();

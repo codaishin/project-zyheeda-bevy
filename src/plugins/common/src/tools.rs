@@ -101,7 +101,7 @@ impl From<Vec<Entity>> for Focus {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub struct Done(pub bool);
 
 impl Done {

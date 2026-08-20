@@ -23,32 +23,62 @@ use std::{
 	fmt::{Debug, Display},
 	hash::Hash,
 };
+use zyheeda_core::collections::ordered::OrderedSet;
 
 pub struct GameStatesPlugin;
 
 impl GameStatesPlugin {
+	fn track_transitions(
+		previous: ResMut<PreviousStates>,
+		mut state_transitions: MessageReader<StateTransitionEvent<ActivityState>>,
+	) {
+		let PreviousStates(previous) = previous.into_inner();
+
+		if let Some(Some(exited)) = state_transitions.read().last().map(|t| t.exited) {
+			previous.insert(exited);
+		}
+	}
+
 	fn apply_transition_from(
 		from_state: Activity,
 	) -> impl IntoSystem<In<Option<ActivityTransition>>, Result<(), TransitionError>, ()> {
 		#[rustfmt::skip]
 		let system = move |
 			In(to_state): In<Option<ActivityTransition>>,
-			mut state_transitions: MessageReader<StateTransitionEvent<ActivityState>>,
-			mut state: ResMut<NextState<ActivityState>>
+		  mut state: ResMut<NextState<ActivityState>>,
+		  previous: Res<PreviousStates>
 		| {
 			let Some(to_state) = to_state else {
 				return Ok(());
 			};
+			let PreviousStates(previous) = previous.into_inner();
 
 			match to_state {
 				ActivityTransition::To(to_state) => {
 					state.set(ActivityState::from(to_state));
 				}
 				ActivityTransition::ToPrevious => {
-					let Some(last_transition) = state_transitions.read().last() else {
-						return Err(TransitionError::NoStateTransitionMessagesFor(from_state));
+					let Some(previous) = previous.last() else {
+						return Err(TransitionError::NoPreviousStateFor(from_state));
 					};
-					let Some(ref previous) = last_transition.exited else {
+
+					state.set(*previous);
+				}
+				ActivityTransition::ToPreviousOf(activity) => {
+					let get_previous = || {
+						previous
+							.iter()
+							.enumerate()
+							.find_map(|(i, ActivityState(a))| {
+								if a != &activity {
+									return None;
+								}
+
+								previous.get_index(i.checked_sub(1)?)
+							})
+					};
+
+					let Some(previous) = get_previous() else {
 						return Err(TransitionError::NoPreviousStateFor(from_state));
 					};
 
@@ -68,11 +98,13 @@ impl Plugin for GameStatesPlugin {
 		UIStates::init(app);
 
 		app.init_state::<ActivityState>()
+			.init_resource::<PreviousStates>()
 			.init_resource::<GameStateContext>()
 			.init_resource::<GameStateRoles>()
 			.add_systems(
 				StateTransition,
 				(
+					Self::track_transitions,
 					GameStateContext::sync_states,
 					GameStatesPlugin::game_paused().pipe(GameStateRoles::pause),
 				)
@@ -188,24 +220,20 @@ impl GamePaused for GameStatesPlugin {
 	}
 }
 
+#[derive(Resource, Default)]
+pub(crate) struct PreviousStates(OrderedSet<ActivityState>);
+
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct GameStateSystems;
 
 #[derive(Debug, PartialEq)]
 enum TransitionError {
-	NoStateTransitionMessagesFor(Activity),
 	NoPreviousStateFor(Activity),
 }
 
 impl Display for TransitionError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			TransitionError::NoStateTransitionMessagesFor(state) => {
-				write!(
-					f,
-					"{state:?}: Could not retrieve state transition messages to determine previous state"
-				)
-			}
 			TransitionError::NoPreviousStateFor(state) => {
 				write!(f, "{state:?}: Cannot detect previous state")
 			}
@@ -246,7 +274,9 @@ mod tests {
 			let mut app = App::new().single_threaded(Update);
 
 			app.add_plugins(StatesPlugin);
+			app.init_resource::<PreviousStates>();
 			app.init_state::<ActivityState>();
+			app.add_systems(StateTransition, GameStatesPlugin::track_transitions);
 
 			app
 		}
@@ -311,6 +341,44 @@ mod tests {
 		}
 
 		#[test]
+		fn apply_transition_to_previous_of() -> Result<(), RunSystemError> {
+			use SettableActivity::*;
+
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|| Some("previous of new game"),
+				hash_map! {
+					"previous of new game" => ActivityTransition::ToPreviousOf(Activity::Settable(NewGame)),
+				},
+			);
+
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(StartScreen)));
+				})?;
+			app.update();
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(NewGame)));
+				})?;
+			app.update();
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(Paused)));
+				})?;
+			app.update();
+			app.update();
+
+			assert_eq!(
+				&ActivityState(Activity::Settable(StartScreen)),
+				app.world().resource::<State<ActivityState>>().get()
+			);
+			Ok(())
+		}
+
+		#[test]
 		fn no_transition() -> Result<(), RunSystemError> {
 			let mut app = setup();
 			_ = GameStatesPlugin::add_activity_transitions(
@@ -336,18 +404,22 @@ mod tests {
 			Ok(())
 		}
 
+		#[derive(Resource)]
+		struct Transition(bool);
+
+		impl Transition {
+			fn check(transition: Option<Res<Transition>>) -> Option<bool> {
+				transition.map(|t| t.into_inner()).map(|Transition(t)| *t)
+			}
+		}
+
 		#[test]
 		fn delayed_transition() -> Result<(), RunSystemError> {
-			#[derive(Resource)]
-			struct Transition(bool);
-
 			let mut app = setup();
 			_ = GameStatesPlugin::add_activity_transitions(
 				&mut app,
 				SettableActivity::Paused,
-				|transition: Option<Res<Transition>>| {
-					transition.map(|t| t.into_inner()).map(|Transition(t)| *t)
-				},
+				Transition::check,
 				hash_map! {
 					true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
 				},
@@ -364,6 +436,42 @@ mod tests {
 
 			assert_eq!(
 				&ActivityState(Activity::Settable(SettableActivity::Play)),
+				app.world().resource::<State<ActivityState>>().get()
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn delayed_transition_to_previous() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				Transition::check,
+				hash_map! {
+					true => ActivityTransition::ToPrevious
+				},
+			);
+
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(
+						SettableActivity::StartScreen,
+					)));
+				})?;
+			app.update();
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
+				})?;
+			app.update();
+			app.update(); // <== Old transition expired by bevy
+			app.insert_resource(Transition(true));
+			app.update();
+			app.update();
+
+			assert_eq!(
+				&ActivityState(Activity::Settable(SettableActivity::StartScreen)),
 				app.world().resource::<State<ActivityState>>().get()
 			);
 			Ok(())

@@ -1,5 +1,5 @@
 use crate::{
-	tools::action_key::{ActionKey, user_input::UserInput},
+	tools::action_key::user_input::UserInput,
 	traits::{
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
@@ -15,12 +15,6 @@ pub struct TerrainTargeting;
 impl InvalidUserInput for TerrainTargeting {
 	fn invalid_input(&self) -> &[UserInput] {
 		&[]
-	}
-}
-
-impl From<TerrainTargeting> for ActionKey {
-	fn from(target: TerrainTargeting) -> Self {
-		Self::Targeting(target)
 	}
 }
 

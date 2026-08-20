@@ -1,5 +1,5 @@
 use super::{load_asset::LoadAsset, thread_safe::ThreadSafe};
-use crate::{errors::Unreachable, tools::path::Path};
+use crate::{errors::Unreachable, tools::path::Path, traits::handles_load_tracking::LoadGroup};
 use bevy::{app::App, asset::Asset, reflect::TypePath};
 use serde::Deserialize;
 use std::{error::Error, fmt::Debug};
@@ -16,7 +16,7 @@ pub trait HandlesCustomFolderAssets {
 	where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + TypePath + ThreadSafe,
-		TLoadGroup: ThreadSafe;
+		TLoadGroup: ThreadSafe + LoadGroup;
 }
 
 pub trait AssetFolderPath {
