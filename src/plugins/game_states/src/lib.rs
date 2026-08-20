@@ -7,7 +7,7 @@ use crate::{
 	resources::{
 		configured_transitions::ConfiguredTransitions,
 		game_state_context::GameStateContext,
-		game_state_roles::GameStateRoles,
+		game_state_roles::{GAME_STATE_ROLES_DEFAULT, GameStateRoles},
 	},
 	states::activity::ActivityState,
 	system_params::{
@@ -74,7 +74,7 @@ impl Plugin for GameStatesPlugin {
 				StateTransition,
 				(
 					GameStateContext::sync_states,
-					GameStatesRead::game_paused().pipe(GameStateRoles::pause),
+					GameStatesPlugin::game_paused().pipe(GameStateRoles::pause),
 				)
 					.chain()
 					.in_set(GameStateSystems)
@@ -171,6 +171,21 @@ impl AddActivityTransitions for GameStatesPlugin {
 	}
 }
 
+impl GamePaused for GameStatesPlugin {
+	fn game_paused() -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
+		IntoSystem::into_system(
+			|states: GameStatesRead, roles: Option<Res<GameStateRoles>>| {
+				let roles = match roles {
+					Some(r) => r.into_inner(),
+					None => &GAME_STATE_ROLES_DEFAULT,
+				};
+
+				states.iter().any(|state| roles.is_pause_state(state))
+			},
+		)
+	}
+}
+
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct GameStateSystems;
 
@@ -218,251 +233,335 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		state::app::StatesPlugin,
 	};
+	use std::collections::hash_set::HashSet;
 	use testing::SingleThreadedApp;
 	use zyheeda_core::prelude::*;
 
-	fn setup() -> App {
-		let mut app = App::new().single_threaded(Update);
+	mod transitions {
+		use super::*;
 
-		app.add_plugins(StatesPlugin);
-		app.init_state::<ActivityState>();
+		fn setup() -> App {
+			let mut app = App::new().single_threaded(Update);
 
-		app
+			app.add_plugins(StatesPlugin);
+			app.init_state::<ActivityState>();
+
+			app
+		}
+
+		#[test]
+		fn apply_transition() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|| Some("new game"),
+				hash_map! {
+					"new game" => ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
+				},
+			);
+
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
+				})?;
+			app.update();
+			app.update();
+
+			assert_eq!(
+				&ActivityState(Activity::Settable(SettableActivity::NewGame)),
+				app.world().resource::<State<ActivityState>>().get()
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn apply_transition_to_previous() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|| Some("previous"),
+				hash_map! {
+					"previous" => ActivityTransition::ToPrevious
+				},
+			);
+
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(
+						SettableActivity::StartScreen,
+					)));
+				})?;
+			app.update();
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
+				})?;
+			app.update();
+			app.update();
+
+			assert_eq!(
+				&ActivityState(Activity::Settable(SettableActivity::StartScreen)),
+				app.world().resource::<State<ActivityState>>().get()
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn no_transition() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|| Some("no new game"),
+				hash_map! {
+					"new game" => ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
+				},
+			);
+
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
+				})?;
+			app.update();
+			app.update();
+
+			assert_eq!(
+				&ActivityState(Activity::Settable(SettableActivity::Paused)),
+				app.world().resource::<State<ActivityState>>().get()
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn delayed_transition() -> Result<(), RunSystemError> {
+			#[derive(Resource)]
+			struct Transition(bool);
+
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|transition: Option<Res<Transition>>| {
+					transition.map(|t| t.into_inner()).map(|Transition(t)| *t)
+				},
+				hash_map! {
+					true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+				},
+			);
+
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
+				})?;
+			app.update();
+			app.insert_resource(Transition(true));
+			app.update();
+			app.update();
+
+			assert_eq!(
+				&ActivityState(Activity::Settable(SettableActivity::Play)),
+				app.world().resource::<State<ActivityState>>().get()
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn no_transition_if_not_in_from_state() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|| Some(true),
+				HashMap::from([(
+					true,
+					ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+				)]),
+			);
+
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(SettableActivity::NewGame)));
+				})?;
+			app.update();
+			app.update();
+
+			assert_eq!(
+				&ActivityState(Activity::Settable(SettableActivity::NewGame)),
+				app.world().resource::<State<ActivityState>>().get()
+			);
+			Ok(())
+		}
+
+		#[test]
+		fn forbid_repeated_config() {
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|| Some(true),
+				hash_map! {
+					true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+				},
+			);
+
+			let result = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				Activity::Settable(SettableActivity::Paused),
+				|| Some(true),
+				HashMap::from([(
+					false,
+					ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
+				)]),
+			);
+
+			let error = match result {
+				Ok(_) => panic!("Expected Error, but was value"),
+				Err(error) => error,
+			};
+			assert_eq!(
+				TransitionsConfigError::AlreadyConfigured(Activity::Settable(
+					SettableActivity::Paused
+				)),
+				error
+			);
+		}
+
+		#[test]
+		fn forbid_transitions_to_self() {
+			let mut app = setup();
+
+			let result = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|| Some(true),
+				hash_map! {
+					true => ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
+				},
+			);
+
+			let error = match result {
+				Ok(_) => panic!("Expected Error, but was value"),
+				Err(error) => error,
+			};
+			assert_eq!(
+				TransitionsConfigError::MayNotTransitionToSelf(Activity::Settable(
+					SettableActivity::Paused
+				)),
+				error
+			);
+		}
+
+		#[test]
+		fn allow_transition_if_previous_broke() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|| Some(true),
+				hash_map! {
+					true => ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
+				},
+			);
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				SettableActivity::Paused,
+				|| Some(true),
+				hash_map! {
+					true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+				},
+			);
+
+			app.world_mut()
+				.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+					state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
+				})?;
+			app.update();
+			app.update();
+
+			assert_eq!(
+				&ActivityState(Activity::Settable(SettableActivity::Play)),
+				app.world().resource::<State<ActivityState>>().get()
+			);
+			Ok(())
+		}
 	}
 
-	#[test]
-	fn apply_transition() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		_ = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			SettableActivity::Paused,
-			|| Some("new game"),
-			hash_map! {
-				"new game" => ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
-			},
-		);
+	mod game_paused {
+		use super::*;
 
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
-			})?;
-		app.update();
-		app.update();
+		fn setup<const N: usize>(activity: Activity, ui: [IngameUI; N]) -> App {
+			let mut app = App::new().single_threaded(Update);
 
-		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::NewGame)),
-			app.world().resource::<State<ActivityState>>().get()
-		);
-		Ok(())
-	}
+			app.insert_resource(GameStateContext {
+				activity,
+				ui: HashSet::from(ui),
+			});
 
-	#[test]
-	fn apply_transition_to_previous() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		_ = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			SettableActivity::Paused,
-			|| Some("previous"),
-			hash_map! {
-				"previous" => ActivityTransition::ToPrevious
-			},
-		);
+			app
+		}
 
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(
-					SettableActivity::StartScreen,
-				)));
-			})?;
-		app.update();
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
-			})?;
-		app.update();
-		app.update();
+		#[test]
+		fn is_paused() -> Result<(), RunSystemError> {
+			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
 
-		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::StartScreen)),
-			app.world().resource::<State<ActivityState>>().get()
-		);
-		Ok(())
-	}
+			let paused = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::game_paused())?;
 
-	#[test]
-	fn no_transition() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		_ = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			SettableActivity::Paused,
-			|| Some("no new game"),
-			hash_map! {
-				"new game" => ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
-			},
-		);
+			assert!(paused);
+			Ok(())
+		}
 
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
-			})?;
-		app.update();
-		app.update();
+		#[test]
+		fn not_paused_on_play() -> Result<(), RunSystemError> {
+			let mut app = setup(Activity::Settable(SettableActivity::Play), []);
 
-		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::Paused)),
-			app.world().resource::<State<ActivityState>>().get()
-		);
-		Ok(())
-	}
+			let paused = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::game_paused())?;
 
-	#[test]
-	fn delayed_transition() -> Result<(), RunSystemError> {
-		#[derive(Resource)]
-		struct Transition(bool);
+			assert!(!paused);
+			Ok(())
+		}
 
-		let mut app = setup();
-		_ = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			SettableActivity::Paused,
-			|transition: Option<Res<Transition>>| {
-				transition.map(|t| t.into_inner()).map(|Transition(t)| *t)
-			},
-			hash_map! {
-				true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-			},
-		);
+		#[test]
+		fn not_paused_when_activity_marked_as_not_pausing() -> Result<(), RunSystemError> {
+			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
+			GameStatesPlugin::add_non_pause_state(&mut app, SettableActivity::Paused);
 
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
-			})?;
-		app.update();
-		app.insert_resource(Transition(true));
-		app.update();
-		app.update();
+			let paused = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::game_paused())?;
 
-		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::Play)),
-			app.world().resource::<State<ActivityState>>().get()
-		);
-		Ok(())
-	}
+			assert!(!paused);
+			Ok(())
+		}
 
-	#[test]
-	fn no_transition_if_not_in_from_state() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		_ = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			SettableActivity::Paused,
-			|| Some(true),
-			HashMap::from([(
-				true,
-				ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-			)]),
-		);
+		#[test]
+		fn paused_on_hud() -> Result<(), RunSystemError> {
+			let mut app = setup(Activity::Settable(SettableActivity::Play), [IngameUI::Hud]);
 
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(SettableActivity::NewGame)));
-			})?;
-		app.update();
-		app.update();
+			let paused = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::game_paused())?;
 
-		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::NewGame)),
-			app.world().resource::<State<ActivityState>>().get()
-		);
-		Ok(())
-	}
+			assert!(paused);
+			Ok(())
+		}
 
-	#[test]
-	fn forbid_repeated_config() {
-		let mut app = setup();
-		_ = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			SettableActivity::Paused,
-			|| Some(true),
-			hash_map! {
-				true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-			},
-		);
+		#[test]
+		fn not_paused_when_ui_marked_as_not_pausing() -> Result<(), RunSystemError> {
+			let mut app = setup(Activity::Settable(SettableActivity::Play), [IngameUI::Hud]);
+			GameStatesPlugin::add_non_pause_state(&mut app, IngameUI::Hud);
 
-		let result = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			Activity::Settable(SettableActivity::Paused),
-			|| Some(true),
-			HashMap::from([(
-				false,
-				ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
-			)]),
-		);
+			let paused = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::game_paused())?;
 
-		let error = match result {
-			Ok(_) => panic!("Expected Error, but was value"),
-			Err(error) => error,
-		};
-		assert_eq!(
-			TransitionsConfigError::AlreadyConfigured(Activity::Settable(SettableActivity::Paused)),
-			error
-		);
-	}
-
-	#[test]
-	fn forbid_transitions_to_self() {
-		let mut app = setup();
-
-		let result = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			SettableActivity::Paused,
-			|| Some(true),
-			hash_map! {
-				true => ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
-			},
-		);
-
-		let error = match result {
-			Ok(_) => panic!("Expected Error, but was value"),
-			Err(error) => error,
-		};
-		assert_eq!(
-			TransitionsConfigError::MayNotTransitionToSelf(Activity::Settable(
-				SettableActivity::Paused
-			)),
-			error
-		);
-	}
-
-	#[test]
-	fn allow_transition_if_previous_broke() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		_ = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			SettableActivity::Paused,
-			|| Some(true),
-			hash_map! {
-				true => ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
-			},
-		);
-		_ = GameStatesPlugin::add_activity_transitions(
-			&mut app,
-			SettableActivity::Paused,
-			|| Some(true),
-			hash_map! {
-				true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-			},
-		);
-
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
-			})?;
-		app.update();
-		app.update();
-
-		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::Play)),
-			app.world().resource::<State<ActivityState>>().get()
-		);
-		Ok(())
+			assert!(!paused);
+			Ok(())
+		}
 	}
 }
