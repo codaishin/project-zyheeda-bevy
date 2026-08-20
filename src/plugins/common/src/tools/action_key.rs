@@ -28,6 +28,7 @@ use movement::MovementKey;
 use serde::{Deserialize, Serialize};
 use slot::HandSlot;
 use user_input::UserInput;
+use zyheeda_core::impl_enum_conversions;
 
 #[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum ActionKey {
@@ -39,6 +40,16 @@ pub enum ActionKey {
 	Camera(CameraKey),
 	Save(SaveKey),
 }
+
+impl_enum_conversions!(ActionKey[
+	Movement(MovementKey),
+	Slot(HandSlot),
+	Targeting(TerrainTargeting),
+	Miscellaneous(Miscellaneous),
+	Menu(MenuState),
+	Camera(CameraKey),
+	Save(SaveKey),
+]);
 
 impl Default for ActionKey {
 	fn default() -> Self {

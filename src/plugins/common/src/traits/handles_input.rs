@@ -5,6 +5,7 @@ use crate::{
 	traits::{
 		accessors::get::{View, ViewField},
 		iteration::IterFinite,
+		thread_safe::ThreadSafe,
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -25,7 +26,8 @@ impl ViewField for MouseOverrideActive {
 }
 
 pub trait HandlesInput {
-	type TInput: SystemParam
+	type TInput: ThreadSafe
+		+ SystemParam
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInput + GetAllInputs + InputSetupChanged>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetInputState + GetAllInputStates>
 		+ for<'w, 's> SystemParam<Item<'w, 's>: GetRawUserInput>;

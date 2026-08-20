@@ -1,4 +1,4 @@
-use super::{ActionKey, user_input::UserInput};
+use super::user_input::UserInput;
 use crate::traits::{
 	handles_input::InvalidUserInput,
 	handles_localization::Token,
@@ -6,7 +6,6 @@ use crate::traits::{
 };
 use bevy::input::{keyboard::KeyCode, mouse::MouseButton};
 use serde::{Deserialize, Serialize};
-use zyheeda_core::prelude::*;
 
 #[derive(Default, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum MovementKey {
@@ -28,23 +27,6 @@ impl From<MovementKey> for UserInput {
 			MovementKey::Right => Self::from(KeyCode::KeyD),
 			MovementKey::Pointer => Self::from(MouseButton::Left),
 			MovementKey::ToggleWalkRun => Self::from(KeyCode::NumpadSubtract),
-		}
-	}
-}
-
-impl From<MovementKey> for ActionKey {
-	fn from(key: MovementKey) -> Self {
-		Self::Movement(key)
-	}
-}
-
-impl TryFrom<ActionKey> for MovementKey {
-	type Error = IsNot<MovementKey>;
-
-	fn try_from(key: ActionKey) -> Result<Self, Self::Error> {
-		match key {
-			ActionKey::Movement(key) => Ok(key),
-			_ => Err(IsNot::target_type()),
 		}
 	}
 }

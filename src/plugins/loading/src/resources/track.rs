@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::MainWorld, state::state::FreelyMutableState};
+use bevy::{prelude::*, render::MainWorld};
 use common::prelude::*;
 use std::{
 	any::{TypeId, type_name},
@@ -78,31 +78,23 @@ where
 			.is_some()
 	}
 
-	pub fn when_all_done_set<TState>(
-		state: TState,
-	) -> impl Fn(Option<Res<Self>>, ResMut<NextState<TState>>)
-	where
-		TState: FreelyMutableState + Copy,
-	{
-		move |load_tracker: Option<Res<Self>>, mut next_state: ResMut<NextState<TState>>| {
-			let Some(load_tracker) = load_tracker else {
-				return;
-			};
+	pub fn is_done(load_tracker: Option<Res<Self>>) -> Option<IsDone> {
+		let all_done = load_tracker?
+			.items
+			.values()
+			.map(|LoadData { loaded, .. }| *loaded)
+			.all(|Loaded(loaded)| loaded);
 
-			let not_all_loaded = load_tracker
-				.items
-				.values()
-				.map(|l| l.loaded)
-				.any(|Loaded(loaded)| !loaded);
-
-			if not_all_loaded {
-				return;
-			}
-
-			next_state.set(state);
+		if !all_done {
+			return None;
 		}
+
+		Some(IsDone)
 	}
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
+pub(crate) struct IsDone;
 
 #[cfg(test)]
 mod tests {
@@ -113,9 +105,6 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
-	#[derive(States, Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-	struct _State;
-
 	#[derive(Default, Debug, PartialEq)]
 	struct _LoadGroup;
 
@@ -125,7 +114,6 @@ mod tests {
 	fn setup(load_tracker: Option<Track<_LoadGroup, _Progress>>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_plugins(StatesPlugin);
-		app.init_state::<_State>();
 
 		if let Some(load_tracker) = load_tracker {
 			app.insert_resource(load_tracker);
@@ -170,7 +158,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_state_when_all_loaded() -> Result<(), RunSystemError> {
+	fn all_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup(Some(Track::new([
 			(
 				TypeId::of::<f32>(),
@@ -188,21 +176,16 @@ mod tests {
 			),
 		])));
 
-		app.world_mut()
-			.run_system_once(Track::<_LoadGroup, _Progress>::when_all_done_set(_State))?;
+		let done = app
+			.world_mut()
+			.run_system_once(Track::<_LoadGroup, _Progress>::is_done)?;
 
-		let state = app.world().resource::<NextState<_State>>();
-		assert!(
-			matches!(state, NextState::Pending(_State)),
-			"expected: {:?}\n     got: {:?}",
-			NextState::Pending(_State),
-			state,
-		);
+		assert_eq!(Some(IsDone), done);
 		Ok(())
 	}
 
 	#[test]
-	fn do_not_set_state_when_not_all_loaded() -> Result<(), RunSystemError> {
+	fn not_all_loaded() -> Result<(), RunSystemError> {
 		let mut app = setup(Some(Track::<_LoadGroup, _Progress>::new([
 			(
 				TypeId::of::<f32>(),
@@ -220,16 +203,11 @@ mod tests {
 			),
 		])));
 
-		app.world_mut()
-			.run_system_once(Track::<_LoadGroup, _Progress>::when_all_done_set(_State))?;
+		let done = app
+			.world_mut()
+			.run_system_once(Track::<_LoadGroup, _Progress>::is_done)?;
 
-		let state = app.world().resource::<NextState<_State>>();
-		assert!(
-			matches!(state, NextState::Unchanged),
-			"expected: {:?}\n     got: {:?}",
-			NextState::<_State>::Unchanged,
-			state,
-		);
+		assert_eq!(None, done);
 		Ok(())
 	}
 
@@ -237,7 +215,10 @@ mod tests {
 	fn no_panic_when_tracker_does_not_exist() -> Result<(), RunSystemError> {
 		let mut app = setup(None);
 
-		app.world_mut()
-			.run_system_once(Track::<_LoadGroup, _Progress>::when_all_done_set(_State))
+		_ = app
+			.world_mut()
+			.run_system_once(Track::<_LoadGroup, _Progress>::is_done);
+
+		Ok(())
 	}
 }

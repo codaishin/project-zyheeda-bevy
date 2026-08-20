@@ -1,17 +1,8 @@
 use super::thread_safe::ThreadSafe;
-use bevy::{
-	app::AppLabel,
-	ecs::schedule::ScheduleLabel,
-	prelude::*,
-	state::state::FreelyMutableState,
-};
+use crate::traits::handles_game_states::{Activity, LoadActivity, SettableActivity};
+use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
 
 pub trait HandlesLoadTracking {
-	fn processing_state<TLoadGroup, TProgress>() -> impl States + Copy
-	where
-		TLoadGroup: ThreadSafe,
-		TProgress: Progress + ThreadSafe;
-
 	fn register_load_group<TLoadGroup>(app: &mut App)
 	where
 		TLoadGroup: LoadGroup + ThreadSafe;
@@ -34,27 +25,25 @@ pub trait HandlesLoadTracking {
 	-> impl LoadTrackingInApp + LoadTrackingInSubApp
 	where
 		T: ThreadSafe,
-		TLoadGroup: ThreadSafe,
-		TProgress: Progress + ThreadSafe;
+		TLoadGroup: ThreadSafe + LoadGroup,
+		TProgress: ThreadSafe + Progress;
 }
 
 pub trait LoadGroup {
-	type TState: FreelyMutableState + Copy;
-
 	/// State to signal that loading has begun. Should be set outside of the plugin.
-	const LOAD_STATE: Self::TState;
+	const LOAD_STATE: LoadActivity;
 
 	/// State to signal that loading has finished. Should be set by the plugin.
-	const LOAD_DONE_STATE: Self::TState;
+	const LOAD_DONE_STATE: Activity;
 
 	/// States used to signal a load plugin reset.
 	///
 	/// This aims to prevent [`after-load-systems`](HandlesLoadTracking::register_after_load_system)
 	/// from running.
 	///
-	/// Defaults to using `vec![Self::LOAD_STATE]`
-	fn load_reset_states() -> Vec<Self::TState> {
-		vec![Self::LOAD_STATE]
+	/// Defaults to using `vec![Activity::LoadAssets(Self::LOAD_STATE)]`
+	fn load_reset_states() -> Vec<Activity> {
+		vec![Activity::LoadAssets(Self::LOAD_STATE)]
 	}
 }
 
@@ -122,6 +111,27 @@ pub struct DependenciesProgress;
 
 impl Progress for DependenciesProgress {
 	const IS_PROCESSING: IsProcessing = IsProcessing::Dependencies;
+}
+
+pub struct LoadingEssentialAssets;
+
+impl LoadGroup for LoadingEssentialAssets {
+	const LOAD_STATE: LoadActivity = LoadActivity::EssentialAssets;
+	const LOAD_DONE_STATE: Activity = Activity::Settable(SettableActivity::StartScreen);
+}
+
+pub struct LoadingGame;
+
+impl LoadGroup for LoadingGame {
+	const LOAD_STATE: LoadActivity = LoadActivity::Assets;
+	const LOAD_DONE_STATE: Activity = Activity::Settable(SettableActivity::Play);
+
+	fn load_reset_states() -> Vec<Activity> {
+		vec![
+			Activity::Settable(SettableActivity::NewGame),
+			Activity::Settable(SettableActivity::Load),
+		]
+	}
 }
 
 mod internal {

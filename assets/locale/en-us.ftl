@@ -53,7 +53,8 @@ camera-key-rotate = Camera Rotation
 menu-inventory = Inventory
 menu-combos = Combos
 menu-settings = Settings
-menu-paused = Pause
+
+paused = Pause
 
 save-quick-save = Quick Save
 save-quick-load = Quick Load

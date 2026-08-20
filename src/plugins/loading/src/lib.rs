@@ -3,11 +3,9 @@ pub mod systems;
 pub mod traits;
 
 mod asset_loader;
-mod states;
 
 use crate::{
-	resources::{group_loaded::GroupLoaded, uniques::Uniques},
-	states::load_state::Load,
+	resources::{group_loaded::GroupLoaded, track::IsDone, uniques::Uniques},
 	systems::{
 		begin_loading_resource::BeginLoadingResource,
 		instantiate_resource::InstantiateResource,
@@ -15,81 +13,133 @@ use crate::{
 };
 use asset_loader::CustomAssetLoader;
 use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
-use common::{
-	prelude::*,
-	states::{
-		game_state::{LoadingEssentialAssets, LoadingGame},
-		transition_to_state,
-	},
-	tools::path::Path,
-};
+use common::{prelude::*, tools::path::Path};
 use resources::track::Track;
 use serde::Deserialize;
-use states::load_state::State;
 use std::{any::type_name, error::Error, fmt::Debug, marker::PhantomData};
 use systems::{begin_loading_folder_assets::begin_loading_folder_assets, is_loaded::is_loaded};
+use zyheeda_core::prelude::*;
 
-pub struct LoadingPlugin;
+pub struct LoadingPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl Plugin for LoadingPlugin {
-	fn build(&self, app: &mut App) {
-		Self::register_load_group::<LoadingEssentialAssets>(app);
-		Self::register_load_group::<LoadingGame>(app);
+impl<TGameStates> LoadingPlugin<TGameStates>
+where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
+{
+	pub fn from_plugins(_: &TGameStates) -> Self {
+		Self(PhantomData)
+	}
+
+	fn default_transitions(app: &mut App) -> Result<(), TransitionsConfigError> {
+		TGameStates::add_activity_transitions(
+			app,
+			SettableActivity::Save,
+			|| Some(()),
+			hash_map! { () => ActivityTransition::ToPrevious },
+		)?;
+
+		TGameStates::add_activity_transitions(
+			app,
+			SettableActivity::NewGame,
+			|| Some(()),
+			hash_map! { () => ActivityTransition::To(Activity::LoadAssets(LoadActivity::Assets)) },
+		)?;
+
+		Ok(())
+	}
+
+	fn load_transitions<TLoadGroup>(
+		app: &mut App,
+		load_assets: Activity,
+		load_deps: Activity,
+		done: Activity,
+	) -> Result<(), TransitionsConfigError>
+	where
+		TLoadGroup: ThreadSafe,
+	{
+		TGameStates::add_activity_transitions(
+			app,
+			load_assets,
+			Track::<TLoadGroup, AssetsProgress>::is_done,
+			hash_map! { IsDone => ActivityTransition::To(load_deps) },
+		)?;
+
+		TGameStates::add_activity_transitions(
+			app,
+			load_deps,
+			Track::<TLoadGroup, DependenciesProgress>::is_done,
+			hash_map! { IsDone => ActivityTransition::To(done) },
+		)?;
+
+		Ok(())
 	}
 }
 
-impl HandlesLoadTracking for LoadingPlugin {
-	fn processing_state<TLoadGroup, TProgress>() -> impl States + Copy
-	where
-		TLoadGroup: ThreadSafe,
-		TProgress: Progress + ThreadSafe,
-	{
-		Load::<TLoadGroup>::processing::<TProgress>()
-	}
+impl<TGameStates> Plugin for LoadingPlugin<TGameStates>
+where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
+{
+	fn build(&self, app: &mut App) {
+		Self::register_load_group::<LoadingEssentialAssets>(app);
+		Self::register_load_group::<LoadingGame>(app);
 
+		if let Err(err) = Self::default_transitions(app) {
+			panic!("{err}");
+		}
+	}
+}
+
+impl<TGameStates> HandlesLoadTracking for LoadingPlugin<TGameStates>
+where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
+{
 	fn register_load_group<TLoadGroup>(app: &mut App)
 	where
 		TLoadGroup: LoadGroup + ThreadSafe,
 	{
-		let loading = TLoadGroup::LOAD_STATE;
+		let load = TLoadGroup::LOAD_STATE;
 		let done = TLoadGroup::LOAD_DONE_STATE;
 		let reset = TLoadGroup::load_reset_states();
-
-		let load_assets = Load::<TLoadGroup>::new(State::LoadAssets);
-		let load_deps = Load::<TLoadGroup>::new(State::ResolveDependencies);
-		let load_default = Load::<TLoadGroup>::default();
+		let load_assets = Activity::LoadAssets(load);
+		let load_deps = Activity::LoadDependencies(load);
 
 		for reset in reset {
-			app.add_systems(OnEnter(reset), GroupLoaded::<TLoadGroup>::remove);
+			TGameStates::add_game_state_systems(
+				app,
+				OnGameState::Enter(reset),
+				GroupLoaded::<TLoadGroup>::remove,
+			);
 		}
 
-		app.init_state::<Load<TLoadGroup>>()
-			.add_systems(OnEnter(loading), transition_to_state(load_assets))
-			.add_systems(
-				OnEnter(load_assets),
-				Track::<TLoadGroup, AssetsProgress>::init,
-			)
-			.add_systems(
-				OnExit(load_assets),
-				Track::<TLoadGroup, AssetsProgress>::remove,
-			)
-			.add_systems(
-				OnEnter(load_deps),
-				Track::<TLoadGroup, DependenciesProgress>::init,
-			)
-			.add_systems(
-				OnExit(load_deps),
-				Track::<TLoadGroup, DependenciesProgress>::remove,
-			)
-			.add_systems(
-				Last,
-				(
-					Track::<TLoadGroup, AssetsProgress>::when_all_done_set(load_deps),
-					Track::<TLoadGroup, DependenciesProgress>::when_all_done_set(load_default),
-					Track::<TLoadGroup, DependenciesProgress>::when_all_done_set(done),
-				),
-			)
-			.add_systems(OnEnter(done), GroupLoaded::<TLoadGroup>::insert);
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Enter(load_assets),
+			Track::<TLoadGroup, AssetsProgress>::init,
+		);
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Exit(load_assets),
+			Track::<TLoadGroup, AssetsProgress>::remove,
+		);
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Enter(load_deps),
+			Track::<TLoadGroup, DependenciesProgress>::init,
+		);
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Exit(load_deps),
+			Track::<TLoadGroup, DependenciesProgress>::remove,
+		);
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Enter(done),
+			GroupLoaded::<TLoadGroup>::insert,
+		);
+
+		if let Err(err) = Self::load_transitions::<TLoadGroup>(app, load_assets, load_deps, done) {
+			panic!("{err}");
+		}
 	}
 
 	fn register_after_load_system<TLoadGroup>() -> impl RunAfterLoadedInApp
@@ -103,10 +153,10 @@ impl HandlesLoadTracking for LoadingPlugin {
 	-> impl LoadTrackingInApp + LoadTrackingInSubApp
 	where
 		T: 'static,
-		TLoadGroup: ThreadSafe,
+		TLoadGroup: ThreadSafe + LoadGroup,
 		TProgress: Progress + ThreadSafe,
 	{
-		RegisterLoadTracking(PhantomData::<(T, TLoadGroup, TProgress)>)
+		RegisterLoadTracking(PhantomData::<(T, TGameStates, TLoadGroup, TProgress)>)
 	}
 }
 
@@ -127,13 +177,17 @@ where
 	}
 }
 
-struct RegisterLoadTracking<T, TLoadGroup, TProgress>(PhantomData<(T, TLoadGroup, TProgress)>);
+struct RegisterLoadTracking<T, TGameState, TLoadGroup, TProgress>(
+	PhantomData<(T, TGameState, TLoadGroup, TProgress)>,
+);
 
-impl<T, TLoadGroup, TProgress> LoadTrackingInApp for RegisterLoadTracking<T, TLoadGroup, TProgress>
+impl<T, TGameState, TLoadGroup, TProgress> LoadTrackingInApp
+	for RegisterLoadTracking<T, TGameState, TLoadGroup, TProgress>
 where
 	T: 'static,
-	TLoadGroup: ThreadSafe,
-	TProgress: Progress + ThreadSafe,
+	TGameState: ThreadSafe + HandlesGameStates + SystemSetDefinition,
+	TLoadGroup: ThreadSafe + LoadGroup,
+	TProgress: ThreadSafe + Progress,
 {
 	fn in_app<TMarker, TLoaded>(
 		self,
@@ -142,6 +196,11 @@ where
 	) where
 		TLoaded: Into<Loaded> + 'static,
 	{
+		let load = TLoadGroup::LOAD_STATE;
+		let state = match TProgress::IS_PROCESSING {
+			IsProcessing::Assets => Activity::LoadAssets(load),
+			IsProcessing::Dependencies => Activity::LoadDependencies(load),
+		};
 		let mut uniques = Uniques::mut_from(app);
 		let is_unique = uniques.register::<(TLoadGroup, TProgress, T)>().is_unique();
 
@@ -159,17 +218,19 @@ where
 			Update,
 			all_loaded
 				.pipe(Track::<TLoadGroup, TProgress>::track::<T, TLoaded>)
-				.run_if(in_state(Load::<TLoadGroup>::processing::<TProgress>())),
+				.run_if(TGameState::in_game_state([state]))
+				.after_plugin(TGameState::SYSTEMS),
 		);
 	}
 }
 
-impl<T, TLoadGroup, TProgress> LoadTrackingInSubApp
-	for RegisterLoadTracking<T, TLoadGroup, TProgress>
+impl<T, TGameStates, TLoadGroup, TProgress> LoadTrackingInSubApp
+	for RegisterLoadTracking<T, TGameStates, TLoadGroup, TProgress>
 where
 	T: 'static,
-	TProgress: Progress + ThreadSafe,
-	TLoadGroup: ThreadSafe,
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
+	TProgress: ThreadSafe + Progress,
+	TLoadGroup: ThreadSafe + LoadGroup,
 {
 	fn in_sub_app<TMarker>(
 		self,
@@ -195,12 +256,13 @@ where
 			schedule,
 			all_loaded
 				.pipe(Track::<TLoadGroup, TProgress>::track_in_main_world::<T>)
-				.run_if(Track::<TLoadGroup, TProgress>::main_world_is_processing),
+				.run_if(Track::<TLoadGroup, TProgress>::main_world_is_processing)
+				.after_plugin(TGameStates::SYSTEMS),
 		);
 	}
 }
 
-impl HandlesCustomAssets for LoadingPlugin {
+impl<TDependencies> HandlesCustomAssets for LoadingPlugin<TDependencies> {
 	fn register_custom_assets<TAsset, TDto>(app: &mut App)
 	where
 		TAsset: Asset + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
@@ -211,21 +273,23 @@ impl HandlesCustomAssets for LoadingPlugin {
 	}
 }
 
-impl HandlesCustomFolderAssets for LoadingPlugin {
+impl<TGameStates> HandlesCustomFolderAssets for LoadingPlugin<TGameStates>
+where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
+{
 	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
 	where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + std::fmt::Debug,
 		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + TypePath + ThreadSafe,
-		TLoadGroup: ThreadSafe,
+		TLoadGroup: ThreadSafe + LoadGroup,
 	{
-		LoadingPlugin::register_custom_assets::<TAsset, TDto>(app);
-		LoadingPlugin::register_load_tracking::<FolderLoadingOf<TAsset>, TLoadGroup, AssetsProgress>()
+		Self::register_custom_assets::<TAsset, TDto>(app);
+		Self::register_load_tracking::<FolderLoadingOf<TAsset>, TLoadGroup, AssetsProgress>()
 			.in_app(app, is_loaded::<TAsset>);
 
-		let load_assets = Load::<TLoadGroup>::new(State::LoadAssets);
-
-		app.add_systems(
-			OnEnter(load_assets),
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Enter(Activity::LoadAssets(TLoadGroup::LOAD_STATE)),
 			begin_loading_folder_assets::<TAsset, AssetServer>,
 		);
 	}
@@ -233,7 +297,10 @@ impl HandlesCustomFolderAssets for LoadingPlugin {
 
 struct FolderLoadingOf<TAsset>(PhantomData<TAsset>);
 
-impl HandlesAssetResourceLoading for LoadingPlugin {
+impl<TGameStates> HandlesAssetResourceLoading for LoadingPlugin<TGameStates>
+where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
+{
 	fn register_custom_resource_loading<TResource, TDto, TLoadGroup>(app: &mut App, path: Path)
 	where
 		TResource: Resource
@@ -246,14 +313,23 @@ impl HandlesAssetResourceLoading for LoadingPlugin {
 	{
 		let loading = TLoadGroup::LOAD_STATE;
 		let loading_done = resource_exists::<TResource>;
-		let on_begin_load = OnEnter(loading);
-		let loading_incomplete = in_state(loading).and_then(not(loading_done));
+		let loading_incomplete = TGameStates::in_game_state([loading]).and_then(not(loading_done));
 
-		LoadingPlugin::register_custom_assets::<TResource, TDto>(app);
-		LoadingPlugin::register_load_tracking::<TResource, TLoadGroup, AssetsProgress>()
+		Self::register_custom_assets::<TResource, TDto>(app);
+		Self::register_load_tracking::<TResource, TLoadGroup, AssetsProgress>()
 			.in_app(app, loading_done);
 
-		app.add_systems(on_begin_load, TResource::begin_loading(path))
-			.add_systems(Update, TResource::instantiate.run_if(loading_incomplete));
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Enter(loading),
+			TResource::begin_loading(path),
+		);
+
+		app.add_systems(
+			Update,
+			TResource::instantiate
+				.run_if(loading_incomplete)
+				.after_plugin(TGameStates::SYSTEMS),
+		);
 	}
 }

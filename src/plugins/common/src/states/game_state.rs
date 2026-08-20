@@ -4,7 +4,6 @@ use crate::{
 	tools::iter_helpers::{first, next},
 	traits::{
 		automatic_transitions::{AutoTransitions, TransitionTo},
-		handles_load_tracking::LoadGroup,
 		iteration::{FiniteIter, IterFinite},
 		pause_control::PauseControl,
 		states::PlayState,
@@ -84,26 +83,6 @@ impl PlayState for GameState {
 }
 
 pub struct LoadingEssentialAssets;
-
-impl LoadGroup for LoadingEssentialAssets {
-	type TState = GameState;
-
-	const LOAD_STATE: GameState = GameState::LoadingEssentialAssets;
-	const LOAD_DONE_STATE: GameState = GameState::StartMenu;
-}
-
-pub struct LoadingGame;
-
-impl LoadGroup for LoadingGame {
-	type TState = GameState;
-
-	const LOAD_STATE: GameState = GameState::LoadDependencies;
-	const LOAD_DONE_STATE: GameState = GameState::Play;
-
-	fn load_reset_states() -> Vec<Self::TState> {
-		vec![GameState::NewGame, GameState::Save(SaveState::Load)]
-	}
-}
 
 #[derive(Debug, PartialEq)]
 pub struct NoKeySet;

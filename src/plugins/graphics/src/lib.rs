@@ -36,7 +36,7 @@ use bevy::{
 	prelude::*,
 	render::{RenderApp, render_resource::PipelineCache},
 };
-use common::{components::essence::Essence, prelude::*, states::game_state::LoadingGame};
+use common::{components::essence::Essence, prelude::*};
 use components::{
 	camera_labels::{UiPass, WorldPass},
 	effect_material_handle::EffectMaterialHandle,

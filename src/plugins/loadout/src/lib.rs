@@ -26,10 +26,7 @@ use crate::{
 	systems::{enqueue::EnqueueSystem, flush::FlushSystem},
 };
 use bevy::prelude::*;
-use common::{
-	prelude::*,
-	states::game_state::{GameState, LoadingGame},
-};
+use common::{prelude::*, states::game_state::GameState};
 use components::{
 	active_skill::ActiveSkill,
 	combos::CombosInternal,

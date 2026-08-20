@@ -1,3 +1,5 @@
+#[cfg(debug_assertions)]
+use crate::traits::insert_ui_content::InsertUiContent;
 use crate::{
 	AddDropdown,
 	AddTooltip,
@@ -6,95 +8,14 @@ use crate::{
 		tooltip::{Tooltip, TooltipUiConfig},
 	},
 	tools::Layout,
-	traits::{GetLayout, GetRootNode, LoadUi},
+	traits::{GetLayout, GetRootNode},
 };
-#[cfg(debug_assertions)]
-use crate::{AddUI, traits::insert_ui_content::InsertUiContent};
 use bevy::{
 	ecs::{relationship::RelatedSpawnerCommands, system::SystemParam},
 	prelude::*,
 };
-use common::{prelude::*, states::game_state::GameState};
-use std::{fmt::Debug, marker::PhantomData, time::Duration};
-
-#[derive(Component)]
-#[require(Node = squared(), BackgroundColor = black())]
-struct StateTime<TState>(Duration, Option<TState>);
-
-fn squared() -> Node {
-	Node {
-		position_type: PositionType::Absolute,
-		right: Val::Px(10.),
-		bottom: Val::Px(10.),
-		border: UiRect::all(Val::Px(2.)),
-		..default()
-	}
-}
-
-fn black() -> BackgroundColor {
-	BackgroundColor(Color::BLACK)
-}
-
-impl<TState> Default for StateTime<TState> {
-	fn default() -> Self {
-		Self(Duration::ZERO, None)
-	}
-}
-
-impl<TState> LoadUi<AssetServer> for StateTime<TState> {
-	fn load_ui(_: &mut AssetServer) -> Self {
-		StateTime::default()
-	}
-}
-
-impl<TState> InsertUiContent for StateTime<TState>
-where
-	TState: Debug + Copy,
-{
-	fn insert_ui_content<TLocalization>(
-		&self,
-		_: &TLocalization,
-		parent: &mut RelatedSpawnerCommands<ChildOf>,
-	) {
-		let state = self.1.map(|s| format!("{s:?}")).unwrap_or("???".into());
-		parent.spawn((
-			Text::new(format!(
-				"{}.{:0>3} seconds in state: {state}",
-				self.0.as_secs(),
-				self.0.subsec_millis()
-			)),
-			TextFont {
-				font_size: FontSize::Px(20.),
-				..default()
-			},
-		));
-	}
-}
-
-fn update_state_time<TState>(
-	mut run_times: Query<&mut StateTime<TState>>,
-	time: Res<Time<Real>>,
-	state: Res<State<TState>>,
-) where
-	TState: States + Copy,
-{
-	let Ok(mut run_time) = run_times.single_mut() else {
-		return;
-	};
-	run_time.0 += time.delta();
-	run_time.1 = Some(*state.get());
-}
-
-pub fn setup_run_time_display<TLocalization, TGraphics>(app: &mut App)
-where
-	TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
-	TGraphics: for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi>,
-{
-	for state in GameState::iterator() {
-		app.add_ui::<StateTime<GameState>, TLocalization, TGraphics>(state);
-	}
-	app.add_systems(Update, update_state_time::<GameState>);
-}
+use common::prelude::*;
+use std::marker::PhantomData;
 
 #[derive(Component)]
 struct DropdownButton {

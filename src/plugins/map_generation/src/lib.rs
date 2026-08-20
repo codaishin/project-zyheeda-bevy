@@ -25,10 +25,7 @@ use crate::{
 	system_params::set_agent_prefab::SetAgentPrefab,
 };
 use bevy::prelude::*;
-use common::{
-	prelude::*,
-	states::game_state::{GameState, LoadingGame},
-};
+use common::{prelude::*, states::game_state::GameState};
 use components::grid::Grid;
 use std::marker::PhantomData;
 use zyheeda_core::strings::normalized_name::NormalizedName;

@@ -1,5 +1,5 @@
 use crate::{
-	tools::action_key::{ActionKey, user_input::UserInput},
+	tools::action_key::user_input::UserInput,
 	traits::{
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
@@ -8,7 +8,6 @@ use crate::{
 };
 use bevy::input::keyboard::KeyCode;
 use serde::{Deserialize, Serialize};
-use zyheeda_core::prelude::*;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum SaveKey {
@@ -25,28 +24,11 @@ impl From<SaveKey> for Token {
 	}
 }
 
-impl From<SaveKey> for ActionKey {
-	fn from(save_key: SaveKey) -> Self {
-		Self::Save(save_key)
-	}
-}
-
 impl From<SaveKey> for UserInput {
 	fn from(value: SaveKey) -> Self {
 		match value {
 			SaveKey::QuickSave => Self::KeyCode(KeyCode::F5),
 			SaveKey::QuickLoad => Self::KeyCode(KeyCode::F9),
-		}
-	}
-}
-
-impl TryFrom<ActionKey> for SaveKey {
-	type Error = IsNot<SaveKey>;
-
-	fn try_from(action_key: ActionKey) -> Result<Self, Self::Error> {
-		match action_key {
-			ActionKey::Save(save_key) => Ok(save_key),
-			_ => Err(IsNot::target_type()),
 		}
 	}
 }
