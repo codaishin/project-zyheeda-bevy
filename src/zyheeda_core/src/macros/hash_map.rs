@@ -1,7 +1,10 @@
 #[macro_export]
 macro_rules! hash_map {
-	($($key:expr => $value:expr),* $(,)?) => {
-		std::collections::hash_map::HashMap::from([$(($key, $value)),*])
+	() => {
+		std::collections::hash_map::HashMap::default()
+	};
+	($($key:expr => $value:expr),+ $(,)?) => {
+		std::collections::hash_map::HashMap::from([$(($key, $value)),+])
 	};
 }
 
