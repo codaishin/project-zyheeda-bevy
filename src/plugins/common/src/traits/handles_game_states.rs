@@ -13,7 +13,7 @@ use std::{
 };
 use zyheeda_core::prelude::*;
 
-pub trait HandlesGameStates: AddGameStateSystem + ActivityTransitions + NonPausedStates {
+pub trait HandlesGameStates: AddGameStateSystem + AddActivityTransitions + NonPausedStates {
 	type TGameStates: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates> + GamePaused;
 	type TGameStatesMut: for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>;
 }
@@ -26,12 +26,12 @@ pub trait AddGameStateSystem {
 	);
 }
 
-pub trait ActivityTransitions {
-	fn activity_transitions<TResult, M>(
+pub trait AddActivityTransitions {
+	fn add_activity_transitions<TResult, M>(
 		app: &mut App,
-		from_state: Activity,
+		from_state: impl Into<Activity>,
 		check: impl IntoSystem<(), Option<TResult>, M>,
-		transitions: HashMap<TResult, ActivityTransition>,
+		transitions: impl Into<HashMap<TResult, ActivityTransition>>,
 	) -> Result<(), TransitionsConfigError>
 	where
 		TResult: PartialEq + Eq + Hash + ThreadSafe;

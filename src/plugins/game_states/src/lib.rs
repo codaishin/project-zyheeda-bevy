@@ -128,16 +128,18 @@ impl NonPausedStates for GameStatesPlugin {
 	}
 }
 
-impl ActivityTransitions for GameStatesPlugin {
-	fn activity_transitions<TResult, M>(
+impl AddActivityTransitions for GameStatesPlugin {
+	fn add_activity_transitions<TResult, M>(
 		app: &mut App,
-		from_state: Activity,
+		from_state: impl Into<Activity>,
 		check: impl IntoSystem<(), Option<TResult>, M>,
-		transitions: HashMap<TResult, ActivityTransition>,
+		transitions: impl Into<HashMap<TResult, ActivityTransition>>,
 	) -> Result<(), TransitionsConfigError>
 	where
 		TResult: PartialEq + Eq + Hash + ThreadSafe,
 	{
+		let from_state = from_state.into();
+		let transitions = transitions.into();
 		let any_self_transitions = transitions.values().any(
 			|to_state| matches!(to_state, ActivityTransition::To(to_state) if to_state == &from_state),
 		);
@@ -217,6 +219,7 @@ mod tests {
 		state::app::StatesPlugin,
 	};
 	use testing::SingleThreadedApp;
+	use zyheeda_core::prelude::*;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
@@ -230,14 +233,13 @@ mod tests {
 	#[test]
 	fn apply_transition() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		_ = GameStatesPlugin::activity_transitions(
+		_ = GameStatesPlugin::add_activity_transitions(
 			&mut app,
-			Activity::Settable(SettableActivity::Paused),
+			SettableActivity::Paused,
 			|| Some("new game"),
-			HashMap::from([(
-				"new game",
-				ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
-			)]),
+			hash_map! {
+				"new game" => ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
+			},
 		);
 
 		app.world_mut()
@@ -257,11 +259,13 @@ mod tests {
 	#[test]
 	fn apply_transition_to_previous() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		_ = GameStatesPlugin::activity_transitions(
+		_ = GameStatesPlugin::add_activity_transitions(
 			&mut app,
-			Activity::Settable(SettableActivity::Paused),
+			SettableActivity::Paused,
 			|| Some("previous"),
-			HashMap::from([("previous", ActivityTransition::ToPrevious)]),
+			hash_map! {
+				"previous" => ActivityTransition::ToPrevious
+			},
 		);
 
 		app.world_mut()
@@ -288,14 +292,13 @@ mod tests {
 	#[test]
 	fn no_transition() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		_ = GameStatesPlugin::activity_transitions(
+		_ = GameStatesPlugin::add_activity_transitions(
 			&mut app,
-			Activity::Settable(SettableActivity::Paused),
+			SettableActivity::Paused,
 			|| Some("no new game"),
-			HashMap::from([(
-				"new game",
-				ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
-			)]),
+			hash_map! {
+				"new game" => ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
+			},
 		);
 
 		app.world_mut()
@@ -318,16 +321,15 @@ mod tests {
 		struct Transition(bool);
 
 		let mut app = setup();
-		_ = GameStatesPlugin::activity_transitions(
+		_ = GameStatesPlugin::add_activity_transitions(
 			&mut app,
-			Activity::Settable(SettableActivity::Paused),
+			SettableActivity::Paused,
 			|transition: Option<Res<Transition>>| {
 				transition.map(|t| t.into_inner()).map(|Transition(t)| *t)
 			},
-			HashMap::from([(
-				true,
-				ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-			)]),
+			hash_map! {
+				true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+			},
 		);
 
 		app.world_mut()
@@ -349,9 +351,9 @@ mod tests {
 	#[test]
 	fn no_transition_if_not_in_from_state() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		_ = GameStatesPlugin::activity_transitions(
+		_ = GameStatesPlugin::add_activity_transitions(
 			&mut app,
-			Activity::Settable(SettableActivity::Paused),
+			SettableActivity::Paused,
 			|| Some(true),
 			HashMap::from([(
 				true,
@@ -376,17 +378,16 @@ mod tests {
 	#[test]
 	fn forbid_repeated_config() {
 		let mut app = setup();
-		_ = GameStatesPlugin::activity_transitions(
+		_ = GameStatesPlugin::add_activity_transitions(
 			&mut app,
-			Activity::Settable(SettableActivity::Paused),
+			SettableActivity::Paused,
 			|| Some(true),
-			HashMap::from([(
-				true,
-				ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-			)]),
+			hash_map! {
+				true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+			},
 		);
 
-		let result = GameStatesPlugin::activity_transitions(
+		let result = GameStatesPlugin::add_activity_transitions(
 			&mut app,
 			Activity::Settable(SettableActivity::Paused),
 			|| Some(true),
@@ -410,14 +411,13 @@ mod tests {
 	fn forbid_transitions_to_self() {
 		let mut app = setup();
 
-		let result = GameStatesPlugin::activity_transitions(
+		let result = GameStatesPlugin::add_activity_transitions(
 			&mut app,
-			Activity::Settable(SettableActivity::Paused),
+			SettableActivity::Paused,
 			|| Some(true),
-			HashMap::from([(
-				true,
-				ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
-			)]),
+			hash_map! {
+				true => ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
+			},
 		);
 
 		let error = match result {
@@ -435,23 +435,21 @@ mod tests {
 	#[test]
 	fn allow_transition_if_previous_broke() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		_ = GameStatesPlugin::activity_transitions(
+		_ = GameStatesPlugin::add_activity_transitions(
 			&mut app,
-			Activity::Settable(SettableActivity::Paused),
+			SettableActivity::Paused,
 			|| Some(true),
-			HashMap::from([(
-				true,
-				ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
-			)]),
+			hash_map! {
+				true => ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
+			},
 		);
-		_ = GameStatesPlugin::activity_transitions(
+		_ = GameStatesPlugin::add_activity_transitions(
 			&mut app,
-			Activity::Settable(SettableActivity::Paused),
+			SettableActivity::Paused,
 			|| Some(true),
-			HashMap::from([(
-				true,
-				ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-			)]),
+			hash_map! {
+				true => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+			},
 		);
 
 		app.world_mut()
