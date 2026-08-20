@@ -95,12 +95,14 @@ impl HandlesGameStates for GameStatesPlugin {
 }
 
 impl AddGameStateSystem for GameStatesPlugin {
-	fn add_game_state_systems<M>(
+	fn add_game_state_systems<M, T>(
 		app: &mut App,
-		on_state: OnGameState,
+		on_state: OnGameState<T>,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
-	) {
-		match on_state {
+	) where
+		OnGameState<T>: Into<OnGameState>,
+	{
+		match on_state.into() {
 			OnGameState::Enter(GameState::Activity(activity)) => {
 				app.add_systems(OnEnter(ActivityState::from(activity)), systems);
 			}

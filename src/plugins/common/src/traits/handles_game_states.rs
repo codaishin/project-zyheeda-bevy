@@ -21,11 +21,12 @@ pub trait HandlesGameStates:
 }
 
 pub trait AddGameStateSystem {
-	fn add_game_state_systems<M>(
+	fn add_game_state_systems<M, T>(
 		app: &mut App,
-		on_state: OnGameState,
+		on_state: OnGameState<T>,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
-	);
+	) where
+		OnGameState<T>: Into<OnGameState>;
 }
 
 pub trait AddActivityTransitions {
@@ -133,10 +134,29 @@ pub trait GameStatesMut {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum OnGameState {
-	Enter(GameState),
-	Exit(GameState),
+pub enum OnGameState<T = GameState> {
+	Enter(T),
+	Exit(T),
 }
+
+macro_rules! impl_on_game_state_conversions {
+	($fst:ty, $($rest:ty),+ $(,)?) => {
+		impl_on_game_state_conversions!($fst);
+		impl_on_game_state_conversions!($($rest),+);
+	};
+	($ty:ty) => {
+		impl From<OnGameState<$ty>> for OnGameState {
+			fn from(value: OnGameState<$ty>) -> Self {
+				match value {
+					OnGameState::Enter(s) => OnGameState::Enter(s.into()),
+					OnGameState::Exit(s) => OnGameState::Exit(s.into()),
+				}
+			}
+		}
+	};
+}
+
+impl_on_game_state_conversions!(Activity, IngameUI, DerivedActivity, SettableActivity);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum GameState {
@@ -296,11 +316,13 @@ mod tests {
 		}
 
 		impl AddGameStateSystem for _Plugin {
-			fn add_game_state_systems<M>(
+			fn add_game_state_systems<M, T>(
 				_: &mut App,
-				_: OnGameState,
+				_: OnGameState<T>,
 				_: impl IntoScheduleConfigs<ScheduleSystem, M>,
-			) {
+			) where
+				OnGameState<T>: Into<OnGameState>,
+			{
 				panic!("NOT USED")
 			}
 		}
