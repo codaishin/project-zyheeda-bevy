@@ -13,9 +13,11 @@ use std::{
 };
 use zyheeda_core::prelude::*;
 
-pub trait HandlesGameStates: AddGameStateSystem + AddActivityTransitions + NonPausedStates {
-	type TGameStates: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates> + GamePaused;
-	type TGameStatesMut: for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>;
+pub trait HandlesGameStates:
+	AddGameStateSystem + AddActivityTransitions + NonPausedStates + GamePaused
+{
+	type TGameStates: ThreadSafe + for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates>;
+	type TGameStatesMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>;
 }
 
 pub trait AddGameStateSystem {
@@ -37,24 +39,23 @@ pub trait AddActivityTransitions {
 		TResult: PartialEq + Eq + Hash + ThreadSafe;
 }
 
-pub trait InGameState: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates> + 'static {
+pub trait InGameState: HandlesGameStates {
 	fn in_game_state<T>(game_state: T) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
 	where
 		T: Into<GameState>,
 	{
 		let game_state = game_state.into();
 
-		IntoSystem::into_system(move |states: StaticSystemParam<Self>| match game_state {
-			GameState::Activity(activity) => states.activity() == activity,
-			GameState::IngameUI(ui) => states.ui().contains(&ui),
-		})
+		IntoSystem::into_system(
+			move |states: StaticSystemParam<Self::TGameStates>| match game_state {
+				GameState::Activity(activity) => states.activity() == activity,
+				GameState::IngameUI(ui) => states.ui().contains(&ui),
+			},
+		)
 	}
 }
 
-impl<T> InGameState for T where
-	T: for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates> + 'static
-{
-}
+impl<T> InGameState for T where T: HandlesGameStates {}
 
 pub trait GamePaused {
 	fn game_paused() -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>;
@@ -267,6 +268,49 @@ mod tests {
 		use super::*;
 		use testing::SingleThreadedApp;
 
+		struct _Plugin;
+
+		impl HandlesGameStates for _Plugin {
+			type TGameStates = _Param<'static>;
+			type TGameStatesMut = _Param<'static>;
+		}
+
+		impl NonPausedStates for _Plugin {
+			fn add_non_pause_state(_: &mut App, _: impl Into<GameState>) {
+				panic!("NOT USED")
+			}
+		}
+
+		impl AddActivityTransitions for _Plugin {
+			fn add_activity_transitions<TResult, M>(
+				_: &mut App,
+				_: impl Into<Activity>,
+				_: impl IntoSystem<(), Option<TResult>, M>,
+				_: impl Into<HashMap<TResult, ActivityTransition>>,
+			) -> Result<(), TransitionsConfigError>
+			where
+				TResult: PartialEq + Eq + Hash + ThreadSafe,
+			{
+				panic!("NOT USED")
+			}
+		}
+
+		impl AddGameStateSystem for _Plugin {
+			fn add_game_state_systems<M>(
+				_: &mut App,
+				_: OnGameState,
+				_: impl IntoScheduleConfigs<ScheduleSystem, M>,
+			) {
+				panic!("NOT USED")
+			}
+		}
+
+		impl GamePaused for _Plugin {
+			fn game_paused() -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
+				IntoSystem::into_system(|| panic!("NOT USED"))
+			}
+		}
+
 		#[derive(Resource)]
 		struct _States {
 			activity: Activity,
@@ -285,6 +329,16 @@ mod tests {
 
 			fn ui(&self) -> &'_ HashSet<IngameUI> {
 				&self.states.ui
+			}
+		}
+
+		impl GameStatesMut for _Param<'_> {
+			fn set_activity(&mut self, _: SettableActivity) {
+				panic!("NOT USED")
+			}
+
+			fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
+				panic!("NOT USED")
 			}
 		}
 
@@ -316,7 +370,7 @@ mod tests {
 			let mut app = setup(Activity::Settable(SettableActivity::Play), []);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Param::<'static>::in_game_state(SettableActivity::Play)),
+				SystemRun::check.run_if(_Plugin::in_game_state(SettableActivity::Play)),
 			);
 
 			app.update();
@@ -329,7 +383,7 @@ mod tests {
 			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Param::<'static>::in_game_state(SettableActivity::Play)),
+				SystemRun::check.run_if(_Plugin::in_game_state(SettableActivity::Play)),
 			);
 
 			app.update();
@@ -345,7 +399,7 @@ mod tests {
 			);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Param::<'static>::in_game_state(IngameUI::Hud)),
+				SystemRun::check.run_if(_Plugin::in_game_state(IngameUI::Hud)),
 			);
 
 			app.update();
@@ -358,7 +412,7 @@ mod tests {
 			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Param::<'static>::in_game_state(IngameUI::Hud)),
+				SystemRun::check.run_if(_Plugin::in_game_state(IngameUI::Hud)),
 			);
 
 			app.update();
