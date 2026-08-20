@@ -46,7 +46,7 @@ impl GameStatesPlugin {
 				}
 				ActivityTransition::ToPrevious => {
 					let Some(last_transition) = state_transitions.read().last() else {
-						return Err(TransitionError::NoStateTransitionsFor(from_state));
+						return Err(TransitionError::NoStateTransitionMessagesFor(from_state));
 					};
 					let Some(ref previous) = last_transition.exited else {
 						return Err(TransitionError::NoPreviousStateFor(from_state));
@@ -100,8 +100,6 @@ impl AddGameStateSystem for GameStatesPlugin {
 		on_state: OnGameState,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	) {
-		let systems = systems.after(AutomaticTransitions::Override);
-
 		match on_state {
 			OnGameState::Enter(GameState::Activity(activity)) => {
 				app.add_systems(OnEnter(ActivityState::from(activity)), systems);
@@ -130,56 +128,10 @@ impl NonPausedStates for GameStatesPlugin {
 	}
 }
 
-impl AutomaticActivityTransitions for GameStatesPlugin {
-	type TOptionalTransitions<'a> = OptionalTransitions<'a>;
-
-	fn automatic_game_state_transitions(
+impl ActivityTransitions for GameStatesPlugin {
+	fn activity_transitions<TResult, M>(
 		app: &mut App,
 		from_state: Activity,
-		to_state: ActivityTransition,
-	) -> Result<Self::TOptionalTransitions<'_>, TransitionsConfigError> {
-		if matches!(to_state, ActivityTransition::To(to_state) if to_state == from_state) {
-			return Err(TransitionsConfigError::MayNotTransitionToSelf(from_state));
-		}
-
-		let ConfiguredTransitions(configured_transitions) = app
-			.world_mut()
-			.get_resource_or_init::<ConfiguredTransitions>()
-			.into_inner();
-		if configured_transitions.contains(&from_state) {
-			return Err(TransitionsConfigError::AlreadyConfigured(from_state));
-		}
-
-		configured_transitions.insert(from_state);
-
-		app.configure_sets(
-			OnEnter(ActivityState::from(from_state)),
-			(
-				AutomaticTransitions::Fallback,
-				AutomaticTransitions::Override,
-			)
-				.chain(),
-		);
-		app.add_systems(
-			OnEnter(ActivityState::from(from_state)),
-			(move || Some(to_state))
-				.pipe(GameStatesPlugin::apply_transition_from(from_state))
-				.pipe(OnError::log)
-				.in_set(AutomaticTransitions::Fallback),
-		);
-
-		Ok(OptionalTransitions { from_state, app })
-	}
-}
-
-pub struct OptionalTransitions<'a> {
-	from_state: Activity,
-	app: &'a mut App,
-}
-
-impl WithOptionalActivityTransitions for OptionalTransitions<'_> {
-	fn with_optional_transitions<TResult, M>(
-		self,
 		check: impl IntoSystem<(), Option<TResult>, M>,
 		transitions: HashMap<TResult, ActivityTransition>,
 	) -> Result<(), TransitionsConfigError>
@@ -187,30 +139,34 @@ impl WithOptionalActivityTransitions for OptionalTransitions<'_> {
 		TResult: PartialEq + Eq + Hash + ThreadSafe,
 	{
 		let any_self_transitions = transitions.values().any(
-			|to_state| matches!(to_state, ActivityTransition::To(to_state) if to_state == &self.from_state),
+			|to_state| matches!(to_state, ActivityTransition::To(to_state) if to_state == &from_state),
 		);
 		if any_self_transitions {
-			return Err(TransitionsConfigError::MayNotTransitionToSelf(
-				self.from_state,
-			));
+			return Err(TransitionsConfigError::MayNotTransitionToSelf(from_state));
 		}
 
-		self.app.add_systems(
-			OnEnter(ActivityState::from(self.from_state)),
+		let ConfiguredTransitions(configured) = app
+			.world_mut()
+			.get_resource_or_init::<ConfiguredTransitions>()
+			.into_inner();
+		if configured.contains(&from_state) {
+			return Err(TransitionsConfigError::AlreadyConfigured(from_state));
+		}
+
+		configured.insert(from_state);
+
+		app.add_systems(
+			Update,
 			check
 				.pipe(move |In(result)| transitions.get(&result?).copied())
-				.pipe(GameStatesPlugin::apply_transition_from(self.from_state))
+				.pipe(GameStatesPlugin::apply_transition_from(from_state))
 				.pipe(OnError::log)
-				.in_set(AutomaticTransitions::Override),
+				.run_if(in_state(ActivityState::from(from_state)))
+				.in_set(GameStateSystems),
 		);
+
 		Ok(())
 	}
-}
-
-#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-enum AutomaticTransitions {
-	Fallback,
-	Override,
 }
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -218,14 +174,14 @@ pub struct GameStateSystems;
 
 #[derive(Debug, PartialEq)]
 enum TransitionError {
-	NoStateTransitionsFor(Activity),
+	NoStateTransitionMessagesFor(Activity),
 	NoPreviousStateFor(Activity),
 }
 
 impl Display for TransitionError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			TransitionError::NoStateTransitionsFor(state) => {
+			TransitionError::NoStateTransitionMessagesFor(state) => {
 				write!(
 					f,
 					"{state:?}: Could not retrieve state transition messages to determine previous state"
@@ -260,7 +216,6 @@ mod tests {
 		ecs::system::{RunSystemError, RunSystemOnce},
 		state::app::StatesPlugin,
 	};
-	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -275,64 +230,9 @@ mod tests {
 	#[test]
 	fn apply_transition() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		_ = GameStatesPlugin::automatic_game_state_transitions(
+		_ = GameStatesPlugin::activity_transitions(
 			&mut app,
 			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-		);
-
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
-			})?;
-		app.update();
-		app.update();
-
-		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::Play)),
-			app.world().resource::<State<ActivityState>>().get()
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn apply_transition_to_previous() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		_ = GameStatesPlugin::automatic_game_state_transitions(
-			&mut app,
-			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::ToPrevious,
-		);
-
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(SettableActivity::Play)));
-			})?;
-		app.update();
-		app.world_mut()
-			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
-			})?;
-		app.update();
-		app.update();
-
-		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::Play)),
-			app.world().resource::<State<ActivityState>>().get()
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn apply_conditional_transition() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let transitions = GameStatesPlugin::automatic_game_state_transitions(
-			&mut app,
-			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-		)
-		.unwrap();
-		_ = transitions.with_optional_transitions(
 			|| Some("new game"),
 			HashMap::from([(
 				"new game",
@@ -355,15 +255,11 @@ mod tests {
 	}
 
 	#[test]
-	fn apply_conditional_transition_to_previous() -> Result<(), RunSystemError> {
+	fn apply_transition_to_previous() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let transitions = GameStatesPlugin::automatic_game_state_transitions(
+		_ = GameStatesPlugin::activity_transitions(
 			&mut app,
 			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-		)
-		.unwrap();
-		_ = transitions.with_optional_transitions(
 			|| Some("previous"),
 			HashMap::from([("previous", ActivityTransition::ToPrevious)]),
 		);
@@ -389,20 +285,13 @@ mod tests {
 		Ok(())
 	}
 
-	#[test_case(Some("Muhaha, I'm an invalid, deal with it"); "on mismatch")]
-	#[test_case(None; "on check returning none")]
-	fn apply_fallback_when_conditional_transitions_do_not_match(
-		result: Option<&'static str>,
-	) -> Result<(), RunSystemError> {
+	#[test]
+	fn no_transition() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let transitions = GameStatesPlugin::automatic_game_state_transitions(
+		_ = GameStatesPlugin::activity_transitions(
 			&mut app,
 			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-		)
-		.unwrap();
-		_ = transitions.with_optional_transitions(
-			move || result,
+			|| Some("no new game"),
 			HashMap::from([(
 				"new game",
 				ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
@@ -417,37 +306,27 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::Play)),
+			&ActivityState(Activity::Settable(SettableActivity::Paused)),
 			app.world().resource::<State<ActivityState>>().get()
 		);
 		Ok(())
 	}
 
 	#[test]
-	fn allow_automatic_transitions_to_be_overridden() -> Result<(), RunSystemError> {
+	fn delayed_transition() -> Result<(), RunSystemError> {
+		#[derive(Resource)]
+		struct Transition(bool);
+
 		let mut app = setup();
-		GameStatesPlugin::add_game_state_systems(
-			&mut app,
-			OnGameState::Enter(GameState::Activity(Activity::Settable(
-				SettableActivity::Paused,
-			))),
-			|mut state: ResMut<NextState<ActivityState>>| {
-				state.set(ActivityState(Activity::Settable(
-					SettableActivity::StartScreen,
-				)));
-			},
-		);
-		let transitions = GameStatesPlugin::automatic_game_state_transitions(
+		_ = GameStatesPlugin::activity_transitions(
 			&mut app,
 			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-		)
-		.unwrap();
-		_ = transitions.with_optional_transitions(
-			|| Some(true),
+			|transition: Option<Res<Transition>>| {
+				transition.map(|t| t.into_inner()).map(|Transition(t)| *t)
+			},
 			HashMap::from([(
 				true,
-				ActivityTransition::To(Activity::Settable(SettableActivity::Save)),
+				ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
 			)]),
 		);
 
@@ -456,10 +335,39 @@ mod tests {
 				state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
 			})?;
 		app.update();
+		app.insert_resource(Transition(true));
+		app.update();
 		app.update();
 
 		assert_eq!(
-			&ActivityState(Activity::Settable(SettableActivity::StartScreen)),
+			&ActivityState(Activity::Settable(SettableActivity::Play)),
+			app.world().resource::<State<ActivityState>>().get()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn no_transition_if_not_in_from_state() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		_ = GameStatesPlugin::activity_transitions(
+			&mut app,
+			Activity::Settable(SettableActivity::Paused),
+			|| Some(true),
+			HashMap::from([(
+				true,
+				ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+			)]),
+		);
+
+		app.world_mut()
+			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+				state.set(ActivityState(Activity::Settable(SettableActivity::NewGame)));
+			})?;
+		app.update();
+		app.update();
+
+		assert_eq!(
+			&ActivityState(Activity::Settable(SettableActivity::NewGame)),
 			app.world().resource::<State<ActivityState>>().get()
 		);
 		Ok(())
@@ -468,16 +376,24 @@ mod tests {
 	#[test]
 	fn forbid_repeated_config() {
 		let mut app = setup();
-		_ = GameStatesPlugin::automatic_game_state_transitions(
+		_ = GameStatesPlugin::activity_transitions(
 			&mut app,
 			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+			|| Some(true),
+			HashMap::from([(
+				true,
+				ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+			)]),
 		);
 
-		let result = GameStatesPlugin::automatic_game_state_transitions(
+		let result = GameStatesPlugin::activity_transitions(
 			&mut app,
 			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+			|| Some(true),
+			HashMap::from([(
+				false,
+				ActivityTransition::To(Activity::Settable(SettableActivity::NewGame)),
+			)]),
 		);
 
 		let error = match result {
@@ -494,10 +410,14 @@ mod tests {
 	fn forbid_transitions_to_self() {
 		let mut app = setup();
 
-		let result = GameStatesPlugin::automatic_game_state_transitions(
+		let result = GameStatesPlugin::activity_transitions(
 			&mut app,
 			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
+			|| Some(true),
+			HashMap::from([(
+				true,
+				ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
+			)]),
 		);
 
 		let error = match result {
@@ -513,35 +433,38 @@ mod tests {
 	}
 
 	#[test]
-	fn forbid_transitions_to_self_in_optional_transitions() {
+	fn allow_transition_if_previous_broke() -> Result<(), RunSystemError> {
 		let mut app = setup();
-
-		let transitions = GameStatesPlugin::automatic_game_state_transitions(
+		_ = GameStatesPlugin::activity_transitions(
 			&mut app,
 			Activity::Settable(SettableActivity::Paused),
-			ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
-		)
-		.unwrap();
-		let result = transitions.with_optional_transitions(
-			|| Some("foo"),
-			HashMap::from([
-				("foo", ActivityTransition::ToPrevious),
-				(
-					"bar",
-					ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
-				),
-			]),
+			|| Some(true),
+			HashMap::from([(
+				true,
+				ActivityTransition::To(Activity::Settable(SettableActivity::Paused)),
+			)]),
+		);
+		_ = GameStatesPlugin::activity_transitions(
+			&mut app,
+			Activity::Settable(SettableActivity::Paused),
+			|| Some(true),
+			HashMap::from([(
+				true,
+				ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+			)]),
 		);
 
-		let error = match result {
-			Ok(_) => panic!("Expected Error, but was value"),
-			Err(error) => error,
-		};
+		app.world_mut()
+			.run_system_once(|mut state: ResMut<NextState<ActivityState>>| {
+				state.set(ActivityState(Activity::Settable(SettableActivity::Paused)));
+			})?;
+		app.update();
+		app.update();
+
 		assert_eq!(
-			TransitionsConfigError::MayNotTransitionToSelf(Activity::Settable(
-				SettableActivity::Paused
-			)),
-			error
+			&ActivityState(Activity::Settable(SettableActivity::Play)),
+			app.world().resource::<State<ActivityState>>().get()
 		);
+		Ok(())
 	}
 }
