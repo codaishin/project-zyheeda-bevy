@@ -10,6 +10,12 @@ impl From<Activity> for ActivityState {
 	}
 }
 
+impl From<SettableActivity> for ActivityState {
+	fn from(activity: SettableActivity) -> Self {
+		Self(Activity::Settable(activity))
+	}
+}
+
 impl From<&ActivityState> for Activity {
 	fn from(ActivityState(activity): &ActivityState) -> Self {
 		*activity

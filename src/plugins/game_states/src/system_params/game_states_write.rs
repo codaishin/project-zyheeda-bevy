@@ -22,11 +22,15 @@ impl GameStatesWrite<'_, '_> {
 			return;
 		};
 
-		if activity == self.current.activity {
-			return;
-		}
+		let activity = match (self.current.activity, activity) {
+			(Activity::Settable(current), activity) if current != activity => activity,
+			(Activity::Settable(SettableActivity::Paused), SettableActivity::Paused) => {
+				SettableActivity::Play
+			}
+			_ => return,
+		};
 
-		self.activity.set(Activity::Settable(activity));
+		self.activity.set(activity);
 	}
 
 	fn drain_ui_change(&mut self) {
@@ -165,6 +169,44 @@ mod tests {
 	#[test]
 	fn set_activity() -> Result<(), RunSystemError> {
 		let mut app = setup();
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			Activity::Settable(SettableActivity::NewGame);
+
+		app.world_mut()
+			.run_system_once(move |mut w: GameStatesWrite| {
+				w.set_activity(SettableActivity::Play);
+			})?;
+
+		assert_state_eq!(
+			&NextState::Pending(ActivityState(Activity::Settable(SettableActivity::Play))),
+			app.world().resource::<NextState<ActivityState>>()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn set_activity_paused_to_play() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			Activity::Settable(SettableActivity::Paused);
+
+		app.world_mut()
+			.run_system_once(move |mut w: GameStatesWrite| {
+				w.set_activity(SettableActivity::Paused);
+			})?;
+
+		assert_state_eq!(
+			&NextState::Pending(ActivityState(Activity::Settable(SettableActivity::Play))),
+			app.world().resource::<NextState<ActivityState>>()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn set_activity_play_to_paused() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			Activity::Settable(SettableActivity::Play);
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWrite| {
@@ -173,6 +215,24 @@ mod tests {
 
 		assert_state_eq!(
 			&NextState::Pending(ActivityState(Activity::Settable(SettableActivity::Paused))),
+			app.world().resource::<NextState<ActivityState>>()
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn guard_against_overriding_non_settable_activity() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		app.world_mut().resource_mut::<GameStateContext>().activity =
+			Activity::LoadAssets(LoadActivity::Assets);
+
+		app.world_mut()
+			.run_system_once(move |mut w: GameStatesWrite| {
+				w.set_activity(SettableActivity::Play);
+			})?;
+
+		assert_state_eq!(
+			&NextState::<ActivityState>::Unchanged,
 			app.world().resource::<NextState<ActivityState>>()
 		);
 		Ok(())
