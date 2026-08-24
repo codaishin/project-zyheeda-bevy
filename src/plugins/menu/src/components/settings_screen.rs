@@ -159,12 +159,11 @@ impl InsertUiContent for SettingsScreen {
 				);
 				self.add_section(
 					parent,
-					Miscellaneous::iterator()
-						.map(ActionKey::from)
-						.chain(MenuKey::iterator().map(ActionKey::from)),
+					Miscellaneous::iterator(),
 					localize,
 					"key-bindings-miscellaneous",
 				);
+				self.add_section(parent, MenuKey::iterator(), localize, "key-bindings-menus");
 				self.add_section(
 					parent,
 					CameraKey::iterator(),

@@ -28,6 +28,7 @@ key-bindings = Key Bindings
 key-bindings-slots = Slots
 key-bindings-movement = Movement
 key-bindings-miscellaneous = Miscellaneous
+key-bindings-menus = Menus
 key-bindings-camera = Camera
 key-bindings-savegame = Save Game
 key-bindings-targeting = Targeting
