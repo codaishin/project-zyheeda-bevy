@@ -110,7 +110,6 @@ impl ErrorData for SaveError {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use common::states::menu_state::MenuState;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -243,7 +242,7 @@ mod tests {
 			writer,
 			_Resource {
 				invalid_inputs: Vec::from([(
-					ActionKey::Menu(MenuState::Inventory),
+					ActionKey::Menu(MenuKey::Inventory),
 					HashSet::from([UserInput::from(MouseButton::Left)]),
 				)]),
 			},
@@ -254,7 +253,7 @@ mod tests {
 
 		assert_eq!(
 			&_Result(Err(SaveError::InvalidInput(InvalidInputWarning::from([(
-				ActionKey::Menu(MenuState::Inventory),
+				ActionKey::Menu(MenuKey::Inventory),
 				HashSet::from([UserInput::from(MouseButton::Left)]),
 			)])))),
 			app.world().resource::<_Result>()
@@ -270,7 +269,7 @@ mod tests {
 			writer,
 			_Resource {
 				invalid_inputs: Vec::from([(
-					ActionKey::Menu(MenuState::Inventory),
+					ActionKey::Menu(MenuKey::Inventory),
 					HashSet::from([UserInput::from(MouseButton::Left)]),
 				)]),
 			},
@@ -281,7 +280,7 @@ mod tests {
 
 		assert_eq!(
 			&_Result(Err(SaveError::InvalidInput(InvalidInputWarning::from([(
-				ActionKey::Menu(MenuState::Inventory),
+				ActionKey::Menu(MenuKey::Inventory),
 				HashSet::from([UserInput::from(MouseButton::Left)]),
 			)])))),
 			app.world().resource::<_Result>()

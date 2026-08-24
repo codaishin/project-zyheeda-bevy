@@ -1,4 +1,5 @@
 pub mod camera_key;
+pub mod menu_key;
 pub mod miscellaneous;
 pub mod movement;
 pub mod save_key;
@@ -7,9 +8,9 @@ pub mod targeting;
 pub mod user_input;
 
 use crate::{
-	states::menu_state::MenuState,
 	tools::{
 		action_key::{
+			menu_key::MenuKey,
 			miscellaneous::Miscellaneous,
 			save_key::SaveKey,
 			targeting::TerrainTargeting,
@@ -36,7 +37,7 @@ pub enum ActionKey {
 	Slot(HandSlot),
 	Targeting(TerrainTargeting),
 	Miscellaneous(Miscellaneous),
-	Menu(MenuState),
+	Menu(MenuKey),
 	Camera(CameraKey),
 	Save(SaveKey),
 }
@@ -46,7 +47,7 @@ impl_enum_conversions!(ActionKey[
 	Slot(HandSlot),
 	Targeting(TerrainTargeting),
 	Miscellaneous(Miscellaneous),
-	Menu(MenuState),
+	Menu(MenuKey),
 	Camera(CameraKey),
 	Save(SaveKey),
 ]);
@@ -134,7 +135,7 @@ mod tests {
 				.chain(HandSlot::iterator().map(ActionKey::from))
 				.chain(TerrainTargeting::iterator().map(ActionKey::from))
 				.chain(Miscellaneous::iterator().map(ActionKey::from))
-				.chain(MenuState::iterator().map(ActionKey::from))
+				.chain(MenuKey::iterator().map(ActionKey::from))
 				.chain(CameraKey::iterator().map(ActionKey::from))
 				.chain(SaveKey::iterator().map(ActionKey::from))
 				.collect::<Vec<_>>(),
@@ -150,7 +151,7 @@ mod tests {
 				.chain(HandSlot::iterator().map(UserInput::from))
 				.chain(TerrainTargeting::iterator().map(UserInput::from))
 				.chain(Miscellaneous::iterator().map(UserInput::from))
-				.chain(MenuState::iterator().map(UserInput::from))
+				.chain(MenuKey::iterator().map(UserInput::from))
 				.chain(CameraKey::iterator().map(UserInput::from))
 				.chain(SaveKey::iterator().map(UserInput::from))
 				.collect::<Vec<_>>(),
@@ -175,7 +176,7 @@ mod tests {
 				.chain(HandSlot::iterator().map(pair_with_invalid_input))
 				.chain(TerrainTargeting::iterator().map(pair_with_invalid_input))
 				.chain(Miscellaneous::iterator().map(pair_with_invalid_input))
-				.chain(MenuState::iterator().map(pair_with_invalid_input))
+				.chain(MenuKey::iterator().map(pair_with_invalid_input))
 				.chain(CameraKey::iterator().map(pair_with_invalid_input))
 				.chain(SaveKey::iterator().map(pair_with_invalid_input))
 				.collect::<HashMap<_, _>>(),

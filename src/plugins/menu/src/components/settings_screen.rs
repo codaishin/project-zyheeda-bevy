@@ -10,7 +10,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
-use common::{prelude::*, states::menu_state::MenuState};
+use common::prelude::*;
 use key_bind::{KeyBind, action::Action, input::Input};
 use std::collections::HashMap;
 
@@ -161,7 +161,7 @@ impl InsertUiContent for SettingsScreen {
 					parent,
 					Miscellaneous::iterator()
 						.map(ActionKey::from)
-						.chain(MenuState::iterator().map(ActionKey::from)),
+						.chain(MenuKey::iterator().map(ActionKey::from)),
 					localize,
 					"key-bindings-miscellaneous",
 				);

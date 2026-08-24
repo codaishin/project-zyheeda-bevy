@@ -2,11 +2,11 @@ use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use common::{prelude::*, states::menu_state::MenuState};
+use common::prelude::*;
 use std::collections::HashMap;
 
 pub(crate) fn toggle_ui<TGameStatesMut, TInput>(
-	keys: HashMap<MenuState, IngameUI>,
+	keys: HashMap<MenuKey, IngameUI>,
 ) -> impl IntoSystem<(), (), ()>
 where
 	TGameStatesMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>,
@@ -39,7 +39,7 @@ where
 	IntoSystem::into_system(system)
 }
 
-fn just_pressed_menu((m, i): (MenuState, InputState)) -> Option<MenuState> {
+fn just_pressed_menu((m, i): (MenuKey, InputState)) -> Option<MenuKey> {
 	match i {
 		InputState::Pressed { just_now: true } => Some(m),
 		_ => None,
@@ -85,7 +85,7 @@ mod tests {
 		}
 	}
 
-	fn setup(input: _Input, game_states: _GameStates, keys: HashMap<MenuState, IngameUI>) -> App {
+	fn setup(input: _Input, game_states: _GameStates, keys: HashMap<MenuKey, IngameUI>) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(input);
@@ -100,14 +100,14 @@ mod tests {
 		let input = _Input::new().with_mock(|mock| {
 			mock.expect_get_all_input_states().returning(|| {
 				Box::new(std::iter::once((
-					MenuState::Inventory,
+					MenuKey::Inventory,
 					InputState::just_pressed(),
 				)))
 			});
 		});
 		let game_states = _GameStates::default();
 		let keys = hash_map! {
-			MenuState::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => IngameUI::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -126,7 +126,7 @@ mod tests {
 		let input = _Input::new().with_mock(|mock| {
 			mock.expect_get_all_input_states().returning(|| {
 				Box::new(std::iter::once((
-					MenuState::Inventory,
+					MenuKey::Inventory,
 					InputState::just_pressed(),
 				)))
 			});
@@ -135,7 +135,7 @@ mod tests {
 			ui: HashSet::from([IngameUI::Inventory]),
 		};
 		let keys = hash_map! {
-			MenuState::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => IngameUI::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -154,7 +154,7 @@ mod tests {
 		let input = _Input::new().with_mock(|mock| {
 			mock.expect_get_all_input_states().returning(|| {
 				Box::new(std::iter::once((
-					MenuState::Inventory,
+					MenuKey::Inventory,
 					InputState::just_pressed(),
 				)))
 			});
@@ -163,7 +163,7 @@ mod tests {
 			ui: HashSet::from([IngameUI::Settings, IngameUI::ComboOverview, IngameUI::Hud]),
 		};
 		let keys = hash_map! {
-			MenuState::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => IngameUI::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -182,7 +182,7 @@ mod tests {
 		let input = _Input::new().with_mock(|mock| {
 			mock.expect_get_all_input_states().returning(|| {
 				Box::new(std::iter::once((
-					MenuState::Inventory,
+					MenuKey::Inventory,
 					InputState::just_released(),
 				)))
 			});
@@ -191,7 +191,7 @@ mod tests {
 			ui: HashSet::from([IngameUI::Inventory]),
 		};
 		let keys = hash_map! {
-			MenuState::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => IngameUI::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -210,7 +210,7 @@ mod tests {
 		let input = _Input::new().with_mock(|mock| {
 			mock.expect_get_all_input_states().returning(|| {
 				Box::new(std::iter::once((
-					MenuState::Inventory,
+					MenuKey::Inventory,
 					InputState::just_released(),
 				)))
 			});
@@ -219,7 +219,7 @@ mod tests {
 			ui: HashSet::from([]),
 		};
 		let keys = hash_map! {
-			MenuState::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => IngameUI::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 

@@ -39,7 +39,7 @@ use crate::{
 	visualization::unusable::Unusable,
 };
 use bevy::prelude::*;
-use common::{prelude::*, states::menu_state::MenuState, tools::path::Path};
+use common::{prelude::*, tools::path::Path};
 use components::{
 	button_interaction::ButtonInteraction,
 	combo_overview::ComboOverview,
@@ -162,9 +162,9 @@ where
 			ActionKey::Save(SaveKey::QuickSave) => SettableActivity::SaveCmd,
 		});
 		let toggle_ui = toggle_ui::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
-			MenuState::ComboOverview => IngameUI::ComboOverview,
-			MenuState::Inventory => IngameUI::Inventory,
-			MenuState::Settings => IngameUI::Settings,
+			MenuKey::ComboOverview => IngameUI::ComboOverview,
+			MenuKey::Inventory => IngameUI::Inventory,
+			MenuKey::Settings => IngameUI::Settings,
 		});
 
 		app.insert_state(MenusChangeable(true));
