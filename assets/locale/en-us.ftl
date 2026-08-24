@@ -24,12 +24,11 @@ combo-skill-menu = Combos
 combo-skill-add = Add new combo skill
 combo-skill-delete = Delete skill (and subsequent skills) from combo tree
 
-paused = Paused
-
 key-bindings = Key Bindings
 key-bindings-slots = Slots
 key-bindings-movement = Movement
 key-bindings-miscellaneous = Miscellaneous
+key-bindings-menus = Menus
 key-bindings-camera = Camera
 key-bindings-savegame = Save Game
 key-bindings-targeting = Targeting
@@ -53,7 +52,8 @@ camera-key-rotate = Camera Rotation
 menu-inventory = Inventory
 menu-combos = Combos
 menu-settings = Settings
-menu-paused = Pause
+
+paused = Pause
 
 save-quick-save = Quick Save
 save-quick-load = Quick Load

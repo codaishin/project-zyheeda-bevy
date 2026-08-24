@@ -1,4 +1,4 @@
-use bevy::{prelude::*, render::MainWorld, state::state::FreelyMutableState};
+use bevy::{diagnostic::FrameCount, prelude::*, render::MainWorld};
 use common::prelude::*;
 use std::{
 	any::{TypeId, type_name},
@@ -9,6 +9,7 @@ use std::{
 #[derive(Resource, Debug, PartialEq)]
 pub(crate) struct Track<TLoadGroup, TProgress> {
 	items: HashMap<TypeId, LoadData>,
+	life_time: FrameCount,
 	_p: PhantomData<(TLoadGroup, TProgress)>,
 }
 
@@ -16,6 +17,7 @@ impl<TLoadGroup, TProgress> Default for Track<TLoadGroup, TProgress> {
 	fn default() -> Self {
 		Self {
 			items: HashMap::default(),
+			life_time: FrameCount(0),
 			_p: PhantomData,
 		}
 	}
@@ -36,8 +38,15 @@ where
 	fn new<const N: usize>(items: [(TypeId, LoadData); N]) -> Self {
 		Self {
 			items: HashMap::from(items),
+			life_time: FrameCount(0),
 			_p: PhantomData,
 		}
+	}
+
+	#[cfg(test)]
+	fn with_life_time(mut self, life_time: FrameCount) -> Self {
+		self.life_time = life_time;
+		self
 	}
 
 	fn insert<T>(&mut self, loaded: Loaded)
@@ -53,7 +62,7 @@ where
 		);
 	}
 
-	pub(crate) fn track<T, TLoaded>(In(loaded): In<TLoaded>, mut tracker: ResMut<Self>)
+	pub(crate) fn track_system<T, TLoaded>(In(loaded): In<TLoaded>, mut tracker: ResMut<Self>)
 	where
 		T: 'static,
 		TLoaded: Into<Loaded>,
@@ -61,8 +70,10 @@ where
 		tracker.insert::<T>(loaded.into());
 	}
 
-	pub(crate) fn track_in_main_world<T>(In(loaded): In<Loaded>, mut main_world: ResMut<MainWorld>)
-	where
+	pub(crate) fn track_in_main_world_system<T>(
+		In(loaded): In<Loaded>,
+		mut main_world: ResMut<MainWorld>,
+	) where
 		T: 'static,
 	{
 		let Some(mut tracker) = main_world.get_resource_mut::<Self>() else {
@@ -78,31 +89,31 @@ where
 			.is_some()
 	}
 
-	pub fn when_all_done_set<TState>(
-		state: TState,
-	) -> impl Fn(Option<Res<Self>>, ResMut<NextState<TState>>)
-	where
-		TState: FreelyMutableState + Copy,
-	{
-		move |load_tracker: Option<Res<Self>>, mut next_state: ResMut<NextState<TState>>| {
-			let Some(load_tracker) = load_tracker else {
-				return;
-			};
-
-			let not_all_loaded = load_tracker
-				.items
-				.values()
-				.map(|l| l.loaded)
-				.any(|Loaded(loaded)| !loaded);
-
-			if not_all_loaded {
-				return;
-			}
-
-			next_state.set(state);
+	pub(crate) fn is_done(load_tracker: Res<Self>) -> Option<IsDone> {
+		if let FrameCount(0) = load_tracker.life_time {
+			return None;
 		}
+
+		let all_done = load_tracker
+			.items
+			.values()
+			.map(|LoadData { loaded, .. }| *loaded)
+			.all(|Loaded(loaded)| loaded);
+
+		if !all_done {
+			return None;
+		}
+
+		Some(IsDone)
+	}
+
+	pub(crate) fn track_lifetime(mut load_tracker: ResMut<Self>) {
+		load_tracker.life_time.0 += 1;
 	}
 }
+
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
+pub(crate) struct IsDone;
 
 #[cfg(test)]
 mod tests {
@@ -113,37 +124,31 @@ mod tests {
 	};
 	use testing::SingleThreadedApp;
 
-	#[derive(States, Default, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-	struct _State;
-
 	#[derive(Default, Debug, PartialEq)]
 	struct _LoadGroup;
 
 	#[derive(Default, Debug, PartialEq)]
 	struct _Progress;
 
-	fn setup(load_tracker: Option<Track<_LoadGroup, _Progress>>) -> App {
+	fn setup(load_tracker: Track<_LoadGroup, _Progress>) -> App {
 		let mut app = App::new().single_threaded(Update);
 		app.add_plugins(StatesPlugin);
-		app.init_state::<_State>();
 
-		if let Some(load_tracker) = load_tracker {
-			app.insert_resource(load_tracker);
-		}
+		app.insert_resource(load_tracker);
 
 		app
 	}
 
 	#[test]
 	fn track_load_status() -> Result<(), RunSystemError> {
-		let mut app = setup(Some(Track::<_LoadGroup, _Progress>::default()));
+		let mut app = setup(Track::<_LoadGroup, _Progress>::default());
 
 		app.world_mut().run_system_once_with(
-			Track::<_LoadGroup, _Progress>::track::<f32, Loaded>,
+			Track::<_LoadGroup, _Progress>::track_system::<f32, Loaded>,
 			Loaded(true),
 		)?;
 		app.world_mut().run_system_once_with(
-			Track::<_LoadGroup, _Progress>::track::<u32, Loaded>,
+			Track::<_LoadGroup, _Progress>::track_system::<u32, Loaded>,
 			Loaded(false),
 		)?;
 
@@ -170,74 +175,94 @@ mod tests {
 	}
 
 	#[test]
-	fn set_state_when_all_loaded() -> Result<(), RunSystemError> {
-		let mut app = setup(Some(Track::new([
-			(
-				TypeId::of::<f32>(),
-				LoadData {
-					type_name: type_name::<f32>(),
-					loaded: Loaded(true),
-				},
-			),
-			(
-				TypeId::of::<u32>(),
-				LoadData {
-					type_name: type_name::<u32>(),
-					loaded: Loaded(true),
-				},
-			),
-		])));
-
-		app.world_mut()
-			.run_system_once(Track::<_LoadGroup, _Progress>::when_all_done_set(_State))?;
-
-		let state = app.world().resource::<NextState<_State>>();
-		assert!(
-			matches!(state, NextState::Pending(_State)),
-			"expected: {:?}\n     got: {:?}",
-			NextState::Pending(_State),
-			state,
+	fn all_loaded() -> Result<(), RunSystemError> {
+		let mut app = setup(
+			Track::new([
+				(
+					TypeId::of::<f32>(),
+					LoadData {
+						type_name: type_name::<f32>(),
+						loaded: Loaded(true),
+					},
+				),
+				(
+					TypeId::of::<u32>(),
+					LoadData {
+						type_name: type_name::<u32>(),
+						loaded: Loaded(true),
+					},
+				),
+			])
+			.with_life_time(FrameCount(1)),
 		);
+
+		let done = app
+			.world_mut()
+			.run_system_once(Track::<_LoadGroup, _Progress>::is_done)?;
+
+		assert_eq!(Some(IsDone), done);
 		Ok(())
 	}
 
 	#[test]
-	fn do_not_set_state_when_not_all_loaded() -> Result<(), RunSystemError> {
-		let mut app = setup(Some(Track::<_LoadGroup, _Progress>::new([
-			(
-				TypeId::of::<f32>(),
-				LoadData {
-					type_name: type_name::<f32>(),
-					loaded: Loaded(true),
-				},
-			),
-			(
-				TypeId::of::<u32>(),
-				LoadData {
-					type_name: type_name::<u32>(),
-					loaded: Loaded(false),
-				},
-			),
-		])));
-
-		app.world_mut()
-			.run_system_once(Track::<_LoadGroup, _Progress>::when_all_done_set(_State))?;
-
-		let state = app.world().resource::<NextState<_State>>();
-		assert!(
-			matches!(state, NextState::Unchanged),
-			"expected: {:?}\n     got: {:?}",
-			NextState::<_State>::Unchanged,
-			state,
+	fn not_all_loaded() -> Result<(), RunSystemError> {
+		let mut app = setup(
+			Track::<_LoadGroup, _Progress>::new([
+				(
+					TypeId::of::<f32>(),
+					LoadData {
+						type_name: type_name::<f32>(),
+						loaded: Loaded(true),
+					},
+				),
+				(
+					TypeId::of::<u32>(),
+					LoadData {
+						type_name: type_name::<u32>(),
+						loaded: Loaded(false),
+					},
+				),
+			])
+			.with_life_time(FrameCount(1)),
 		);
+
+		let done = app
+			.world_mut()
+			.run_system_once(Track::<_LoadGroup, _Progress>::is_done)?;
+
+		assert_eq!(None, done);
 		Ok(())
 	}
 
 	#[test]
-	fn no_panic_when_tracker_does_not_exist() -> Result<(), RunSystemError> {
-		let mut app = setup(None);
+	fn not_loaded_if_just_created() -> Result<(), RunSystemError> {
+		let mut app = setup(Track::new([]).with_life_time(FrameCount(0)));
+
+		let done = app
+			.world_mut()
+			.run_system_once(Track::<_LoadGroup, _Progress>::is_done)?;
+
+		assert_eq!(None, done);
+		Ok(())
+	}
+
+	#[test]
+	fn increment_lifetime() -> Result<(), RunSystemError> {
+		let mut app = setup(Track {
+			life_time: FrameCount(11),
+			..default()
+		});
 
 		app.world_mut()
-			.run_system_once(Track::<_LoadGroup, _Progress>::when_all_done_set(_State))
+			.run_system_once(Track::<_LoadGroup, _Progress>::track_lifetime)?;
+
+		assert_eq!(
+			&Track {
+				life_time: FrameCount(12),
+				..default()
+			},
+			app.world().resource::<Track<_LoadGroup, _Progress>>()
+		);
+		Ok(())
 	}
 }

@@ -1,7 +1,5 @@
-use bevy::state::state::FreelyMutableState;
+use common::traits::handles_game_states::SettableActivity;
 
 pub(crate) trait TriggerState {
-	type TState: FreelyMutableState + Clone;
-
-	fn trigger_state(&self) -> Self::TState;
+	fn trigger_state(&self) -> SettableActivity;
 }

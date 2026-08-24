@@ -108,13 +108,13 @@ mod tests {
 
 		app.update();
 		app.world_mut().resource_mut::<GameStateContext>().activity =
-			Activity::Settable(SettableActivity::Save);
+			Activity::Settable(SettableActivity::SaveCmd);
 		app.world_mut().resource_mut::<GameStateContext>().ui = HashSet::from([IngameUI::Hud]);
 		app.update();
 
 		assert_eq!(
 			(
-				Activity::Settable(SettableActivity::Save),
+				Activity::Settable(SettableActivity::SaveCmd),
 				&HashSet::from([IngameUI::Hud])
 			),
 			(

@@ -10,7 +10,7 @@ use crate::{
 	system_params::input::Input,
 };
 use bevy::prelude::*;
-use common::{prelude::*, states::game_state::LoadingEssentialAssets, tools::path::Path};
+use common::{prelude::*, tools::path::Path};
 use resources::{
 	asset_writer::AssetWriter,
 	key_map::{KeyMap, dto::KeyMapDto as KeyMapDtoGeneric},

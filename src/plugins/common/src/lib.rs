@@ -7,7 +7,6 @@ pub mod errors;
 pub mod observers;
 pub mod prelude;
 pub mod resources;
-pub mod states;
 pub mod system_params;
 pub mod systems;
 pub mod tools;
@@ -24,15 +23,10 @@ use crate::{
 		persistent_entity::PersistentEntity,
 	},
 	error_logger::GlobalErrorLogger,
-	states::game_state::GameState,
 	systems::log::OnError,
-	traits::{
-		prefab::AddPrefabObserver,
-		register_controlled_state::RegisterControlledState,
-		register_persistent_entities::RegisterPersistentEntities,
-	},
+	traits::{prefab::AddPrefabObserver, register_persistent_entities::RegisterPersistentEntities},
 };
-use bevy::prelude::*;
+use bevy::{prelude::*, time::TimePlugin};
 use components::{insert_asset::InsertAsset, model::Model};
 
 pub struct CommonPlugin {
@@ -49,7 +43,6 @@ impl CommonPlugin {
 
 impl Plugin for CommonPlugin {
 	fn build(&self, app: &mut App) {
-		game_state(app);
 		persistent_entities(app);
 		life_cycles(app);
 
@@ -59,10 +52,6 @@ impl Plugin for CommonPlugin {
 	}
 }
 
-fn game_state(app: &mut App) {
-	app.register_controlled_state::<GameState>();
-}
-
 fn persistent_entities(app: &mut App) {
 	app.register_persistent_entities();
 	app.add_observer(ChildOfPersistent::insert_child_of);
@@ -70,6 +59,10 @@ fn persistent_entities(app: &mut App) {
 }
 
 fn life_cycles(app: &mut App) {
+	if !app.is_plugin_added::<TimePlugin>() {
+		app.add_plugins(TimePlugin);
+	}
+
 	app.add_systems(Update, Lifetime::update::<Virtual>);
 }
 

@@ -7,22 +7,10 @@ mod traits;
 
 use crate::{
 	resources::{inspector::Inspector, unique_ids::UniqueIds},
-	systems::{
-		despawn_persistent_entities::DespawnAll,
-		trigger_state::TriggerState,
-		write_buffer::WriteBufferSystem,
-	},
+	systems::{despawn_persistent_entities::DespawnAll, write_buffer::WriteBufferSystem},
 };
 use bevy::{ecs::system::ScheduleSystem, prelude::*};
-use common::{
-	prelude::*,
-	states::{
-		game_state::GameState,
-		save_state::SaveState,
-		transition_to_previous,
-		transition_to_state,
-	},
-};
+use common::prelude::*;
 use context::SaveContext;
 use file_io::FileIO;
 use resources::register::Register;
@@ -32,19 +20,18 @@ use std::{
 	path::PathBuf,
 	sync::{Arc, Mutex},
 };
-
-const ON_ENTER_SAVE: OnEnter<GameState> = OnEnter(GameState::Save(SaveState::Save));
+use zyheeda_core::prelude::*;
 
 pub struct SavegamePlugin<TDependencies> {
 	game_directory: PathBuf,
 	_p: PhantomData<TDependencies>,
 }
 
-impl<TInput> SavegamePlugin<TInput>
+impl<TGameStates> SavegamePlugin<TGameStates>
 where
-	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
+	TGameStates: ThreadSafe + SystemSetDefinition + HandlesGameStates,
 {
-	pub fn from_plugin(_: &TInput) -> SavegamePluginBuilder<TInput> {
+	pub fn from_plugin(_: &TGameStates) -> SavegamePluginBuilder<TGameStates> {
 		SavegamePluginBuilder(PhantomData)
 	}
 }
@@ -60,9 +47,52 @@ impl<TDependencies> SavegamePluginBuilder<TDependencies> {
 	}
 }
 
-impl<TInput> Plugin for SavegamePlugin<TInput>
+impl<TGameStates> SavegamePlugin<TGameStates>
 where
-	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
+	TGameStates: ThreadSafe + SystemSetDefinition + HandlesGameStates,
+{
+	fn add_transitions(app: &mut App) -> Result<(), TransitionsConfigError> {
+		TGameStates::add_activity_transitions(
+			app,
+			SettableActivity::SaveCmd,
+			always,
+			hash_map! {
+				() => ActivityTransition::To(Activity::SaveGame(SaveGameActivity::Save)),
+			},
+		)?;
+		TGameStates::add_activity_transitions(
+			app,
+			SaveGameActivity::Save,
+			always,
+			hash_map! {
+				() => ActivityTransition::ToPreviousOf(Activity::Settable(SettableActivity::SaveCmd)),
+			},
+		)?;
+		TGameStates::add_activity_transitions(
+			app,
+			SettableActivity::LoadCmd,
+			Self::can_quick_load().pipe(|In(r)| Some(r)),
+			hash_map! {
+				true => ActivityTransition::To(Activity::SaveGame(SaveGameActivity::Load)),
+				false => ActivityTransition::ToPrevious,
+			},
+		)?;
+		TGameStates::add_activity_transitions(
+			app,
+			SaveGameActivity::Load,
+			always,
+			hash_map! {
+				() => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+			},
+		)?;
+
+		Ok(())
+	}
+}
+
+impl<TGameStates> Plugin for SavegamePlugin<TGameStates>
+where
+	TGameStates: ThreadSafe + SystemSetDefinition + HandlesGameStates,
 {
 	fn build(&self, app: &mut App) {
 		let quick_save_file = self
@@ -74,16 +104,6 @@ where
 		let quick_save = Arc::new(Mutex::new(SaveContext::from(FileIO::with_file(
 			quick_save_file,
 		))));
-		let trigger_quick_save = TInput::TInput::trigger(
-			ActionKey::Save(SaveKey::QuickSave),
-			GameState::Save(SaveState::Save),
-		);
-		let trigger_quick_load_attempt = TInput::TInput::trigger(
-			ActionKey::Save(SaveKey::QuickLoad),
-			GameState::Save(SaveState::AttemptLoad),
-		);
-		let transition_to_load = transition_to_state(GameState::Save(SaveState::Load));
-		let transition_to_previous = transition_to_previous::<GameState>;
 
 		Self::register_savable_component::<Name>(app);
 		Self::register_savable_component::<Transform>(app);
@@ -91,10 +111,31 @@ where
 		Self::register_savable_component::<ChildOfPersistent>(app);
 		Self::register_savable_component::<Lifetime>(app);
 
-		app.configure_sets(
-			ON_ENTER_SAVE,
-			(SaveSystems::OnBeforeSave, SaveSystems::ExecuteSave).chain(),
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Enter(SettableActivity::SaveCmd),
+			(
+				SaveContext::write_buffer_system(quick_save.clone()).pipe(OnError::log),
+				SaveContext::write_file_system(quick_save.clone()).pipe(OnError::log),
+			)
+				.in_set(ExecuteSave)
+				.chain(),
 		);
+
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Enter(SettableActivity::LoadCmd),
+			(
+				PersistentEntity::despawn_all,
+				SaveContext::read_file_system(quick_save.clone()).pipe(OnError::log),
+				SaveContext::read_buffer_system(quick_save.clone()).pipe(OnError::log),
+			)
+				.chain(),
+		);
+
+		if let Err(err) = Self::add_transitions(app) {
+			panic!("{err}");
+		}
 
 		app.init_resource::<Register>()
 			.insert_resource(Inspector {
@@ -102,46 +143,15 @@ where
 			})
 			.add_systems(
 				Startup,
-				Register::update_context(quick_save.clone()).pipe(OnError::log),
-			)
-			.add_systems(
-				Update,
-				(
-					trigger_quick_save,
-					trigger_quick_load_attempt.run_if(Self::can_quick_load()),
-				)
-					.run_if(in_state(GameState::Play))
-					.after_plugin(TInput::SYSTEMS),
-			)
-			.add_systems(
-				ON_ENTER_SAVE,
-				(
-					SaveContext::write_buffer_system(quick_save.clone()).pipe(OnError::log),
-					SaveContext::write_file_system(quick_save.clone()).pipe(OnError::log),
-				)
-					.in_set(SaveSystems::ExecuteSave)
-					.chain(),
-			)
-			.add_systems(
-				OnEnter(GameState::Save(SaveState::AttemptLoad)),
-				(
-					transition_to_load.run_if(Self::can_quick_load()),
-					transition_to_previous.run_if(not(Self::can_quick_load())),
-				),
-			)
-			.add_systems(
-				OnEnter(GameState::Save(SaveState::Load)),
-				(
-					PersistentEntity::despawn_all,
-					SaveContext::read_file_system(quick_save.clone()).pipe(OnError::log),
-					SaveContext::read_buffer_system(quick_save).pipe(OnError::log),
-				)
-					.chain(),
+				Register::update_context(quick_save).pipe(OnError::log),
 			);
 	}
 }
 
-impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
+impl<TGameStates> HandlesSaving for SavegamePlugin<TGameStates>
+where
+	TGameStates: ThreadSafe + AddGameStateSystem,
+{
 	fn can_quick_load() -> impl SystemCondition<()> {
 		IntoSystem::into_system(
 			Inspector::<FileIO>::quick_save_file_exists.pipe(OnError::log_and_return(|| false)),
@@ -185,23 +195,42 @@ impl<TDependencies> HandlesSaving for SavegamePlugin<TDependencies> {
 	}
 
 	fn on_before_save<M>(app: &mut App, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) {
-		app.add_systems(ON_ENTER_SAVE, systems.in_set(SaveSystems::OnBeforeSave));
+		TGameStates::add_game_state_systems(
+			app,
+			OnGameState::Enter(SettableActivity::SaveCmd),
+			systems.before(ExecuteSave),
+		);
 	}
 }
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-enum SaveSystems {
-	OnBeforeSave,
-	ExecuteSave,
-}
+struct ExecuteSave;
 
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ecs::system::SystemParam;
 	use macros::SavableComponent;
 	use serde::{Deserialize, Serialize};
 	use std::panic::catch_unwind;
 	use testing::SingleThreadedApp;
+
+	struct _States;
+
+	impl AddGameStateSystem for _States {
+		fn add_game_state_systems<M, T>(
+			_: &mut App,
+			_: OnGameState<T>,
+			_: impl IntoScheduleConfigs<ScheduleSystem, M>,
+		) where
+			OnGameState<T>: Into<OnGameState>,
+		{
+			panic!("SHOULD NOT BE USED")
+		}
+	}
+
+	#[derive(SystemParam)]
+	struct _StatesParam;
 
 	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
 	#[savable_component(id = "a")]
@@ -223,7 +252,7 @@ mod tests {
 	fn register_component() {
 		let mut app = setup();
 
-		SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
+		SavegamePlugin::<_States>::register_savable_component::<_A>(&mut app);
 
 		let mut expected = Register::default();
 		expected.register_component::<_A>();
@@ -234,8 +263,8 @@ mod tests {
 	fn register_components() {
 		let mut app = setup();
 
-		SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
-		SavegamePlugin::<()>::register_savable_component::<_B>(&mut app);
+		SavegamePlugin::<_States>::register_savable_component::<_A>(&mut app);
+		SavegamePlugin::<_States>::register_savable_component::<_B>(&mut app);
 
 		let mut expected = Register::default();
 		expected.register_component::<_A>();
@@ -248,8 +277,8 @@ mod tests {
 		let result = catch_unwind(|| {
 			let mut app = setup();
 
-			SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
-			SavegamePlugin::<()>::register_savable_component::<_AAgain>(&mut app);
+			SavegamePlugin::<_States>::register_savable_component::<_A>(&mut app);
+			SavegamePlugin::<_States>::register_savable_component::<_AAgain>(&mut app);
 		});
 
 		assert!(result.is_err());
@@ -260,9 +289,9 @@ mod tests {
 		let result = catch_unwind(|| {
 			let mut app = setup();
 
-			SavegamePlugin::<()>::register_savable_component::<_B>(&mut app);
-			SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
-			SavegamePlugin::<()>::register_savable_component::<_AAgain>(&mut app);
+			SavegamePlugin::<_States>::register_savable_component::<_B>(&mut app);
+			SavegamePlugin::<_States>::register_savable_component::<_A>(&mut app);
+			SavegamePlugin::<_States>::register_savable_component::<_AAgain>(&mut app);
 		});
 
 		assert!(result.is_err());
@@ -273,8 +302,8 @@ mod tests {
 		let result = catch_unwind(|| {
 			let mut app = setup();
 
-			SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
-			SavegamePlugin::<()>::register_savable_component::<_A>(&mut app);
+			SavegamePlugin::<_States>::register_savable_component::<_A>(&mut app);
+			SavegamePlugin::<_States>::register_savable_component::<_A>(&mut app);
 		});
 
 		assert!(result.is_ok());

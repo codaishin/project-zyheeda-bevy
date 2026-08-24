@@ -14,11 +14,7 @@ use crate::{
 	system_params::interactive_param::{InteractiveParam, InteractiveParamMut},
 };
 use bevy::prelude::*;
-use common::{
-	prelude::*,
-	states::game_state::LoadingEssentialAssets,
-	systems::register_animations::RegisterAnimationsSystem,
-};
+use common::{prelude::*, systems::register_animations::RegisterAnimationsSystem};
 use std::marker::PhantomData;
 
 pub struct InteractivePlugin<TDependencies>(PhantomData<TDependencies>);

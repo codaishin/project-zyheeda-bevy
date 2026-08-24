@@ -42,7 +42,6 @@ pub mod ownership_relation;
 pub mod pause_control;
 pub mod prefab;
 pub mod read;
-pub mod register_controlled_state;
 pub mod register_derived_component;
 pub mod register_persistent_entities;
 pub mod remove_conditionally;

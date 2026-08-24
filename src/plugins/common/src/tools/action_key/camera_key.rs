@@ -1,4 +1,4 @@
-use super::{ActionKey, user_input::UserInput};
+use super::user_input::UserInput;
 use crate::traits::{
 	handles_input::InvalidUserInput,
 	handles_localization::Token,
@@ -6,7 +6,6 @@ use crate::traits::{
 };
 use bevy::input::mouse::MouseButton;
 use serde::{Deserialize, Serialize};
-use zyheeda_core::prelude::*;
 
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub enum CameraKey {
@@ -21,27 +20,10 @@ impl From<CameraKey> for Token {
 	}
 }
 
-impl From<CameraKey> for ActionKey {
-	fn from(camera_key: CameraKey) -> Self {
-		Self::Camera(camera_key)
-	}
-}
-
 impl From<CameraKey> for UserInput {
 	fn from(value: CameraKey) -> Self {
 		match value {
 			CameraKey::Rotate => UserInput::MouseButton(MouseButton::Right),
-		}
-	}
-}
-
-impl TryFrom<ActionKey> for CameraKey {
-	type Error = IsNot<CameraKey>;
-
-	fn try_from(value: ActionKey) -> Result<Self, Self::Error> {
-		match value {
-			ActionKey::Camera(camera_key) => Ok(camera_key),
-			_ => Err(IsNot::target_type()),
 		}
 	}
 }

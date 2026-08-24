@@ -1,4 +1,4 @@
-use super::{ActionKey, user_input::UserInput};
+use super::user_input::UserInput;
 use crate::{
 	errors::{ErrorData, Level},
 	traits::{
@@ -11,7 +11,6 @@ use crate::{
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{any::type_name, fmt::Display, marker::PhantomData};
-use zyheeda_core::prelude::*;
 
 #[derive(Clone, Copy, Default, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
 pub struct SlotKey(pub u8);
@@ -32,23 +31,6 @@ impl From<HandSlot> for UserInput {
 		match value {
 			HandSlot::Left => Self::from(KeyCode::Digit1),
 			HandSlot::Right => Self::from(KeyCode::Digit2),
-		}
-	}
-}
-
-impl From<HandSlot> for ActionKey {
-	fn from(key: HandSlot) -> Self {
-		Self::Slot(key)
-	}
-}
-
-impl TryFrom<ActionKey> for HandSlot {
-	type Error = IsNot<HandSlot>;
-
-	fn try_from(key: ActionKey) -> Result<Self, Self::Error> {
-		match key {
-			ActionKey::Slot(key) => Ok(key),
-			_ => Err(IsNot::target_type()),
 		}
 	}
 }

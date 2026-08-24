@@ -26,10 +26,7 @@ use crate::{
 	systems::{enqueue::EnqueueSystem, flush::FlushSystem},
 };
 use bevy::prelude::*;
-use common::{
-	prelude::*,
-	states::game_state::{GameState, LoadingGame},
-};
+use common::prelude::*;
 use components::{
 	active_skill::ActiveSkill,
 	combos::CombosInternal,
@@ -49,16 +46,23 @@ use systems::{
 
 pub struct LoadoutPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TSaveGame, TPhysics, TLoading, TMovement>
-	LoadoutPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
+impl<TGameState, TSaveGame, TPhysics, TLoading, TMovement>
+	LoadoutPlugin<(TGameState, TSaveGame, TPhysics, TLoading, TMovement)>
 where
+	TGameState: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,
 	TMovement: ThreadSafe + HandlesOrientation + SystemSetDefinition,
 {
 	#[allow(clippy::too_many_arguments)]
-	pub fn from_plugins(_: &TSaveGame, _: &TPhysics, _: &TLoading, _: &TMovement) -> Self {
+	pub fn from_plugins(
+		_: &TGameState,
+		_: &TSaveGame,
+		_: &TPhysics,
+		_: &TLoading,
+		_: &TMovement,
+	) -> Self {
 		Self(PhantomData)
 	}
 
@@ -107,14 +111,16 @@ where
 			)
 				.chain()
 				.after_plugin(TMovement::SYSTEMS)
-				.run_if(in_state(GameState::Play)),
+				.after_plugin(TGameState::SYSTEMS)
+				.run_if(not(TGameState::game_paused())),
 		);
 	}
 }
 
-impl<TSaveGame, TPhysics, TLoading, TMovement> Plugin
-	for LoadoutPlugin<(TSaveGame, TPhysics, TLoading, TMovement)>
+impl<TGameState, TSaveGame, TPhysics, TLoading, TMovement> Plugin
+	for LoadoutPlugin<(TGameState, TSaveGame, TPhysics, TLoading, TMovement)>
 where
+	TGameState: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesAllPhysicalEffects + HandlesSkillPhysics + HandlesRaycast,
 	TLoading: ThreadSafe + HandlesCustomAssets + HandlesCustomFolderAssets + HandlesLoadTracking,

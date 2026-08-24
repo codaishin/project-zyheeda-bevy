@@ -5,6 +5,7 @@ use bevy::prelude::*;
 use camera_control::CameraControlPlugin;
 use common::CommonPlugin;
 use frame_limiter::FrameLimiterPlugin;
+use game_states::GameStatesPlugin;
 use graphics::GraphicsPlugin;
 use input::InputPlugin;
 use interactive::InteractivePlugin;
@@ -43,16 +44,24 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	};
 	let game_dir = home.join("Games").join("Project Zyheeda");
 
-	let loading = LoadingPlugin;
+	let game_states = GameStatesPlugin;
+	let loading = LoadingPlugin::from_plugins(&game_states);
 	let input = InputPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);
-	let savegame = SavegamePlugin::from_plugin(&input).with_game_directory(game_dir);
+	let savegame = SavegamePlugin::from_plugin(&game_states).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 	let physics = PhysicsPlugin::new(TARGET_FPS, &savegame, &animations);
-	let map_generation = MapGenerationPlugin::from_plugins(&loading, &savegame, &physics);
+	let map_generation =
+		MapGenerationPlugin::from_plugins(&game_states, &loading, &savegame, &physics);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
-	let movement =
-		MovementPlugin::from_plugins(&input, &savegame, &animations, &physics, &path_finding);
+	let movement = MovementPlugin::from_plugins(
+		&game_states,
+		&input,
+		&savegame,
+		&animations,
+		&physics,
+		&path_finding,
+	);
 
 	#[cfg(feature = "debug-utils")]
 	let graphics = GraphicsPlugin::new(
@@ -65,10 +74,12 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	#[cfg(not(feature = "debug-utils"))]
 	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics);
 
-	let loadout = LoadoutPlugin::from_plugins(&savegame, &physics, &loading, &movement);
+	let loadout =
+		LoadoutPlugin::from_plugins(&game_states, &savegame, &physics, &loading, &movement);
 	let interactive =
 		InteractivePlugin::from_plugin(&loading, &savegame, &physics, &map_generation, &animations);
 	let agents = AgentsPlugin::from_plugins(
+		&game_states,
 		&loading,
 		&input,
 		&savegame,
@@ -81,6 +92,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&loadout,
 	);
 	let menus = MenuPlugin::from_plugins(
+		&game_states,
 		&loading,
 		&savegame,
 		&input,
@@ -90,8 +102,14 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&loadout,
 	);
 	let bars = BarsPlugin::from_plugins(&agents, &physics, &graphics);
-	let camera_control =
-		CameraControlPlugin::from_plugins(&input, &physics, &savegame, &agents, &graphics);
+	let camera_control = CameraControlPlugin::from_plugins(
+		&game_states,
+		&input,
+		&physics,
+		&savegame,
+		&agents,
+		&graphics,
+	);
 	let frame_limiter = FrameLimiterPlugin {
 		target_fps: TARGET_FPS,
 	};
@@ -104,6 +122,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		.add_plugins(camera_control)
 		.add_plugins(common)
 		.add_plugins(frame_limiter)
+		.add_plugins(game_states)
 		.add_plugins(graphics)
 		.add_plugins(input)
 		.add_plugins(interactive)

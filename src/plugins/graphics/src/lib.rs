@@ -36,7 +36,7 @@ use bevy::{
 	prelude::*,
 	render::{RenderApp, render_resource::PipelineCache},
 };
-use common::{components::essence::Essence, prelude::*, states::game_state::LoadingGame};
+use common::{components::essence::Essence, prelude::*};
 use components::{
 	camera_labels::{UiPass, WorldPass},
 	effect_material_handle::EffectMaterialHandle,
@@ -96,7 +96,7 @@ where
 
 	fn track_render_pipeline_ready(app: &mut App) {
 		TLoading::register_load_tracking::<PipelineCache, LoadingGame, AssetsProgress>()
-			.in_sub_app(app, RenderApp, ExtractSchedule, no_waiting_pipelines);
+			.in_sub_app(app, RenderApp, no_waiting_pipelines);
 	}
 
 	fn shading(app: &mut App) {

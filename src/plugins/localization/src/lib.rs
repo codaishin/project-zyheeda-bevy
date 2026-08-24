@@ -11,7 +11,7 @@ use crate::{
 };
 use assets::ftl::{Ftl, loader::FtlLoader};
 use bevy::prelude::*;
-use common::{prelude::*, states::game_state::LoadingEssentialAssets, tools::path::Path};
+use common::{prelude::*, tools::path::Path};
 use resources::ftl_server::FtlServer;
 use std::marker::PhantomData;
 use systems::{

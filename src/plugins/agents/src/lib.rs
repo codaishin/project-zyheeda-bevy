@@ -15,17 +15,14 @@ use crate::{
 	system_params::agent_param::AgentParam,
 };
 use bevy::{ecs::query::QueryFilter, prelude::*};
-use common::{
-	prelude::*,
-	states::game_state::{GameState, LoadingEssentialAssets},
-	systems::register_animations::RegisterAnimationsSystem,
-};
+use common::{prelude::*, systems::register_animations::RegisterAnimationsSystem};
 use std::marker::PhantomData;
 use systems::void_sphere::ring_rotation::ring_rotation;
 
 pub struct AgentsPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<
+	TGameStates,
 	TLoading,
 	TInput,
 	TSaveGame,
@@ -38,6 +35,7 @@ impl<
 	TLoadout,
 >
 	AgentsPlugin<(
+		TGameStates,
 		TLoading,
 		TInput,
 		TSaveGame,
@@ -50,6 +48,7 @@ impl<
 		TLoadout,
 	)>
 where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -67,6 +66,7 @@ where
 {
 	#[allow(clippy::too_many_arguments)]
 	pub fn from_plugins(
+		_: &TGameStates,
 		_: &TLoading,
 		_: &TInput,
 		_: &TSaveGame,
@@ -83,6 +83,7 @@ where
 }
 
 impl<
+	TGameStates,
 	TLoading,
 	TInput,
 	TSaveGame,
@@ -95,6 +96,7 @@ impl<
 	TLoadout,
 > Plugin
 	for AgentsPlugin<(
+		TGameStates,
 		TLoading,
 		TInput,
 		TSaveGame,
@@ -107,6 +109,7 @@ impl<
 		TLoadout,
 	)>
 where
+	TGameStates: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TLoading: ThreadSafe + HandlesCustomFolderAssets,
 	TInput: ThreadSafe + SystemSetDefinition + HandlesInput,
 	TSaveGame: ThreadSafe + HandlesSaving,
@@ -208,7 +211,8 @@ where
 				>,
 			)
 				.chain()
-				.run_if(in_state(GameState::Play))
+				.run_if(not(TGameStates::game_paused()))
+				.after_plugin(TGameStates::SYSTEMS)
 				.after_plugin(TInput::SYSTEMS)
 				.after_plugin(TMovement::SYSTEMS)
 				.after_plugin(TInteractive::SYSTEMS)

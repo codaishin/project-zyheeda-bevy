@@ -25,18 +25,17 @@ use crate::{
 	system_params::set_agent_prefab::SetAgentPrefab,
 };
 use bevy::prelude::*;
-use common::{
-	prelude::*,
-	states::game_state::{GameState, LoadingGame},
-};
+use common::prelude::*;
 use components::grid::Grid;
 use std::marker::PhantomData;
 use zyheeda_core::strings::normalized_name::NormalizedName;
 
 pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
 
-impl<TLoading, TSavegame, TPhysics> MapGenerationPlugin<(TLoading, TSavegame, TPhysics)>
+impl<TGameState, TLoading, TSavegame, TPhysics>
+	MapGenerationPlugin<(TGameState, TLoading, TSavegame, TPhysics)>
 where
+	TGameState: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
@@ -55,13 +54,15 @@ where
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
 	const NAV_MESH_PREFIX: &str = "NavMesh";
 
-	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
+	pub fn from_plugins(_: &TGameState, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self(PhantomData)
 	}
 }
 
-impl<TLoading, TSavegame, TPhysics> Plugin for MapGenerationPlugin<(TLoading, TSavegame, TPhysics)>
+impl<TGameState, TLoading, TSavegame, TPhysics> Plugin
+	for MapGenerationPlugin<(TGameState, TLoading, TSavegame, TPhysics)>
 where
+	TGameState: ThreadSafe + HandlesGameStates + SystemSetDefinition,
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
@@ -85,9 +86,14 @@ where
 		#[cfg(debug_assertions)]
 		crate::mesh_grid_graph::debug::draw(app);
 
+		TGameState::add_game_state_systems(
+			app,
+			OnGameState::Enter(SettableActivity::NewGame),
+			Level::<0>::spawn_default,
+		);
+
 		app.init_resource::<PrefabRegister<AgentType>>()
 			.init_resource::<PrefabRegister<InteractiveType>>()
-			.add_systems(OnEnter(GameState::NewGame), Level::<0>::spawn_default)
 			.add_prefab_observer::<MeshCollider, TPhysics::TConfigMut>()
 			.add_observer(Map::apply_despawned_map_objects_persistence)
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
@@ -105,9 +111,10 @@ where
 					PersistentMapObject::link_with_map.pipe(OnError::log),
 					Spawner::<AgentType>::execute,
 					Spawner::<InteractiveType>::execute,
-					GridAgent::link_to_grid::<MeshGridGraph>.run_if(in_state(GameState::Play)),
+					GridAgent::link_to_grid::<MeshGridGraph>.run_if(not(TGameState::game_paused())),
 				)
-					.chain(),
+					.chain()
+					.after_plugin(TGameState::SYSTEMS),
 			);
 	}
 }

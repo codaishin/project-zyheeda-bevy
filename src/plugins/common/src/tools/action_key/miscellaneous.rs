@@ -1,5 +1,5 @@
 use crate::{
-	tools::action_key::{ActionKey, user_input::UserInput},
+	tools::action_key::user_input::UserInput,
 	traits::{
 		handles_input::InvalidUserInput,
 		handles_localization::Token,
@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
 pub enum Miscellaneous {
 	Interact,
+	Paused,
 }
 
 impl InvalidUserInput for Miscellaneous {
@@ -20,21 +21,21 @@ impl InvalidUserInput for Miscellaneous {
 	}
 }
 
-impl From<Miscellaneous> for ActionKey {
-	fn from(target: Miscellaneous) -> Self {
-		Self::Miscellaneous(target)
-	}
-}
-
 impl From<Miscellaneous> for UserInput {
-	fn from(_: Miscellaneous) -> Self {
-		Self::KeyCode(KeyCode::KeyF)
+	fn from(m: Miscellaneous) -> Self {
+		match m {
+			Miscellaneous::Interact => Self::KeyCode(KeyCode::KeyF),
+			Miscellaneous::Paused => Self::KeyCode(KeyCode::KeyP),
+		}
 	}
 }
 
 impl From<Miscellaneous> for Token {
-	fn from(_: Miscellaneous) -> Self {
-		Self::from("interact")
+	fn from(m: Miscellaneous) -> Self {
+		match m {
+			Miscellaneous::Interact => Self::from("interact"),
+			Miscellaneous::Paused => Self::from("paused"),
+		}
 	}
 }
 
@@ -45,7 +46,8 @@ impl IterFinite for Miscellaneous {
 
 	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
-			Miscellaneous::Interact => None,
+			Miscellaneous::Interact => Some(Miscellaneous::Paused),
+			Miscellaneous::Paused => None,
 		}
 	}
 }

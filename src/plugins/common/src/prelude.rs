@@ -23,6 +23,7 @@ pub use crate::{
 		action_key::{
 			ActionKey,
 			camera_key::CameraKey,
+			menu_key::MenuKey,
 			miscellaneous::Miscellaneous,
 			movement::MovementKey,
 			save_key::SaveKey,
