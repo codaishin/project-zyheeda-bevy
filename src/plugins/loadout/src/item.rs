@@ -47,29 +47,29 @@ impl VisualizeItem for VisibleEssenceSlot {
 }
 
 impl VisualizeItem for VisibleForearmSlot {
-	type TComponent = Model;
+	type TComponent = UniqueChildModel;
 
 	fn visualize(item: Option<&Item>) -> Self::TComponent {
 		match item {
 			Some(Item {
 				model: ModelRender::Forearm(path),
 				..
-			}) => Model::scene(path),
-			_ => Model::None,
+			}) => UniqueChildModel(Model::scene(path)),
+			_ => UniqueChildModel(Model::None),
 		}
 	}
 }
 
 impl VisualizeItem for VisibleHandSlot {
-	type TComponent = Model;
+	type TComponent = UniqueChildModel;
 
 	fn visualize(item: Option<&Item>) -> Self::TComponent {
 		match item {
 			Some(Item {
 				model: ModelRender::Hand(path),
 				..
-			}) => Model::scene(path),
-			_ => Model::None,
+			}) => UniqueChildModel(Model::scene(path)),
+			_ => UniqueChildModel(Model::None),
 		}
 	}
 }

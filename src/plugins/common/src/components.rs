@@ -8,5 +8,6 @@ pub mod model;
 pub mod persistent_entity;
 pub mod protected;
 pub mod ui_node_for;
+pub mod unique_child_model;
 
 pub(crate) mod load_world_asset;

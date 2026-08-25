@@ -8,6 +8,7 @@ pub use crate::{
 		model::*,
 		persistent_entity::PersistentEntity,
 		ui_node_for::UiNodeFor,
+		unique_child_model::UniqueChildModel,
 	},
 	dto::duration_in_seconds::DurationInSeconds,
 	effects::{EffectApplies, force::Force, gravity::Gravity, health_damage::HealthDamage},
