@@ -151,8 +151,8 @@ impl AddGameStateSystem for GameStatesPlugin {
 	}
 }
 
-impl NonPausedStates for GameStatesPlugin {
-	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>) {
+impl SetToNotPause for GameStatesPlugin {
+	fn set_to_not_pause(app: &mut App, state: impl Into<GameState>) {
 		let GameStateRoles { non_pause_states } = app
 			.world_mut()
 			.get_resource_or_init::<GameStateRoles>()
@@ -639,7 +639,7 @@ mod tests {
 		#[test]
 		fn not_paused_when_activity_marked_as_not_pausing() -> Result<(), RunSystemError> {
 			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
-			GameStatesPlugin::add_non_pause_state(&mut app, SettableActivity::Paused);
+			GameStatesPlugin::set_to_not_pause(&mut app, SettableActivity::Paused);
 
 			let paused = app
 				.world_mut()
@@ -664,7 +664,7 @@ mod tests {
 		#[test]
 		fn not_paused_when_ui_marked_as_not_pausing() -> Result<(), RunSystemError> {
 			let mut app = setup(Activity::Settable(SettableActivity::Play), [IngameUI::Hud]);
-			GameStatesPlugin::add_non_pause_state(&mut app, IngameUI::Hud);
+			GameStatesPlugin::set_to_not_pause(&mut app, IngameUI::Hud);
 
 			let paused = app
 				.world_mut()

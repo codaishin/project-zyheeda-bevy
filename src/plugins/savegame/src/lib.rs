@@ -82,7 +82,7 @@ where
 			SaveGameActivity::Load,
 			always,
 			hash_map! {
-				() => ActivityTransition::To(Activity::Settable(SettableActivity::Play)),
+				() => ActivityTransition::To(Activity::LoadAssets(LoadActivity::Assets)),
 			},
 		)?;
 

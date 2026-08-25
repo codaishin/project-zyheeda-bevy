@@ -11,7 +11,7 @@ pub(crate) struct GameStateRoles {
 pub(crate) static GAME_STATE_ROLES_DEFAULT: LazyLock<GameStateRoles> =
 	LazyLock::new(|| GameStateRoles {
 		non_pause_states: HashSet::from_iter(
-			GameStatesPlugin::DEFAULT
+			GameStatesPlugin::DEFAULT_NON_PAUSE
 				.iter()
 				.copied()
 				.map(GameState::Activity),

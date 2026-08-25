@@ -18,7 +18,7 @@ use std::{
 use zyheeda_core::prelude::*;
 
 pub trait HandlesGameStates:
-	AddGameStateSystem + AddActivityTransitions + NonPausedStates + GamePaused
+	AddGameStateSystem + AddActivityTransitions + SetToNotPause + GamePaused
 {
 	type TGameStates: ThreadSafe + for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates>;
 	type TGameStatesMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>;
@@ -101,10 +101,10 @@ impl Display for TransitionsConfigError {
 	}
 }
 
-pub trait NonPausedStates {
-	const DEFAULT: &[Activity] = &[Activity::Settable(SettableActivity::Play)];
+pub trait SetToNotPause {
+	const DEFAULT_NON_PAUSE: &[Activity] = &[Activity::Settable(SettableActivity::Play)];
 
-	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>);
+	fn set_to_not_pause(app: &mut App, state: impl Into<GameState>);
 }
 
 pub trait GameStates {
@@ -153,7 +153,16 @@ impl Iterator for GameStateIter<'_> {
 }
 
 pub trait GameStatesMut {
-	fn set_activity(&mut self, activity: SettableActivity);
+	type TActivitySetter<'a>: SetActivity
+	where
+		Self: 'a;
+
+	#[must_use]
+	fn get_activity_setter(
+		&mut self,
+		activity: SettableActivity,
+	) -> Option<Self::TActivitySetter<'_>>;
+
 	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI>;
 }
 
@@ -161,13 +170,25 @@ impl<T> GameStatesMut for T
 where
 	T: DerefMut<Target: GameStatesMut>,
 {
-	fn set_activity(&mut self, activity: SettableActivity) {
-		self.deref_mut().set_activity(activity);
+	type TActivitySetter<'a>
+		= <T::Target as GameStatesMut>::TActivitySetter<'a>
+	where
+		Self: 'a;
+
+	fn get_activity_setter(
+		&mut self,
+		activity: SettableActivity,
+	) -> Option<Self::TActivitySetter<'_>> {
+		self.deref_mut().get_activity_setter(activity)
 	}
 
 	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
 		self.deref_mut().ui_mut()
 	}
+}
+
+pub trait SetActivity {
+	fn set_activity(self);
 }
 
 #[derive(Debug, PartialEq)]
@@ -434,8 +455,8 @@ mod tests {
 			type TGameStatesMut = _Param<'static>;
 		}
 
-		impl NonPausedStates for _Plugin {
-			fn add_non_pause_state(_: &mut App, _: impl Into<GameState>) {
+		impl SetToNotPause for _Plugin {
+			fn set_to_not_pause(_: &mut App, _: impl Into<GameState>) {
 				panic!("NOT USED")
 			}
 		}
@@ -494,11 +515,27 @@ mod tests {
 		}
 
 		impl GameStatesMut for _Param<'_> {
-			fn set_activity(&mut self, _: SettableActivity) {
+			type TActivitySetter<'a>
+				= _SetActivity
+			where
+				Self: 'a;
+
+			fn get_activity_setter(
+				&mut self,
+				_: SettableActivity,
+			) -> Option<Self::TActivitySetter<'_>> {
 				panic!("NOT USED")
 			}
 
 			fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
+				panic!("NOT USED")
+			}
+		}
+
+		struct _SetActivity;
+
+		impl SetActivity for _SetActivity {
+			fn set_activity(self) {
 				panic!("NOT USED")
 			}
 		}

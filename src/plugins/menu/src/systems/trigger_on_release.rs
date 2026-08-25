@@ -34,7 +34,11 @@ fn trigger_on_release<TGameStatesMut, TComponent, TInteraction>(
 			continue;
 		}
 
-		states.set_activity(trigger.trigger_state());
+		let Some(setter) = states.get_activity_setter(trigger.trigger_state()) else {
+			continue;
+		};
+
+		setter.set_activity();
 	}
 }
 
@@ -81,12 +85,31 @@ mod tests {
 	}
 
 	impl GameStatesMut for _States {
-		fn set_activity(&mut self, activity: SettableActivity) {
-			self.activity = activity
+		type TActivitySetter<'a>
+			= _Setter<'a>
+		where
+			Self: 'a;
+
+		fn get_activity_setter(&mut self, activity: SettableActivity) -> Option<_Setter<'_>> {
+			Some(_Setter {
+				new: activity,
+				current: &mut self.activity,
+			})
 		}
 
 		fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
 			&mut self.ui
+		}
+	}
+
+	struct _Setter<'a> {
+		new: SettableActivity,
+		current: &'a mut SettableActivity,
+	}
+
+	impl SetActivity for _Setter<'_> {
+		fn set_activity(self) {
+			*self.current = self.new;
 		}
 	}
 
