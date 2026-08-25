@@ -2,6 +2,7 @@ pub use crate::{
 	CommonPlugin,
 	attributes::{effect_target::EffectTarget, health::Health},
 	components::{
+		child_model::ChildModel,
 		child_of_persistent::ChildOfPersistent,
 		insert_asset::InsertAsset,
 		lifetime::Lifetime,

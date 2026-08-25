@@ -1,4 +1,5 @@
 pub mod asset_mesh_name;
+pub mod child_model;
 pub mod child_of_persistent;
 pub mod essence;
 pub mod gltf;

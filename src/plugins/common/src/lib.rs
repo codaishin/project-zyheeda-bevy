@@ -16,6 +16,7 @@ pub mod zyheeda_commands;
 use crate::{
 	components::{
 		asset_mesh_name::AssetMeshName,
+		child_model::ChildModel,
 		child_of_persistent::ChildOfPersistent,
 		gltf::GltfLookup,
 		lifetime::Lifetime,
@@ -68,6 +69,7 @@ fn life_cycles(app: &mut App) {
 
 fn asset_loading(app: &mut App) {
 	app.add_prefab_observer::<Model, AssetServer>();
+	app.add_prefab_observer::<ChildModel, ()>();
 	app.add_observer(LoadWorldAsset::execute.pipe(OnError::log));
 	app.add_observer(InsertAsset::<Mesh>::apply);
 	app.add_observer(InsertAsset::<StandardMaterial>::apply);
