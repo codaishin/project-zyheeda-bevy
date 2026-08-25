@@ -35,12 +35,14 @@ pub fn drop_item<TPlayer, TLoadout>(
 		return;
 	};
 
-	for (.., keyed_panel) in panels.iter().filter(is_hovered) {
-		ctx.swap_items(dad.0, keyed_panel.0);
-		commands.try_apply_on(&entity, |mut e| {
-			e.try_remove::<Dad>();
-		});
-	}
+	let Some((.., keyed_panel)) = panels.iter().find(is_hovered) else {
+		return;
+	};
+
+	ctx.swap_items(dad.0, keyed_panel.0);
+	commands.try_apply_on(&entity, |mut e| {
+		e.try_remove::<Dad>();
+	});
 }
 
 fn is_hovered((interaction, ..): &(&Interaction, &KeyedPanel)) -> bool {
@@ -55,7 +57,7 @@ mod tests {
 		app::{App, Update},
 		ui::Interaction,
 	};
-	use testing::{SingleThreadedApp, set_input};
+	use testing::{SingleThreadedApp, assert_eq_any_of, set_input};
 
 	#[derive(Component, Debug, PartialEq, Default)]
 	struct _Container {
@@ -101,6 +103,37 @@ mod tests {
 			Some(&_Container {
 				swaps: vec![(LoadoutKey::from(SlotKey(42)), LoadoutKey::from(SlotKey(11)))]
 			}),
+			app.world().entity(entity).get::<_Container>(),
+		);
+	}
+
+	#[test]
+	fn call_swap_only_once() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
+			.id();
+		app.world_mut()
+			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
+		app.world_mut()
+			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(12))));
+
+		set_input!(app, just_released(MOUSE_LEFT));
+		app.update();
+
+		assert_eq_any_of!(
+			expected(
+				[
+					&_Container {
+						swaps: vec![(LoadoutKey::from(SlotKey(42)), LoadoutKey::from(SlotKey(11)))]
+					},
+					&_Container {
+						swaps: vec![(LoadoutKey::from(SlotKey(42)), LoadoutKey::from(SlotKey(12)))]
+					},
+				]
+				.map(Some)
+			),
 			app.world().entity(entity).get::<_Container>(),
 		);
 	}
