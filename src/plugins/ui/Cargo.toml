@@ -1,5 +1,5 @@
 [package]
-name = "menu"
+name = "ui"
 version.workspace = true
 edition.workspace = true
 

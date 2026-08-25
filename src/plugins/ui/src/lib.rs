@@ -80,10 +80,10 @@ use systems::{
 use traits::{LoadUi, add_dropdown::AddDropdown, add_tooltip::AddTooltip, add_ui::AddUI};
 use zyheeda_core::hash_map;
 
-pub struct MenuPlugin<TDependencies>(PhantomData<TDependencies>);
+pub struct UIPlugin<TDependencies>(PhantomData<TDependencies>);
 
 impl<TGameStates, TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
-	MenuPlugin<(
+	UIPlugin<(
 		TGameStates,
 		TLoading,
 		TSavegame,
@@ -119,7 +119,7 @@ where
 }
 
 impl<TGameStates, TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout>
-	MenuPlugin<(
+	UIPlugin<(
 		TGameStates,
 		TLoading,
 		TSavegame,
@@ -384,7 +384,7 @@ where
 }
 
 impl<TGameStates, TLoading, TSavegame, TInput, TLocalization, TGraphics, TPlayers, TLoadout> Plugin
-	for MenuPlugin<(
+	for UIPlugin<(
 		TGameStates,
 		TLoading,
 		TSavegame,
