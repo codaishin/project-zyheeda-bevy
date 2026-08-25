@@ -167,6 +167,21 @@ macro_rules! assert_count {
 }
 
 #[macro_export]
+macro_rules! assert_eq_any_of {
+	(expected($expected:expr), $got:expr $(,)?) => {{
+		if !$expected.contains(&$got) {
+			panic!(
+				"assertion failed\n expected any of: {:?}\n not: {:?}",
+				$expected, $got,
+			);
+		}
+	}};
+	($got:expr, expected($expected:expr) $(,)?) => {
+		assert_eq_any_of!(expected($expected), $got)
+	};
+}
+
+#[macro_export]
 macro_rules! fake_entity {
 	($row:literal) => {{
 		const ENTITY: Option<bevy::prelude::Entity> = bevy::prelude::Entity::from_raw_u32($row);
@@ -519,6 +534,34 @@ mod regression_tests {
 		#[test]
 		fn passes_when_left_and_right_item_count_matches() {
 			assert_eq_unordered!(vec![1, 1, 2, 2, 3], vec![1, 2, 3, 2, 1]);
+		}
+	}
+
+	mod assert_eq_any_of {
+		#[test]
+		fn ok() {
+			assert_no_panic! {
+				assert_eq_any_of!(expected([1, 2, 3]), 2)
+			};
+		}
+
+		#[test]
+		fn ok_reversed() {
+			assert_no_panic! {
+				assert_eq_any_of!(2, expected([1, 2, 3]))
+			};
+		}
+
+		#[test]
+		#[should_panic]
+		fn err() {
+			assert_eq_any_of!(expected([1, 2, 3]), 4)
+		}
+
+		#[test]
+		#[should_panic]
+		fn err_reversed() {
+			assert_eq_any_of!(4, expected([1, 2, 3]))
 		}
 	}
 }
