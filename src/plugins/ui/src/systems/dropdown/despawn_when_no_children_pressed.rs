@@ -3,12 +3,12 @@ use bevy::prelude::*;
 use common::prelude::*;
 
 pub(crate) fn dropdown_despawn_when_no_children_pressed<TItem: Sync + Send + 'static>(
-	focus: In<Focus>,
-	commands: Commands,
+	In(focus): In<Focus>,
+	commands: ZyheedaCommands,
 	dropdowns: Query<(Entity, &DropdownUI<TItem>)>,
 	interactions: Query<&Interaction>,
 ) -> Focus {
-	match focus.0 {
+	match focus {
 		Focus::New(new_focus) => despawn_and_unfocus(dropdowns, interactions, commands, new_focus),
 		Focus::Unchanged => Focus::Unchanged,
 	}
@@ -17,7 +17,7 @@ pub(crate) fn dropdown_despawn_when_no_children_pressed<TItem: Sync + Send + 'st
 fn despawn_and_unfocus<TItem: Sync + Send + 'static>(
 	dropdown_uis: Query<(Entity, &DropdownUI<TItem>)>,
 	interactions: Query<&Interaction>,
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	mut new_focus: Vec<Entity>,
 ) -> Focus {
 	let has_no_pressed_child_dropdown = |(_, dropdown_ui): &(Entity, &DropdownUI<TItem>)| {
@@ -29,22 +29,11 @@ fn despawn_and_unfocus<TItem: Sync + Send + 'static>(
 	};
 
 	for (entity, dropdown_ui) in dropdown_uis.iter().filter(has_no_pressed_child_dropdown) {
-		despawn_entity(&mut commands, entity);
-		unfocus(&mut new_focus, &dropdown_ui.source);
+		commands.try_apply_on(&entity, |e| e.try_despawn());
+		new_focus.retain(|focused| focused != &dropdown_ui.source);
 	}
 
 	Focus::New(new_focus)
-}
-
-fn despawn_entity(commands: &mut Commands, entity: Entity) {
-	let Ok(mut entity) = commands.get_entity(entity) else {
-		return;
-	};
-	entity.despawn();
-}
-
-fn unfocus(new_focus: &mut Vec<Entity>, despawned: &Entity) {
-	new_focus.retain(|focused| focused != despawned);
 }
 
 #[cfg(test)]
