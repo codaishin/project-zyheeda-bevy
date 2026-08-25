@@ -13,7 +13,6 @@ use loading::LoadingPlugin;
 use loadout::LoadoutPlugin;
 use localization::LocalizationPlugin;
 use map_generation::MapGenerationPlugin;
-use menu::MenuPlugin;
 use movement::MovementPlugin;
 use path_finding::PathFindingPlugin;
 use physics::PhysicsPlugin;
@@ -22,6 +21,7 @@ use std::{
 	env::home_dir,
 	process::{ExitCode, Termination},
 };
+use ui::UIPlugin;
 
 fn main() -> ZyheedaAppExit {
 	let app = &mut App::new();
@@ -91,7 +91,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&movement,
 		&loadout,
 	);
-	let menus = MenuPlugin::from_plugins(
+	let menus = UIPlugin::from_plugins(
 		&game_states,
 		&loading,
 		&savegame,

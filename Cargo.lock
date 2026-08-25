@@ -4070,21 +4070,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "menu"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "common",
- "macros",
- "mockall",
- "test-case",
- "testing",
- "tracing",
- "uuid",
- "zyheeda_core",
-]
-
-[[package]]
 name = "miniz_oxide"
 version = "0.8.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5187,7 +5172,6 @@ dependencies = [
  "localization",
  "macros",
  "map_generation",
- "menu",
  "mockall",
  "movement",
  "path_finding",
@@ -5198,6 +5182,7 @@ dependencies = [
  "test-case",
  "testing",
  "tracing",
+ "ui",
  "unic-langid",
  "uuid",
  "yaml_serde",
@@ -6256,6 +6241,21 @@ name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
+
+[[package]]
+name = "ui"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "common",
+ "macros",
+ "mockall",
+ "test-case",
+ "testing",
+ "tracing",
+ "uuid",
+ "zyheeda_core",
+]
 
 [[package]]
 name = "unic-langid"

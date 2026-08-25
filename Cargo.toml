@@ -75,7 +75,7 @@ loading = { path = "src/plugins/loading" }
 loadout = { path = "src/plugins/loadout" }
 localization = { path = "src/plugins/localization" }
 map_generation = { path = "src/plugins/map_generation" }
-menu = { path = "src/plugins/menu" }
+ui = { path = "src/plugins/ui" }
 movement = { path = "src/plugins/movement" }
 input = { path = "src/plugins/input" }
 interactive = { path = "src/plugins/interactive" }
