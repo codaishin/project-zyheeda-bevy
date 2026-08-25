@@ -229,7 +229,7 @@ where
 	fn ui_overlay(&self, app: &mut App) {
 		let hud = IngameUI::Hud;
 
-		TGameStates::add_non_pause_state(app, IngameUI::Hud);
+		TGameStates::set_to_not_pause(app, IngameUI::Hud);
 
 		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(hud)
 			.add_observer(QuickbarPanel::add_input_control::<TInput::TActionKeyButton>)

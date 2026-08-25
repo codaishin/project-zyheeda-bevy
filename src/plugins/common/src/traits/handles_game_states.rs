@@ -18,7 +18,7 @@ use std::{
 use zyheeda_core::prelude::*;
 
 pub trait HandlesGameStates:
-	AddGameStateSystem + AddActivityTransitions + NonPausedStates + GamePaused
+	AddGameStateSystem + AddActivityTransitions + SetToNotPause + GamePaused
 {
 	type TGameStates: ThreadSafe + for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates>;
 	type TGameStatesMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>;
@@ -101,10 +101,10 @@ impl Display for TransitionsConfigError {
 	}
 }
 
-pub trait NonPausedStates {
-	const DEFAULT: &[Activity] = &[Activity::Settable(SettableActivity::Play)];
+pub trait SetToNotPause {
+	const DEFAULT_NON_PAUSE: &[Activity] = &[Activity::Settable(SettableActivity::Play)];
 
-	fn add_non_pause_state(app: &mut App, state: impl Into<GameState>);
+	fn set_to_not_pause(app: &mut App, state: impl Into<GameState>);
 }
 
 pub trait GameStates {
@@ -434,8 +434,8 @@ mod tests {
 			type TGameStatesMut = _Param<'static>;
 		}
 
-		impl NonPausedStates for _Plugin {
-			fn add_non_pause_state(_: &mut App, _: impl Into<GameState>) {
+		impl SetToNotPause for _Plugin {
+			fn set_to_not_pause(_: &mut App, _: impl Into<GameState>) {
 				panic!("NOT USED")
 			}
 		}
