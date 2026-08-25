@@ -76,13 +76,24 @@ mod tests {
 	}
 
 	impl GameStatesMut for _GameStates {
-		fn set_activity(&mut self, _: SettableActivity) {
-			panic!("SHOULD NOT BE USED")
+		type TActivitySetter<'a>
+			= _Setter
+		where
+			Self: 'a;
+
+		fn get_activity_setter(&mut self, _: SettableActivity) -> Option<_Setter> {
+			panic!("SHOULD NOT BE USED");
 		}
 
 		fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
 			&mut self.ui
 		}
+	}
+
+	struct _Setter;
+
+	impl SetActivity for _Setter {
+		fn set_activity(self) {}
 	}
 
 	fn setup(input: _Input, game_states: _GameStates, keys: HashMap<MenuKey, IngameUI>) -> App {

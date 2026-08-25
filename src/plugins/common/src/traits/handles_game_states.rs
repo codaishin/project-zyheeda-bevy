@@ -153,7 +153,16 @@ impl Iterator for GameStateIter<'_> {
 }
 
 pub trait GameStatesMut {
-	fn set_activity(&mut self, activity: SettableActivity);
+	type TActivitySetter<'a>: SetActivity
+	where
+		Self: 'a;
+
+	#[must_use]
+	fn get_activity_setter(
+		&mut self,
+		activity: SettableActivity,
+	) -> Option<Self::TActivitySetter<'_>>;
+
 	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI>;
 }
 
@@ -161,13 +170,25 @@ impl<T> GameStatesMut for T
 where
 	T: DerefMut<Target: GameStatesMut>,
 {
-	fn set_activity(&mut self, activity: SettableActivity) {
-		self.deref_mut().set_activity(activity);
+	type TActivitySetter<'a>
+		= <T::Target as GameStatesMut>::TActivitySetter<'a>
+	where
+		Self: 'a;
+
+	fn get_activity_setter(
+		&mut self,
+		activity: SettableActivity,
+	) -> Option<Self::TActivitySetter<'_>> {
+		self.deref_mut().get_activity_setter(activity)
 	}
 
 	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
 		self.deref_mut().ui_mut()
 	}
+}
+
+pub trait SetActivity {
+	fn set_activity(self);
 }
 
 #[derive(Debug, PartialEq)]
@@ -494,11 +515,27 @@ mod tests {
 		}
 
 		impl GameStatesMut for _Param<'_> {
-			fn set_activity(&mut self, _: SettableActivity) {
+			type TActivitySetter<'a>
+				= _SetActivity
+			where
+				Self: 'a;
+
+			fn get_activity_setter(
+				&mut self,
+				_: SettableActivity,
+			) -> Option<Self::TActivitySetter<'_>> {
 				panic!("NOT USED")
 			}
 
 			fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
+				panic!("NOT USED")
+			}
+		}
+
+		struct _SetActivity;
+
+		impl SetActivity for _SetActivity {
+			fn set_activity(self) {
 				panic!("NOT USED")
 			}
 		}

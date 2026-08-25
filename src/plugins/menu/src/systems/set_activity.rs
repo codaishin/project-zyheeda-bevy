@@ -23,7 +23,11 @@ where
 			.filter_map(|a| key_map.get(&a).copied());
 
 		for trigger in triggers {
-			game_states.set_activity(trigger);
+			let Some(setter) = game_states.get_activity_setter(trigger) else {
+				continue;
+			};
+
+			setter.set_activity();
 		}
 	};
 
@@ -69,12 +73,31 @@ mod tests {
 	}
 
 	impl GameStatesMut for _GameStates {
-		fn set_activity(&mut self, activity: SettableActivity) {
-			self.activity = activity;
+		type TActivitySetter<'a>
+			= _Setter<'a>
+		where
+			Self: 'a;
+
+		fn get_activity_setter(&mut self, activity: SettableActivity) -> Option<_Setter<'_>> {
+			Some(_Setter {
+				new: activity,
+				current: &mut self.activity,
+			})
 		}
 
 		fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
 			panic!("SHOULD NOT BE USED")
+		}
+	}
+
+	struct _Setter<'a> {
+		new: SettableActivity,
+		current: &'a mut SettableActivity,
+	}
+
+	impl SetActivity for _Setter<'_> {
+		fn set_activity(self) {
+			*self.current = self.new
 		}
 	}
 
