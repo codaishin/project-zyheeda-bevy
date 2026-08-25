@@ -12,9 +12,9 @@ use bevy::{ecs::system::StaticSystemParam, prelude::*};
 #[derive(Component, Debug, PartialEq)]
 #[require(Visibility)]
 #[component(immutable)]
-pub struct ChildModel(pub Model);
+pub struct UniqueChildModel(pub Model);
 
-impl Prefab<()> for ChildModel {
+impl Prefab<()> for UniqueChildModel {
 	type TError = Unreachable;
 	type TSystemParam = (
 		ZyheedaCommands<'static, 'static>,
@@ -61,7 +61,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_prefab_observer::<ChildModel, ()>();
+		app.add_prefab_observer::<UniqueChildModel, ()>();
 
 		app
 	}
@@ -72,7 +72,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(ChildModel(Model::Scene(Scene::default())))
+			.spawn(UniqueChildModel(Model::Scene(Scene::default())))
 			.id();
 
 		let mut children = app.world_mut().query::<&ChildOf>();
@@ -86,7 +86,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(ChildModel(Model::Scene(Scene::default())))
+			.spawn(UniqueChildModel(Model::Scene(Scene::default())))
 			.id();
 
 		let mut children = app.world_mut().query::<(&ChildOf, &Model)>();
@@ -101,8 +101,8 @@ mod tests {
 	fn replace_child_model() {
 		let mut app = setup();
 
-		let mut entity = app.world_mut().spawn(ChildModel(Model::None));
-		entity.insert(ChildModel(Model::Scene(Scene::default())));
+		let mut entity = app.world_mut().spawn(UniqueChildModel(Model::None));
+		entity.insert(UniqueChildModel(Model::Scene(Scene::default())));
 
 		let entity = entity.id();
 		let mut children = app.world_mut().query::<(&ChildOf, &Model)>();
@@ -120,9 +120,9 @@ mod tests {
 
 		let mut app = setup();
 
-		let mut entity = app.world_mut().spawn(ChildModel(Model::None));
+		let mut entity = app.world_mut().spawn(UniqueChildModel(Model::None));
 		entity.with_child(_Other);
-		entity.insert(ChildModel(Model::Scene(Scene::default())));
+		entity.insert(UniqueChildModel(Model::Scene(Scene::default())));
 
 		let mut others = app.world_mut().query::<&_Other>();
 		assert_count!(1, others.iter(app.world()));
