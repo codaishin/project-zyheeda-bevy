@@ -9,17 +9,19 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{any::type_name, fmt::Display, marker::PhantomData};
 
-#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Clone, Copy, Default, Eq, Hash, PartialEq, Debug)]
 pub struct SlotKey(pub u8);
 
 impl ViewField for SlotKey {
 	type TValue<'a> = Self;
 }
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize, Default)]
+#[serde_model]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
 pub enum HandSlot {
 	#[default]
 	Left,

@@ -1,8 +1,9 @@
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{borrow::Borrow, ops::Deref, sync::Arc};
 
-#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
 pub struct BoneName(Arc<str>);
 
 impl From<&str> for BoneName {

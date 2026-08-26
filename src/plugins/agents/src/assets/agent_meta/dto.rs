@@ -4,18 +4,20 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::collections::HashMap;
 use zyheeda_core::serialization::as_vec;
 
-#[derive(TypePath, Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(TypePath, Debug, PartialEq)]
 pub struct AgentConfigDto {
 	model: ModelConfig,
 	loadout: Loadout,
 	attributes: PhysicalDefaultAttributes,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 #[allow(clippy::large_enum_variant)]
 pub(crate) enum ModelConfig {
 	Asset {
@@ -32,7 +34,8 @@ pub(crate) enum ModelConfig {
 	Procedural(ProceduralModel),
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub(crate) enum ProceduralModel {
 	VoidSphere,
 }

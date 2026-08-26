@@ -1,10 +1,11 @@
 use super::KeyMap;
 use bevy::reflect::TypePath;
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::hash::Hash;
 
-#[derive(TypePath, Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(TypePath, Debug, PartialEq)]
 pub(crate) struct KeyMapDto<TAllKeys>
 where
 	TAllKeys: Eq + Hash,

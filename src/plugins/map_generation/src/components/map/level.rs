@@ -1,9 +1,10 @@
 use crate::components::map::Map;
 use bevy::prelude::*;
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, Debug, PartialEq, Default, Clone)]
 #[require(Map, Name = Self, Model = Self)]
 pub(crate) struct Level<const L: i8>;
 

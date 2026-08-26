@@ -2,11 +2,12 @@ use super::Item;
 use crate::components::model_render::ModelRender;
 use bevy::reflect::TypePath;
 use common::{components::essence::Essence, prelude::*};
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
 type SkillPath = String;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, TypePath)]
+#[serde_model]
+#[derive(Debug, PartialEq, TypePath)]
 pub(crate) struct ItemDto {
 	token: String,
 	model: ModelRender,

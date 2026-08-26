@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use std::ops::Deref;
 
-#[derive(SavableComponent, Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(SavableComponent, Component, Debug, PartialEq, Default, Clone)]
 #[savable_component(id = "skill target")]
 pub(crate) struct SkillTargetInternal(pub(crate) Option<SkillTarget>);
 

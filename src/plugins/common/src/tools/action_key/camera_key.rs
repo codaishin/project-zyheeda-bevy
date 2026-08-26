@@ -5,9 +5,10 @@ use crate::traits::{
 	iteration::{FiniteIter, IterFinite},
 };
 use bevy::input::mouse::MouseButton;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum CameraKey {
 	Rotate,
 }

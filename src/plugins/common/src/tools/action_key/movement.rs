@@ -5,9 +5,10 @@ use crate::traits::{
 	iteration::{FiniteIter, IterFinite},
 };
 use bevy::input::{keyboard::KeyCode, mouse::MouseButton};
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Default, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Default, Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum MovementKey {
 	#[default]
 	Forward,

@@ -5,7 +5,7 @@ pub(crate) mod shape;
 use crate::{skills::behaviors::SkillBehaviorConfig, traits::ReleaseSkill};
 use bevy::prelude::*;
 use common::{prelude::*, tools::path::Path};
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{
 	collections::HashSet,
 	fmt::{Display, Formatter, Result as FmtResult},
@@ -82,7 +82,8 @@ impl Default for SkillId {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub enum SkillMode {
 	#[default]
 	Hold,

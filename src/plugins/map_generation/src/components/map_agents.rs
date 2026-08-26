@@ -1,9 +1,9 @@
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
-#[derive(SavableComponent, Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(SavableComponent, Component, Debug, PartialEq, Default, Clone)]
 #[savable_component(id = "grid agent")]
 pub struct GridAgent;
 

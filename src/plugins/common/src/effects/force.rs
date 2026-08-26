@@ -1,7 +1,8 @@
 use crate::{attributes::effect_target::EffectTarget, traits::handles_physics::PhysicalEffect};
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Force;
 
 impl PhysicalEffect for Force {

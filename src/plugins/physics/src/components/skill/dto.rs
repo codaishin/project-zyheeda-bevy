@@ -1,8 +1,9 @@
 use crate::components::skill::{CreatedFrom, Skill};
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub struct SkillDto {
 	pub(crate) shape: SkillShape,
 	pub(crate) contact_effects: Vec<SkillEffect>,

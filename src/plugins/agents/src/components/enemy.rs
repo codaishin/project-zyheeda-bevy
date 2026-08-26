@@ -7,10 +7,10 @@ pub(crate) mod void_sphere;
 use crate::components::enemy::attack_config::EnemyAttackConfig;
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone)]
 #[component(immutable)]
 #[require(PersistentEntity, Transform, Visibility, EnemyAttackConfig)]
 #[savable_component(id = "enemy")]

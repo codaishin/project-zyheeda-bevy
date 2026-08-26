@@ -1,7 +1,6 @@
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use std::ops::Index;
 
 #[derive(Component, Debug, PartialEq, Default, Clone)]
@@ -27,8 +26,7 @@ impl Index<SpeedIndex> for Config {
 	}
 }
 
-#[derive(
-	Component, SavableComponent, Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize,
-)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Copy)]
 #[savable_component(id = "current movement speed")]
 pub(crate) struct SpeedIndex(pub(crate) SpeedToggle);

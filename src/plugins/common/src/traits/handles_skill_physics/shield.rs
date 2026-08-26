@@ -1,7 +1,8 @@
 use crate::traits::handles_skill_physics::SkillShape;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Shield;
 
 impl From<Shield> for SkillShape {

@@ -3,9 +3,10 @@ use crate::{
 	tools::UnitsPerSecond,
 	traits::handles_physics::PhysicalEffect,
 };
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Gravity {
 	pub strength: UnitsPerSecond,
 }

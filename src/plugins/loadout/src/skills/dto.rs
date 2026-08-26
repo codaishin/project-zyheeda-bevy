@@ -9,11 +9,12 @@ use bevy::{
 	reflect::TypePath,
 };
 use common::{prelude::*, tools::path::Path};
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{collections::HashSet, time::Duration};
 use uuid::Uuid;
 
-#[derive(TypePath, Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(TypePath, Debug, PartialEq)]
 pub(crate) struct SkillDto {
 	id: Uuid,
 	token: String,
@@ -66,7 +67,8 @@ impl From<Skill> for SkillDto {
 	}
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub(crate) enum RunSkillBehaviorDto {
 	OnActive(SkillBehaviorConfigDto),
 	OnAim(SkillBehaviorConfigDto),

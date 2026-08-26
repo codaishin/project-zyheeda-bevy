@@ -114,7 +114,7 @@ mod tests {
 	use super::*;
 	use crate::traits::write_file::WriteFile;
 	use bevy::asset::AssetPath;
-	use macros::SavableComponent;
+	use macros::{SavableComponent, serde_model};
 	use serde::{Deserialize, Serialize};
 	use serde_json::{from_str, to_string};
 	use std::collections::HashMap;
@@ -149,7 +149,8 @@ mod tests {
 		value: i32,
 	}
 
-	#[derive(Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Clone)]
 	struct _ADto {
 		value: u32,
 	}
@@ -175,7 +176,8 @@ mod tests {
 		}
 	}
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone, PartialEq, Debug)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone, PartialEq, Debug)]
 	#[savable_component(id = "b")]
 	struct _B {
 		v: i32,
@@ -315,7 +317,8 @@ mod tests {
 		use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 		use serde_json::json;
 
-		#[derive(Component, SavableComponent, Serialize, Deserialize, Clone, PartialEq, Debug)]
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone, PartialEq, Debug)]
 		#[savable_component(id = "c")]
 		struct _C {
 			v: i32,

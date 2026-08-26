@@ -1,8 +1,9 @@
 use crate::{SkillDto, components::combo_node::ComboNode, skills::Skill};
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub(crate) struct ComboNodeDto(Vec<(SlotKey, (SkillDto, ComboNodeDto))>);
 
 impl From<ComboNode> for ComboNodeDto {

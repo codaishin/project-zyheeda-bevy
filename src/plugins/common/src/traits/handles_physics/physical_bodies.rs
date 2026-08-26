@@ -2,16 +2,18 @@ use crate::{
 	tools::Units,
 	traits::iteration::{FiniteIter, IterFinite},
 };
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::collections::HashSet;
 
-#[derive(Debug, PartialEq, Clone, Default, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct BodyConfig {
 	pub core: Option<Core>,
 	pub sub_frames: Vec<InteractiveFrame>,
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct InteractiveFrame {
 	pub forward_offset: Units,
 	pub shape: ShapeParameters,
@@ -37,7 +39,8 @@ impl From<ShapeParameters> for InteractiveFrame {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Core {
 	pub shape: Shape,
 	pub physics_type: PhysicsType,
@@ -53,7 +56,8 @@ impl Default for Core {
 }
 
 /// Shape definition. Used to describe physics colliders.
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Shape {
 	/// Use the given parameters for a static collider
 	Parameters(ShapeParameters),
@@ -78,7 +82,8 @@ impl From<ShapeParameters> for Shape {
 /// All fields that apply to the same geometric dimension are to
 /// be interpreted additively in order to prevent illogical value combinations.
 /// For instance a capsule collider's full height is composed of `2 * half_y + 2 * radius`.
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ShapeParameters {
 	Sphere {
 		radius: Units,
@@ -106,13 +111,15 @@ impl Default for ShapeParameters {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone)]
 pub enum PhysicsType {
 	Agent(HashSet<Blocker>),
 	Terrain(HashSet<Blocker>),
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Blocker {
 	Physical,
 	Force,
@@ -158,7 +165,8 @@ impl IterFinite for Blocker {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Blockers {
 	All,
 	AnyOf(HashSet<Blocker>),

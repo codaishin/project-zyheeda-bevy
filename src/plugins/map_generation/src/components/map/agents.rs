@@ -1,8 +1,8 @@
 use bevy::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[component(immutable)]
 #[savable_component(id = "agents loaded marker")]
 pub(crate) struct AgentsLoaded;

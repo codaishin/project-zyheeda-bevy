@@ -8,12 +8,12 @@ use crate::{
 };
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use std::{collections::HashMap, fmt::Debug, iter::Rev};
 use zyheeda_core::prelude::*;
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[require(CurrentMovementDirection, CurrentForwardPitch, ChangedAnimations)]
 #[savable_component(id = "animation dispatch")]
 pub struct AnimationDispatch {
@@ -123,7 +123,8 @@ impl<'a> Iterator for IterAllAnimations<'a> {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub(crate) struct AnimationState {
 	pub(crate) seek: F32Finite,
 }

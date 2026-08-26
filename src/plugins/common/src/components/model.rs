@@ -14,7 +14,7 @@ use bevy::{
 	ecs::{component::Mutable, system::StaticSystemParam},
 	prelude::*,
 };
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::ops::Deref;
 
 #[derive(Component, Debug, Default, PartialEq, Clone)]
@@ -72,7 +72,8 @@ where
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct SceneId(pub usize);
 
 impl Deref for SceneId {
@@ -84,7 +85,8 @@ impl Deref for SceneId {
 }
 
 /// Whether or not to add [`GltfLookup`] to the entity
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct UseGltfLookup(pub bool);
 
 impl Deref for UseGltfLookup {
@@ -95,7 +97,8 @@ impl Deref for UseGltfLookup {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Scene {
 	pub asset_path: String,
 	pub id: SceneId,

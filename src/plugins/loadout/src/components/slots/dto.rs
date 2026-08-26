@@ -1,9 +1,10 @@
 use crate::components::slots::Slots;
 use bevy::asset::AssetPath;
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub struct SlotsDto(Vec<(SlotKey, Option<String>)>);
 
 impl From<Slots> for SlotsDto {

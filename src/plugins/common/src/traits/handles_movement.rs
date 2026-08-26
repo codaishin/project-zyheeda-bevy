@@ -6,8 +6,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use macros::EntityKey;
-use serde::{Deserialize, Serialize};
+use macros::{EntityKey, serde_model};
 use std::ops::DerefMut;
 
 pub trait HandlesMovement: SystemSetDefinition {
@@ -22,7 +21,8 @@ pub trait ControlMovement: StartMovement + StopMovement + ToggleSpeed + CurrentM
 
 impl<T> ControlMovement for T where T: StartMovement + StopMovement + ToggleSpeed + CurrentMovement {}
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum MovementTarget {
 	Dir(Dir3),
 	Point(Vec3),
@@ -57,7 +57,8 @@ where
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum MovementSpeed {
 	Fixed(UnitsPerSecond),
 	Variable([UnitsPerSecond; 2]),
@@ -78,7 +79,8 @@ impl Default for MovementSpeed {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct RequiredClearance {
 	pub vertical: Units,
 	pub horizontal: Units,
@@ -128,7 +130,8 @@ where
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub enum SpeedToggle {
 	#[default]
 	Left,

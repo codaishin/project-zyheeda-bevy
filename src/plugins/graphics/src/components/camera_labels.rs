@@ -19,8 +19,7 @@ use bevy::{
 	render::extract_component::ExtractComponent,
 };
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
 const WORLD_PASS: Layer = 0;
 const AGENTS_PASS: Layer = 1;
@@ -258,19 +257,8 @@ impl Prefab<()> for WorldLight {
 	}
 }
 
-#[derive(
-	Component,
-	SavableComponent,
-	Debug,
-	PartialEq,
-	Eq,
-	Hash,
-	Default,
-	Clone,
-	Copy,
-	Serialize,
-	Deserialize,
-)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 #[component(immutable)]
 #[savable_component(id = "camera")]
 #[require(

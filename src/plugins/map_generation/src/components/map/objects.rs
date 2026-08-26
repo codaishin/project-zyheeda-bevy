@@ -1,7 +1,6 @@
 use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct MapObject;
@@ -14,7 +13,8 @@ pub(crate) struct MapObjects(EntityHashSet);
 #[relationship(relationship_target = MapObjects)]
 pub(crate) struct MapObjectOf(pub(crate) Entity);
 
-#[derive(SavableComponent, Component, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(SavableComponent, Component, Debug, PartialEq, Clone)]
 #[savable_component(id = "map object of")]
 pub(crate) struct PersistentMapObject {
 	pub(crate) map: PersistentEntity,

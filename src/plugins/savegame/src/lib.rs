@@ -210,8 +210,7 @@ struct ExecuteSave;
 mod tests {
 	use super::*;
 	use bevy::ecs::system::SystemParam;
-	use macros::SavableComponent;
-	use serde::{Deserialize, Serialize};
+	use macros::{SavableComponent, serde_model};
 	use std::panic::catch_unwind;
 	use testing::SingleThreadedApp;
 
@@ -232,15 +231,18 @@ mod tests {
 	#[derive(SystemParam)]
 	struct _StatesParam;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "a")]
 	struct _A;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "a")]
 	struct _AAgain;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "b")]
 	struct _B;
 

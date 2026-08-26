@@ -13,10 +13,11 @@ use bevy::{
 	utils::default,
 };
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{collections::HashMap, sync::LazyLock, time::Duration};
 
-#[derive(Component, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, Debug, PartialEq, Default, Clone)]
 #[component(immutable)]
 #[require(
 	Name = "Void Sphere",

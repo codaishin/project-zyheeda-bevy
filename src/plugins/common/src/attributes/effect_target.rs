@@ -1,8 +1,9 @@
 use crate::errors::Unreachable;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::marker::PhantomData;
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum EffectTarget<TEffect> {
 	Affected,
 	Immune,

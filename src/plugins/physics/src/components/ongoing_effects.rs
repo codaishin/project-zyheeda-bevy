@@ -4,10 +4,11 @@ use crate::components::{
 };
 use bevy::prelude::{Component, default};
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-#[derive(Component, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component)]
 pub(crate) struct OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,

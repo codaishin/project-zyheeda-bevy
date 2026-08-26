@@ -1,10 +1,10 @@
 use crate::systems::insert_affected::AffectedComponent;
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy)]
 #[savable_component(id = "force affected")]
 pub struct ForceAffected(pub(crate) EffectTarget<Force>);
 

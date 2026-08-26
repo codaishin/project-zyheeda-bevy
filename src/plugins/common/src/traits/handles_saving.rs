@@ -137,11 +137,11 @@ impl Hash for IdInternal {
 #[cfg(test)]
 mod test_savable_component_derive {
 	use super::*;
-	use macros::SavableComponent;
-	use serde::Deserialize;
+	use macros::{SavableComponent, serde_model};
 	use std::any::TypeId;
 
-	#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "default")]
 	struct _Default;
 
@@ -149,7 +149,8 @@ mod test_savable_component_derive {
 	#[savable_component(id = "with dto", dto = _Dto)]
 	struct _WithDto;
 
-	#[derive(Serialize, Deserialize)]
+	#[serde_model]
+	#[derive()]
 	struct _Dto;
 
 	impl From<_WithDto> for _Dto {
@@ -169,7 +170,8 @@ mod test_savable_component_derive {
 		}
 	}
 
-	#[derive(Component, SavableComponent, Clone, Serialize, Deserialize)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "priority", has_priority)]
 	struct _Priority;
 

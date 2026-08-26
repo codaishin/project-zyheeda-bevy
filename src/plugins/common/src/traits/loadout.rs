@@ -1,5 +1,5 @@
 use crate::tools::action_key::slot::SlotKey;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{fmt::Display, ops::Deref, sync::Arc};
 
 pub trait LoadoutConfig {
@@ -7,7 +7,8 @@ pub trait LoadoutConfig {
 	fn slots(&self) -> impl Iterator<Item = (SlotKey, Option<ItemName>)>;
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone)]
 pub struct ItemName(Arc<str>);
 
 impl From<String> for ItemName {

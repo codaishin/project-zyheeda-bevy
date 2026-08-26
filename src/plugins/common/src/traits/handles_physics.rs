@@ -10,8 +10,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use macros::EntityKey;
-use serde::{Deserialize, Serialize};
+use macros::{EntityKey, serde_model};
 use std::{
 	collections::HashSet,
 	ops::{Deref, DerefMut},
@@ -165,7 +164,8 @@ pub trait HandlesMotion {
 	type TCharacterMotion: Component + From<CharacterMotion> + View<CharacterMotion>;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CharacterMotion {
 	Direction { speed: Speed, direction: Dir3 },
 	ToTarget { speed: Speed, target: Vec3 },
@@ -210,7 +210,8 @@ pub trait PhysicalEffect {
 	type TTarget;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct PhysicalDefaultAttributes {
 	pub health: Health,
 	pub force_interaction: EffectTarget<Force>,

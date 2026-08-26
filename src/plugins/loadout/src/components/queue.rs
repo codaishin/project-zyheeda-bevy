@@ -8,15 +8,15 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use std::{
 	collections::{VecDeque, vec_deque::Iter},
 	time::Duration,
 };
 use zyheeda_core::prelude::*;
 
-#[derive(PartialEq, Debug, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(PartialEq, Debug, Default, Clone)]
 enum State {
 	#[default]
 	Flushed,
@@ -162,7 +162,8 @@ impl GetActiveSkill<SkillState> for Queue {
 	}
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(PartialEq, Debug, Clone, Copy)]
 pub(crate) struct SkillElapsed<TDuration> {
 	active: TDuration,
 	#[serde(skip_serializing_if = "Option::is_none")]

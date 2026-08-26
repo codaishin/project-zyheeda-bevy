@@ -6,7 +6,7 @@ use crate::{
 	},
 };
 use bevy::ecs::{query::QueryFilter, system::SystemParam};
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
 pub trait HandlesEnemies {
 	type TEnemy<TFilter>: for<'w, 's> SystemParam<
@@ -16,7 +16,8 @@ pub trait HandlesEnemies {
 		TFilter: QueryFilter + 'static;
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy, Eq, Hash)]
 pub enum EnemyType {
 	VoidSphere,
 }

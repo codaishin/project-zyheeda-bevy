@@ -1,7 +1,8 @@
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Component, Default, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, Default, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
 pub enum Essence {
 	#[default]
