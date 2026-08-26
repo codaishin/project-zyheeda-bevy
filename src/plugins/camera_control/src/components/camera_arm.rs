@@ -5,7 +5,7 @@ use macros::{SavableComponent, serde_model};
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy)]
-#[savable_component(id = "camera arm")]
+#[savable_component(id = "camera_arm")]
 #[require(Transform)]
 pub struct CameraArm {
 	pub direction: Dir3,

@@ -5,7 +5,7 @@ use macros::{SavableComponent, serde_model};
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy)]
-#[savable_component(id = "force affected")]
+#[savable_component(id = "force_affected")]
 pub struct ForceAffected(pub(crate) EffectTarget<Force>);
 
 impl From<EffectTarget<Force>> for ForceAffected {

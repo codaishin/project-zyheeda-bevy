@@ -164,6 +164,20 @@ where
 	{
 		let new_type = TypeId::of::<TComponent>();
 		let unique_id = TComponent::ID;
+		let snake_case = unique_id
+			.chars()
+			.all(|c| (c.is_lowercase() && c.is_alphabetic()) || c.is_numeric() || c == '_')
+			&& !unique_id.contains("__")
+			&& !unique_id.starts_with("_")
+			&& !unique_id.ends_with("_");
+
+		if !snake_case {
+			panic!(
+				"attempted to register `{}` as savable, but its id `{:?}` is not in snake_case",
+				type_name::<TComponent>(),
+				unique_id
+			);
+		}
 
 		match app.world_mut().get_resource_mut::<UniqueIds>() {
 			Some(mut unique_ids) => {
@@ -306,6 +320,150 @@ mod tests {
 
 			SavegamePlugin::<_States>::register_savable_component::<_A>(&mut app);
 			SavegamePlugin::<_States>::register_savable_component::<_A>(&mut app);
+		});
+
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn crash_when_id_with_capital_letters() {
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone)]
+		#[savable_component(id = "Capital")]
+		struct _NotSnakeCase;
+
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<_States>::register_savable_component::<_NotSnakeCase>(&mut app);
+		});
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn crash_when_id_with_whitespace() {
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone)]
+		#[savable_component(id = "white\nspace")]
+		struct _NotSnakeCase;
+
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<_States>::register_savable_component::<_NotSnakeCase>(&mut app);
+		});
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn crash_when_id_with_special_symbol() {
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone)]
+		#[savable_component(id = "with-hyphen")]
+		struct _NotSnakeCase;
+
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<_States>::register_savable_component::<_NotSnakeCase>(&mut app);
+		});
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn do_not_crash_when_id_with_underscore() {
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone)]
+		#[savable_component(id = "under_score")]
+		struct _NotSnakeCase;
+
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<_States>::register_savable_component::<_NotSnakeCase>(&mut app);
+		});
+
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn crash_when_double_underscores() {
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone)]
+		#[savable_component(id = "double__underscore")]
+		struct _NotSnakeCase;
+
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<_States>::register_savable_component::<_NotSnakeCase>(&mut app);
+		});
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn crash_when_starting_with_underscore() {
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone)]
+		#[savable_component(id = "_id")]
+		struct _NotSnakeCase;
+
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<_States>::register_savable_component::<_NotSnakeCase>(&mut app);
+		});
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn crash_when_ending_with_underscore() {
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone)]
+		#[savable_component(id = "id_")]
+		struct _NotSnakeCase;
+
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<_States>::register_savable_component::<_NotSnakeCase>(&mut app);
+		});
+
+		assert!(result.is_err());
+	}
+
+	#[test]
+	fn do_not_crash_when_id_with_numbers() {
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone)]
+		#[savable_component(id = "number_1")]
+		struct _NotSnakeCase;
+
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<_States>::register_savable_component::<_NotSnakeCase>(&mut app);
+		});
+
+		assert!(result.is_ok());
+	}
+
+	#[test]
+	fn do_not_crash_when_id_with_letter() {
+		#[serde_model]
+		#[derive(Component, SavableComponent, Clone)]
+		#[savable_component(id = "letters")]
+		struct _NotSnakeCase;
+
+		let result = catch_unwind(|| {
+			let mut app = setup();
+
+			SavegamePlugin::<_States>::register_savable_component::<_NotSnakeCase>(&mut app);
 		});
 
 		assert!(result.is_ok());

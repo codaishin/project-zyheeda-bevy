@@ -15,7 +15,7 @@ use zyheeda_core::prelude::*;
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[require(CurrentMovementDirection, CurrentForwardPitch, ChangedAnimations)]
-#[savable_component(id = "animation dispatch")]
+#[savable_component(id = "animation_dispatch")]
 pub struct AnimationDispatch {
 	priorities: (
 		OrderedSet<AnimationKey>,

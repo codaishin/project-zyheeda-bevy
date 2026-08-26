@@ -28,5 +28,5 @@ impl Index<SpeedIndex> for Config {
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Copy)]
-#[savable_component(id = "current movement speed")]
+#[savable_component(id = "current_movement_speed")]
 pub(crate) struct SpeedIndex(pub(crate) SpeedToggle);

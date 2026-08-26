@@ -6,7 +6,7 @@ use std::vec::Drain;
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
-#[savable_component(id = "gravity affected")]
+#[savable_component(id = "gravity_affected")]
 pub enum GravityAffected {
 	AffectedBy {
 		#[serde(default, skip_serializing_if = "Vec::is_empty")]

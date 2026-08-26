@@ -10,7 +10,7 @@ use std::time::Duration;
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
-#[savable_component(id = "gravity effect")]
+#[savable_component(id = "gravity_effect")]
 pub struct GravityEffect(pub(crate) Gravity);
 
 impl<TDependencies> HandlesPhysicalEffect<Gravity> for PhysicsPlugin<TDependencies> {

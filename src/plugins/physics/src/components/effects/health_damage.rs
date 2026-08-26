@@ -10,7 +10,7 @@ use std::time::Duration;
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
-#[savable_component(id = "health damage")]
+#[savable_component(id = "health_damage")]
 pub struct HealthDamageEffect(pub(crate) HealthDamage);
 
 impl<TSaveGame> HandlesPhysicalEffect<HealthDamage> for PhysicsPlugin<TSaveGame> {

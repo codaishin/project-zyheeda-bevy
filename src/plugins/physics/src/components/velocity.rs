@@ -11,7 +11,7 @@ use testing::ApproxEqual;
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[component(immutable)]
-#[savable_component(id = "linear velocity")]
+#[savable_component(id = "linear_velocity")]
 pub(crate) struct LinearVelocity(pub(crate) Vec3);
 
 #[cfg(test)]

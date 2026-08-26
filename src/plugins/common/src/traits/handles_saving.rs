@@ -146,7 +146,7 @@ mod test_savable_component_derive {
 	struct _Default;
 
 	#[derive(Component, SavableComponent, Clone)]
-	#[savable_component(id = "with dto", dto = _Dto)]
+	#[savable_component(id = "with_dto", dto = _Dto)]
 	struct _WithDto;
 
 	#[serde_model]

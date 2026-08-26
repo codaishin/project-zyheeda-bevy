@@ -5,7 +5,7 @@ use std::ops::Deref;
 
 #[serde_model]
 #[derive(SavableComponent, Component, Debug, PartialEq, Default, Clone)]
-#[savable_component(id = "skill target")]
+#[savable_component(id = "skill_target")]
 pub(crate) struct SkillTargetInternal(pub(crate) Option<SkillTarget>);
 
 impl From<PersistentEntity> for SkillTargetInternal {

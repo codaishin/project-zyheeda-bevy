@@ -15,7 +15,7 @@ pub(crate) struct MapObjectOf(pub(crate) Entity);
 
 #[serde_model]
 #[derive(SavableComponent, Component, Debug, PartialEq, Clone)]
-#[savable_component(id = "map object of")]
+#[savable_component(id = "map_object_of")]
 pub(crate) struct PersistentMapObject {
 	pub(crate) map: PersistentEntity,
 }

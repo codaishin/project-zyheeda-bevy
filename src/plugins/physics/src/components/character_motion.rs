@@ -8,7 +8,7 @@ use testing::ApproxEqual;
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
-#[savable_component(id = "apply character motion")]
+#[savable_component(id = "apply_character_motion")]
 #[require(IsInMotion, Transform)]
 pub struct ApplyMotion(pub(crate) CharacterMotion);
 

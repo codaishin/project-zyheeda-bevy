@@ -8,5 +8,5 @@ use macros::{SavableComponent, serde_model};
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[component(immutable)]
-#[savable_component(id = "child of persistent")]
+#[savable_component(id = "child_of_persistent")]
 pub struct ChildOfPersistent(pub PersistentEntity);

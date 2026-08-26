@@ -12,8 +12,8 @@ impl<const L: i8> SavableComponent for Level<L> {
 	type TDto = Self;
 
 	const ID: UniqueComponentId = UniqueComponentId::from_lazy(|| match L {
-		l if l < 0 => format!("level neg {}", l.abs()),
-		l => format!("level {}", l),
+		l if l < 0 => format!("level_neg_{}", l.abs()),
+		l => format!("level_{}", l),
 	});
 }
 

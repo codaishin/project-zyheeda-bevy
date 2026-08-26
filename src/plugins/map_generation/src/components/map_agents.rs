@@ -4,7 +4,7 @@ use macros::{SavableComponent, serde_model};
 
 #[serde_model]
 #[derive(SavableComponent, Component, Debug, PartialEq, Default, Clone)]
-#[savable_component(id = "grid agent")]
+#[savable_component(id = "grid_agent")]
 pub struct GridAgent;
 
 #[derive(Component, Debug, PartialEq)]

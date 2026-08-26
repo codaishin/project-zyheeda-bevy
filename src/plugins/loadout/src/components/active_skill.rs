@@ -10,7 +10,7 @@ use macros::{SavableComponent, serde_model};
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone)]
-#[savable_component(id = "active skill", dto = ActiveSkill<SkillBehaviorConfigDto>)]
+#[savable_component(id = "active_skill", dto = ActiveSkill<SkillBehaviorConfigDto>)]
 pub(crate) enum ActiveSkill<TSkillBehavior = SkillBehaviorConfig> {
 	#[default]
 	Idle,

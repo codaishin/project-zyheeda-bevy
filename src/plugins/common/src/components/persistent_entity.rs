@@ -61,7 +61,7 @@ use uuid::Uuid;
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[component(immutable)]
-#[savable_component(id = "persistent entity", has_priority)]
+#[savable_component(id = "persistent_entity", has_priority)]
 pub struct PersistentEntity(Uuid);
 
 impl PersistentEntity {

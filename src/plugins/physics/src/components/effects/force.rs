@@ -11,7 +11,7 @@ use std::time::Duration;
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
-#[savable_component(id = "force effect")]
+#[savable_component(id = "force_effect")]
 pub struct ForceEffect(pub(crate) Force);
 
 impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies> {

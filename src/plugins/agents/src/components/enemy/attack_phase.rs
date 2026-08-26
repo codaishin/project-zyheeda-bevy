@@ -5,7 +5,7 @@ use std::time::Duration;
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
-#[savable_component(id = "enemy attack phase")]
+#[savable_component(id = "enemy_attack_phase")]
 pub(crate) enum EnemyAttackPhase {
 	HoldSkill { key: SlotKey, holding: Duration },
 	Cooldown(Duration),
