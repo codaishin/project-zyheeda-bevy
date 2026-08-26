@@ -1,12 +1,12 @@
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use std::fmt::Display;
 
 use crate::components::{container::Container, door::Door};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[component(immutable)]
 #[savable_component(id = "interactive")]
 pub(crate) struct Interactive {

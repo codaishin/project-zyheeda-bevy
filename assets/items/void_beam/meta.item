@@ -1,7 +1,13 @@
 {
 	"token": "item-void-beam",
-	"model": "None",
-	"essence": "None",
+	"model": {
+		"type": "none"
+	},
+	"essence": {
+		"type": "none"
+	},
 	"skill": "items/void_beam/skills/void_beam/meta.skill",
-	"item_type": "VoidBeam"
+	"item_type": {
+		"type": "void_beam"
+	}
 }

@@ -1,8 +1,9 @@
 use crate::skills::behaviors::SkillBehaviorConfig;
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub(crate) struct SkillBehaviorConfigDto {
 	shape: SpawnSkillDto,
 	contact: Vec<SkillEffect>,
@@ -29,7 +30,8 @@ impl From<SkillBehaviorConfig> for SkillBehaviorConfigDto {
 	}
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub(crate) enum SpawnSkillDto {
 	GroundTargetedAoe(SphereAoE<DurationInSeconds>),
 	Projectile(Projectile),

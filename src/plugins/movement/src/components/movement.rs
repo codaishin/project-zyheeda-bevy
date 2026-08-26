@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use std::{collections::VecDeque, ops::Deref};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[savable_component(id = "movement")]
 pub(crate) enum Movement {
 	None,
@@ -25,7 +25,8 @@ where
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone)]
 pub(crate) struct MovementPath {
 	waypoints: VecDeque<Vec3>,
 	is_new: bool,

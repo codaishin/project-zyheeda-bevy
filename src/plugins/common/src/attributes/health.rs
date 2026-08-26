@@ -1,7 +1,8 @@
 use crate::traits::accessors::get::ViewField;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct Health {
 	pub current: f32,
 	pub max: f32,

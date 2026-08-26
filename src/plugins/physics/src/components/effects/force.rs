@@ -6,12 +6,12 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use std::time::Duration;
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[savable_component(id = "force effect")]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
+#[savable_component(id = "force_effect")]
 pub struct ForceEffect(pub(crate) Force);
 
 impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies> {

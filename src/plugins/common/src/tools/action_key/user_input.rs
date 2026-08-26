@@ -1,12 +1,13 @@
 use crate::traits::{accessors::get::ViewField, handles_localization::Token};
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use zyheeda_core::prelude::*;
 
 #[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct UserInputSystem;
 
-#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum UserInput {
 	KeyCode(KeyCode),
 	MouseButton(MouseButton),

@@ -2,9 +2,10 @@ use crate::{
 	tools::Units,
 	traits::{handles_physics::physical_bodies::Blockers, handles_skill_physics::SkillShape},
 };
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Beam {
 	pub range: Units,
 	pub blocked_by: Blockers,

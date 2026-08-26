@@ -2,98 +2,146 @@
   "actions": [
     [
       {
-        "Movement": "Forward"
+        "type": "movement",
+        "content": {
+          "type": "forward"
+        }
       },
       {
-        "KeyCode": "KeyW"
+        "type": "key_code",
+        "content": "KeyW"
       }
     ],
     [
       {
-        "Movement": "Backward"
+        "type": "movement",
+        "content": {
+          "type": "backward"
+        }
       },
       {
-        "KeyCode": "KeyS"
+        "type": "key_code",
+        "content": "KeyS"
       }
     ],
     [
       {
-        "Movement": "Left"
+        "type": "movement",
+        "content": {
+          "type": "left"
+        }
       },
       {
-        "KeyCode": "KeyA"
+        "type": "key_code",
+        "content": "KeyA"
       }
     ],
     [
       {
-        "Movement": "Right"
+        "type": "movement",
+        "content": {
+          "type": "right"
+        }
       },
       {
-        "KeyCode": "KeyD"
+        "type": "key_code",
+        "content": "KeyD"
       }
     ],
     [
       {
-        "Movement": "Pointer"
+        "type": "movement",
+        "content": {
+          "type": "pointer"
+        }
       },
       {
-        "KeyCode": "Space"
+        "type": "key_code",
+        "content": "Space"
       }
     ],
     [
       {
-        "Movement": "ToggleWalkRun"
+        "type": "movement",
+        "content": {
+          "type": "toggle_walk_run"
+        }
       },
       {
-        "KeyCode": "NumpadSubtract"
+        "type": "key_code",
+        "content": "NumpadSubtract"
       }
     ],
     [
       {
-        "Slot": "Left"
+        "type": "slot",
+        "content": {
+          "type": "left"
+        }
       },
       {
-        "MouseButton": "Left"
+        "type": "mouse_button",
+        "content": "Left"
       }
     ],
     [
       {
-        "Slot": "Right"
+        "type": "slot",
+        "content": {
+          "type": "right"
+        }
       },
       {
-        "MouseButton": "Right"
+        "type": "mouse_button",
+        "content": "Right"
       }
     ],
     [
       {
-        "Menu": "Inventory"
+        "type": "menu",
+        "content": {
+          "type": "inventory"
+        }
       },
       {
-        "KeyCode": "KeyI"
+        "type": "key_code",
+        "content": "KeyI"
       }
     ],
     [
       {
-        "Menu": "ComboOverview"
+        "type": "menu",
+        "content": {
+          "type": "combo_overview"
+        }
       },
       {
-        "KeyCode": "KeyK"
+        "type": "key_code",
+        "content": "KeyK"
       }
     ],
     [
       {
-        "Menu": "Settings"
+        "type": "menu",
+        "content": {
+          "type": "settings"
+        }
       },
       {
-        "KeyCode": "Escape"
+        "type": "key_code",
+        "content": "Escape"
       }
     ],
     [
       {
-        "Camera": "Rotate"
+        "type": "camera",
+        "content": {
+          "type": "rotate"
+        }
       },
       {
-        "MouseButton": "Middle"
+        "type": "mouse_button",
+        "content": "Middle"
       }
     ]
   ]

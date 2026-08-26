@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
+
 #[cfg(test)]
 use testing::ApproxEqual;
 
@@ -8,9 +8,10 @@ use testing::ApproxEqual;
 ///
 /// Because we cannot implement save-ability for rapier components (we neither own the trait
 /// nor the component) we drive all linear velocities through this component.
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[component(immutable)]
-#[savable_component(id = "linear velocity")]
+#[savable_component(id = "linear_velocity")]
 pub(crate) struct LinearVelocity(pub(crate) Vec3);
 
 #[cfg(test)]

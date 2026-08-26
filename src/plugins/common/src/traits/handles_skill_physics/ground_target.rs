@@ -1,12 +1,14 @@
+use macros::serde_model;
+
 use crate::{
 	dto::duration_in_seconds::DurationInSeconds,
 	tools::Units,
 	traits::handles_skill_physics::SkillShape,
 };
-use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
-#[derive(Default, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct SphereAoE<TDuration = Duration> {
 	#[serde(skip_serializing_if = "Option::is_none")]
 	pub lifetime: Option<TDuration>,

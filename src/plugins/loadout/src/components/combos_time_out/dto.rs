@@ -1,9 +1,10 @@
 use crate::components::combos_time_out::CombosTimeOut;
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::time::Duration;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub struct CombosTimeOutDto {
 	max_duration: DurationInSeconds,
 	duration: DurationInSeconds,

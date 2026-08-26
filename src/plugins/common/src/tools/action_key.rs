@@ -25,13 +25,14 @@ use crate::{
 };
 use bevy::{reflect::TypePath, utils::default};
 use camera_key::CameraKey;
+use macros::serde_model;
 use movement::MovementKey;
-use serde::{Deserialize, Serialize};
 use slot::HandSlot;
 use user_input::UserInput;
 use zyheeda_core::impl_enum_conversions;
 
-#[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
+#[serde_model]
+#[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum ActionKey {
 	Movement(MovementKey),
 	Slot(HandSlot),

@@ -4,10 +4,10 @@ use crate::{
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{prelude::*, systems::register_animations::AnimationsMarker};
-use macros::{SavableComponent, asset_path};
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, asset_path, serde_model};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy)]
 #[savable_component(id = "door")]
 #[component(immutable)]
 #[require(

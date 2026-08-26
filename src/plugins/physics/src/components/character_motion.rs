@@ -1,14 +1,14 @@
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
 #[cfg(test)]
 use testing::ApproxEqual;
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
-#[savable_component(id = "apply character motion")]
+#[savable_component(id = "apply_character_motion")]
 #[require(IsInMotion, Transform)]
 pub struct ApplyMotion(pub(crate) CharacterMotion);
 

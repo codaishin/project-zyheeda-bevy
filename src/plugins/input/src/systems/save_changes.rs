@@ -110,11 +110,12 @@ impl ErrorData for SaveError {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use macros::NestedMocks;
+	use macros::{NestedMocks, serde_model};
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
 
-	#[derive(Resource, Debug, PartialEq, Serialize, Clone, Default)]
+	#[serde_model]
+	#[derive(Resource, Debug, PartialEq, Clone, Default)]
 	struct _Resource {
 		invalid_inputs: Vec<(ActionKey, HashSet<UserInput>)>,
 	}
@@ -128,7 +129,8 @@ mod tests {
 		}
 	}
 
-	#[derive(Asset, TypePath, Debug, PartialEq, Serialize)]
+	#[serde_model]
+	#[derive(Asset, TypePath, Debug, PartialEq)]
 	struct _ResourceDto(_Resource);
 
 	impl From<_Resource> for _ResourceDto {

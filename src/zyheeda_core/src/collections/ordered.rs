@@ -1,5 +1,6 @@
 mod keys;
 
+use macros::serde_model;
 use serde::{Deserialize, Serialize, de::Error};
 use std::{
 	any::type_name,
@@ -375,7 +376,8 @@ where
 /// A container containing unique items, which retains insertion order.
 ///
 /// Removal and Insertion are `O(n)` operations.
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone)]
 pub struct OrderedSet<T>
 where
 	T: PartialEq,

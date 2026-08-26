@@ -21,8 +21,7 @@ use bevy::{
 	ecs::{entity::Entity, system::SystemParam},
 	prelude::*,
 };
-use macros::EntityKey;
-use serde::{Deserialize, Serialize};
+use macros::{EntityKey, serde_model};
 use std::{
 	collections::HashMap,
 	ops::{Deref, DerefMut},
@@ -141,7 +140,8 @@ pub struct SpawnArgs<'a> {
 	pub mount: SkillMount,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone)]
 pub enum SkillShape {
 	SphereAoE(SphereAoE),
 	Projectile(Projectile),
@@ -149,7 +149,8 @@ pub enum SkillShape {
 	Shield(Shield),
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum SkillEffect {
 	Force(Force),
 	Gravity(Gravity),
@@ -162,7 +163,8 @@ pub struct SkillRoot {
 	pub persistent_entity: PersistentEntity,
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct SkillCaster(pub PersistentEntity);
 
 impl Deref for SkillCaster {
@@ -173,7 +175,8 @@ impl Deref for SkillCaster {
 	}
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub enum SkillTarget {
 	Cursor(Cursor),
 	Entity(PersistentEntity),
@@ -191,14 +194,16 @@ impl From<PersistentEntity> for SkillTarget {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub enum Cursor {
 	#[default]
 	Direction,
 	TerrainHover,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
 pub enum SkillMount {
 	#[default]
 	Center,
@@ -219,7 +224,8 @@ impl SkillMount {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
 pub enum SkillMountBone {
 	#[default]
 	NeutralSlot,

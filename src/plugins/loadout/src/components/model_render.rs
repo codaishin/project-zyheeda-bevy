@@ -1,6 +1,7 @@
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub enum ModelRender {
 	#[default]
 	None,

@@ -1,9 +1,10 @@
 use crate::components::inventory::Inventory;
 use bevy::prelude::*;
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub struct InventoryDto(Vec<(usize, String)>);
 
 impl From<Inventory> for InventoryDto {

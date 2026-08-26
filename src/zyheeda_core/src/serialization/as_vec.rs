@@ -11,17 +11,19 @@
 //! # Example
 //! ```
 //! use zyheeda_core::serialization::as_vec;
-//! use serde::{Serialize, Deserialize};
 //! use serde_json::{json, to_value, from_value};
 //! use std::collections::HashMap;
+//! use macros::serde_model;
 //!
-//! #[derive(Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+//! #[serde_model]
+//! #[derive(Debug, PartialEq, Eq, Hash)]
 //! struct Key {
 //!   id: usize,
 //!   name: String,
 //! }
 //!
-//! #[derive(Debug, PartialEq, Serialize, Deserialize)]
+//! #[serde_model]
+//! #[derive(Debug, PartialEq)]
 //! struct Container {
 //!   #[serde(with = "as_vec")]
 //!   map: HashMap<Key, String>
@@ -90,21 +92,26 @@ where
 mod test_as_vec {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
+	use macros::serde_model;
 	use serde_json::json;
 
-	#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+	#[serde_model]
+	#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 	enum _Key {
 		A(usize),
 		B(String),
 	}
 
-	#[derive(Debug, PartialEq, Serialize, Deserialize)]
+	#[serde_model]
+	#[derive(Debug, PartialEq)]
 	struct _Wrapper {
 		#[serde(with = "super")]
 		map: HashMap<_Key, String>,
 	}
 
 	mod serialize {
+		use testing::assert_eq_any_of;
+
 		use super::*;
 
 		#[test]
@@ -118,22 +125,22 @@ mod test_as_vec {
 
 			let value = serde_json::to_value(wrapper).unwrap();
 
-			assert!(
-				[
+			assert_eq_any_of!(
+				expected([
 					json!({
 						"map":[
-							[{ "A": 42 }, "A"],
-							[{ "B": "11" }, "B"],
+							[{ "type": "a", "content": 42 }, "A"],
+							[{ "type": "b", "content": "11" }, "B"],
 						],
 					}),
 					json!({
 						"map":[
-							[{ "B": "11" }, "B"],
-							[{ "A": 42 }, "A"],
+							[{ "type": "b", "content": "11" }, "B"],
+							[{ "type": "a", "content": 42 }, "A"],
 						],
-					}),
-				]
-				.contains(&value)
+					})
+				]),
+				value,
 			);
 		}
 	}
@@ -145,8 +152,8 @@ mod test_as_vec {
 		fn from_list_of_lists() {
 			let value = json!({
 				"map":[
-					[{ "A": 42 }, "A"],
-					[{ "B": "11" }, "B"],
+					[{ "type": "a", "content": 42 }, "A"],
+					[{ "type": "b", "content": "11" }, "B"],
 				],
 			});
 
@@ -167,8 +174,8 @@ mod test_as_vec {
 		fn error_on_duplicate_key() {
 			let value = json!({
 				"map":[
-					[{ "A": 42 }, "A"],
-					[{ "A": 42 }, "B"],
+					[{ "type": "a", "content": 42 }, "A"],
+					[{ "type": "a", "content": 42 }, "B"],
 				],
 			});
 

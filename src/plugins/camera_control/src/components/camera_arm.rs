@@ -1,11 +1,11 @@
 use crate::traits::orbit::{MoveArm, Vec2Radians};
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
-#[savable_component(id = "camera arm")]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy)]
+#[savable_component(id = "camera_arm")]
 #[require(Transform)]
 pub struct CameraArm {
 	pub direction: Dir3,

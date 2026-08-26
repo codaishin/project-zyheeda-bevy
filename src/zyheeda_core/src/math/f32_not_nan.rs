@@ -1,7 +1,9 @@
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
+use serde::Deserialize;
 use std::{cmp::Ordering, fmt::Display, hash::Hash, ops::Deref};
 
-#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize)]
+#[serde_model(no_default_deserialize)]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct F32NotNan(f32);
 
 impl F32NotNan {

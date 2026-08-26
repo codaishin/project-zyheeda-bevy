@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::time::Duration;
 
 /// A compact dto for [`Duration`].
@@ -8,7 +8,8 @@ use std::time::Duration;
 /// - Positive infinity or overflow: `Duration::MAX`
 ///
 /// Use only where the precision loss of `f32` is acceptable.
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct DurationInSeconds {
 	seconds: f32,
 }

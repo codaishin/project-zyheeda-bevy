@@ -1,9 +1,10 @@
 use super::UnitsPerSecond;
 use crate::traits::accessors::get::ViewField;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::ops::Deref;
 
-#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub struct Speed(pub UnitsPerSecond);
 
 impl Speed {

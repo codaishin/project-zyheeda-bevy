@@ -1,12 +1,12 @@
 use crate::systems::{apply_pull::PullAbleByGravity, insert_affected::AffectedComponent};
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use std::vec::Drain;
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[savable_component(id = "gravity affected")]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
+#[savable_component(id = "gravity_affected")]
 pub enum GravityAffected {
 	AffectedBy {
 		#[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -80,7 +80,8 @@ impl AffectedComponent for GravityAffected {
 	type TAttribute = EffectTarget<Gravity>;
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct GravityPull {
 	pub(crate) strength: UnitsPerSecond,
 	pub(crate) towards: PersistentEntity,

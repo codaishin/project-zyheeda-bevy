@@ -7,9 +7,10 @@ use crate::{
 	},
 };
 use bevy::input::keyboard::KeyCode;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Miscellaneous {
 	Interact,
 	Paused,

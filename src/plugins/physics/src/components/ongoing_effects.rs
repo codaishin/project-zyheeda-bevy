@@ -4,10 +4,11 @@ use crate::components::{
 };
 use bevy::prelude::{Component, default};
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-#[derive(Component, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component)]
 pub(crate) struct OngoingEffects<TActor, TTarget>
 where
 	TActor: Component,
@@ -21,19 +22,19 @@ where
 impl SavableComponent for OngoingEffects<HealthDamageEffect, Life> {
 	type TDto = Self;
 
-	const ID: UniqueComponentId = UniqueComponentId::from_str("ongoing health damage effects");
+	const ID: UniqueComponentId = UniqueComponentId::from_str("ongoing_health_damage_effects");
 }
 
 impl SavableComponent for OngoingEffects<GravityEffect, GravityAffected> {
 	type TDto = Self;
 
-	const ID: UniqueComponentId = UniqueComponentId::from_str("ongoing gravity effects");
+	const ID: UniqueComponentId = UniqueComponentId::from_str("ongoing_gravity_effects");
 }
 
 impl SavableComponent for OngoingEffects<ForceEffect, ForceAffected> {
 	type TDto = Self;
 
-	const ID: UniqueComponentId = UniqueComponentId::from_str("ongoing force effects");
+	const ID: UniqueComponentId = UniqueComponentId::from_str("ongoing_force_effects");
 }
 
 impl<TActor, TTarget> Clone for OngoingEffects<TActor, TTarget>

@@ -6,11 +6,11 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-#[savable_component(id = "active skill", dto = ActiveSkill<SkillBehaviorConfigDto>)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone)]
+#[savable_component(id = "active_skill", dto = ActiveSkill<SkillBehaviorConfigDto>)]
 pub(crate) enum ActiveSkill<TSkillBehavior = SkillBehaviorConfig> {
 	#[default]
 	Idle,

@@ -4,10 +4,10 @@ use common::{
 	systems::register_animations::{AnimationConfig, AnimationKeyAndNames, AnimationMaskAndBones},
 	tools::path::Path,
 };
-use macros::asset_path;
-use serde::{Deserialize, Serialize};
+use macros::{asset_path, serde_model};
 
-#[derive(Asset, TypePath, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Asset, TypePath, Debug, PartialEq, Default, Clone)]
 pub(crate) struct DoorMeta {
 	pub(crate) animations: DoorAnimations,
 	pub(crate) animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
@@ -42,7 +42,8 @@ impl AnimationConfig for DoorMeta {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub(crate) struct DoorAnimations {
 	open: Animation<AnimationNames>,
 	close: Animation<AnimationNames>,

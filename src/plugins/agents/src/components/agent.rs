@@ -4,11 +4,11 @@ use crate::{
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{prelude::*, systems::register_animations::AnimationsMarker};
-use macros::{SavableComponent, asset_path};
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, asset_path, serde_model};
 use std::{fmt::Display, ops::DerefMut};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[component(immutable)]
 #[savable_component(id = "agent")]
 #[require(AgentConfig, ApplyAgentConfig, Transform)]

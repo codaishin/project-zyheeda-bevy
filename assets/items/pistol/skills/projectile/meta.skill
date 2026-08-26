@@ -4,19 +4,28 @@
 	"cast_time": {
 		"seconds": 0.2
 	},
-	"animation": "Aim",
+	"animation": {
+		"type": "aim"
+	},
 	"behavior": {
-		"OnActive": {
+		"type": "on_active",
+		"content": {
 			"shape": {
-				"Projectile": {
-					"destroyed_by": "All"
+				"type": "projectile",
+				"content": {
+					"destroyed_by": {
+						"type": "all"
+					}
 				}
 			},
 			"contact": [
 				{
-					"HealthDamage": [
+					"type": "health_damage",
+					"content": [
 						1,
-						"Once"
+						{
+							"type": "once"
+						}
 					]
 				}
 			],
@@ -24,7 +33,9 @@
 		}
 	},
 	"is_usable_with": [
-		"Pistol"
+		{
+			"type": "pistol"
+		}
 	],
 	"icon": "items/pistol/skills/projectile/icon.png"
 }

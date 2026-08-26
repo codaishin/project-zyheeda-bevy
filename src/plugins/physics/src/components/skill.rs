@@ -7,8 +7,7 @@ mod projection;
 use crate::components::{collider::ColliderRoot, skill::dto::SkillDto};
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::{SavableComponent, asset_path};
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, asset_path, serde_model};
 
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[require(PersistentEntity, Transform, Visibility)]
@@ -30,7 +29,8 @@ pub struct SkillContactRoot;
 #[require(ColliderRoot, Transform, Visibility)]
 pub struct SkillProjectionRoot;
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum CreatedFrom {
 	Spawn,
 	Save,

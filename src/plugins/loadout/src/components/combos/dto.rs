@@ -4,9 +4,10 @@ use crate::components::{
 };
 use bevy::prelude::*;
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub struct CombosInternalDto {
 	config: ComboNodeDto,
 	#[serde(skip_serializing_if = "Option::is_none")]

@@ -4,7 +4,8 @@ use std::{any::type_name, collections::VecDeque};
 /// Holds unique values, but retains insertion order.
 ///
 /// Removal and Insertion are `O(n)` operations.
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[serde_model(no_default_deserialize)]
+#[derive(Debug, PartialEq, Clone)]
 pub(super) struct Unique<TKey>(VecDeque<TKey>)
 where
 	TKey: PartialEq;

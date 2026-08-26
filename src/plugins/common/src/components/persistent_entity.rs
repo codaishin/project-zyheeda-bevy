@@ -1,7 +1,6 @@
 use crate::traits::accessors::get::ViewField;
 use bevy::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use uuid::Uuid;
 
 /// Used as an [`Entity`] reference throughout different game sessions.
@@ -59,11 +58,10 @@ use uuid::Uuid;
 ///   app.world().entity(target_entity).get::<Name>(),
 /// );
 /// ```
-#[derive(
-	Component, SavableComponent, Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize,
-)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[component(immutable)]
-#[savable_component(id = "persistent entity", has_priority)]
+#[savable_component(id = "persistent_entity", has_priority)]
 pub struct PersistentEntity(Uuid);
 
 impl PersistentEntity {

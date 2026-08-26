@@ -1,9 +1,8 @@
 use bevy::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 use std::time::Duration;
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
-#[serde(transparent)]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Default, Clone)]
 #[savable_component(id = "lifetime")]
 pub struct Lifetime(pub(crate) Duration);

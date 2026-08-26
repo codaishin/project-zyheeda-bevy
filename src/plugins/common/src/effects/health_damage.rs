@@ -1,8 +1,9 @@
 use super::EffectApplies;
 use crate::{attributes::health::Health, traits::handles_physics::PhysicalEffect};
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct HealthDamage(pub f32, pub EffectApplies);
 
 impl HealthDamage {

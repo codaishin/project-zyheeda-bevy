@@ -4,10 +4,11 @@ use crate::{
 	skills::{QueuedSkill, Skill, SkillMode},
 };
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::time::Duration;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 pub struct QueueDto {
 	queue: Vec<QueuedSkillDto>,
 	#[serde(skip_serializing_if = "Option::is_none")]
@@ -67,7 +68,8 @@ impl TryLoadFrom<QueueDto> for Queue {
 	}
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq)]
 struct QueuedSkillDto {
 	skill: SkillDto,
 	key: SlotKey,

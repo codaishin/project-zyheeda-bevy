@@ -19,8 +19,7 @@ pub mod vec_not_nan;
 
 use crate::traits::accessors::get::ViewField;
 use bevy::prelude::Entity;
-use macros::ClampZeroPositive;
-use serde::Serialize;
+use macros::{ClampZeroPositive, serde_model};
 use std::{
 	fmt::Debug,
 	ops::{Deref, DerefMut},
@@ -54,7 +53,8 @@ impl<T: Debug + PartialEq> Deref for Last<'_, T> {
 	}
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize)]
+#[serde_model(no_default_deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive)]
 pub struct UnitsPerSecond(f32);
 
 impl UnitsPerSecond {
@@ -65,7 +65,8 @@ impl UnitsPerSecond {
 	}
 }
 
-#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive, Serialize)]
+#[serde_model(no_default_deserialize)]
+#[derive(Debug, PartialEq, PartialOrd, Clone, Copy, ClampZeroPositive)]
 pub struct Units(f32);
 
 impl Units {

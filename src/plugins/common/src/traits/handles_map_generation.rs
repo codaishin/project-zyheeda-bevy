@@ -9,7 +9,7 @@ use crate::{
 	zyheeda_commands::ZyheedaEntityCommands,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{
 	fmt::Debug,
 	hash::Hash,
@@ -88,7 +88,8 @@ pub trait GraphNaivePath {
 	) -> NaivePath;
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct GroundPosition(pub Vec3);
 
 impl GroundPosition {
@@ -140,7 +141,8 @@ pub enum NaivePath {
 	PartialUntil(GroundPosition),
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AgentType {
 	Player,
 	Enemy(EnemyType),
@@ -154,7 +156,8 @@ impl PrefabType for AgentType {
 	type TTranslation = GroundPosition;
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum InteractiveType {
 	Door,
 	Container,

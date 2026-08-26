@@ -1,8 +1,9 @@
 use bevy::asset::AssetPath;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::{ops::Deref, sync::Arc};
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Path(Arc<str>);
 
 impl Path {

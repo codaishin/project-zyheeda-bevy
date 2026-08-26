@@ -4,22 +4,29 @@
 	"cast_time": {
 		"seconds": 0.2
 	},
-	"animation": "Block",
+	"animation": {
+		"type": "block"
+	},
 	"behavior": {
-		"OnAim": {
+		"type": "on_aim",
+		"content": {
 			"shape": {
-				"Shield": null
+				"type": "shield",
+				"content": null
 			},
 			"contact": [
 				{
-					"Force": null
+					"type": "force",
+					"content": null
 				}
 			],
 			"projection": []
 		}
 	},
 	"is_usable_with": [
-		"ForceEssence"
+		{
+			"type": "force_essence"
+		}
 	],
 	"icon": "items/force_essence/skills/shield/icon.png"
 }

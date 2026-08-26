@@ -2,9 +2,10 @@ pub mod force;
 pub mod gravity;
 pub mod health_damage;
 
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(Debug, PartialEq, Clone, Copy, Default, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy, Default)]
 pub enum EffectApplies {
 	#[default]
 	OncePerSecond,

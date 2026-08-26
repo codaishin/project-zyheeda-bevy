@@ -7,9 +7,10 @@ use crate::{
 	},
 };
 use bevy::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 
-#[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, Serialize, Deserialize)]
+#[serde_model]
+#[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub struct TerrainTargeting;
 
 impl InvalidUserInput for TerrainTargeting {

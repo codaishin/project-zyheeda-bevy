@@ -1,8 +1,9 @@
 use crate::traits::accessors::get::ViewField;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::collections::HashSet;
 
-#[derive(Debug, Default, Hash, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, Default, Hash, PartialEq, Eq, Clone, Copy)]
 pub enum ItemType {
 	#[default]
 	Pistol,

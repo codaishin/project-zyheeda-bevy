@@ -1,9 +1,10 @@
 use super::Units;
 use crate::traits::accessors::get::ViewField;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use std::ops::Deref;
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub struct ColliderRadius(pub Units);
 
 impl From<Units> for ColliderRadius {

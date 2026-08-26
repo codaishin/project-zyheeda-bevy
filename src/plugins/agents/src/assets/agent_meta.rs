@@ -6,8 +6,7 @@ use common::{
 	systems::register_animations::{AnimationConfig, AnimationKeyAndNames, AnimationMaskAndBones},
 	tools::path::Path,
 };
-use macros::asset_path;
-use serde::{Deserialize, Serialize};
+use macros::{asset_path, serde_model};
 use std::collections::HashMap;
 
 #[derive(Asset, TypePath, Debug, PartialEq, Default, Clone)]
@@ -50,13 +49,15 @@ impl AnimationConfig for AgentMeta {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub(crate) struct Loadout {
 	pub(crate) inventory: Vec<Option<ItemName>>,
 	pub(crate) slots: Vec<(SlotKey, Option<ItemName>)>,
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub(crate) struct Bones {
 	pub(crate) skill_mounts: HashMap<BoneName, SkillMountBone>,
 	pub(crate) hand_slots: HashMap<BoneName, SlotKey>,
@@ -92,7 +93,8 @@ impl PartialEq for AgentModel {
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub(crate) struct HeightLevels {
 	pub(crate) aim: f32,
 	pub(crate) center: f32,

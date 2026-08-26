@@ -76,22 +76,25 @@ impl<TLoadAsset> PartialEq for Register<TLoadAsset> {
 #[cfg(test)]
 mod test_registration {
 	use super::*;
-	use macros::SavableComponent;
-	use serde::{Deserialize, Serialize};
+	use macros::{SavableComponent, serde_model};
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "a")]
 	struct _A;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "b")]
 	struct _B;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "pa", has_priority)]
 	struct _PA;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "pb", has_priority)]
 	struct _PB;
 
@@ -170,24 +173,27 @@ mod test_update_context {
 	use super::*;
 	use crate::file_io::FileIO;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use macros::SavableComponent;
-	use serde::{Deserialize, Serialize};
+	use macros::{SavableComponent, serde_model};
 	use std::{ops::Deref, path::PathBuf};
 	use testing::SingleThreadedApp;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "a")]
 	struct _A;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "b")]
 	struct _B;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "c")]
 	struct _C;
 
-	#[derive(Component, SavableComponent, Serialize, Deserialize, Clone)]
+	#[serde_model]
+	#[derive(Component, SavableComponent, Clone)]
 	#[savable_component(id = "d")]
 	struct _D;
 

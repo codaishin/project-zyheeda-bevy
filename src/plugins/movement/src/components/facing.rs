@@ -1,15 +1,16 @@
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::SavableComponent;
-use serde::{Deserialize, Serialize};
+use macros::{SavableComponent, serde_model};
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[savable_component(id = "set face override")]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
+#[savable_component(id = "set_face_override")]
 #[require(CanFace)]
 pub struct SetFaceOverride(pub Face);
 
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Serialize, Deserialize)]
-#[savable_component(id = "set face")]
+#[serde_model]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
+#[savable_component(id = "set_face")]
 #[require(CanFace)]
 pub struct SetFace(pub Face);
 

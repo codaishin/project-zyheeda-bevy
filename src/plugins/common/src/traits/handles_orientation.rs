@@ -3,8 +3,7 @@ use crate::{
 	traits::accessors::get::TryGetContextMut,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use macros::EntityKey;
-use serde::{Deserialize, Serialize};
+use macros::{EntityKey, serde_model};
 use std::ops::DerefMut;
 
 pub trait HandlesOrientation {
@@ -35,7 +34,8 @@ where
 	}
 }
 
-#[derive(Debug, PartialEq, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub enum Face {
 	#[default]
 	SkillTarget,

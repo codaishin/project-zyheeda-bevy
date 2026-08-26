@@ -2,6 +2,7 @@ use proc_macro::TokenStream;
 use quote::{format_ident, quote};
 use std::path::PathBuf;
 use syn::{
+	Attribute,
 	Data,
 	DeriveInput,
 	Error,
@@ -9,6 +10,7 @@ use syn::{
 	Field,
 	Fields,
 	Ident,
+	Item,
 	ItemImpl,
 	Lit,
 	LitStr,
@@ -679,4 +681,79 @@ pub fn entity_key(input: TokenStream) -> TokenStream {
 			}
 		}
 	})
+}
+
+struct SerdeModelOptions {
+	default_deserialize: bool,
+}
+
+impl SerdeModelOptions {
+	fn add_base_attributes(&self, attributes: &mut Vec<Attribute>) {
+		attributes.push(parse_quote!(
+			#[derive(serde::Serialize)]
+		));
+
+		if self.default_deserialize {
+			attributes.push(parse_quote!(
+				#[derive(serde::Deserialize)]
+			));
+		}
+
+		attributes.push(parse_quote!(
+			#[serde(rename_all = "snake_case")]
+		));
+	}
+}
+
+impl Parse for SerdeModelOptions {
+	fn parse(input: ParseStream) -> syn::Result<Self> {
+		let default_deserialize = match input.parse::<Option<Ident>>()? {
+			Some(option) if option == "no_default_deserialize" => false,
+			Some(other) => {
+				return Err(Error::new(
+					input.span(),
+					format!(
+						"`{other}` not recognized. Only allowed option: `no_default_deserialize`"
+					),
+				));
+			}
+			None => true,
+		};
+
+		Ok(Self {
+			default_deserialize,
+		})
+	}
+}
+
+#[proc_macro_attribute]
+pub fn serde_model(attr: TokenStream, input: TokenStream) -> TokenStream {
+	let options = parse_macro_input!(attr as SerdeModelOptions);
+	let mut item = parse_macro_input!(input as Item);
+
+	match &mut item {
+		Item::Struct(item) => {
+			options.add_base_attributes(&mut item.attrs);
+
+			if matches!(&item.fields, Fields::Unnamed(fields) if fields.unnamed.len() == 1) {
+				item.attrs.push(parse_quote!(
+					#[serde(transparent)]
+				));
+			}
+		}
+		Item::Enum(item) => {
+			options.add_base_attributes(&mut item.attrs);
+
+			item.attrs.push(parse_quote!(
+				#[serde(tag = "type", content = "content")]
+			));
+		}
+		_ => {
+			return TokenStream::from(quote! {
+				compile_error!("`serde_model` only supports structs and enums")
+			});
+		}
+	}
+
+	TokenStream::from(quote! { #item })
 }

@@ -8,7 +8,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use macros::{EntityKey, InRange};
+use macros::{EntityKey, InRange, serde_model};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de::Error};
 use std::{
 	borrow::{Borrow, Cow},
@@ -146,7 +146,8 @@ where
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum AnimationClips<T = Handle<AnimationClip>> {
 	Single(T),
 	Directional(Directional<T>),
@@ -267,7 +268,8 @@ where
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct Directional<T = Handle<AnimationClip>> {
 	pub forward: T,
 	pub backward: T,
@@ -275,14 +277,16 @@ pub struct Directional<T = Handle<AnimationClip>> {
 	pub right: T,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub struct PitchedForward<T = Handle<AnimationClip>> {
 	pub neutral: T,
 	pub up: (ForwardPitch, T),
 	pub down: (ForwardPitch, T),
 }
 
-#[derive(InRange, Debug, PartialEq, Clone, Copy, Serialize)]
+#[serde_model(no_default_deserialize)]
+#[derive(InRange, Debug, PartialEq, Clone, Copy)]
 #[in_range(low = >0., high = 1.)]
 pub struct ForwardPitch(f32);
 
@@ -357,7 +361,8 @@ impl<'a, T> Iterator for Iter<'a, T> {
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone)]
 pub struct AnimationName(Cow<'static, str>);
 
 impl AnimationName {
@@ -407,23 +412,23 @@ impl AnimationPriority {
 		DescendingAnimationPriorities::default()
 	}
 }
-
-#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub enum PlayMode {
 	#[default]
 	Once,
 	Replay,
 	Repeat,
 }
-
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Animation<TClips = AnimationClips<Handle<AnimationClip>>> {
 	pub clips: TClips,
 	pub play_mode: PlayMode,
 	pub mask_groups: AnimationMaskBits,
 }
-
-#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Default, Clone, Copy)]
 pub struct AnimationMaskBits(#[serde(with = "bits_conversion")] AnimationMask);
 
 impl AnimationMaskBits {
@@ -488,14 +493,16 @@ impl TryFrom<u8> for BitMaskIndex {
 #[derive(Debug)]
 pub struct MaxBitExceeded;
 
-#[derive(Debug, PartialEq, Default, Clone, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct AffectedAnimationBones {
 	pub from_root: BoneName,
 	#[serde(default)]
 	pub until_exclusive: HashSet<BoneName>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum AnimationKey {
 	Idle,
 	Walk,
@@ -508,7 +515,8 @@ pub enum AnimationKey {
 	Close,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum SkillAnimation {
 	Aim,
 	Block,
@@ -555,7 +563,8 @@ mod tests {
 	use super::*;
 	use serde_json::json;
 
-	#[derive(Debug, PartialEq, Serialize, Deserialize)]
+	#[serde_model]
+	#[derive(Debug, PartialEq)]
 	struct _Wrapper {
 		#[serde(with = "bits_conversion")]
 		mask: AnimationMask,

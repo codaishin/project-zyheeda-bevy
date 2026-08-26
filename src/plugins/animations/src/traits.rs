@@ -5,7 +5,7 @@ pub(crate) mod tuple_animation_player_transitions;
 
 use crate::components::animation_dispatch::AnimationState;
 use common::prelude::*;
-use serde::{Deserialize, Serialize};
+use macros::serde_model;
 use zyheeda_core::math::f32_finite::F32Finite;
 
 pub(crate) trait InsertClips<TIndex>: Sized {
@@ -54,5 +54,6 @@ pub(crate) enum SetTo {
 	SeekTime(F32Finite),
 }
 
-#[derive(Debug, PartialEq, Clone, Copy, Serialize, Deserialize)]
+#[serde_model]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct OldAnimationState(pub(crate) AnimationState);
