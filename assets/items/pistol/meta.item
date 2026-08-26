@@ -1,9 +1,14 @@
 {
 	"token": "item-plasma-pistol",
 	"model": {
-		"Hand": "items/pistol/model.glb"
+		"type": "hand",
+		"content": "items/pistol/model.glb"
 	},
-	"essence": "None",
+	"essence": {
+		"type": "none"
+	},
 	"skill": "items/pistol/skills/projectile/meta.skill",
-	"item_type": "Pistol"
+	"item_type": {
+		"type": "pistol"
+	}
 }

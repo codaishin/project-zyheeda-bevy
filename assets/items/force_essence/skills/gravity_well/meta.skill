@@ -4,11 +4,15 @@
 	"cast_time": {
 		"seconds": 0.2
 	},
-	"animation": "Aim",
+	"animation": {
+		"type": "aim"
+	},
 	"behavior": {
-		"OnActive": {
+		"type": "on_active",
+		"content": {
 			"shape": {
-				"GroundTargetedAoe": {
+				"type": "ground_targeted_aoe",
+				"content": {
 					"lifetime": {
 						"seconds": 5
 					},
@@ -19,16 +23,21 @@
 			"contact": [],
 			"projection": [
 				{
-					"Gravity": {
+					"type": "gravity",
+					"content": {
 						"strength": 2,
-						"effect_applies": "Always"
+						"effect_applies": {
+							"type": "always"
+						}
 					}
 				}
 			]
 		}
 	},
 	"is_usable_with": [
-		"ForceEssence"
+		{
+			"type": "force_essence"
+		}
 	],
 	"icon": "items/force_essence/skills/gravity_well/icon.png"
 }

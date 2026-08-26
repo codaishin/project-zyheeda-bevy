@@ -4,8 +4,12 @@
 			"current": 5,
 			"max": 5
 		},
-		"gravity_interaction": "Affected",
-		"force_interaction": "Affected"
+		"gravity_interaction": {
+			"type": "affected"
+		},
+		"force_interaction": {
+			"type": "affected"
+		}
 	},
 	"loadout": {
 		"inventory": [],
@@ -17,6 +21,9 @@
 		]
 	},
 	"model": {
-		"Procedural": "VoidSphere"
+		"type": "procedural",
+		"content": {
+			"type": "void_sphere"
+		}
 	}
 }

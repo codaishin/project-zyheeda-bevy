@@ -4,8 +4,12 @@
 			"current": 100,
 			"max": 100
 		},
-		"gravity_interaction": "Affected",
-		"force_interaction": "Affected"
+		"gravity_interaction": {
+			"type": "affected"
+		},
+		"force_interaction": {
+			"type": "affected"
+		}
 	},
 	"loadout": {
 		"inventory": [
@@ -24,12 +28,14 @@
 		]
 	},
 	"model": {
-		"Asset": {
+		"type": "asset",
+		"content": {
 			"model_path": "agents/player/model.glb",
 			"interactive_detection_shape": {
 				"forward_offset": 0.3,
 				"shape": {
-					"Cuboid": {
+					"type": "cuboid",
+					"content": {
 						"half_x": 0.2,
 						"half_y": 0.65,
 						"half_z": 0.3
@@ -45,19 +51,24 @@
 				"aim": 1
 			},
 			"movement_speed": {
-				"Variable": [
+				"type": "variable",
+				"content": [
 					3,
 					0.9
 				]
 			},
 			"bones": {
 				"skill_mounts": {
-					"skill_spawn": "NeutralSlot",
+					"skill_spawn": {
+						"type": "neutral_slot"
+					},
 					"skill_spawn.L": {
-						"Slot": 0
+						"type": "slot",
+						"content": 0
 					},
 					"skill_spawn.R": {
-						"Slot": 1
+						"type": "slot",
+						"content": 1
 					}
 				},
 				"hand_slots": {
@@ -75,55 +86,74 @@
 			},
 			"animations": [
 				[
-					"Idle",
+					{
+						"type": "idle"
+					},
 					{
 						"clips": {
-							"Single": "Idle"
+							"type": "single",
+							"content": "Idle"
 						},
-						"play_mode": "Repeat",
+						"play_mode": {
+							"type": "repeat"
+						},
 						"mask_groups": "1111"
 					}
 				],
 				[
-					"Walk",
+					{
+						"type": "walk"
+					},
 					{
 						"clips": {
-							"Directional": {
+							"type": "directional",
+							"content": {
 								"forward": "Walk.F",
 								"backward": "Walk.B",
 								"left": "Walk.L",
 								"right": "Walk.R"
 							}
 						},
-						"play_mode": "Repeat",
+						"play_mode": {
+							"type": "repeat"
+						},
 						"mask_groups": "1111"
 					}
 				],
 				[
-					"Run",
+					{
+						"type": "run"
+					},
 					{
 						"clips": {
-							"Directional": {
+							"type": "directional",
+							"content": {
 								"forward": "Run.F",
 								"backward": "Run.B",
 								"left": "Run.L",
 								"right": "Run.R"
 							}
 						},
-						"play_mode": "Repeat",
+						"play_mode": {
+							"type": "repeat"
+						},
 						"mask_groups": "1111"
 					}
 				],
 				[
 					{
-						"Skill": {
+						"type": "skill",
+						"content": {
 							"slot": 0,
-							"animation": "Aim"
+							"animation": {
+								"type": "aim"
+							}
 						}
 					},
 					{
 						"clips": {
-							"PitchedForward": {
+							"type": "pitched_forward",
+							"content": {
 								"neutral": "Aim.L",
 								"up": [
 									0.5,
@@ -135,20 +165,26 @@
 								]
 							}
 						},
-						"play_mode": "Repeat",
+						"play_mode": {
+							"type": "repeat"
+						},
 						"mask_groups": "1010"
 					}
 				],
 				[
 					{
-						"Skill": {
+						"type": "skill",
+						"content": {
 							"slot": 1,
-							"animation": "Aim"
+							"animation": {
+								"type": "aim"
+							}
 						}
 					},
 					{
 						"clips": {
-							"PitchedForward": {
+							"type": "pitched_forward",
+							"content": {
 								"neutral": "Aim.R",
 								"up": [
 									0.5,
@@ -160,37 +196,51 @@
 								]
 							}
 						},
-						"play_mode": "Repeat",
+						"play_mode": {
+							"type": "repeat"
+						},
 						"mask_groups": "1100"
 					}
 				],
 				[
 					{
-						"Skill": {
+						"type": "skill",
+						"content": {
 							"slot": 0,
-							"animation": "Block"
+							"animation": {
+								"type": "block"
+							}
 						}
 					},
 					{
 						"clips": {
-							"Single": "Block.L"
+							"type": "single",
+							"content": "Block.L"
 						},
-						"play_mode": "Repeat",
+						"play_mode": {
+							"type": "repeat"
+						},
 						"mask_groups": "1010"
 					}
 				],
 				[
 					{
-						"Skill": {
+						"type": "skill",
+						"content": {
 							"slot": 1,
-							"animation": "Block"
+							"animation": {
+								"type": "block"
+							}
 						}
 					},
 					{
 						"clips": {
-							"Single": "Block.R"
+							"type": "single",
+							"content": "Block.R"
 						},
-						"play_mode": "Repeat",
+						"play_mode": {
+							"type": "repeat"
+						},
 						"mask_groups": "1100"
 					}
 				]

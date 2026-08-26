@@ -1,7 +1,13 @@
 {
 	"token": "item-force-essence",
-	"model": "None",
-	"essence": "Force",
+	"model": {
+		"type": "none"
+	},
+	"essence": {
+		"type": "force"
+	},
 	"skill": "items/force_essence/skills/shield/meta.skill",
-	"item_type": "ForceEssence"
+	"item_type": {
+		"type": "force_essence"
+	}
 }

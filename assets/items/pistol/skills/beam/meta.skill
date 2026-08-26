@@ -4,20 +4,29 @@
 	"cast_time": {
 		"seconds": 0.2
 	},
-	"animation": "Aim",
+	"animation": {
+		"type": "aim"
+	},
 	"behavior": {
-		"OnAim": {
+		"type": "on_aim",
+		"content": {
 			"shape": {
-				"Beam": {
+				"type": "beam",
+				"content": {
 					"range": 20,
-					"blocked_by": "All"
+					"blocked_by": {
+						"type": "all"
+					}
 				}
 			},
 			"contact": [
 				{
-					"HealthDamage": [
+					"type": "health_damage",
+					"content": [
 						1,
-						"OncePerSecond"
+						{
+							"type": "once_per_second"
+						}
 					]
 				}
 			],
@@ -25,7 +34,9 @@
 		}
 	},
 	"is_usable_with": [
-		"Pistol"
+		{
+			"type": "pistol"
+		}
 	],
 	"icon": "generic/icons/beam.png"
 }

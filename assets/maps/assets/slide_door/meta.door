@@ -2,16 +2,22 @@
 	"animations": {
 		"open": {
 			"clips": {
-				"Single": "Open"
+				"type": "single",
+				"content": "Open"
 			},
-			"play_mode": "Once",
+			"play_mode": {
+				"type": "once"
+			},
 			"mask_groups": "1"
 		},
 		"close": {
 			"clips": {
-				"Single": "Close"
+				"type": "single",
+				"content": "Close"
 			},
-			"play_mode": "Once",
+			"play_mode": {
+				"type": "once"
+			},
 			"mask_groups": "1"
 		}
 	},
@@ -21,7 +27,8 @@
 		}
 	},
 	"interactive_detection_shape": {
-		"Cuboid": {
+		"type": "cuboid",
+		"content": {
 			"half_x": 1.0,
 			"half_y": 1.0,
 			"half_z": 0.6
