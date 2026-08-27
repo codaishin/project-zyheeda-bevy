@@ -12,6 +12,7 @@ pub mod mesh_name;
 pub mod path;
 pub mod pixel;
 pub mod plugin_system_set;
+pub mod scale;
 pub mod skill_execution;
 pub mod speed;
 pub mod swap_key;
