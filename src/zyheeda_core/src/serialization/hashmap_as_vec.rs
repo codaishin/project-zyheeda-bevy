@@ -1,16 +1,16 @@
-//! Used as a parser for [HashMap]s in conjunction with [serde] (de)serialization.
+//! Used as a parser for [`HashMap`]s in conjunction with [serde] (de)serialization.
 //!
 //! If the map keys can be completely represented as strings, serde can handle the hashmap
 //! by itself.
 //!
 //! Otherwise use this module to treat the map as a [`Vec`] of key value pairs:
-//! - only serialization: `#[serde(serialize_with = "as_vec::serialize")]`
-//! - only deserialization: `#[serde(deserialize_with = "as_vec::deserialize")]`
-//! - both: `#[serde(with = "as_vec")]`
+//! - only serialization: `#[serde(serialize_with = "hashmap_as_vec::serialize")]`
+//! - only deserialization: `#[serde(deserialize_with = "hashmap_as_vec::deserialize")]`
+//! - both: `#[serde(with = "hashmap_as_vec")]`
 //!
 //! # Example
 //! ```
-//! use zyheeda_core::serialization::as_vec;
+//! use zyheeda_core::serialization::hashmap_as_vec;
 //! use serde_json::{json, to_value, from_value};
 //! use std::collections::HashMap;
 //! use macros::serde_model;
@@ -25,7 +25,7 @@
 //! #[serde_model]
 //! #[derive(Debug, PartialEq)]
 //! struct Container {
-//!   #[serde(with = "as_vec")]
+//!   #[serde(with = "hashmap_as_vec")]
 //!   map: HashMap<Key, String>
 //! }
 //!
@@ -110,9 +110,8 @@ mod test_as_vec {
 	}
 
 	mod serialize {
-		use testing::assert_eq_any_of;
-
 		use super::*;
+		use testing::assert_eq_any_of;
 
 		#[test]
 		fn as_list_of_lists() {

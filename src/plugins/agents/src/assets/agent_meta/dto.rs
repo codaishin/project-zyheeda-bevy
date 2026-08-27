@@ -6,7 +6,7 @@ use bevy::prelude::*;
 use common::prelude::*;
 use macros::serde_model;
 use std::collections::HashMap;
-use zyheeda_core::serialization::as_vec;
+use zyheeda_core::prelude::*;
 
 #[serde_model]
 #[derive(TypePath, Debug, PartialEq)]
@@ -27,7 +27,7 @@ pub(crate) enum ModelConfig {
 		movement_speed: MovementSpeed,
 		required_clearance: RequiredClearance,
 		height_levels: HeightLevels,
-		#[serde(with = "as_vec")]
+		#[serde(with = "hashmap_as_vec")]
 		animations: HashMap<AnimationKey, Animation<AnimationNames>>,
 		animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
 	},

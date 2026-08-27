@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use macros::serde_model;
 use std::hash::Hash;
 use zyheeda_core::prelude::*;
 
@@ -13,8 +14,9 @@ macro_rules! vec_not_nan {
 
 pub use vec_not_nan;
 
+#[serde_model]
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
-pub struct VecNotNan<const N: usize>(pub [F32NotNan; N]);
+pub struct VecNotNan<const N: usize>(#[serde(with = "array_as_vec")] pub [F32NotNan; N]);
 
 impl<const N: usize> VecNotNan<N> {
 	pub const ZERO: Self = Self([F32NotNan::ZERO; N]);

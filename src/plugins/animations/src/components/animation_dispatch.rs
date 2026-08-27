@@ -22,7 +22,7 @@ pub struct AnimationDispatch {
 		OrderedSet<AnimationKey>,
 		OrderedSet<AnimationKey>,
 	),
-	#[serde(with = "as_vec")]
+	#[serde(with = "hashmap_as_vec")]
 	pub(crate) states: HashMap<AnimationKey, AnimationState>,
 }
 
