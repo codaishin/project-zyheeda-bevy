@@ -77,6 +77,7 @@ impl VoidSphere {
 				aim: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
 				center: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
 			},
+			self_skill_scale: Scale::ONE,
 			speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(1)),
 			animations: HashMap::from([]),
 			animation_mask_groups: HashMap::from([]),

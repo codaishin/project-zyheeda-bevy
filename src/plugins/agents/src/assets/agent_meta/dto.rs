@@ -27,6 +27,7 @@ pub(crate) enum ModelConfig {
 		movement_speed: MovementSpeed,
 		required_clearance: RequiredClearance,
 		height_levels: HeightLevels,
+		self_skill_scale: Option<Scale<3>>,
 		#[serde(with = "hashmap_as_vec")]
 		animations: HashMap<AnimationKey, Animation<AnimationNames>>,
 		animation_mask_groups: HashMap<AnimationMaskBits, AffectedAnimationBones>,
@@ -62,6 +63,7 @@ impl TryLoadFrom<AgentConfigDto> for AgentMeta {
 				movement_speed,
 				required_clearance,
 				height_levels,
+				self_skill_scale,
 				animations,
 				animation_mask_groups,
 			} => Ok(AgentMeta {
@@ -71,6 +73,7 @@ impl TryLoadFrom<AgentConfigDto> for AgentMeta {
 				interactive_detection_shape,
 				required_clearance,
 				height_levels,
+				self_skill_scale: self_skill_scale.unwrap_or_default(),
 				speed: movement_speed,
 				attributes,
 				animations,

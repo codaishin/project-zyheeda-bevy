@@ -17,6 +17,7 @@ pub struct AgentMeta {
 	pub(crate) interactive_detection_shape: InteractiveFrame,
 	pub(crate) required_clearance: RequiredClearance,
 	pub(crate) height_levels: HeightLevels,
+	pub(crate) self_skill_scale: Scale<3>,
 	pub(crate) speed: MovementSpeed,
 	pub(crate) attributes: PhysicalDefaultAttributes,
 	pub(crate) animations: HashMap<AnimationKey, Animation<AnimationNames>>,
