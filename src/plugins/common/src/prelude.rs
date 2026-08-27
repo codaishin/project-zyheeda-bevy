@@ -40,9 +40,10 @@ pub use crate::{
 		mesh_name::MeshName,
 		pixel::Pixel,
 		plugin_system_set::PluginSystemSet,
+		scale::{Scale, scale},
 		skill_execution::SkillExecution,
 		speed::Speed,
-		vec_not_nan::*,
+		vec_not_nan::{VecNotNan, vec_not_nan},
 	},
 	traits::{
 		accessors::{get::*, set::*},

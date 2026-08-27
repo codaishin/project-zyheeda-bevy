@@ -6,7 +6,7 @@ pub(crate) mod tuple_animation_player_transitions;
 use crate::components::animation_dispatch::AnimationState;
 use common::prelude::*;
 use macros::serde_model;
-use zyheeda_core::math::f32_finite::F32Finite;
+use zyheeda_core::prelude::F32Finite;
 
 pub(crate) trait InsertClips<TIndex>: Sized {
 	type TBuffer;
