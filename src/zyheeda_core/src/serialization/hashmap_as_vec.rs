@@ -1,4 +1,4 @@
-//! Used as a parser for [HashMap]s in conjunction with [serde] (de)serialization.
+//! Used as a parser for [`HashMap`]s in conjunction with [serde] (de)serialization.
 //!
 //! If the map keys can be completely represented as strings, serde can handle the hashmap
 //! by itself.

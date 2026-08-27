@@ -1,3 +1,42 @@
+//! Used as a parser for primitive arrays `[T; N]` in conjunction with [serde] (de)serialization.
+//!
+//! Use this module to treat the array as a [`Vec`] for (de)serialization:
+//! - only serialization: `#[serde(serialize_with = "array_as_vec::serialize")]`
+//! - only deserialization: `#[serde(deserialize_with = "array_as_vec::deserialize")]`
+//! - both: `#[serde(with = "array_as_vec")]`
+//!
+//! # Example
+//! ```
+//! use zyheeda_core::serialization::array_as_vec;
+//! use serde_json::{json, to_value, from_value};
+//! use macros::serde_model;
+//!
+//! #[serde_model]
+//! #[derive(Debug, PartialEq)]
+//! struct Container {
+//!   #[serde(with = "array_as_vec")]
+//!   array: [u32; 3],
+//! }
+//!
+//! let container = Container {
+//!   array: [1, 2, 3]
+//! };
+//!
+//! let value = to_value(&container).unwrap();
+//!
+//! assert_eq!(
+//!   json!({
+//!     "array": [1, 2, 3]
+//!   }),
+//!   value
+//! );
+//!
+//! let container2 = from_value::<Container>(value).unwrap();
+//!
+//! assert_eq!(container, container2);
+//!
+//! ```
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 pub fn serialize<S, I, const N: usize>(array: &[I; N], serializer: S) -> Result<S::Ok, S::Error>
