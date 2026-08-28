@@ -1,3 +1,4 @@
+mod caster;
 mod contact;
 mod dto;
 mod lifetime;
@@ -71,10 +72,3 @@ const SHIELD_CONTACT_MODEL: &str = shield_path!(asset("contact"));
 const SHIELD_CONTACT_COLLIDER: &str = shield_path!(mesh("contact_collider"));
 const SHIELD_PROJECTION_MODEL: &str = shield_path!(asset("projection"));
 const SHIELD_PROJECTION_COLLIDER: &str = shield_path!(mesh("projection_collider"));
-
-//FIXME: Should not be necessary, see: https://github.com/codaishin/project-zyheeda-bevy/issues/761
-const SHIELD_SCALE: Vec3 = Vec3 {
-	x: 1.7,
-	y: 1.7,
-	z: 1.7,
-};

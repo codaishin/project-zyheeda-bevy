@@ -53,11 +53,23 @@ impl TryFrom<Vec2> for Scale<2> {
 	}
 }
 
+impl From<Scale<2>> for Vec2 {
+	fn from(Scale(scale): Scale<2>) -> Self {
+		Vec2::from_array(scale.map(|s| *s))
+	}
+}
+
 impl TryFrom<Vec3> for Scale<3> {
 	type Error = F32ParseError;
 
 	fn try_from(value: Vec3) -> Result<Self, Self::Error> {
 		Self::try_from(value.to_array())
+	}
+}
+
+impl From<Scale<3>> for Vec3 {
+	fn from(Scale(scale): Scale<3>) -> Self {
+		Vec3::from_array(scale.map(|s| *s))
 	}
 }
 
