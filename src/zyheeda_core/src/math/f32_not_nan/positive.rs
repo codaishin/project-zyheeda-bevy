@@ -16,31 +16,3 @@ impl Positive {
 		Ok(F32NotNanBase(v, PhantomData))
 	}
 }
-
-#[macro_export]
-macro_rules! f32_positive {
-	($value:literal) => {{
-		const F32: $crate::prelude::F32Positive =
-			match $crate::prelude::F32Positive::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not positive"),
-			};
-		F32
-	}};
-}
-
-pub use f32_positive;
-
-#[macro_export]
-macro_rules! f32_finite_positive {
-	($value:literal) => {{
-		const F32: $crate::prelude::F32FinitePositive =
-			match $crate::prelude::F32FinitePositive::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not finite positive"),
-			};
-		F32
-	}};
-}
-
-pub use f32_finite_positive;

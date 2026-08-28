@@ -17,20 +17,6 @@ impl NonZero {
 	}
 }
 
-#[macro_export]
-macro_rules! f32_finite_strictly_positive {
-	($value:literal) => {{
-		const F32: $crate::prelude::F32FiniteStrictlyPositive =
-			match $crate::prelude::F32FiniteStrictlyPositive::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not finite and greater than zero"),
-			};
-		F32
-	}};
-}
-
-pub use f32_finite_strictly_positive;
-
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]

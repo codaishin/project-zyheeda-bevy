@@ -26,17 +26,3 @@ impl Default for F32Finite {
 		Self(0., PhantomData)
 	}
 }
-
-#[macro_export]
-macro_rules! f32_finite {
-	($value:literal) => {{
-		const F32: $crate::prelude::F32Finite =
-			match $crate::prelude::F32Finite::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not finite"),
-			};
-		F32
-	}};
-}
-
-pub use f32_finite;

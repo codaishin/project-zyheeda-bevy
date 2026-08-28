@@ -7,6 +7,87 @@ use macros::serde_model;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ops::Deref};
 
+constraints::implement!(Finite);
+constraints::implement!(Positive);
+constraints::implement!(Finite, Positive);
+constraints::implement!(Finite, Positive, NonZero);
+
+pub type F32NotNan = F32NotNanBase;
+pub type F32Finite = F32NotNanBase<Finite>;
+pub type F32Positive = F32NotNanBase<Positive>;
+pub type F32FinitePositive = F32NotNanBase<(Finite, Positive)>;
+pub type F32FiniteStrictlyPositive = F32NotNanBase<(Finite, Positive, NonZero)>;
+
+#[macro_export]
+macro_rules! f32_not_nan {
+	($value:literal) => {{
+		const F32: $crate::prelude::F32NotNan =
+			match $crate::prelude::F32NotNan::try_from_f32($value) {
+				Ok(v) => v,
+				Err(_) => panic!("The f32 value is not a number"),
+			};
+		F32
+	}};
+}
+
+pub use f32_not_nan;
+
+#[macro_export]
+macro_rules! f32_finite {
+	($value:literal) => {{
+		const F32: $crate::prelude::F32Finite =
+			match $crate::prelude::F32Finite::try_from_f32($value) {
+				Ok(v) => v,
+				Err(_) => panic!("The f32 value is not finite"),
+			};
+		F32
+	}};
+}
+
+pub use f32_finite;
+
+#[macro_export]
+macro_rules! f32_positive {
+	($value:literal) => {{
+		const F32: $crate::prelude::F32Positive =
+			match $crate::prelude::F32Positive::try_from_f32($value) {
+				Ok(v) => v,
+				Err(_) => panic!("The f32 value is not positive"),
+			};
+		F32
+	}};
+}
+
+pub use f32_positive;
+
+#[macro_export]
+macro_rules! f32_finite_positive {
+	($value:literal) => {{
+		const F32: $crate::prelude::F32FinitePositive =
+			match $crate::prelude::F32FinitePositive::try_from_f32($value) {
+				Ok(v) => v,
+				Err(_) => panic!("The f32 value is not finite positive"),
+			};
+		F32
+	}};
+}
+
+pub use f32_finite_positive;
+
+#[macro_export]
+macro_rules! f32_finite_strictly_positive {
+	($value:literal) => {{
+		const F32: $crate::prelude::F32FiniteStrictlyPositive =
+			match $crate::prelude::F32FiniteStrictlyPositive::try_from_f32($value) {
+				Ok(v) => v,
+				Err(_) => panic!("The f32 value is not finite and greater than zero"),
+			};
+		F32
+	}};
+}
+
+pub use f32_finite_strictly_positive;
+
 #[serde_model(no_default_deserialize)]
 #[derive(Debug)]
 pub struct F32NotNanBase<TConstraint = ()>(f32, PhantomData<TConstraint>)
@@ -24,20 +105,6 @@ impl F32NotNanBase {
 		Ok(Self(value, PhantomData))
 	}
 }
-
-#[macro_export]
-macro_rules! f32_not_nan {
-	($value:literal) => {{
-		const F32_NOT_NAN: $crate::prelude::F32NotNan =
-			match $crate::prelude::F32NotNan::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not a number"),
-			};
-		F32_NOT_NAN
-	}};
-}
-
-pub use f32_not_nan;
 
 impl Default for F32NotNanBase {
 	fn default() -> Self {
@@ -212,81 +279,74 @@ impl From<F32Invalid> for F32ParseError {
 	}
 }
 
-macro_rules! impl_constraints {
-	($t_fst:ty $(, $t_rest:ty)*) => {
-		#[allow(unused_parens)]
-		impl F32NotNanBase<($t_fst $(, $t_rest)*)>
-		where
-			$t_fst: Serialize,
-			$($t_rest: Serialize),*
-		{
-			pub const fn try_from_f32(value: f32) -> Result<Self, F32ParseError>
+mod constraints {
+	macro_rules! implement {
+		($t_fst:ty $(, $t_rest:ty)*) => {
+			#[allow(unused_parens)]
+			impl F32NotNanBase<($t_fst $(, $t_rest)*)>
+			where
+				$t_fst: Serialize,
+				$($t_rest: Serialize),*
+			{
+				pub const fn try_from_f32(value: f32) -> Result<Self, F32ParseError>
 
-			 {
-				let mut value = match F32NotNan::try_from_f32(value) {
-					Ok(value) => value,
-					Err(err) => return Err(F32ParseError::IsNaN(err)),
-				};
+				{
+					let mut value = match F32NotNan::try_from_f32(value) {
+						Ok(value) => value,
+						Err(err) => return Err(F32ParseError::IsNaN(err)),
+					};
 
-				value = match <$t_fst>::parse_f32(value) {
-					Ok(value) => value,
-					Err(err) => return Err(F32ParseError::Invalid(err)),
-				};
-				$(
-					value = match <$t_rest>::parse_f32(value) {
+					value = match <$t_fst>::parse_f32(value) {
 						Ok(value) => value,
 						Err(err) => return Err(F32ParseError::Invalid(err)),
 					};
-				)*
+					$(
+						value = match <$t_rest>::parse_f32(value) {
+							Ok(value) => value,
+							Err(err) => return Err(F32ParseError::Invalid(err)),
+						};
+					)*
 
 
-				Ok(Self(value.0, PhantomData))
+					Ok(Self(value.0, PhantomData))
+				}
 			}
-		}
 
-		#[allow(unused_parens)]
-		impl TryFrom<f32> for F32NotNanBase<($t_fst $(, $t_rest)*)>
-		where
-			$t_fst: Serialize,
-			$($t_rest: Serialize),*
-		{
-			type Error = F32ParseError;
-
-			fn try_from(value: f32) -> Result<Self, Self::Error> {
-				Self::try_from_f32(value)
-			}
-		}
-
-		#[allow(unused_parens)]
-		impl<'de> Deserialize<'de> for F32NotNanBase<($t_fst $(, $t_rest)*)>
-		where
-			$t_fst: Serialize,
-			$($t_rest: Serialize),*
-		{
-			fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+			#[allow(unused_parens)]
+			impl TryFrom<f32> for F32NotNanBase<($t_fst $(, $t_rest)*)>
 			where
-				D: serde::Deserializer<'de>,
+				$t_fst: Serialize,
+				$($t_rest: Serialize),*
 			{
-				let value = f32::deserialize(deserializer)?;
+				type Error = F32ParseError;
 
-				F32NotNanBase::<($t_fst $(, $t_rest)*)>
-					::try_from_f32(value)
-					.map_err(F32ParseError::into_serde_error)
+				fn try_from(value: f32) -> Result<Self, Self::Error> {
+					Self::try_from_f32(value)
+				}
 			}
-		}
-	};
+
+			#[allow(unused_parens)]
+			impl<'de> Deserialize<'de> for F32NotNanBase<($t_fst $(, $t_rest)*)>
+			where
+				$t_fst: Serialize,
+				$($t_rest: Serialize),*
+			{
+				fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+				where
+					D: serde::Deserializer<'de>,
+				{
+					let value = f32::deserialize(deserializer)?;
+
+					F32NotNanBase::<($t_fst $(, $t_rest)*)>
+						::try_from_f32(value)
+						.map_err(F32ParseError::into_serde_error)
+				}
+			}
+		};
+	}
+
+	pub(super) use implement;
 }
-
-pub type F32NotNan = F32NotNanBase;
-pub type F32Finite = F32NotNanBase<Finite>;
-pub type F32Positive = F32NotNanBase<Positive>;
-pub type F32FinitePositive = F32NotNanBase<(Finite, Positive)>;
-pub type F32FiniteStrictlyPositive = F32NotNanBase<(Finite, Positive, NonZero)>;
-
-impl_constraints!(Finite);
-impl_constraints!(Positive);
-impl_constraints!(Finite, Positive);
-impl_constraints!(Finite, Positive, NonZero);
 
 #[cfg(test)]
 mod tests {
