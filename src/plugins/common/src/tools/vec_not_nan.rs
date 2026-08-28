@@ -6,8 +6,10 @@ use zyheeda_core::prelude::*;
 #[macro_export]
 macro_rules! vec_not_nan {
 	($($c:literal),+ $(,)?) => {{
+		type T = zyheeda_core::prelude::F32NotNan;
+
 		$crate::tools::vec_not_nan::VecNotNan([
-			$(zyheeda_core::prelude::f32_not_nan!($c),)+
+			$(zyheeda_core::prelude::new_f32!(T($c)),)+
 		])
 	}};
 }
@@ -88,7 +90,13 @@ mod tests {
 		let node = VecNotNan::try_from([1., 2., 3.]);
 
 		assert_eq!(
-			Ok(const { VecNotNan([f32_not_nan!(1.), f32_not_nan!(2.), f32_not_nan!(3.)]) }),
+			Ok(const {
+				VecNotNan([
+					new_f32!(F32NotNan(1.)),
+					new_f32!(F32NotNan(2.)),
+					new_f32!(F32NotNan(3.)),
+				])
+			}),
 			node
 		);
 	}

@@ -21,14 +21,14 @@ impl NonZero {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::prelude::{F32NotNan, f32_not_nan};
+	use crate::prelude::{F32NotNan, new_f32};
 	use test_case::test_case;
 
 	#[test]
 	fn non_zero_ok() {
-		let v = f32_not_nan!(1.);
+		let v = new_f32!(F32NotNan(1.));
 
-		assert_eq!(Ok(f32_not_nan!(1.)), NonZero::parse_f32(v));
+		assert_eq!(Ok(new_f32!(F32NotNan(1.))), NonZero::parse_f32(v));
 	}
 
 	#[test_case(0.0; "positive")]

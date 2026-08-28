@@ -102,7 +102,7 @@ mod tests {
 				AnimationDispatch::with_states([(
 					AnimationKey::Walk,
 					AnimationState {
-						seek: f32_finite!(11.),
+						seek: new_f32!(F32Finite(11.)),
 					},
 				)]),
 				AnimationLookup::<_Clips>::with_clips([(
@@ -122,7 +122,7 @@ mod tests {
 			mock.expect_update_animation()
 				.with(
 					eq(AnimationNodeIndex::new(42)),
-					eq(SetTo::SeekTime(f32_finite!(11.))),
+					eq(SetTo::SeekTime(new_f32!(F32Finite(11.)))),
 				)
 				.return_const(None);
 		}
@@ -139,7 +139,7 @@ mod tests {
 				AnimationDispatch::with_states([(
 					AnimationKey::Walk,
 					AnimationState {
-						seek: f32_finite!(11.),
+						seek: new_f32!(F32Finite(11.)),
 					},
 				)]),
 				AnimationLookup::<_Clips>::with_clips([(
@@ -210,7 +210,7 @@ mod tests {
 				AnimationDispatch::with_states([(
 					AnimationKey::Walk,
 					AnimationState {
-						seek: f32_finite!(11.),
+						seek: new_f32!(F32Finite(11.)),
 					},
 				)]),
 				AnimationLookup::<_Clips>::with_clips([(
@@ -231,7 +231,7 @@ mod tests {
 			mock.expect_update_animation()
 				.with(
 					eq(AnimationNodeIndex::new(42)),
-					eq(SetTo::SeekTime(f32_finite!(11.))),
+					eq(SetTo::SeekTime(new_f32!(F32Finite(11.)))),
 				)
 				.once()
 				.return_const(None);

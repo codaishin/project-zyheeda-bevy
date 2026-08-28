@@ -1485,7 +1485,7 @@ mod tests {
 					ChangedAnimations::default().with_just_stopped([(
 						AnimationKey::Close,
 						Some(OldAnimationState(AnimationState {
-							seek: f32_finite!(42.),
+							seek: new_f32!(F32Finite(42.)),
 						})),
 					)]),
 					_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
@@ -1501,7 +1501,7 @@ mod tests {
 					mock.expect_update_animation()
 						.with(eq(AnimationNodeIndex::new(1)), eq(SetTo::Stop))
 						.return_const(OldAnimationState(AnimationState {
-							seek: f32_finite!(11.),
+							seek: new_f32!(F32Finite(11.)),
 						}));
 					mock.expect_update_animation().return_const(None);
 				}),
@@ -1514,7 +1514,7 @@ mod tests {
 				Some(&ChangedAnimations::default().with_just_stopped([(
 					AnimationKey::Open,
 					Some(OldAnimationState(AnimationState {
-						seek: f32_finite!(11.),
+						seek: new_f32!(F32Finite(11.)),
 					})),
 				)])),
 				app.world().entity(agent).get::<ChangedAnimations>(),
@@ -1542,7 +1542,7 @@ mod tests {
 					ChangedAnimations::default().with_just_stopped([(
 						AnimationKey::Close,
 						Some(OldAnimationState(AnimationState {
-							seek: f32_finite!(42.),
+							seek: new_f32!(F32Finite(42.)),
 						})),
 					)]),
 					_AnimationDispatch::new().with_mock(|mock: &mut Mock_AnimationDispatch| {
@@ -1561,12 +1561,12 @@ mod tests {
 					mock.expect_update_animation()
 						.with(eq(AnimationNodeIndex::new(2)), eq(SetTo::Stop))
 						.return_const(OldAnimationState(AnimationState {
-							seek: f32_finite!(22.),
+							seek: new_f32!(F32Finite(22.)),
 						}));
 					mock.expect_update_animation()
 						.with(eq(AnimationNodeIndex::new(3)), eq(SetTo::Stop))
 						.return_const(OldAnimationState(AnimationState {
-							seek: f32_finite!(33.),
+							seek: new_f32!(F32Finite(33.)),
 						}));
 				}),
 				AnimationPlayerOf(agent),
@@ -1578,7 +1578,7 @@ mod tests {
 				Some(&ChangedAnimations::default().with_just_stopped([(
 					AnimationKey::Open,
 					Some(OldAnimationState(AnimationState {
-						seek: f32_finite!(22.),
+						seek: new_f32!(F32Finite(22.)),
 					})),
 				)])),
 				app.world().entity(agent).get::<ChangedAnimations>(),

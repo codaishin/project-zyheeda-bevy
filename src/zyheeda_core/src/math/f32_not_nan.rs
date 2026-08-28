@@ -19,74 +19,18 @@ pub type F32FinitePositive = F32NotNanBase<(Finite, Positive)>;
 pub type F32FiniteStrictlyPositive = F32NotNanBase<(Finite, Positive, NonZero)>;
 
 #[macro_export]
-macro_rules! f32_not_nan {
-	($value:literal) => {{
-		const F32: $crate::prelude::F32NotNan =
-			match $crate::prelude::F32NotNan::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not a number"),
-			};
+macro_rules! new_f32 {
+	($t:ident($v:literal)) => {{
+		const F32: $t = match $t::try_from_f32($v) {
+			Ok(v) => v,
+			Err(_) => panic!("invalid f32"),
+		};
+
 		F32
 	}};
 }
 
-pub use f32_not_nan;
-
-#[macro_export]
-macro_rules! f32_finite {
-	($value:literal) => {{
-		const F32: $crate::prelude::F32Finite =
-			match $crate::prelude::F32Finite::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not finite"),
-			};
-		F32
-	}};
-}
-
-pub use f32_finite;
-
-#[macro_export]
-macro_rules! f32_positive {
-	($value:literal) => {{
-		const F32: $crate::prelude::F32Positive =
-			match $crate::prelude::F32Positive::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not positive"),
-			};
-		F32
-	}};
-}
-
-pub use f32_positive;
-
-#[macro_export]
-macro_rules! f32_finite_positive {
-	($value:literal) => {{
-		const F32: $crate::prelude::F32FinitePositive =
-			match $crate::prelude::F32FinitePositive::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not finite positive"),
-			};
-		F32
-	}};
-}
-
-pub use f32_finite_positive;
-
-#[macro_export]
-macro_rules! f32_finite_strictly_positive {
-	($value:literal) => {{
-		const F32: $crate::prelude::F32FiniteStrictlyPositive =
-			match $crate::prelude::F32FiniteStrictlyPositive::try_from_f32($value) {
-				Ok(v) => v,
-				Err(_) => panic!("The f32 value is not finite and greater than zero"),
-			};
-		F32
-	}};
-}
-
-pub use f32_finite_strictly_positive;
+pub use new_f32;
 
 #[serde_model(no_default_deserialize)]
 #[derive(Debug)]
@@ -429,7 +373,7 @@ mod tests {
 
 	#[test]
 	fn macro_ok() {
-		const V: F32NotNan = f32_not_nan!(11.);
+		const V: F32NotNan = new_f32!(F32NotNan(11.));
 
 		assert_eq!(F32NotNan::raw(11.), V);
 	}
