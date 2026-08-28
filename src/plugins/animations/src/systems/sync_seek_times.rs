@@ -264,7 +264,7 @@ mod tests {
 					.with_just_stopped([(
 						stopped,
 						Some(OldAnimationState(AnimationState {
-							seek: f32_finite!(4.),
+							seek: new_f32!(F32Finite(4.)),
 						})),
 					)])
 					.with_just_started([started]),
@@ -291,7 +291,8 @@ mod tests {
 			.id();
 		app.world_mut().spawn((
 			AnimationPlayerOf(entity),
-			_AnimationPlayer::new().with_mock(assert_set_seek_time(started_id, f32_finite!(6.))),
+			_AnimationPlayer::new()
+				.with_mock(assert_set_seek_time(started_id, new_f32!(F32Finite(6.)))),
 		));
 
 		app.update();
@@ -339,7 +340,7 @@ mod tests {
 					.with_just_stopped([(
 						stopped,
 						Some(OldAnimationState(AnimationState {
-							seek: f32_finite!(4.),
+							seek: new_f32!(F32Finite(4.)),
 						})),
 					)])
 					.with_just_started([started]),
@@ -407,7 +408,7 @@ mod tests {
 					.with_just_stopped([(
 						stopped,
 						Some(OldAnimationState(AnimationState {
-							seek: f32_finite!(4.),
+							seek: new_f32!(F32Finite(4.)),
 						})),
 					)])
 					.with_just_started([started]),

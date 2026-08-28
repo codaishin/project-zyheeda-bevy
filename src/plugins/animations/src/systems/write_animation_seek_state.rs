@@ -118,7 +118,7 @@ pub(crate) mod tests {
 			player_with_clips([(
 				AnimationNodeIndex::new(11),
 				AnimationState {
-					seek: f32_finite!(11.),
+					seek: new_f32!(F32Finite(11.)),
 				},
 			)]),
 		));
@@ -129,7 +129,7 @@ pub(crate) mod tests {
 			Some(&AnimationDispatch::with_states([(
 				AnimationKey::Walk,
 				AnimationState {
-					seek: f32_finite!(11.)
+					seek: new_f32!(F32Finite(11.))
 				}
 			)])),
 			app.world().entity(entity).get::<AnimationDispatch>(),
@@ -145,7 +145,7 @@ pub(crate) mod tests {
 				AnimationDispatch::with_states([(
 					AnimationKey::Run,
 					AnimationState {
-						seek: f32_finite!(44.),
+						seek: new_f32!(F32Finite(44.)),
 					},
 				)]),
 				AnimationLookup::<_Clips>::with_clips([(
@@ -159,7 +159,7 @@ pub(crate) mod tests {
 			player_with_clips([(
 				AnimationNodeIndex::new(11),
 				AnimationState {
-					seek: f32_finite!(11.),
+					seek: new_f32!(F32Finite(11.)),
 				},
 			)]),
 		));
@@ -170,7 +170,7 @@ pub(crate) mod tests {
 			Some(&AnimationDispatch::with_states([(
 				AnimationKey::Walk,
 				AnimationState {
-					seek: f32_finite!(11.)
+					seek: new_f32!(F32Finite(11.))
 				}
 			)])),
 			app.world().entity(entity).get::<AnimationDispatch>(),
@@ -196,13 +196,13 @@ pub(crate) mod tests {
 				(
 					AnimationNodeIndex::new(11),
 					AnimationState {
-						seek: f32_finite!(11.),
+						seek: new_f32!(F32Finite(11.)),
 					},
 				),
 				(
 					AnimationNodeIndex::new(22),
 					AnimationState {
-						seek: f32_finite!(22.),
+						seek: new_f32!(F32Finite(22.)),
 					},
 				),
 			]),
@@ -214,7 +214,7 @@ pub(crate) mod tests {
 			Some(&AnimationDispatch::with_states([(
 				AnimationKey::Walk,
 				AnimationState {
-					seek: f32_finite!(11.)
+					seek: new_f32!(F32Finite(11.))
 				}
 			)])),
 			app.world().entity(entity).get::<AnimationDispatch>(),
