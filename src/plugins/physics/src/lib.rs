@@ -53,7 +53,7 @@ use crate::{
 		interpolate_position::OverstepFraction,
 	},
 };
-use bevy::prelude::*;
+use bevy::{ecs::schedule::ScheduleLabel, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
 use components::effects::{gravity::GravityEffect, health_damage::HealthDamageEffect};
@@ -64,6 +64,38 @@ use traits::act_on::ActOn;
 pub struct PhysicsPlugin<TDependencies> {
 	target_fps: u32,
 	_p: PhantomData<TDependencies>,
+}
+
+impl<TDependencies> PhysicsPlugin<TDependencies> {
+	fn configure_schedules(app: &mut App, label: impl ScheduleLabel) {
+		app.configure_sets(
+			label,
+			(
+				PhysicsSystems::Prep,
+				PhysicsSystems::Resolve,
+				PhysicsSystems::Interpolate,
+			)
+				.chain(),
+		);
+	}
+
+	fn configure_physics(&self, app: &mut App, rapier_schedule: impl ScheduleLabel + Clone) {
+		let rapier = RapierPhysicsPlugin::<()>::default().in_schedule(rapier_schedule.clone());
+		let apply_beam_blocks = Blockable::apply_beam_blocks
+			.pipe(OnError::log)
+			// make sure beam blocks are applied after rapier has updated positions from movement/forces
+			.after(RapierTransformPropagateSet)
+			.before(RapierBevyComponentApply)
+			.in_set(PhysicsSet::SyncBackend);
+		let set_rapier_time_step = set_rapier_time_step(Duration::from_secs(1) / self.target_fps);
+
+		app.add_plugins(rapier);
+		app.add_systems(rapier_schedule, apply_beam_blocks);
+		app.add_systems(Startup, set_rapier_time_step);
+		app.insert_resource(Time::<Fixed>::from_hz(self.target_fps as f64));
+		app.register_required_components::<RigidBody, ColliderRoot>();
+		app.add_observer(LinearVelocity::apply);
+	}
 }
 
 impl<TSaveGame, TAnimations> PhysicsPlugin<(TSaveGame, TAnimations)>
@@ -94,35 +126,11 @@ where
 		TSaveGame::register_savable_component::<LinearVelocity>(app);
 		TSaveGame::register_savable_component::<CharacterGravity>(app);
 
-		app.configure_sets(
-			Update,
-			(
-				PhysicsSystems::Prep,
-				PhysicsSystems::Resolve,
-				PhysicsSystems::Interpolate,
-			)
-				.chain(),
-		);
-		app.configure_sets(
-			FixedPostUpdate,
-			(
-				PhysicsSystems::Prep,
-				PhysicsSystems::Resolve,
-				PhysicsSystems::Interpolate,
-			)
-				.chain(),
-		);
+		Self::configure_schedules(app, Update);
+		Self::configure_schedules(app, FixedPostUpdate);
+		self.configure_physics(app, FixedUpdate);
 
 		app
-			// Rapier
-			.add_plugins(RapierPhysicsPlugin::<NoUserData>::default().in_schedule(FixedUpdate))
-			.register_required_components::<RigidBody, ColliderRoot>()
-			.add_systems(
-				Startup,
-				set_rapier_time_step(Duration::from_secs(1) / self.target_fps),
-			)
-			.insert_resource(Time::<Fixed>::from_hz(self.target_fps as f64))
-			.add_observer(LinearVelocity::apply)
 			// World camera
 			.init_resource::<WorldCamera>()
 			.add_systems(
@@ -222,7 +230,6 @@ where
 				(
 					// Collect physical collections
 					(
-						Blockable::apply_beam_blocks.pipe(OnError::log),
 						RootCollisions::<Physical>::clear,
 						FixedPostUpdate::delta
 							.pipe(UpdateRootCollisions::<Physical>::prevent_tunneling)
