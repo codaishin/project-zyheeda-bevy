@@ -1,12 +1,12 @@
 use bevy::prelude::*;
 use macros::serde_model;
-use zyheeda_core::{f32_finite_positive, prelude::*};
+use zyheeda_core::{f32_finite_strictly_positive, prelude::*};
 
 #[macro_export]
 macro_rules! scale {
 	($($c:literal),+ $(,)?) => {{
 		$crate::tools::scale::Scale([
-			$(zyheeda_core::prelude::f32_finite_positive!($c),)+
+			$(zyheeda_core::prelude::f32_finite_strictly_positive!($c),)+
 		])
 	}};
 }
@@ -15,16 +15,18 @@ pub use scale;
 
 #[serde_model]
 #[derive(Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Clone, Copy)]
-pub struct Scale<const N: usize>(#[serde(with = "array_as_vec")] pub [F32FinitePositive; N]);
+pub struct Scale<const N: usize>(
+	#[serde(with = "array_as_vec")] pub [F32FiniteStrictlyPositive; N],
+);
 
 impl<const N: usize> TryFrom<[f32; N]> for Scale<N> {
 	type Error = F32ParseError;
 
 	fn try_from(array: [f32; N]) -> Result<Self, Self::Error> {
-		let mut vec = [f32_finite_positive!(1.); N];
+		let mut vec = [f32_finite_strictly_positive!(1.); N];
 
 		for i in 0..N {
-			vec[i] = F32FinitePositive::try_from_f32(array[i])?;
+			vec[i] = F32FiniteStrictlyPositive::try_from_f32(array[i])?;
 		}
 
 		Ok(Self(vec))
@@ -52,15 +54,14 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use test_case::test_case;
-	use zyheeda_core::f32_finite_positive;
 
 	#[test]
 	fn scale_ok() {
 		assert_eq!(
 			Ok(Scale([
-				f32_finite_positive!(1.),
-				f32_finite_positive!(2.),
-				f32_finite_positive!(3.),
+				f32_finite_strictly_positive!(1.),
+				f32_finite_strictly_positive!(2.),
+				f32_finite_strictly_positive!(3.),
 			])),
 			Scale::try_from([1., 2., 3.])
 		);
@@ -70,9 +71,9 @@ mod tests {
 	fn scale_macro() {
 		assert_eq!(
 			Scale([
-				f32_finite_positive!(1.),
-				f32_finite_positive!(2.),
-				f32_finite_positive!(3.),
+				f32_finite_strictly_positive!(1.),
+				f32_finite_strictly_positive!(2.),
+				f32_finite_strictly_positive!(3.),
 			]),
 			scale!(1., 2., 3.)
 		);
