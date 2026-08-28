@@ -3,6 +3,7 @@ use crate::{
 		async_collider::ColliderType,
 		collider::ColliderShape,
 		effects::Effects,
+		self_skill_scale::SelfSkillScale,
 		skill::{
 			BEAM_CONTACT_RADIUS,
 			BEAM_MODEL,
@@ -10,7 +11,6 @@ use crate::{
 			PROJECTILE_CONTACT_RADIUS,
 			SHIELD_CONTACT_COLLIDER,
 			SHIELD_CONTACT_MODEL,
-			SHIELD_SCALE,
 			SPHERE_MODEL,
 			Skill,
 		},
@@ -23,7 +23,10 @@ use common::prelude::*;
 use std::f32::consts::PI;
 
 impl GetContactPrefab for Skill {
-	fn get_contact_prefab(&self) -> (PhysicalObject, SubModel, ContactCollider, Effects) {
+	fn get_contact_prefab(
+		&self,
+		SelfSkillScale(self_skill_scale): &SelfSkillScale,
+	) -> (PhysicalObject, SubModel, ContactCollider, Effects) {
 		let (obj, model, collider) = match &self.shape {
 			SkillShape::SphereAoE(SphereAoE { radius, .. }) => (
 				PhysicalObject::Fragile {
@@ -86,12 +89,12 @@ impl GetContactPrefab for Skill {
 				},
 				SubModel {
 					model: Model::scene(SHIELD_CONTACT_MODEL),
-					transform: Transform::from_scale(SHIELD_SCALE),
+					transform: Transform::from_scale(Vec3::from(*self_skill_scale)),
 				},
 				ContactCollider {
 					shape: ColliderShape::CustomAsset {
 						mesh: SHIELD_CONTACT_COLLIDER,
-						scale: ColliderScale::Relative(SHIELD_SCALE),
+						scale: ColliderScale::Relative(Vec3::from(*self_skill_scale)),
 						collider_type: ColliderType::Concave,
 					},
 					transform: Transform::default(),

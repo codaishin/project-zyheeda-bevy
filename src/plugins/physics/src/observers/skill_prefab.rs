@@ -4,6 +4,7 @@ use crate::components::{
 	collision_domains::Physical,
 	effects::Effects,
 	persistent_root::PersistentRoot,
+	self_skill_scale::SelfSkillScale,
 	skill::{SkillContactRoot, SkillProjectionRoot},
 	skill_transform::SkillTransformOf,
 };
@@ -13,28 +14,48 @@ use common::prelude::*;
 use std::time::Duration;
 
 impl<T> SkillPrefab for T where
-	T: Component + GetLifetime + GetContactPrefab + GetProjectionPrefab + ApplyMotionPrefab
+	T: Component
+		+ GetCaster
+		+ GetLifetime
+		+ GetContactPrefab
+		+ GetProjectionPrefab
+		+ ApplyMotionPrefab
 {
 }
 
 pub(crate) trait SkillPrefab:
-	Component + GetLifetime + GetContactPrefab + GetProjectionPrefab + ApplyMotionPrefab + Sized
+	Component
+	+ GetCaster
+	+ GetLifetime
+	+ GetContactPrefab
+	+ GetProjectionPrefab
+	+ ApplyMotionPrefab
+	+ Sized
 {
 	fn prefab(
 		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
+		casters: Query<&SelfSkillScale>,
 		skills: Query<(&Self, &PersistentEntity)>,
 	) {
 		let root = on_insert.entity;
+		let Ok((skill, persistent_entity)) = skills.get(root) else {
+			return;
+		};
+		let Some(caster) = commands.get(&skill.get_caster()) else {
+			return;
+		};
+		let Ok(self_skill_scale) = casters.get(caster) else {
+			return;
+		};
 		let Some(mut entity) = commands.get_mut(&root) else {
 			return;
 		};
-		let Ok((skill, persistent_entity)) = skills.get(entity.id()) else {
-			return;
-		};
 		let rigid_body = skill.apply_motion_prefab(&mut entity);
-		let (obj, cont_model, cont_collider, cont_effects) = skill.get_contact_prefab();
-		let (proj_model, proj_collider, proj_effects) = skill.get_projection_prefab();
+		let (obj, cont_model, cont_collider, cont_effects) =
+			skill.get_contact_prefab(self_skill_scale);
+		let (proj_model, proj_collider, proj_effects) =
+			skill.get_projection_prefab(self_skill_scale);
 		let collision_group = CollisionGroups {
 			memberships: SKILLS_GROUP,
 			filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
@@ -91,16 +112,26 @@ pub(crate) trait SkillPrefab:
 	}
 }
 
+pub(crate) trait GetCaster {
+	fn get_caster(&self) -> PersistentEntity;
+}
+
 pub(crate) trait GetLifetime {
 	fn get_lifetime(&self) -> Option<Duration>;
 }
 
 pub(crate) trait GetContactPrefab {
-	fn get_contact_prefab(&self) -> (PhysicalObject, SubModel, ContactCollider, Effects);
+	fn get_contact_prefab(
+		&self,
+		scale: &SelfSkillScale,
+	) -> (PhysicalObject, SubModel, ContactCollider, Effects);
 }
 
 pub(crate) trait GetProjectionPrefab {
-	fn get_projection_prefab(&self) -> (SubModel, ProjectionCollider, Effects);
+	fn get_projection_prefab(
+		&self,
+		scale: &SelfSkillScale,
+	) -> (SubModel, ProjectionCollider, Effects);
 }
 
 pub(crate) trait ApplyMotionPrefab {
@@ -127,25 +158,33 @@ pub(crate) struct ContactCollider {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use crate::components::{
 		persistent_root::PersistentRoot,
 		skill::SkillContactRoot,
 		skill_transform::SkillTransformOf,
 	};
-	use std::{collections::HashSet, sync::LazyLock};
+	use std::{
+		collections::HashSet,
+		sync::{LazyLock, OnceLock},
+	};
 	use testing::{SingleThreadedApp, assert_children_count};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Motion;
 
 	static SKILL: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
 
 	#[derive(Component)]
 	#[require(PersistentEntity = *SKILL)]
 	struct _Skill {
+		used_contact_scale: OnceLock<Scale<3>>,
+		used_projection_scale: OnceLock<Scale<3>>,
 		rigid_body: RigidBody,
 		lifetime: Option<Duration>,
+		caster: PersistentEntity,
 		contact: (PhysicalObject, SubModel, ContactCollider, Effects),
 		projection: (SubModel, ProjectionCollider, Effects),
 	}
@@ -190,8 +229,11 @@ mod tests {
 	impl Default for _Skill {
 		fn default() -> Self {
 			Self {
+				used_contact_scale: OnceLock::new(),
+				used_projection_scale: OnceLock::new(),
 				rigid_body: RigidBody::Dynamic,
 				lifetime: None,
+				caster: *CASTER,
 				contact: (
 					Self::default_object(),
 					Self::default_model(),
@@ -204,6 +246,12 @@ mod tests {
 					Effects(vec![]),
 				),
 			}
+		}
+	}
+
+	impl GetCaster for _Skill {
+		fn get_caster(&self) -> PersistentEntity {
+			self.caster
 		}
 	}
 
@@ -222,12 +270,20 @@ mod tests {
 	}
 
 	impl GetContactPrefab for _Skill {
-		fn get_contact_prefab(&self) -> (PhysicalObject, SubModel, ContactCollider, Effects) {
+		fn get_contact_prefab(
+			&self,
+			SelfSkillScale(scale): &SelfSkillScale,
+		) -> (PhysicalObject, SubModel, ContactCollider, Effects) {
+			self.used_contact_scale.set(*scale).unwrap();
 			self.contact.clone()
 		}
 	}
 	impl GetProjectionPrefab for _Skill {
-		fn get_projection_prefab(&self) -> (SubModel, ProjectionCollider, Effects) {
+		fn get_projection_prefab(
+			&self,
+			SelfSkillScale(scale): &SelfSkillScale,
+		) -> (SubModel, ProjectionCollider, Effects) {
+			self.used_projection_scale.set(*scale).unwrap();
 			self.projection.clone()
 		}
 	}
@@ -244,9 +300,12 @@ mod tests {
 		};
 	}
 
-	fn setup() -> App {
+	fn setup_with_caster(self_sill_scale: Scale<3>) -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
+		app.world_mut()
+			.spawn((*CASTER, SelfSkillScale(self_sill_scale)));
 		app.add_observer(_Skill::prefab);
 
 		app
@@ -257,7 +316,7 @@ mod tests {
 
 		#[test]
 		fn insert_blockable() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill {
 				contact: (
@@ -283,7 +342,7 @@ mod tests {
 
 		#[test]
 		fn insert_lifetime() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill {
 				lifetime: Some(Duration::from_hours(1)),
@@ -298,7 +357,7 @@ mod tests {
 
 		#[test]
 		fn insert_contact() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill::default());
 
@@ -307,7 +366,7 @@ mod tests {
 
 		#[test]
 		fn spawn_projection_child() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
@@ -320,7 +379,7 @@ mod tests {
 
 		#[test]
 		fn insert_persistent_root() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill::default());
 
@@ -328,8 +387,23 @@ mod tests {
 		}
 
 		#[test]
+		fn use_scale() {
+			let mut app = setup_with_caster(scale!(1., 2., 3.));
+
+			let skill = app.world_mut().spawn(_Skill::default()).id();
+
+			assert_eq!(
+				Some(&scale!(1., 2., 3.)),
+				app.world()
+					.entity(skill)
+					.get::<_Skill>()
+					.and_then(|s| s.used_contact_scale.get()),
+			);
+		}
+
+		#[test]
 		fn spawn_model_child() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app
 				.world_mut()
@@ -359,7 +433,7 @@ mod tests {
 
 		#[test]
 		fn spawn_collider_child() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app
 				.world_mut()
@@ -407,7 +481,7 @@ mod tests {
 
 		#[test]
 		fn spawn_collider_rapier_sensor() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
@@ -417,7 +491,7 @@ mod tests {
 
 		#[test]
 		fn add_skill_transform_children() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
@@ -436,7 +510,7 @@ mod tests {
 
 		#[test]
 		fn add_effects() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill {
 				contact: (
@@ -460,7 +534,7 @@ mod tests {
 
 		#[test]
 		fn insert_persistent_root() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
@@ -472,8 +546,23 @@ mod tests {
 		}
 
 		#[test]
+		fn use_scale() {
+			let mut app = setup_with_caster(scale!(1., 2., 3.));
+
+			let skill = app.world_mut().spawn(_Skill::default()).id();
+
+			assert_eq!(
+				Some(&scale!(1., 2., 3.)),
+				app.world()
+					.entity(skill)
+					.get::<_Skill>()
+					.and_then(|s| s.used_projection_scale.get()),
+			);
+		}
+
+		#[test]
 		fn spawn_model_child() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app
 				.world_mut()
@@ -503,7 +592,7 @@ mod tests {
 
 		#[test]
 		fn spawn_collider_child() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app
 				.world_mut()
@@ -551,7 +640,7 @@ mod tests {
 
 		#[test]
 		fn spawn_collider_rapier_sensor() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
@@ -562,7 +651,7 @@ mod tests {
 
 		#[test]
 		fn add_skill_transform_children() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
@@ -582,7 +671,7 @@ mod tests {
 
 		#[test]
 		fn add_effects() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let skill = app
 				.world_mut()
@@ -609,7 +698,7 @@ mod tests {
 
 		#[test]
 		fn apply_motion() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let entity = app.world_mut().spawn(_Skill::default());
 
@@ -618,7 +707,7 @@ mod tests {
 
 		#[test]
 		fn insert_rigid_body() {
-			let mut app = setup();
+			let mut app = setup_with_caster(Scale::default());
 
 			let entity = app.world_mut().spawn(_Skill {
 				rigid_body: RigidBody::KinematicPositionBased,

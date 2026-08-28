@@ -3,6 +3,7 @@ use crate::{
 		async_collider::ColliderType,
 		collider::ColliderShape,
 		effects::Effects,
+		self_skill_scale::SelfSkillScale,
 		skill::{
 			BEAM_MODEL,
 			BEAM_PROJECTION_RADIUS,
@@ -10,7 +11,6 @@ use crate::{
 			PROJECTILE_PROJECTION_RADIUS,
 			SHIELD_PROJECTION_COLLIDER,
 			SHIELD_PROJECTION_MODEL,
-			SHIELD_SCALE,
 			SPHERE_MODEL,
 			Skill,
 		},
@@ -23,7 +23,10 @@ use common::prelude::*;
 use std::f32::consts::PI;
 
 impl GetProjectionPrefab for Skill {
-	fn get_projection_prefab(&self) -> (SubModel, ProjectionCollider, Effects) {
+	fn get_projection_prefab(
+		&self,
+		SelfSkillScale(self_skill_scale): &SelfSkillScale,
+	) -> (SubModel, ProjectionCollider, Effects) {
 		let (model, collider) = match &self.shape {
 			SkillShape::SphereAoE(SphereAoE { radius, .. }) => (
 				SubModel {
@@ -75,12 +78,12 @@ impl GetProjectionPrefab for Skill {
 			SkillShape::Shield(Shield) => (
 				SubModel {
 					model: Model::scene(SHIELD_PROJECTION_MODEL),
-					transform: Transform::from_scale(SHIELD_SCALE),
+					transform: Transform::from_scale(Vec3::from(*self_skill_scale)),
 				},
 				ProjectionCollider {
 					shape: ColliderShape::CustomAsset {
 						mesh: SHIELD_PROJECTION_COLLIDER,
-						scale: ColliderScale::Relative(SHIELD_SCALE),
+						scale: ColliderScale::Relative(Vec3::from(*self_skill_scale)),
 						collider_type: ColliderType::Convex,
 					},
 					transform: Transform::default(),

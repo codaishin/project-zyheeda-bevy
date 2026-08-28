@@ -6,7 +6,7 @@ pub mod shield;
 use crate::{
 	components::persistent_entity::PersistentEntity,
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
-	tools::{action_key::slot::SlotKey, bone_name::BoneName},
+	tools::{action_key::slot::SlotKey, bone_name::BoneName, scale::Scale},
 	traits::{
 		accessors::get::{TryGetContext, TryGetContextMut},
 		handles_skill_physics::{
@@ -90,15 +90,23 @@ pub struct InitializedAgent {
 }
 
 pub trait Initialize {
-	fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>);
+	fn initialize(
+		&mut self,
+		definition: HashMap<BoneName, SkillMountBone>,
+		self_skill_scale: Scale<3>,
+	);
 }
 
 impl<T> Initialize for T
 where
 	T: DerefMut<Target: Initialize>,
 {
-	fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>) {
-		self.deref_mut().initialize(definition);
+	fn initialize(
+		&mut self,
+		definition: HashMap<BoneName, SkillMountBone>,
+		self_skill_scale: Scale<3>,
+	) {
+		self.deref_mut().initialize(definition, self_skill_scale);
 	}
 }
 

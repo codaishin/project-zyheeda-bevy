@@ -21,6 +21,16 @@ pub struct Scale<const N: usize>(
 	#[serde(with = "array_as_vec")] pub [F32FiniteStrictlyPositive; N],
 );
 
+impl<const N: usize> Scale<N> {
+	pub const ONE: Scale<N> = Scale([new_f32!(F32FiniteStrictlyPositive(1.)); N]);
+}
+
+impl<const N: usize> Default for Scale<N> {
+	fn default() -> Self {
+		Self::ONE
+	}
+}
+
 impl<const N: usize> TryFrom<[f32; N]> for Scale<N> {
 	type Error = F32ParseError;
 
@@ -43,11 +53,23 @@ impl TryFrom<Vec2> for Scale<2> {
 	}
 }
 
+impl From<Scale<2>> for Vec2 {
+	fn from(Scale(scale): Scale<2>) -> Self {
+		Vec2::from_array(scale.map(|s| *s))
+	}
+}
+
 impl TryFrom<Vec3> for Scale<3> {
 	type Error = F32ParseError;
 
 	fn try_from(value: Vec3) -> Result<Self, Self::Error> {
 		Self::try_from(value.to_array())
+	}
+}
+
+impl From<Scale<3>> for Vec3 {
+	fn from(Scale(scale): Scale<3>) -> Self {
+		Vec3::from_array(scale.map(|s| *s))
 	}
 }
 

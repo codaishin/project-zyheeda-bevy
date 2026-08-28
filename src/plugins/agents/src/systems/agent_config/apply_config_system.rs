@@ -66,7 +66,7 @@ impl ApplyAgentConfig {
 			let not_initialized = NotInitializedAgent { entity };
 			if let Some(mut ctx) = TSkills::try_get_context_mut(&mut skills_param, not_initialized)
 			{
-				ctx.initialize(config.bones.skill_mounts.clone());
+				ctx.initialize(config.bones.skill_mounts.clone(), config.self_skill_scale);
 			};
 
 			let not_configured = NotConfiguredMovement { entity };
@@ -239,8 +239,12 @@ mod tests {
 
 	#[automock]
 	impl Initialize for _Skills {
-		fn initialize(&mut self, definition: HashMap<BoneName, SkillMountBone>) {
-			self.mock.initialize(definition);
+		fn initialize(
+			&mut self,
+			definition: HashMap<BoneName, SkillMountBone>,
+			self_skill_scale: Scale<3>,
+		) {
+			self.mock.initialize(definition, self_skill_scale);
 		}
 	}
 
@@ -419,8 +423,10 @@ mod tests {
 						(BoneName::from("a"), SkillMountBone::NeutralSlot),
 						(BoneName::from("b"), SkillMountBone::Slot(SlotKey(42))),
 					]),
+
 					..default()
 				},
+				self_skill_scale: scale!(1., 2., 3.),
 				..default()
 			};
 			let mut app = setup([(&config_handle, asset)]);
@@ -431,10 +437,13 @@ mod tests {
 				_Skills::new().with_mock(|mock| {
 					mock.expect_initialize()
 						.once()
-						.with(eq(HashMap::from([
-							(BoneName::from("a"), SkillMountBone::NeutralSlot),
-							(BoneName::from("b"), SkillMountBone::Slot(SlotKey(42))),
-						])))
+						.with(
+							eq(HashMap::from([
+								(BoneName::from("a"), SkillMountBone::NeutralSlot),
+								(BoneName::from("b"), SkillMountBone::Slot(SlotKey(42))),
+							])),
+							eq(scale!(1., 2., 3.)),
+						)
 						.return_const(());
 				}),
 			));

@@ -50,6 +50,11 @@
 				"center": 0.8,
 				"aim": 1
 			},
+			"self_skill_scale": [
+				1.7,
+				1.7,
+				1.7
+			],
 			"movement_speed": {
 				"type": "variable",
 				"content": [
