@@ -1,7 +1,8 @@
 pub mod finite;
+pub mod non_zero;
 pub mod positive;
 
-use crate::math::f32_not_nan::{finite::Finite, positive::Positive};
+use crate::math::f32_not_nan::{finite::Finite, non_zero::NonZero, positive::Positive};
 use macros::serde_model;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ops::Deref};
@@ -193,6 +194,7 @@ impl Display for F32ParseError {
 			F32ParseError::IsNaN(err) => err.fmt(f),
 			F32ParseError::Invalid(F32Invalid::Infinite(v)) => write!(f, "{v}: is infinite"),
 			F32ParseError::Invalid(F32Invalid::Negative(v)) => write!(f, "{v}: is negative"),
+			F32ParseError::Invalid(F32Invalid::Zero(v)) => write!(f, "{v}: is zero"),
 		}
 	}
 }
@@ -201,6 +203,7 @@ impl Display for F32ParseError {
 pub enum F32Invalid {
 	Infinite(f32),
 	Negative(f32),
+	Zero(f32),
 }
 
 impl From<F32Invalid> for F32ParseError {
@@ -278,10 +281,12 @@ pub type F32NotNan = F32NotNanBase;
 pub type F32Finite = F32NotNanBase<Finite>;
 pub type F32Positive = F32NotNanBase<Positive>;
 pub type F32FinitePositive = F32NotNanBase<(Finite, Positive)>;
+pub type F32FiniteStrictlyPositive = F32NotNanBase<(Finite, Positive, NonZero)>;
 
 impl_constraints!(Finite);
 impl_constraints!(Positive);
 impl_constraints!(Finite, Positive);
+impl_constraints!(Finite, Positive, NonZero);
 
 #[cfg(test)]
 mod tests {

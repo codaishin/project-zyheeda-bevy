@@ -19,6 +19,7 @@ pub use crate::{
 	math::f32_not_nan::{
 		F32Finite,
 		F32FinitePositive,
+		F32FiniteStrictlyPositive,
 		F32Invalid,
 		F32NotNan,
 		F32ParseError,
@@ -26,6 +27,7 @@ pub use crate::{
 		IsNaN,
 		f32_not_nan,
 		finite::f32_finite,
+		non_zero::f32_finite_strictly_positive,
 		positive::{f32_finite_positive, f32_positive},
 	},
 	serialization::*,
