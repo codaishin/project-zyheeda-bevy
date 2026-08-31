@@ -8,3 +8,9 @@ impl<T> IsNot<T> {
 		Self(PhantomData)
 	}
 }
+
+impl<T> Default for IsNot<T> {
+	fn default() -> Self {
+		Self(PhantomData)
+	}
+}

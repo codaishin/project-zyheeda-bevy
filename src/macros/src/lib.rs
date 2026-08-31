@@ -757,3 +757,199 @@ pub fn serde_model(attr: TokenStream, input: TokenStream) -> TokenStream {
 
 	TokenStream::from(quote! { #item })
 }
+
+/// Implement conversions of enums to and from the inner types.
+/// Fallible conversions use `zyheeda_core::prelude::IsNot<inner-type>` as error.
+///
+/// It also allows direct comparison of inner and outer type instances.
+///
+/// Attributes:
+/// - `error` (on enum or variant): Set a different error for fallible conversions
+/// - `skip` (on variant): Skip this variant
+///
+/// # Example
+/// ```
+/// use macros::EnumConversions;
+///
+/// #[derive(Debug, PartialEq, EnumConversions)]
+/// #[enum_conversions(error = Error)]
+/// enum Animal {
+///   Dog(Dog),
+///   #[enum_conversions(error = NotACat)]
+///   Cat(Cat),
+///   #[enum_conversions(skip)]
+///   OtherDog(Dog)
+/// }
+///
+/// #[derive(Debug, PartialEq)]
+/// struct Dog;
+///
+/// #[derive(Debug, PartialEq)]
+/// struct Cat;
+///
+/// #[derive(Debug, PartialEq, Default)]
+/// struct NotACat;
+///
+/// #[derive(Debug, PartialEq, Default)]
+/// struct Error;
+///
+/// assert_eq!(Animal::Dog(Dog), Animal::from(Dog));
+///
+/// assert_eq!(Ok(Cat), Cat::try_from(Animal::Cat(Cat)));
+/// assert_eq!(Err(NotACat), Cat::try_from(Animal::Dog(Dog)));
+/// assert_eq!(Err(Error), Dog::try_from(Animal::Cat(Cat)));
+///
+/// assert_ne!(Dog, Animal::Cat(Cat));
+/// assert_eq!(Cat, Animal::Cat(Cat));
+///
+/// assert_ne!(Animal::Cat(Cat), Dog);
+/// assert_eq!(Animal::Cat(Cat), Cat);
+/// ```
+#[proc_macro_derive(EnumConversions, attributes(enum_conversions))]
+pub fn derive_enum_conversions(input: TokenStream) -> TokenStream {
+	let input = parse_macro_input!(input as DeriveInput);
+	let enum_name = &input.ident;
+	let Data::Enum(data) = &input.data else {
+		return TokenStream::from(
+			Error::new(enum_name.span(), "Can only be derived for enums").to_compile_error(),
+		);
+	};
+	let conversion_error = match ConversionOptions::from_attributes(&input.attrs) {
+		Err(err) => return TokenStream::from(err.into_compile_error()),
+		Ok(ConversionOptions { skip: true, .. }) => {
+			return TokenStream::from(
+				Error::new(input.span(), "Invalid. Allowed: `error`").into_compile_error(),
+			);
+		}
+		Ok(ConversionOptions { error, .. }) => error,
+	};
+
+	let mut conversions = Vec::new();
+
+	for variant in &data.variants {
+		let variant_conversion_error = match ConversionOptions::from_attributes(&variant.attrs) {
+			Err(err) => return TokenStream::from(err.into_compile_error()),
+			Ok(ConversionOptions { skip: true, .. }) => continue,
+			Ok(ConversionOptions { error, .. }) => error,
+		};
+
+		let variant_name = &variant.ident;
+		let inner = match &variant.fields {
+			Fields::Unnamed(fields) if fields.unnamed.len() == 1 => &fields.unnamed[0].ty,
+			Fields::Unnamed(_) | Fields::Unit => {
+				return TokenStream::from(
+					Error::new(variant.span(), "VAriant must contain exactly one field")
+						.into_compile_error(),
+				);
+			}
+			Fields::Named(_) => {
+				return TokenStream::from(
+					Error::new(variant.span(), "Variant must be tuple variants")
+						.into_compile_error(),
+				);
+			}
+		};
+
+		let mut generics = input.generics.clone();
+		generics
+			.make_where_clause()
+			.predicates
+			.push(syn::parse_quote! {
+				#inner: PartialEq
+			});
+		let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+		let conversion_error = match (variant_conversion_error, &conversion_error) {
+			(Some(variant_error), ..) => variant_error,
+			(None, Some(error)) => error.clone(),
+			(None, None) => {
+				let core = match crate_root("zyheeda_core") {
+					Ok(core) => core,
+					Err(error) => return error,
+				};
+
+				parse_quote! { #core::prelude::IsNot<#inner> }
+			}
+		};
+
+		conversions.push(quote! {
+			impl #impl_generics From<#inner> for #enum_name #ty_generics #where_clause {
+				fn from(inner: #inner) -> Self {
+					Self::#variant_name(inner)
+				}
+			}
+
+			impl #impl_generics TryFrom<#enum_name #ty_generics> for #inner #where_clause {
+				type Error = #conversion_error;
+
+				fn try_from(
+					outer: #enum_name #ty_generics,
+				) -> Result<#inner, Self::Error> {
+					match outer {
+						#enum_name::#variant_name(inner) => Ok(inner),
+						_ => Err(<#conversion_error as Default>::default()),
+					}
+				}
+			}
+
+			impl #impl_generics PartialEq<#enum_name #ty_generics> for #inner #where_clause
+			{
+				fn eq(&self, other: &#enum_name #ty_generics) -> bool {
+					match other {
+						#enum_name::#variant_name(other) => self == other,
+						_ => false,
+					}
+				}
+			}
+
+			impl #impl_generics PartialEq<#inner> for #enum_name #ty_generics #where_clause
+			{
+				fn eq(&self, other: &#inner) -> bool {
+					match self {
+						#enum_name::#variant_name(this) => this == other,
+						_ => false,
+					}
+				}
+			}
+		})
+	}
+
+	TokenStream::from(quote! {
+		#(#conversions)*
+	})
+}
+
+struct ConversionOptions {
+	skip: bool,
+	error: Option<Path>,
+}
+
+impl ConversionOptions {
+	fn from_attributes(attributes: &[Attribute]) -> syn::Result<Self> {
+		let mut options = Self {
+			skip: false,
+			error: None,
+		};
+
+		let attributes = attributes
+			.iter()
+			.filter(|a| a.path().is_ident("enum_conversions"));
+
+		for attribute in attributes {
+			attribute.parse_nested_meta(|meta| {
+				if meta.path.is_ident("skip") {
+					options.skip = true;
+					return Ok(());
+				}
+
+				if meta.path.is_ident("error") {
+					options.error = Some(meta.value()?.parse::<Path>()?);
+					return Ok(());
+				}
+
+				Err(meta.error("Invalid. Allowed: `error`, `skip`"))
+			})?;
+		}
+
+		Ok(options)
+	}
+}

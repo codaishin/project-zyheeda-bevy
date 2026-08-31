@@ -25,14 +25,13 @@ use crate::{
 };
 use bevy::{reflect::TypePath, utils::default};
 use camera_key::CameraKey;
-use macros::serde_model;
+use macros::{EnumConversions, serde_model};
 use movement::MovementKey;
 use slot::HandSlot;
 use user_input::UserInput;
-use zyheeda_core::impl_enum_conversions;
 
 #[serde_model]
-#[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug)]
+#[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, EnumConversions)]
 pub enum ActionKey {
 	Movement(MovementKey),
 	Slot(HandSlot),
@@ -42,14 +41,6 @@ pub enum ActionKey {
 	Camera(CameraKey),
 	Save(SaveKey),
 }
-
-impl_enum_conversions!(ActionKey::Movement(MovementKey));
-impl_enum_conversions!(ActionKey::Slot(HandSlot));
-impl_enum_conversions!(ActionKey::Targeting(TerrainTargeting));
-impl_enum_conversions!(ActionKey::Miscellaneous(Miscellaneous));
-impl_enum_conversions!(ActionKey::Menu(MenuKey));
-impl_enum_conversions!(ActionKey::Camera(CameraKey));
-impl_enum_conversions!(ActionKey::Save(SaveKey));
 
 impl Default for ActionKey {
 	fn default() -> Self {
