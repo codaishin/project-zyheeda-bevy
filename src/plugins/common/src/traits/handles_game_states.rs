@@ -9,13 +9,13 @@ use bevy::{
 	ecs::system::{ReadOnlySystemParam, ScheduleSystem, StaticSystemParam, SystemParam},
 	prelude::*,
 };
+use macros::EnumConversions;
 use std::{
 	collections::{HashMap, HashSet, hash_set::Iter as HashSetIter},
 	fmt::{Debug, Display},
 	hash::Hash,
 	ops::{Deref, DerefMut},
 };
-use zyheeda_core::prelude::*;
 
 pub trait HandlesGameStates:
 	AddGameStateSystem + AddActivityTransitions + SetToNotPause + GamePaused
@@ -222,7 +222,7 @@ impl_on_game_state_conversions!(
 	SaveGameActivity,
 );
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, EnumConversions)]
 pub enum GameState {
 	Activity(Activity),
 	IngameUI(IngameUI),
@@ -243,15 +243,11 @@ impl IterFinite for GameState {
 	}
 }
 
-impl_enum_conversions!(GameState[
-	Activity(Activity),
-	IngameUI(IngameUI),
-]);
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, EnumConversions)]
 pub enum Activity {
 	SaveGame(SaveGameActivity),
 	LoadAssets(LoadActivity),
+	#[enum_conversions(skip)]
 	LoadDependencies(LoadActivity),
 	Settable(SettableActivity),
 }
@@ -289,12 +285,6 @@ impl IterFinite for Activity {
 		}
 	}
 }
-
-impl_enum_conversions!(Activity[
-	SaveGame(SaveGameActivity),
-	Settable(SettableActivity),
-	LoadAssets(LoadActivity),
-]);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum SaveGameActivity {
