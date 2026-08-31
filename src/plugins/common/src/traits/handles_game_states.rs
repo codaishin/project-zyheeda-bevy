@@ -102,7 +102,9 @@ impl Display for TransitionsConfigError {
 }
 
 pub trait SetToNotPause {
-	const DEFAULT_NON_PAUSE: &[Activity] = &[Activity::Settable(SettableActivity::Play)];
+	const DEFAULT_NON_PAUSE: &[GameState] = &[GameState::Activity(Activity::Settable(
+		SettableActivity::Play,
+	))];
 
 	fn set_to_not_pause(app: &mut App, state: impl Into<GameState>);
 }
