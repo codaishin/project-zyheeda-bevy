@@ -243,10 +243,8 @@ impl IterFinite for GameState {
 	}
 }
 
-impl_enum_conversions!(GameState[
-	Activity(Activity),
-	IngameUI(IngameUI),
-]);
+impl_enum_conversions!(GameState::Activity(Activity));
+impl_enum_conversions!(GameState::IngameUI(IngameUI));
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum Activity {
@@ -290,11 +288,9 @@ impl IterFinite for Activity {
 	}
 }
 
-impl_enum_conversions!(Activity[
-	SaveGame(SaveGameActivity),
-	Settable(SettableActivity),
-	LoadAssets(LoadActivity),
-]);
+impl_enum_conversions!(Activity::SaveGame(SaveGameActivity));
+impl_enum_conversions!(Activity::Settable(SettableActivity));
+impl_enum_conversions!(Activity::LoadAssets(LoadActivity));
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum SaveGameActivity {

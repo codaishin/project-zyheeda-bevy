@@ -43,15 +43,13 @@ pub enum ActionKey {
 	Save(SaveKey),
 }
 
-impl_enum_conversions!(ActionKey[
-	Movement(MovementKey),
-	Slot(HandSlot),
-	Targeting(TerrainTargeting),
-	Miscellaneous(Miscellaneous),
-	Menu(MenuKey),
-	Camera(CameraKey),
-	Save(SaveKey),
-]);
+impl_enum_conversions!(ActionKey::Movement(MovementKey));
+impl_enum_conversions!(ActionKey::Slot(HandSlot));
+impl_enum_conversions!(ActionKey::Targeting(TerrainTargeting));
+impl_enum_conversions!(ActionKey::Miscellaneous(Miscellaneous));
+impl_enum_conversions!(ActionKey::Menu(MenuKey));
+impl_enum_conversions!(ActionKey::Camera(CameraKey));
+impl_enum_conversions!(ActionKey::Save(SaveKey));
 
 impl Default for ActionKey {
 	fn default() -> Self {
