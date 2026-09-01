@@ -838,7 +838,7 @@ pub fn derive_enum_conversions(input: TokenStream) -> TokenStream {
 			Fields::Unnamed(fields) if fields.unnamed.len() == 1 => &fields.unnamed[0].ty,
 			Fields::Unnamed(_) | Fields::Unit => {
 				return TokenStream::from(
-					Error::new(variant.span(), "VAriant must contain exactly one field")
+					Error::new(variant.span(), "Variant must contain exactly one field")
 						.into_compile_error(),
 				);
 			}
