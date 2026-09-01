@@ -36,6 +36,7 @@ use crate::{
 		start_menu_button::set_activity::UIActivity,
 		toggle_ui::toggle_ui,
 	},
+	traits::add_ui::AddLoadUI,
 	visualization::unusable::Unusable,
 };
 use bevy::prelude::*;
@@ -152,14 +153,13 @@ where
 
 	fn state_control(&self, app: &mut App) {
 		let changeable = in_state(MenusChangeable(true));
-		let in_game =
-			TGameStates::in_game_state([SettableActivity::Play, SettableActivity::Paused]);
+		let in_game = TGameStates::in_game_state([GameStateCommand::Play, GameStateCommand::Pause]);
 		let changeable_and_in_game = changeable.and_then(in_game);
 
 		let set_activity = set_activity::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
-			ActionKey::Miscellaneous(Miscellaneous::Paused) => SettableActivity::Paused,
-			ActionKey::Save(SaveKey::QuickLoad) => SettableActivity::LoadCmd,
-			ActionKey::Save(SaveKey::QuickSave) => SettableActivity::SaveCmd,
+			ActionKey::Miscellaneous(Miscellaneous::Paused) => GameStateCommand::Pause,
+			ActionKey::Save(SaveKey::QuickLoad) => GameStateCommand::Load,
+			ActionKey::Save(SaveKey::QuickSave) => GameStateCommand::Save,
 		});
 		let toggle_ui = toggle_ui::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
 			MenuKey::ComboOverview => IngameUI::ComboOverview,
@@ -178,24 +178,19 @@ where
 		);
 	}
 
-	fn loading_screen<TLoadGroup>(&self, app: &mut App)
+	fn loading_screen<TLoadGroup>(&self, app: &mut App, load_group: TLoadGroup)
 	where
-		TLoadGroup: LoadGroup + ThreadSafe,
+		TLoadGroup: LoadGroup<TLoading::TLoadAssetState>,
 	{
-		let load = TLoadGroup::LOAD_STATE;
-		let load_steps = [Activity::LoadAssets(load), Activity::LoadDependencies(load)];
-
-		for load_step in load_steps {
-			app
-				.add_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
-					load_step
-				);
-		}
+		app
+			.add_load_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TLoading>(
+				load_group
+			);
 	}
 
 	fn start_menu(&self, app: &mut App) {
-		let start_menu = SettableActivity::StartScreen;
-		let load = SettableActivity::LoadCmd;
+		let start_menu = GameStateCommand::StartScreen;
+		let load = GameStateCommand::Load;
 		let enable_or_disable_quick_load_button = TSavegame::can_quick_load()
 			.pipe(|In(can_quick_load)| match can_quick_load {
 				true => UIActivity::Enable,
@@ -222,7 +217,7 @@ where
 
 	fn pause_menu(&self, app: &mut App) {
 		app.add_ui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
-			SettableActivity::Paused,
+			GameStateCommand::Pause,
 		);
 	}
 
@@ -352,10 +347,7 @@ where
 	}
 
 	fn general_systems(&self, app: &mut App) {
-		let ui_ready = not(TGameStates::in_game_state([
-			Activity::LoadAssets(LoadActivity::EssentialAssets),
-			Activity::LoadDependencies(LoadActivity::EssentialAssets),
-		]));
+		let ui_ready = not(TLoading::is_loading(LoadingEssentialAssets));
 
 		app.register_derived_component::<MenuBackground, Node>()
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
@@ -408,8 +400,8 @@ where
 		self.resources(app);
 		self.messages(app);
 		self.state_control(app);
-		self.loading_screen::<LoadingEssentialAssets>(app);
-		self.loading_screen::<LoadingGame>(app);
+		self.loading_screen(app, LoadingEssentialAssets);
+		self.loading_screen(app, LoadingGame);
 		self.start_menu(app);
 		self.pause_menu(app);
 		self.ui_overlay(app);

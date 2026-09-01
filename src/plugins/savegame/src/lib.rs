@@ -2,11 +2,13 @@ mod context;
 mod errors;
 mod file_io;
 mod resources;
+mod states;
 mod systems;
 mod traits;
 
 use crate::{
 	resources::{inspector::Inspector, unique_ids::UniqueIds},
+	states::save_state::SaveFile,
 	systems::{despawn_persistent_entities::DespawnAll, write_buffer::WriteBufferSystem},
 };
 use bevy::{ecs::system::ScheduleSystem, prelude::*};
@@ -21,6 +23,13 @@ use std::{
 	sync::{Arc, Mutex},
 };
 use zyheeda_core::prelude::*;
+
+type SaveGameIO = SaveGameExtension<SaveFile>;
+
+const EXEC_SAVE: GameStateCommandExtended<SaveGameIO> =
+	GameStateCommandExtended::Extended(SaveGameExtension::SaveGame(SaveFile::Quick));
+const EXEC_LOAD: GameStateCommandExtended<SaveGameIO> =
+	GameStateCommandExtended::Extended(SaveGameExtension::LoadGame(SaveFile::Quick));
 
 pub struct SavegamePlugin<TDependencies> {
 	game_directory: PathBuf,
@@ -51,38 +60,40 @@ impl<TGameStates> SavegamePlugin<TGameStates>
 where
 	TGameStates: ThreadSafe + SystemSetDefinition + HandlesGameStates,
 {
-	fn add_transitions(app: &mut App) -> Result<(), TransitionsConfigError> {
-		TGameStates::add_activity_transitions(
+	fn add_transitions(
+		app: &mut App,
+	) -> Result<(), TransitionsConfigError<GameStateCommandExtended<SaveGameIO>>> {
+		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			SettableActivity::SaveCmd,
+			GameStateCommand::Save,
 			always,
 			hash_map! {
-				() => ActivityTransition::To(Activity::SaveGame(SaveGameActivity::Save)),
+				() => ActivityTransition::To(EXEC_SAVE),
 			},
 		)?;
-		TGameStates::add_activity_transitions(
+		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			SaveGameActivity::Save,
+			EXEC_SAVE,
 			always,
 			hash_map! {
-				() => ActivityTransition::ToPreviousOf(Activity::Settable(SettableActivity::SaveCmd)),
+				() => ActivityTransition::ToPreviousOf(GameStateCommandExtended::from(GameStateCommand::Save)),
 			},
 		)?;
-		TGameStates::add_activity_transitions(
+		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			SettableActivity::LoadCmd,
+			GameStateCommand::Load,
 			Self::can_quick_load().pipe(|In(r)| Some(r)),
 			hash_map! {
-				true => ActivityTransition::To(Activity::SaveGame(SaveGameActivity::Load)),
+				true => ActivityTransition::To(EXEC_LOAD),
 				false => ActivityTransition::ToPrevious,
 			},
 		)?;
-		TGameStates::add_activity_transitions(
+		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			SaveGameActivity::Load,
+			EXEC_LOAD,
 			always,
 			hash_map! {
-				() => ActivityTransition::To(Activity::LoadAssets(LoadActivity::Assets)),
+				() => ActivityTransition::To(GameStateCommandExtended::from(GameStateCommand::Play)),
 			},
 		)?;
 
@@ -111,9 +122,9 @@ where
 		Self::register_savable_component::<ChildOfPersistent>(app);
 		Self::register_savable_component::<Lifetime>(app);
 
-		TGameStates::add_game_state_systems(
+		TGameStates::TExtended::<SaveGameIO>::add_game_state_systems(
 			app,
-			OnGameState::Enter(SettableActivity::SaveCmd),
+			OnGameState::Enter(EXEC_SAVE),
 			(
 				SaveContext::write_buffer_system(quick_save.clone()).pipe(OnError::log),
 				SaveContext::write_file_system(quick_save.clone()).pipe(OnError::log),
@@ -122,9 +133,9 @@ where
 				.chain(),
 		);
 
-		TGameStates::add_game_state_systems(
+		TGameStates::TExtended::<SaveGameIO>::add_game_state_systems(
 			app,
-			OnGameState::Enter(SettableActivity::LoadCmd),
+			OnGameState::Enter(EXEC_LOAD),
 			(
 				PersistentEntity::despawn_all,
 				SaveContext::read_file_system(quick_save.clone()).pipe(OnError::log),
@@ -150,7 +161,7 @@ where
 
 impl<TGameStates> HandlesSaving for SavegamePlugin<TGameStates>
 where
-	TGameStates: ThreadSafe + AddGameStateSystem,
+	TGameStates: ThreadSafe + ExtendGameState,
 {
 	fn can_quick_load() -> impl SystemCondition<()> {
 		IntoSystem::into_system(
@@ -209,9 +220,9 @@ where
 	}
 
 	fn on_before_save<M>(app: &mut App, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) {
-		TGameStates::add_game_state_systems(
+		TGameStates::TExtended::<SaveGameIO>::add_game_state_systems(
 			app,
-			OnGameState::Enter(SettableActivity::SaveCmd),
+			OnGameState::Enter(EXEC_SAVE),
 			systems.before(ExecuteSave),
 		);
 	}
@@ -225,22 +236,54 @@ mod tests {
 	use super::*;
 	use bevy::ecs::system::SystemParam;
 	use macros::{SavableComponent, serde_model};
-	use std::panic::catch_unwind;
+	use std::{collections::HashMap, fmt::Debug, hash::Hash, panic::catch_unwind};
 	use testing::SingleThreadedApp;
 
 	struct _States;
 
-	impl AddGameStateSystem for _States {
-		fn add_game_state_systems<M, T>(
+	impl ExtendGameState for _States {
+		type TExtended<T>
+			= _Extended<T>
+		where
+			T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy;
+	}
+
+	impl<T> AddActivityTransitions<GameStateCommandExtended<T>> for _Extended<T> {
+		fn add_activity_transitions<TResult, M>(
 			_: &mut App,
-			_: OnGameState<T>,
-			_: impl IntoScheduleConfigs<ScheduleSystem, M>,
-		) where
-			OnGameState<T>: Into<OnGameState>,
+			_: impl Into<GameStateCommandExtended<T>>,
+			_: impl IntoSystem<(), Option<TResult>, M>,
+			_: impl Into<HashMap<TResult, ActivityTransition<GameStateCommandExtended<T>>>>,
+		) -> Result<(), TransitionsConfigError<GameStateCommandExtended<T>>>
+		where
+			TResult: PartialEq + Eq + Hash + ThreadSafe,
 		{
-			panic!("SHOULD NOT BE USED")
+			panic!("NOT USED")
 		}
 	}
+
+	impl<T> AddGameStateSystem<GameStateCommandExtended<T>> for _Extended<T> {
+		fn add_game_state_systems<M>(
+			_: &mut App,
+			_: impl Into<OnGameState<GameStateCommandExtended<T>>>,
+			_: impl IntoScheduleConfigs<ScheduleSystem, M>,
+		) {
+			panic!("NOT USED")
+		}
+	}
+
+	impl<T> InGameState<GameStateCommandExtended<T>> for _Extended<T> {
+		fn in_game_state<const N: usize, U>(
+			_: [U; N],
+		) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
+		where
+			U: Into<GameStateCommandExtended<T>>,
+		{
+			IntoSystem::into_system(|| panic!("NOT USED"))
+		}
+	}
+
+	struct _Extended<T>(PhantomData<T>);
 
 	#[derive(SystemParam)]
 	struct _StatesParam;

@@ -4,13 +4,13 @@ use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(SystemParam)]
-pub struct GameStatesRead<'w> {
+pub struct GameStatesReadParam<'w> {
 	current: Res<'w, GameStateContext>,
 }
 
-impl GameStates for GameStatesRead<'_> {
-	fn activity(&self) -> Activity {
-		self.current.activity
+impl GameStates for GameStatesReadParam<'_> {
+	fn command(&self) -> Option<GameStateCommand> {
+		self.current.command_state.try_into().ok()
 	}
 
 	fn ui(&self) -> &'_ HashSet<IngameUI> {

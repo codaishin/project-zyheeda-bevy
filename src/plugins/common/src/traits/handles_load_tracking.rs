@@ -1,50 +1,42 @@
 use super::thread_safe::ThreadSafe;
-use crate::traits::handles_game_states::{Activity, LoadActivity, SettableActivity};
-use bevy::{app::AppLabel, ecs::schedule::ScheduleLabel, prelude::*};
+use crate::traits::handles_game_states::{GameStateCommand, LoadAssetsExtension, OnGameState};
+use bevy::{
+	app::AppLabel,
+	ecs::{schedule::ScheduleLabel, system::ScheduleSystem},
+	prelude::*,
+};
 
 pub trait HandlesLoadTracking {
-	fn register_load_group<TLoadGroup>(app: &mut App)
-	where
-		TLoadGroup: LoadGroup + ThreadSafe;
+	type TLoadAssetState;
 
 	#[must_use]
-	/// Run a system after loading is done, but not if the load plugin has been reset.
-	fn register_after_load_system<TLoadGroup>() -> impl RunAfterLoadedInApp
-	where
-		TLoadGroup: ThreadSafe;
+	fn register_after_load_system(
+		load_group: impl LoadGroup<Self::TLoadAssetState>,
+	) -> impl RunAfterLoadedInApp;
 
 	#[must_use]
-	/// Register a check system to determine whether some dependencies have been loaded
-	///
-	/// - `T`: Uniqueness marker.
-	/// - `TLoadGroup`: To which loading process (loading savegame, loading essentials on startup,
-	///   ...) the check should be applied to
-	/// - `TProgress`: To which loading step (loading assets, resolving dependencies, ...) the check
-	///   should be applied to
-	fn register_load_tracking<T, TLoadGroup, TProgress>()
-	-> impl LoadTrackingInApp + LoadTrackingInSubApp
+	fn register_load_tracking<T>(
+		load_group: impl LoadGroup<Self::TLoadAssetState>,
+		progress: impl Progress,
+	) -> impl LoadTrackingInApp + LoadTrackingInSubApp
 	where
-		T: ThreadSafe,
-		TLoadGroup: ThreadSafe + LoadGroup,
-		TProgress: ThreadSafe + Progress;
+		T: ThreadSafe;
+
+	fn is_loading(
+		load_group: impl LoadGroup<Self::TLoadAssetState>,
+	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>;
+
+	fn add_loading_systems<M>(
+		app: &mut App,
+		on_transition: OnGameState<impl LoadGroup<Self::TLoadAssetState>>,
+		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
+	);
 }
 
-pub trait LoadGroup {
-	/// State to signal that loading has begun. Should be set outside of the plugin.
-	const LOAD_STATE: LoadActivity;
+pub trait LoadGroup<TLoadAssetState>: internal::LoadGroup + ThreadSafe + Clone + Copy {
+	fn load_state(&self, load_state: TLoadAssetState) -> LoadAssetsExtension<TLoadAssetState>;
 
-	/// State to signal that loading has finished. Should be set by the plugin.
-	const LOAD_DONE_STATE: Activity;
-
-	/// States used to signal a load plugin reset.
-	///
-	/// This aims to prevent [`after-load-systems`](HandlesLoadTracking::register_after_load_system)
-	/// from running.
-	///
-	/// Defaults to using `vec![Activity::LoadAssets(Self::LOAD_STATE)]`
-	fn load_reset_states() -> Vec<Activity> {
-		vec![Activity::LoadAssets(Self::LOAD_STATE)]
-	}
+	fn load_state_done(&self) -> GameStateCommand;
 }
 
 pub trait RunAfterLoadedInApp {
@@ -89,8 +81,8 @@ impl From<bool> for Loaded {
 	}
 }
 
-pub trait Progress: internal::Progress {
-	const IS_PROCESSING: IsProcessing;
+pub trait Progress: internal::Progress + ThreadSafe + Clone + Copy {
+	fn is_processing(&self) -> IsProcessing;
 }
 
 pub enum IsProcessing {
@@ -98,38 +90,47 @@ pub enum IsProcessing {
 	Dependencies,
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub struct AssetsProgress;
 
 impl Progress for AssetsProgress {
-	const IS_PROCESSING: IsProcessing = IsProcessing::Assets;
+	fn is_processing(&self) -> IsProcessing {
+		const { IsProcessing::Assets }
+	}
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub struct DependenciesProgress;
 
 impl Progress for DependenciesProgress {
-	const IS_PROCESSING: IsProcessing = IsProcessing::Dependencies;
+	fn is_processing(&self) -> IsProcessing {
+		const { IsProcessing::Dependencies }
+	}
 }
 
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub struct LoadingEssentialAssets;
 
-impl LoadGroup for LoadingEssentialAssets {
-	const LOAD_STATE: LoadActivity = LoadActivity::EssentialAssets;
-	const LOAD_DONE_STATE: Activity = Activity::Settable(SettableActivity::StartScreen);
+impl<TLoadSteps> LoadGroup<TLoadSteps> for LoadingEssentialAssets {
+	fn load_state(&self, load_steps: TLoadSteps) -> LoadAssetsExtension<TLoadSteps> {
+		LoadAssetsExtension::LoadEssentials(load_steps)
+	}
+
+	fn load_state_done(&self) -> GameStateCommand {
+		GameStateCommand::StartScreen
+	}
 }
 
+#[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub struct LoadingGame;
 
-impl LoadGroup for LoadingGame {
-	const LOAD_STATE: LoadActivity = LoadActivity::Assets;
-	const LOAD_DONE_STATE: Activity = Activity::Settable(SettableActivity::Play);
+impl<TLoadSteps> LoadGroup<TLoadSteps> for LoadingGame {
+	fn load_state(&self, load_steps: TLoadSteps) -> LoadAssetsExtension<TLoadSteps> {
+		LoadAssetsExtension::Load(load_steps)
+	}
 
-	fn load_reset_states() -> Vec<Activity> {
-		vec![
-			Activity::Settable(SettableActivity::NewGame),
-			Activity::Settable(SettableActivity::LoadCmd),
-		]
+	fn load_state_done(&self) -> GameStateCommand {
+		GameStateCommand::Play
 	}
 }
 
@@ -140,4 +141,9 @@ mod internal {
 
 	impl Progress for AssetsProgress {}
 	impl Progress for DependenciesProgress {}
+
+	pub trait LoadGroup {}
+
+	impl LoadGroup for LoadingEssentialAssets {}
+	impl LoadGroup for LoadingGame {}
 }

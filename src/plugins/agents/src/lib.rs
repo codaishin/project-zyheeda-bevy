@@ -127,8 +127,9 @@ where
 {
 	fn build(&self, app: &mut App) {
 		// # Load Agent
-		TLoading::register_custom_folder_assets::<AgentMeta, AgentConfigDto, LoadingEssentialAssets>(
+		TLoading::register_custom_folder_assets::<AgentMeta, AgentConfigDto>(
 			app,
+			LoadingEssentialAssets,
 		);
 		app.init_asset::<AgentMeta>();
 

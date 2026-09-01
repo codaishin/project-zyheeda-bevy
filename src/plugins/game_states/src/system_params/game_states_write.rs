@@ -1,24 +1,24 @@
 use crate::{
 	resources::game_state_context::GameStateContext,
-	states::activity::ActivityState,
+	states::command_state::CommandState,
 	system_params::ui_states::UIStatesMut,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
-use common::prelude::{SetActivity as SetActivityTrait, *};
+use common::prelude::{SetGameState as SetGameStateTrait, *};
 use std::collections::HashSet;
 
 #[derive(SystemParam)]
-pub struct GameStatesWrite<'w, 's> {
+pub struct GameStatesWriteParam<'w, 's> {
 	current: Res<'w, GameStateContext>,
 	activity: ActivityStateMut<'w>,
 	ui: UIStatesMut<'w>,
-	activity_change: Local<'s, Option<SettableActivity>>,
+	command_change: Local<'s, Option<GameStateCommand>>,
 	ui_change: Local<'s, Option<HashSet<IngameUI>>>,
 }
 
-impl GameStatesWrite<'_, '_> {
+impl GameStatesWriteParam<'_, '_> {
 	fn drain_activity_change(&mut self) {
-		let Some(activity) = self.activity_change.take() else {
+		let Some(activity) = self.command_change.take() else {
 			return;
 		};
 
@@ -42,9 +42,9 @@ impl GameStatesWrite<'_, '_> {
 	}
 }
 
-impl GameStates for GameStatesWrite<'_, '_> {
-	fn activity(&self) -> Activity {
-		self.current.activity
+impl GameStates for GameStatesWriteParam<'_, '_> {
+	fn command(&self) -> Option<GameStateCommand> {
+		self.current.command_state.try_into().ok()
 	}
 
 	fn ui(&self) -> &'_ HashSet<IngameUI> {
@@ -52,24 +52,24 @@ impl GameStates for GameStatesWrite<'_, '_> {
 	}
 }
 
-impl GameStatesMut for GameStatesWrite<'_, '_> {
-	type TActivitySetter<'a>
-		= SetActivity<'a>
+impl GameStatesMut for GameStatesWriteParam<'_, '_> {
+	type TGameStateSetter<'a>
+		= SetGameState<'a>
 	where
 		Self: 'a;
 
-	fn get_activity_setter(&mut self, activity: SettableActivity) -> Option<SetActivity<'_>> {
-		let activity = match (self.current.activity, activity) {
-			(Activity::Settable(current), new) if current != new => new,
-			(Activity::Settable(SettableActivity::Paused), SettableActivity::Paused) => {
-				SettableActivity::Play
+	fn get_game_state_setter(&mut self, activity: GameStateCommand) -> Option<SetGameState<'_>> {
+		let command = match (self.current.command_state, activity) {
+			(CommandState::Active(current), new) if current != new => new,
+			(CommandState::Active(GameStateCommand::Pause), GameStateCommand::Pause) => {
+				GameStateCommand::Play
 			}
 			_ => return None,
 		};
 
-		Some(SetActivity {
-			activity,
-			change: &mut self.activity_change,
+		Some(SetGameState {
+			command,
+			change: &mut self.command_change,
 		})
 	}
 
@@ -78,31 +78,31 @@ impl GameStatesMut for GameStatesWrite<'_, '_> {
 	}
 }
 
-impl Drop for GameStatesWrite<'_, '_> {
+impl Drop for GameStatesWriteParam<'_, '_> {
 	fn drop(&mut self) {
 		self.drain_activity_change();
 		self.drain_ui_change();
 	}
 }
 
-pub struct SetActivity<'a> {
-	activity: SettableActivity,
-	change: &'a mut Option<SettableActivity>,
+pub struct SetGameState<'a> {
+	command: GameStateCommand,
+	change: &'a mut Option<GameStateCommand>,
 }
 
-impl SetActivityTrait for SetActivity<'_> {
-	fn set_activity(self) {
-		*self.change = Some(self.activity);
+impl SetGameStateTrait for SetGameState<'_> {
+	fn set_game_state(self) {
+		*self.change = Some(self.command);
 	}
 }
 
 #[derive(SystemParam)]
 struct ActivityStateMut<'w> {
-	activity: ResMut<'w, NextState<ActivityState>>,
+	activity: ResMut<'w, NextState<CommandState>>,
 }
 
 impl ActivityStateMut<'_> {
-	fn set(&mut self, activity: impl Into<ActivityState>) {
+	fn set(&mut self, activity: impl Into<CommandState>) {
 		self.activity.set(activity.into());
 	}
 }
@@ -145,7 +145,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(StatesPlugin);
-		app.init_state::<ActivityState>();
+		app.init_state::<CommandState>();
 		UIStates::init(&mut app);
 		app.init_resource::<GameStateContext>();
 
@@ -172,19 +172,20 @@ mod tests {
 	#[test]
 	fn set_activity() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().resource_mut::<GameStateContext>().activity =
-			Activity::Settable(SettableActivity::NewGame);
+		app.world_mut()
+			.resource_mut::<GameStateContext>()
+			.command_state = CommandState::Active(GameStateCommand::NewGame);
 
 		app.world_mut()
-			.run_system_once(move |mut w: GameStatesWrite| {
-				if let Some(s) = w.get_activity_setter(SettableActivity::Play) {
-					s.set_activity()
+			.run_system_once(move |mut w: GameStatesWriteParam| {
+				if let Some(s) = w.get_game_state_setter(GameStateCommand::Play) {
+					s.set_game_state()
 				};
 			})?;
 
 		assert_state_eq!(
-			&NextState::Pending(ActivityState(Activity::Settable(SettableActivity::Play))),
-			app.world().resource::<NextState<ActivityState>>()
+			&NextState::Pending(CommandState::Active(GameStateCommand::Play)),
+			app.world().resource::<NextState<CommandState>>()
 		);
 		Ok(())
 	}
@@ -192,19 +193,20 @@ mod tests {
 	#[test]
 	fn set_activity_paused_to_play() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().resource_mut::<GameStateContext>().activity =
-			Activity::Settable(SettableActivity::Paused);
+		app.world_mut()
+			.resource_mut::<GameStateContext>()
+			.command_state = CommandState::Active(GameStateCommand::Pause);
 
 		app.world_mut()
-			.run_system_once(move |mut w: GameStatesWrite| {
-				if let Some(s) = w.get_activity_setter(SettableActivity::Paused) {
-					s.set_activity()
+			.run_system_once(move |mut w: GameStatesWriteParam| {
+				if let Some(s) = w.get_game_state_setter(GameStateCommand::Pause) {
+					s.set_game_state()
 				};
 			})?;
 
 		assert_state_eq!(
-			&NextState::Pending(ActivityState(Activity::Settable(SettableActivity::Play))),
-			app.world().resource::<NextState<ActivityState>>()
+			&NextState::Pending(CommandState::Active(GameStateCommand::Play)),
+			app.world().resource::<NextState<CommandState>>()
 		);
 		Ok(())
 	}
@@ -212,36 +214,21 @@ mod tests {
 	#[test]
 	fn set_activity_play_to_paused() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().resource_mut::<GameStateContext>().activity =
-			Activity::Settable(SettableActivity::Play);
+		app.world_mut()
+			.resource_mut::<GameStateContext>()
+			.command_state = CommandState::Active(GameStateCommand::Play);
 
 		app.world_mut()
-			.run_system_once(move |mut w: GameStatesWrite| {
-				if let Some(s) = w.get_activity_setter(SettableActivity::Paused) {
-					s.set_activity()
+			.run_system_once(move |mut w: GameStatesWriteParam| {
+				if let Some(s) = w.get_game_state_setter(GameStateCommand::Pause) {
+					s.set_game_state()
 				};
 			})?;
 
 		assert_state_eq!(
-			&NextState::Pending(ActivityState(Activity::Settable(SettableActivity::Paused))),
-			app.world().resource::<NextState<ActivityState>>()
+			&NextState::Pending(CommandState::Active(GameStateCommand::Pause)),
+			app.world().resource::<NextState<CommandState>>()
 		);
-		Ok(())
-	}
-
-	#[test]
-	fn guard_against_overriding_non_settable_activity() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		app.world_mut().resource_mut::<GameStateContext>().activity =
-			Activity::LoadAssets(LoadActivity::Assets);
-
-		let no_setter = app
-			.world_mut()
-			.run_system_once(move |mut w: GameStatesWrite| {
-				w.get_activity_setter(SettableActivity::Play).is_none()
-			})?;
-
-		assert!(no_setter);
 		Ok(())
 	}
 
@@ -256,7 +243,7 @@ mod tests {
 		let mut app = setup();
 
 		app.world_mut()
-			.run_system_once(move |mut w: GameStatesWrite| {
+			.run_system_once(move |mut w: GameStatesWriteParam| {
 				w.ui_mut().insert(state);
 			})?;
 
@@ -282,7 +269,7 @@ mod tests {
 			.insert(state);
 
 		app.world_mut()
-			.run_system_once(move |mut w: GameStatesWrite| {
+			.run_system_once(move |mut w: GameStatesWriteParam| {
 				w.ui_mut().remove(&state);
 			})?;
 
@@ -296,12 +283,15 @@ mod tests {
 	#[test]
 	fn no_setter_if_activity_would_be_unchanged() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		app.world_mut().resource_mut::<GameStateContext>().activity =
-			Activity::Settable(SettableActivity::Play);
+		app.world_mut()
+			.resource_mut::<GameStateContext>()
+			.command_state = CommandState::Active(GameStateCommand::Play);
 
-		let no_setter = app.world_mut().run_system_once(|mut p: GameStatesWrite| {
-			p.get_activity_setter(SettableActivity::Play).is_none()
-		})?;
+		let no_setter = app
+			.world_mut()
+			.run_system_once(|mut p: GameStatesWriteParam| {
+				p.get_game_state_setter(GameStateCommand::Play).is_none()
+			})?;
 
 		assert!(no_setter);
 		Ok(())
@@ -321,9 +311,10 @@ mod tests {
 		app.world_mut().resource_mut::<GameStateContext>().ui =
 			HashSet::from([IngameUI::Hud, IngameUI::Settings]);
 
-		app.world_mut().run_system_once(|mut p: GameStatesWrite| {
-			*p.ui_mut() = HashSet::from([IngameUI::Hud, IngameUI::Settings]);
-		})?;
+		app.world_mut()
+			.run_system_once(|mut p: GameStatesWriteParam| {
+				*p.ui_mut() = HashSet::from([IngameUI::Hud, IngameUI::Settings]);
+			})?;
 
 		assert_state_eq!(
 			&NextState::<TState>::Unchanged,
@@ -333,9 +324,9 @@ mod tests {
 	}
 
 	fn execute_once(
-		exec: impl Fn(&mut GameStatesWrite),
-	) -> impl FnMut(GameStatesWrite, Local<bool>) {
-		move |mut p: GameStatesWrite, mut done: Local<bool>| {
+		exec: impl Fn(&mut GameStatesWriteParam),
+	) -> impl FnMut(GameStatesWriteParam, Local<bool>) {
+		move |mut p: GameStatesWriteParam, mut done: Local<bool>| {
 			if *done {
 				return;
 			}
@@ -352,8 +343,8 @@ mod tests {
 		app.add_systems(
 			Update,
 			execute_once(|p| {
-				if let Some(s) = p.get_activity_setter(SettableActivity::Play) {
-					s.set_activity();
+				if let Some(s) = p.get_game_state_setter(GameStateCommand::Play) {
+					s.set_game_state();
 				}
 			}),
 		);
@@ -361,8 +352,8 @@ mod tests {
 		app.update();
 
 		assert_state_eq!(
-			&NextState::<ActivityState>::Unchanged,
-			app.world().resource::<NextState<ActivityState>>()
+			&NextState::<CommandState>::Unchanged,
+			app.world().resource::<NextState<CommandState>>()
 		);
 		Ok(())
 	}

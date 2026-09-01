@@ -18,28 +18,39 @@ use std::{
 };
 
 pub trait HandlesGameStates:
-	AddGameStateSystem + AddActivityTransitions + SetToNotPause + GamePaused
+	GameStatesRead
+	+ GameStatesWrite
+	+ AddGameStateSystem
+	+ AddActivityTransitions
+	+ ExtendGameState
+	+ SetToNotPause
+	+ GamePaused
 {
+}
+
+pub trait GameStatesRead {
 	type TGameStates: ThreadSafe + for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates>;
+}
+
+pub trait GameStatesWrite {
 	type TGameStatesMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>;
 }
 
-pub trait AddGameStateSystem {
-	fn add_game_state_systems<M, T>(
+pub trait AddGameStateSystem<TState = GameState> {
+	fn add_game_state_systems<M>(
 		app: &mut App,
-		on_state: OnGameState<T>,
+		on_state: impl Into<OnGameState<TState>>,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
-	) where
-		OnGameState<T>: Into<OnGameState>;
+	);
 }
 
-pub trait AddActivityTransitions {
+pub trait AddActivityTransitions<TCommand = GameStateCommand> {
 	fn add_activity_transitions<TResult, M>(
 		app: &mut App,
-		from_state: impl Into<Activity>,
+		from_state: impl Into<TCommand>,
 		check: impl IntoSystem<(), Option<TResult>, M>,
-		transitions: impl Into<HashMap<TResult, ActivityTransition>>,
-	) -> Result<(), TransitionsConfigError>
+		transitions: impl Into<HashMap<TResult, ActivityTransition<TCommand>>>,
+	) -> Result<(), TransitionsConfigError<TCommand>>
 	where
 		TResult: PartialEq + Eq + Hash + ThreadSafe;
 }
@@ -48,7 +59,33 @@ pub fn always() -> Option<()> {
 	Some(())
 }
 
-pub trait InGameState: HandlesGameStates {
+pub trait ExtendGameState {
+	type TExtended<T>: InGameState<GameStateCommandExtended<T>>
+		+ AddGameStateSystem<GameStateCommandExtended<T>>
+		+ AddActivityTransitions<GameStateCommandExtended<T>>
+	where
+		T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy;
+}
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, EnumConversions)]
+pub enum GameStateCommandExtended<T> {
+	Command(GameStateCommand),
+	#[enum_conversions(skip)]
+	Extended(T),
+}
+
+pub trait InGameState<TState = GameState> {
+	fn in_game_state<const N: usize, T>(
+		game_states: [T; N],
+	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
+	where
+		T: Into<TState>;
+}
+
+impl<TPlugin> InGameState for TPlugin
+where
+	TPlugin: GameStatesRead,
+{
 	fn in_game_state<const N: usize, T>(
 		game_states: [T; N],
 	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
@@ -57,35 +94,36 @@ pub trait InGameState: HandlesGameStates {
 	{
 		let game_states = game_states.map(|s| s.into());
 
-		IntoSystem::into_system(move |states: StaticSystemParam<Self::TGameStates>| {
+		IntoSystem::into_system(move |states: StaticSystemParam<TPlugin::TGameStates>| {
 			game_states.iter().any(|game_state| match game_state {
-				GameState::Activity(activity) => &states.activity() == activity,
+				GameState::Command(command) => states.command().as_ref() == Some(command),
 				GameState::IngameUI(ui) => states.ui().contains(ui),
 			})
 		})
 	}
 }
 
-impl<T> InGameState for T where T: HandlesGameStates {}
-
 pub trait GamePaused {
 	fn game_paused() -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>;
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum ActivityTransition {
-	To(Activity),
+pub enum ActivityTransition<T = GameStateCommand> {
+	To(T),
 	ToPrevious,
-	ToPreviousOf(Activity),
+	ToPreviousOf(T),
 }
 
 #[derive(Debug, PartialEq)]
-pub enum TransitionsConfigError {
-	AlreadyConfigured(Activity),
-	MayNotTransitionToSelf(Activity),
+pub enum TransitionsConfigError<T = GameStateCommand> {
+	AlreadyConfigured(T),
+	MayNotTransitionToSelf(T),
 }
 
-impl Display for TransitionsConfigError {
+impl<T> Display for TransitionsConfigError<T>
+where
+	T: Debug,
+{
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
 			TransitionsConfigError::AlreadyConfigured(state) => {
@@ -102,15 +140,13 @@ impl Display for TransitionsConfigError {
 }
 
 pub trait SetToNotPause {
-	const DEFAULT_NON_PAUSE: &[GameState] = &[GameState::Activity(Activity::Settable(
-		SettableActivity::Play,
-	))];
+	const DEFAULT_NON_PAUSE: &[GameState] = &[GameState::Command(GameStateCommand::Play)];
 
 	fn set_to_not_pause(app: &mut App, state: impl Into<GameState>);
 }
 
 pub trait GameStates {
-	fn activity(&self) -> Activity;
+	fn command(&self) -> Option<GameStateCommand>;
 	fn ui(&self) -> &'_ HashSet<IngameUI>;
 }
 
@@ -118,8 +154,8 @@ impl<T> GameStates for T
 where
 	T: Deref<Target: GameStates>,
 {
-	fn activity(&self) -> Activity {
-		self.deref().activity()
+	fn command(&self) -> Option<GameStateCommand> {
+		self.deref().command()
 	}
 
 	fn ui(&self) -> &'_ HashSet<IngameUI> {
@@ -130,7 +166,7 @@ where
 pub trait IterGameStates: GameStates {
 	fn iter(&self) -> GameStateIter<'_> {
 		GameStateIter {
-			activity: Some(self.activity()),
+			command: self.command(),
 			ui: self.ui().iter(),
 		}
 	}
@@ -139,7 +175,7 @@ pub trait IterGameStates: GameStates {
 impl<T> IterGameStates for T where T: GameStates {}
 
 pub struct GameStateIter<'a> {
-	activity: Option<Activity>,
+	command: Option<GameStateCommand>,
 	ui: HashSetIter<'a, IngameUI>,
 }
 
@@ -147,23 +183,23 @@ impl Iterator for GameStateIter<'_> {
 	type Item = GameState;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		match self.activity.take() {
-			Some(activity) => Some(GameState::Activity(activity)),
+		match self.command.take() {
+			Some(command) => Some(GameState::Command(command)),
 			None => self.ui.next().copied().map(GameState::IngameUI),
 		}
 	}
 }
 
 pub trait GameStatesMut {
-	type TActivitySetter<'a>: SetActivity
+	type TGameStateSetter<'a>: SetGameState
 	where
 		Self: 'a;
 
 	#[must_use]
-	fn get_activity_setter(
+	fn get_game_state_setter(
 		&mut self,
-		activity: SettableActivity,
-	) -> Option<Self::TActivitySetter<'_>>;
+		command: GameStateCommand,
+	) -> Option<Self::TGameStateSetter<'_>>;
 
 	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI>;
 }
@@ -172,16 +208,16 @@ impl<T> GameStatesMut for T
 where
 	T: DerefMut<Target: GameStatesMut>,
 {
-	type TActivitySetter<'a>
-		= <T::Target as GameStatesMut>::TActivitySetter<'a>
+	type TGameStateSetter<'a>
+		= <T::Target as GameStatesMut>::TGameStateSetter<'a>
 	where
 		Self: 'a;
 
-	fn get_activity_setter(
+	fn get_game_state_setter(
 		&mut self,
-		activity: SettableActivity,
-	) -> Option<Self::TActivitySetter<'_>> {
-		self.deref_mut().get_activity_setter(activity)
+		command: GameStateCommand,
+	) -> Option<Self::TGameStateSetter<'_>> {
+		self.deref_mut().get_game_state_setter(command)
 	}
 
 	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
@@ -189,8 +225,8 @@ where
 	}
 }
 
-pub trait SetActivity {
-	fn set_activity(self);
+pub trait SetGameState {
+	fn set_game_state(self);
 }
 
 #[derive(Debug, PartialEq)]
@@ -216,115 +252,77 @@ macro_rules! impl_on_game_state_conversions {
 	};
 }
 
-impl_on_game_state_conversions!(
-	Activity,
-	IngameUI,
-	LoadActivity,
-	SettableActivity,
-	SaveGameActivity,
-);
+impl_on_game_state_conversions!(GameStateCommand, IngameUI);
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, EnumConversions)]
 pub enum GameState {
-	Activity(Activity),
+	Command(GameStateCommand),
 	IngameUI(IngameUI),
 }
 
 impl IterFinite for GameState {
 	fn iterator() -> FiniteIter<Self> {
-		FiniteIter(first(GameState::Activity))
+		FiniteIter(first(GameState::Command))
 	}
 
 	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		use GameState::*;
 
 		match current.0? {
-			Activity(activity) => next(Activity, activity).or(first(IngameUI)),
+			Command(command) => next(Command, command).or(first(IngameUI)),
 			IngameUI(ingame_ui) => next(IngameUI, ingame_ui),
 		}
 	}
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, EnumConversions)]
-pub enum Activity {
-	SaveGame(SaveGameActivity),
-	LoadAssets(LoadActivity),
-	#[enum_conversions(skip)]
-	LoadDependencies(LoadActivity),
-	Settable(SettableActivity),
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum GameStateCommand {
+	StartScreen,
+	NewGame,
+	Play,
+	Pause,
+	Save,
+	Load,
 }
 
-impl Default for Activity {
-	fn default() -> Self {
-		Self::LoadAssets(LoadActivity::EssentialAssets)
-	}
-}
-
-impl IterFinite for Activity {
+impl IterFinite for GameStateCommand {
 	fn iterator() -> FiniteIter<Self> {
-		FiniteIter(Some(Self::SaveGame(SaveGameActivity::Save)))
+		FiniteIter(Some(Self::StartScreen))
 	}
 
 	fn next(current: &FiniteIter<Self>) -> Option<Self> {
-		use Activity::*;
-		use LoadActivity::*;
-		use SaveGameActivity::*;
-		use SettableActivity::*;
-
 		match current.0? {
-			SaveGame(Save) => Some(SaveGame(Load)),
-			SaveGame(Load) => Some(LoadAssets(EssentialAssets)),
-			LoadAssets(EssentialAssets) => Some(LoadAssets(Assets)),
-			LoadAssets(Assets) => Some(LoadDependencies(EssentialAssets)),
-			LoadDependencies(EssentialAssets) => Some(LoadDependencies(Assets)),
-			LoadDependencies(Assets) => Some(Settable(StartScreen)),
-			Settable(StartScreen) => Some(Settable(NewGame)),
-			Settable(NewGame) => Some(Settable(Play)),
-			Settable(Play) => Some(Settable(Paused)),
-			Settable(Paused) => Some(Settable(SaveCmd)),
-			Settable(SaveCmd) => Some(Settable(LoadCmd)),
-			Settable(LoadCmd) => None,
+			Self::StartScreen => Some(Self::NewGame),
+			Self::NewGame => Some(Self::Play),
+			Self::Play => Some(Self::Pause),
+			Self::Pause => Some(Self::Save),
+			Self::Save => Some(Self::Load),
+			Self::Load => None,
 		}
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum SaveGameActivity {
-	Save,
-	Load,
+pub enum SaveGameExtension<T> {
+	SaveGame(T),
+	LoadGame(T),
 }
 
-impl From<SaveGameActivity> for GameState {
-	fn from(value: SaveGameActivity) -> Self {
-		Self::from(Activity::SaveGame(value))
+impl<T> From<SaveGameExtension<T>> for GameStateCommandExtended<SaveGameExtension<T>> {
+	fn from(ext: SaveGameExtension<T>) -> Self {
+		Self::Extended(ext)
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum SettableActivity {
-	StartScreen,
-	NewGame,
-	Play,
-	Paused,
-	SaveCmd,
-	LoadCmd,
+pub enum LoadAssetsExtension<T> {
+	LoadEssentials(T),
+	Load(T),
 }
 
-impl From<SettableActivity> for GameState {
-	fn from(value: SettableActivity) -> Self {
-		Self::from(Activity::Settable(value))
-	}
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum LoadActivity {
-	EssentialAssets,
-	Assets,
-}
-
-impl From<LoadActivity> for GameState {
-	fn from(value: LoadActivity) -> Self {
-		Self::from(Activity::LoadAssets(value))
+impl<T> From<LoadAssetsExtension<T>> for GameStateCommandExtended<LoadAssetsExtension<T>> {
+	fn from(ext: LoadAssetsExtension<T>) -> Self {
+		Self::Extended(ext)
 	}
 }
 
@@ -359,23 +357,21 @@ mod tests {
 		use super::*;
 
 		#[test]
-		fn iter_activity_states() {
+		fn iter_game_states() {
 			assert_eq!(
 				vec![
-					Activity::SaveGame(SaveGameActivity::Save),
-					Activity::SaveGame(SaveGameActivity::Load),
-					Activity::LoadAssets(LoadActivity::EssentialAssets),
-					Activity::LoadAssets(LoadActivity::Assets),
-					Activity::LoadDependencies(LoadActivity::EssentialAssets),
-					Activity::LoadDependencies(LoadActivity::Assets),
-					Activity::Settable(SettableActivity::StartScreen),
-					Activity::Settable(SettableActivity::NewGame),
-					Activity::Settable(SettableActivity::Play),
-					Activity::Settable(SettableActivity::Paused),
-					Activity::Settable(SettableActivity::SaveCmd),
-					Activity::Settable(SettableActivity::LoadCmd),
+					GameState::Command(GameStateCommand::StartScreen),
+					GameState::Command(GameStateCommand::NewGame),
+					GameState::Command(GameStateCommand::Play),
+					GameState::Command(GameStateCommand::Pause),
+					GameState::Command(GameStateCommand::Save),
+					GameState::Command(GameStateCommand::Load),
+					GameState::IngameUI(IngameUI::Hud),
+					GameState::IngameUI(IngameUI::Inventory),
+					GameState::IngameUI(IngameUI::ComboOverview),
+					GameState::IngameUI(IngameUI::Settings),
 				],
-				Activity::iterator().take(100).collect::<Vec<_>>()
+				GameState::iterator().take(100).collect::<Vec<_>>()
 			);
 		}
 
@@ -393,26 +389,15 @@ mod tests {
 		}
 
 		#[test]
-		fn iter_game_sate() {
-			let activities = Activity::iterator().map(GameState::Activity);
-			let uis = IngameUI::iterator().map(GameState::IngameUI);
-
-			assert_eq!(
-				activities.chain(uis).collect::<Vec<_>>(),
-				GameState::iterator().take(100).collect::<Vec<_>>()
-			);
-		}
-
-		#[test]
 		fn iter_game_state_collection() {
 			struct _GameStates {
-				activity: Activity,
+				command: Option<GameStateCommand>,
 				ui: HashSet<IngameUI>,
 			}
 
 			impl GameStates for &'_ _GameStates {
-				fn activity(&self) -> Activity {
-					self.activity
+				fn command(&self) -> Option<GameStateCommand> {
+					self.command
 				}
 
 				fn ui(&self) -> &'_ HashSet<IngameUI> {
@@ -421,13 +406,13 @@ mod tests {
 			}
 
 			let game_states = &_GameStates {
-				activity: Activity::Settable(SettableActivity::Play),
+				command: Some(GameStateCommand::Play),
 				ui: HashSet::from([IngameUI::Hud, IngameUI::Settings]),
 			};
 
 			assert_eq!(
 				HashSet::from([
-					GameState::Activity(Activity::Settable(SettableActivity::Play)),
+					GameState::Command(GameStateCommand::Play),
 					GameState::IngameUI(IngameUI::Hud),
 					GameState::IngameUI(IngameUI::Settings)
 				]),
@@ -442,52 +427,13 @@ mod tests {
 
 		struct _Plugin;
 
-		impl HandlesGameStates for _Plugin {
+		impl GameStatesRead for _Plugin {
 			type TGameStates = _Param<'static>;
-			type TGameStatesMut = _Param<'static>;
-		}
-
-		impl SetToNotPause for _Plugin {
-			fn set_to_not_pause(_: &mut App, _: impl Into<GameState>) {
-				panic!("NOT USED")
-			}
-		}
-
-		impl AddActivityTransitions for _Plugin {
-			fn add_activity_transitions<TResult, M>(
-				_: &mut App,
-				_: impl Into<Activity>,
-				_: impl IntoSystem<(), Option<TResult>, M>,
-				_: impl Into<HashMap<TResult, ActivityTransition>>,
-			) -> Result<(), TransitionsConfigError>
-			where
-				TResult: PartialEq + Eq + Hash + ThreadSafe,
-			{
-				panic!("NOT USED")
-			}
-		}
-
-		impl AddGameStateSystem for _Plugin {
-			fn add_game_state_systems<M, T>(
-				_: &mut App,
-				_: OnGameState<T>,
-				_: impl IntoScheduleConfigs<ScheduleSystem, M>,
-			) where
-				OnGameState<T>: Into<OnGameState>,
-			{
-				panic!("NOT USED")
-			}
-		}
-
-		impl GamePaused for _Plugin {
-			fn game_paused() -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
-				IntoSystem::into_system(|| panic!("NOT USED"))
-			}
 		}
 
 		#[derive(Resource)]
 		struct _States {
-			activity: Activity,
+			command: Option<GameStateCommand>,
 			ui: HashSet<IngameUI>,
 		}
 
@@ -497,38 +443,12 @@ mod tests {
 		}
 
 		impl GameStates for _Param<'_> {
-			fn activity(&self) -> Activity {
-				self.states.activity
+			fn command(&self) -> Option<GameStateCommand> {
+				self.states.command
 			}
 
 			fn ui(&self) -> &'_ HashSet<IngameUI> {
 				&self.states.ui
-			}
-		}
-
-		impl GameStatesMut for _Param<'_> {
-			type TActivitySetter<'a>
-				= _SetActivity
-			where
-				Self: 'a;
-
-			fn get_activity_setter(
-				&mut self,
-				_: SettableActivity,
-			) -> Option<Self::TActivitySetter<'_>> {
-				panic!("NOT USED")
-			}
-
-			fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
-				panic!("NOT USED")
-			}
-		}
-
-		struct _SetActivity;
-
-		impl SetActivity for _SetActivity {
-			fn set_activity(self) {
-				panic!("NOT USED")
 			}
 		}
 
@@ -543,12 +463,12 @@ mod tests {
 			}
 		}
 
-		fn setup<const N: usize>(activity: Activity, ui: [IngameUI; N]) -> App {
+		fn setup<const N: usize>(command: GameStateCommand, ui: [IngameUI; N]) -> App {
 			let mut app = App::new().single_threaded(Update);
 
 			app.init_resource::<SystemRun>();
 			app.insert_resource(_States {
-				activity,
+				command: Some(command),
 				ui: HashSet::from(ui),
 			});
 
@@ -557,10 +477,10 @@ mod tests {
 
 		#[test]
 		fn run_active() {
-			let mut app = setup(Activity::Settable(SettableActivity::Play), []);
+			let mut app = setup(GameStateCommand::Play, []);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state([SettableActivity::Play])),
+				SystemRun::check.run_if(_Plugin::in_game_state([GameStateCommand::Play])),
 			);
 
 			app.update();
@@ -570,10 +490,10 @@ mod tests {
 
 		#[test]
 		fn do_not_run_if_not_active() {
-			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
+			let mut app = setup(GameStateCommand::Pause, []);
 			app.add_systems(
 				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state([SettableActivity::Play])),
+				SystemRun::check.run_if(_Plugin::in_game_state([GameStateCommand::Play])),
 			);
 
 			app.update();
@@ -583,10 +503,7 @@ mod tests {
 
 		#[test]
 		fn run_if_ui_active() {
-			let mut app = setup(
-				Activity::Settable(SettableActivity::Paused),
-				[IngameUI::Hud],
-			);
+			let mut app = setup(GameStateCommand::Pause, [IngameUI::Hud]);
 			app.add_systems(
 				Update,
 				SystemRun::check.run_if(_Plugin::in_game_state([IngameUI::Hud])),
@@ -599,7 +516,7 @@ mod tests {
 
 		#[test]
 		fn do_not_run_ingame_ui_not_active() {
-			let mut app = setup(Activity::Settable(SettableActivity::Paused), []);
+			let mut app = setup(GameStateCommand::Pause, []);
 			app.add_systems(
 				Update,
 				SystemRun::check.run_if(_Plugin::in_game_state([IngameUI::Hud])),

@@ -4,7 +4,7 @@ use common::prelude::*;
 
 impl StartMenuButton {
 	pub(crate) fn set_activity(
-		target_trigger_state: SettableActivity,
+		target_trigger_state: GameStateCommand,
 	) -> impl Fn(In<UIActivity>, ZyheedaCommands, Query<(Entity, &StartMenuButton)>) {
 		move |In(activity), mut commands, buttons| {
 			for (entity, StartMenuButton { trigger_state, .. }) in buttons {
@@ -48,12 +48,12 @@ mod tests {
 			.world_mut()
 			.spawn((
 				UIDisabled,
-				StartMenuButton::triggers(SettableActivity::NewGame),
+				StartMenuButton::triggers(GameStateCommand::NewGame),
 			))
 			.id();
 
 		app.world_mut().run_system_once_with(
-			StartMenuButton::set_activity(SettableActivity::NewGame),
+			StartMenuButton::set_activity(GameStateCommand::NewGame),
 			UIActivity::Enable,
 		)?;
 
@@ -66,11 +66,11 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(StartMenuButton::triggers(SettableActivity::NewGame))
+			.spawn(StartMenuButton::triggers(GameStateCommand::NewGame))
 			.id();
 
 		app.world_mut().run_system_once_with(
-			StartMenuButton::set_activity(SettableActivity::NewGame),
+			StartMenuButton::set_activity(GameStateCommand::NewGame),
 			UIActivity::Disable,
 		)?;
 
@@ -85,12 +85,12 @@ mod tests {
 			.world_mut()
 			.spawn((
 				UIDisabled,
-				StartMenuButton::triggers(SettableActivity::NewGame),
+				StartMenuButton::triggers(GameStateCommand::NewGame),
 			))
 			.id();
 
 		app.world_mut().run_system_once_with(
-			StartMenuButton::set_activity(SettableActivity::Play),
+			StartMenuButton::set_activity(GameStateCommand::Play),
 			UIActivity::Enable,
 		)?;
 

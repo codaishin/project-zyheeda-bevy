@@ -67,11 +67,11 @@ where
 	}
 
 	fn skill_load(&self, app: &mut App) {
-		TLoading::register_custom_folder_assets::<Skill, SkillDto, LoadingGame>(app);
+		TLoading::register_custom_folder_assets::<Skill, SkillDto>(app, LoadingGame);
 	}
 
 	fn item_load(&self, app: &mut App) {
-		TLoading::register_custom_folder_assets::<Item, ItemDto, LoadingGame>(app);
+		TLoading::register_custom_folder_assets::<Item, ItemDto>(app, LoadingGame);
 	}
 
 	fn loadout(&self, app: &mut App) {

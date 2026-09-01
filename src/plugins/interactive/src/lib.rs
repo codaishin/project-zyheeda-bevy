@@ -49,7 +49,7 @@ where
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
 	fn build(&self, app: &mut App) {
-		TLoading::register_custom_folder_assets::<DoorMeta, DoorMeta, LoadingEssentialAssets>(app);
+		TLoading::register_custom_folder_assets::<DoorMeta, DoorMeta>(app, LoadingEssentialAssets);
 
 		TSavegame::register_savable_component::<Door>(app);
 		TSavegame::register_savable_component::<IsActive>(app);

@@ -13,11 +13,11 @@ use common::prelude::*;
 #[require(Button, Node = Self::node())]
 pub(crate) struct StartMenuButton {
 	pub(crate) label: Localized,
-	pub(crate) trigger_state: SettableActivity,
+	pub(crate) trigger_state: GameStateCommand,
 }
 
 impl StartMenuButton {
-	pub(crate) fn triggers(trigger_state: SettableActivity) -> Self {
+	pub(crate) fn triggers(trigger_state: GameStateCommand) -> Self {
 		Self {
 			trigger_state,
 			label: Localized::default(),
@@ -52,7 +52,7 @@ impl HasPanelColors for StartMenuButton {
 }
 
 impl TriggerState for StartMenuButton {
-	fn trigger_state(&self) -> SettableActivity {
+	fn trigger_state(&self) -> GameStateCommand {
 		self.trigger_state
 	}
 }

@@ -76,12 +76,12 @@ mod tests {
 	}
 
 	impl GameStatesMut for _GameStates {
-		type TActivitySetter<'a>
+		type TGameStateSetter<'a>
 			= _Setter
 		where
 			Self: 'a;
 
-		fn get_activity_setter(&mut self, _: SettableActivity) -> Option<_Setter> {
+		fn get_game_state_setter(&mut self, _: GameStateCommand) -> Option<_Setter> {
 			panic!("SHOULD NOT BE USED");
 		}
 
@@ -92,8 +92,8 @@ mod tests {
 
 	struct _Setter;
 
-	impl SetActivity for _Setter {
-		fn set_activity(self) {}
+	impl SetGameState for _Setter {
+		fn set_game_state(self) {}
 	}
 
 	fn setup(input: _Input, game_states: _GameStates, keys: HashMap<MenuKey, IngameUI>) -> App {

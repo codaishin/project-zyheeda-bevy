@@ -1,6 +1,6 @@
 use crate::{
 	resources::game_state_context::GameStateContext,
-	states::activity::ActivityState,
+	states::command_state::CommandState,
 	system_params::ui_states::UIStates,
 };
 use bevy::prelude::*;
@@ -10,14 +10,14 @@ use std::collections::HashSet;
 impl GameStateContext {
 	pub(crate) fn sync_states(
 		mut ctx: ResMut<Self>,
-		activity: Res<State<ActivityState>>,
+		command_state: Res<State<CommandState>>,
 		ui: UIStates,
 	) {
-		if !activity.is_changed() && !ui.is_changed() {
+		if !command_state.is_changed() && !ui.is_changed() {
 			return;
 		}
 
-		ctx.activity = Activity::from(activity.get());
+		ctx.command_state = *command_state.get();
 		ctx.ui = HashSet::from_iter(IngameUI::iterator().filter(|ui_state| ui.is_on(ui_state)));
 	}
 }
@@ -27,7 +27,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		states::{
-			activity::ActivityState,
+			command_state::CommandState,
 			ui::{ComboOverview, Hud, Inventory, Settings},
 		},
 		system_params::ui_states::UIStates,
@@ -41,7 +41,7 @@ mod tests {
 
 		app.add_plugins(StatesPlugin);
 		UIStates::init(&mut app);
-		app.init_state::<ActivityState>();
+		app.init_state::<CommandState>();
 		app.init_resource::<GameStateContext>();
 		app.add_systems(Update, GameStateContext::sync_states);
 
@@ -51,17 +51,17 @@ mod tests {
 	#[test]
 	fn sync_activity() {
 		let mut app = setup();
-		app.insert_state(ActivityState(Activity::Settable(SettableActivity::Play)));
+		app.insert_state(CommandState::Active(GameStateCommand::Play));
 
 		app.update();
 
 		assert_eq!(
 			(
-				Activity::Settable(SettableActivity::Play),
+				CommandState::Active(GameStateCommand::Play),
 				&HashSet::default()
 			),
 			(
-				app.world().resource::<GameStateContext>().activity,
+				app.world().resource::<GameStateContext>().command_state,
 				&app.world().resource::<GameStateContext>().ui,
 			),
 		);
@@ -103,22 +103,23 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let mut app = setup();
-		app.insert_state(ActivityState(Activity::Settable(SettableActivity::Play)));
+		app.insert_state(CommandState::Active(GameStateCommand::Play));
 		app.insert_state(Inventory::On);
 
 		app.update();
-		app.world_mut().resource_mut::<GameStateContext>().activity =
-			Activity::Settable(SettableActivity::SaveCmd);
+		app.world_mut()
+			.resource_mut::<GameStateContext>()
+			.command_state = CommandState::Active(GameStateCommand::Save);
 		app.world_mut().resource_mut::<GameStateContext>().ui = HashSet::from([IngameUI::Hud]);
 		app.update();
 
 		assert_eq!(
 			(
-				Activity::Settable(SettableActivity::SaveCmd),
+				CommandState::Active(GameStateCommand::Save),
 				&HashSet::from([IngameUI::Hud])
 			),
 			(
-				app.world().resource::<GameStateContext>().activity,
+				app.world().resource::<GameStateContext>().command_state,
 				&app.world().resource::<GameStateContext>().ui
 			)
 		);
@@ -127,15 +128,15 @@ mod tests {
 	#[test]
 	fn act_again_if_activity_changed() {
 		let mut app = setup();
-		app.insert_state(ActivityState(Activity::Settable(SettableActivity::Play)));
+		app.insert_state(CommandState::Active(GameStateCommand::Play));
 
 		app.update();
-		app.insert_state(ActivityState(Activity::Settable(SettableActivity::Paused)));
+		app.insert_state(CommandState::Active(GameStateCommand::Pause));
 		app.update();
 
 		assert_eq!(
-			Activity::Settable(SettableActivity::Paused),
-			app.world().resource::<GameStateContext>().activity,
+			CommandState::Active(GameStateCommand::Pause),
+			app.world().resource::<GameStateContext>().command_state,
 		);
 	}
 
