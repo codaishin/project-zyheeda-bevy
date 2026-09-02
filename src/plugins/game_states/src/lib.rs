@@ -116,6 +116,7 @@ impl GameStatesPlugin {
 
 impl<T> GameStatesPlugin<T>
 where
+	Self: TransitionUnique<T>,
 	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
 {
 	fn configure_transitions<TResult, M>(
@@ -136,15 +137,9 @@ where
 			return Err(TransitionsConfigError::MayNotTransitionToSelf(from_state));
 		}
 
-		let ConfiguredTransitions(configured) = app
-			.world_mut()
-			.get_resource_or_init::<ConfiguredTransitions<T>>()
-			.into_inner();
-		if configured.contains(&from_state) {
+		if !Self::transition_unique(app, from_state) {
 			return Err(TransitionsConfigError::AlreadyConfigured(from_state));
 		}
-
-		configured.insert(from_state);
 
 		app.add_systems(
 			Update,
@@ -297,6 +292,39 @@ where
 	}
 }
 
+impl TransitionUnique<GameStateCommand> for GameStatesPlugin {
+	fn transition_unique(app: &mut App, state: GameStateCommand) -> bool {
+		let ConfiguredTransitions(configured) = app
+			.world_mut()
+			.get_resource_or_init::<ConfiguredTransitions<GameStateCommand>>()
+			.into_inner();
+
+		configured.insert(state)
+	}
+}
+
+impl<T> TransitionUnique<GameStateCommandExtended<T>>
+	for GameStatesPlugin<GameStateCommandExtended<T>>
+where
+	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
+{
+	fn transition_unique(app: &mut App, state: GameStateCommandExtended<T>) -> bool {
+		use GameStateCommandExtended::Command;
+
+		match state {
+			Command(state) if !GameStatesPlugin::transition_unique(app, state) => false,
+			state => {
+				let ConfiguredTransitions(configured) = app
+					.world_mut()
+					.get_resource_or_init::<ConfiguredTransitions<GameStateCommandExtended<T>>>()
+					.into_inner();
+
+				configured.insert(state)
+			}
+		}
+	}
+}
+
 impl AddActivityTransitions for GameStatesPlugin {
 	fn add_activity_transitions<TResult, M>(
 		app: &mut App,
@@ -357,6 +385,10 @@ where
 			},
 		)
 	}
+}
+
+pub trait TransitionUnique<T> {
+	fn transition_unique(app: &mut App, state: T) -> bool;
 }
 
 #[derive(Resource)]
@@ -712,6 +744,39 @@ mod tests {
 				Err(error) => error,
 			};
 			assert_eq!(TransitionsConfigError::AlreadyConfigured(EXT_A), error);
+		}
+
+		#[test]
+		fn forbid_repeated_config_against_non_extended() {
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				GameStateCommand::Play,
+				always,
+				hash_map! {
+					() => ActivityTransition::To(GameStateCommand::Pause),
+				},
+			);
+
+			let result = _ExtendedPlugin::add_activity_transitions(
+				&mut app,
+				GameStateCommand::Play,
+				always,
+				hash_map! {
+					() => ActivityTransition::To(GameStateCommandExtended::<_Extension>::from(GameStateCommand::Pause)),
+				},
+			);
+
+			let error = match result {
+				Ok(_) => panic!("Expected Error, but was value"),
+				Err(error) => error,
+			};
+			assert_eq!(
+				TransitionsConfigError::AlreadyConfigured(
+					GameStateCommandExtended::<_Extension>::from(GameStateCommand::Play)
+				),
+				error
+			);
 		}
 
 		#[test]
