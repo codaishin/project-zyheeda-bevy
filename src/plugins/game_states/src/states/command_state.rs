@@ -19,6 +19,11 @@ where
 		Self(Variant::Dirty)
 	}
 
+	#[cfg(test)]
+	pub(crate) fn none() -> Self {
+		Self(Variant::None)
+	}
+
 	pub(crate) fn try_into_active(self) -> Option<T> {
 		match self.0 {
 			Variant::Active(v) => Some(v),

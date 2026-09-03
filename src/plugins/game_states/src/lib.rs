@@ -221,6 +221,10 @@ impl GamePaused for GameStatesPlugin {
 	fn game_paused() -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
 		IntoSystem::into_system(
 			|states: GameStatesReadParam, roles: Option<Res<GameStateRoles>>| {
+				if states.command().is_none() {
+					return true;
+				}
+
 				let roles = match roles {
 					Some(r) => r.into_inner(),
 					None => &GAME_STATE_ROLES_DEFAULT,
@@ -899,6 +903,18 @@ mod tests {
 			});
 
 			app
+		}
+
+		#[test]
+		fn is_paused_by_default() -> Result<(), RunSystemError> {
+			let mut app = setup(CommandState::none(), []);
+
+			let paused = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::game_paused())?;
+
+			assert!(paused);
+			Ok(())
 		}
 
 		#[test]

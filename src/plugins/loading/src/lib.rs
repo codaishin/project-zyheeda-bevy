@@ -142,7 +142,7 @@ where
 		TGameStates::TExtended::<AssetsIO>::add_game_state_systems(
 			app,
 			OnGameState::Enter(done),
-			GroupLoaded::<TLoadGroup>::insert,
+			GroupLoaded::insert(load_group),
 		);
 
 		if let Err(err) = Self::load_transitions::<TLoadGroup>(app, load_assets, load_deps, done) {
@@ -191,13 +191,12 @@ where
 		}
 	}
 
-	fn is_loading(
+	fn is_loaded(
 		load_group: impl LoadGroup<AssetLoadPhase>,
 	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
-		TGameStates::TExtended::<AssetsIO>::in_game_state([
-			load_group.load_state(AssetLoadPhase::Assets),
-			load_group.load_state(AssetLoadPhase::Dependencies),
-		])
+		let loaded = GroupLoaded(load_group);
+
+		IntoSystem::into_system(loaded.exists_as_resource())
 	}
 
 	fn add_loading_systems<M>(
