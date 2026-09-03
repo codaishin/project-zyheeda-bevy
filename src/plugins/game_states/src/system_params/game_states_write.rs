@@ -1,6 +1,6 @@
 use crate::{
+	events::StateEvent,
 	resources::game_state_context::GameStateContext,
-	states::command_state::CommandState,
 	system_params::ui_states::UIStatesMut,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -10,7 +10,7 @@ use std::collections::HashSet;
 #[derive(SystemParam)]
 pub struct GameStatesWriteParam<'w, 's> {
 	current: Res<'w, GameStateContext>,
-	activity: ActivityStateMut<'w>,
+	activity: ActivityStateMut<'w, 's>,
 	ui: UIStatesMut<'w>,
 	command_change: Local<'s, Option<GameStateCommand>>,
 	ui_change: Local<'s, Option<HashSet<IngameUI>>>,
@@ -95,13 +95,13 @@ impl SetGameStateTrait for SetGameState<'_> {
 }
 
 #[derive(SystemParam)]
-struct ActivityStateMut<'w> {
-	activity: ResMut<'w, NextState<CommandState>>,
+struct ActivityStateMut<'w, 's> {
+	commands: ZyheedaCommands<'w, 's>,
 }
 
-impl ActivityStateMut<'_> {
-	fn set(&mut self, activity: impl Into<CommandState>) {
-		self.activity.set(activity.into());
+impl ActivityStateMut<'_, '_> {
+	fn set(&mut self, state: impl Into<StateEvent<GameStateCommand>>) {
+		self.commands.trigger_observers_for(state.into());
 	}
 }
 
@@ -128,7 +128,10 @@ impl Change {
 mod tests {
 	use super::*;
 	use crate::{
-		states::ui::{ComboOverview, Hud, Inventory, Settings},
+		states::{
+			command_state::CommandState,
+			ui::{ComboOverview, Hud, Inventory, Settings},
+		},
 		system_params::ui_states::UIStates,
 	};
 	use bevy::{
@@ -139,12 +142,28 @@ mod tests {
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
+	#[derive(Resource, Debug, PartialEq)]
+	struct _State(Option<StateEvent<GameStateCommand>>);
+
+	impl _State {
+		fn record(on_state: On<StateEvent<GameStateCommand>>, mut c: Commands) {
+			c.insert_resource(_State(Some(*on_state)));
+		}
+
+		fn clear(mut state: ResMut<_State>) {
+			state.0 = None;
+		}
+	}
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(StatesPlugin);
-		app.init_state::<CommandState>();
+		app.add_observer(_State::record);
+		app.add_systems(First, _State::clear);
 		UIStates::init(&mut app);
+		app.insert_resource(_State(None));
+		app.init_state::<CommandState>();
 		app.init_resource::<GameStateContext>();
 
 		app
@@ -181,9 +200,9 @@ mod tests {
 				};
 			})?;
 
-		assert_state_eq!(
-			&NextState::Pending(CommandState::active(GameStateCommand::Play)),
-			app.world().resource::<NextState<CommandState>>()
+		assert_eq!(
+			&_State(Some(StateEvent::Active(GameStateCommand::Play))),
+			app.world().resource::<_State>()
 		);
 		Ok(())
 	}
@@ -202,9 +221,9 @@ mod tests {
 				};
 			})?;
 
-		assert_state_eq!(
-			&NextState::Pending(CommandState::active(GameStateCommand::Play)),
-			app.world().resource::<NextState<CommandState>>()
+		assert_eq!(
+			&_State(Some(StateEvent::Active(GameStateCommand::Play))),
+			app.world().resource::<_State>()
 		);
 		Ok(())
 	}
@@ -223,9 +242,9 @@ mod tests {
 				};
 			})?;
 
-		assert_state_eq!(
-			&NextState::Pending(CommandState::active(GameStateCommand::Pause)),
-			app.world().resource::<NextState<CommandState>>()
+		assert_eq!(
+			&_State(Some(StateEvent::Active(GameStateCommand::Pause))),
+			app.world().resource::<_State>()
 		);
 		Ok(())
 	}
@@ -349,10 +368,7 @@ mod tests {
 		app.update();
 		app.update();
 
-		assert_state_eq!(
-			&NextState::<CommandState>::Unchanged,
-			app.world().resource::<NextState<CommandState>>()
-		);
+		assert_eq!(&_State(None), app.world().resource::<_State>());
 		Ok(())
 	}
 

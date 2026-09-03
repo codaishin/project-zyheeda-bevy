@@ -12,6 +12,21 @@ where
 	Active(T),
 }
 
+impl From<GameStateCommand> for StateEvent<GameStateCommand> {
+	fn from(value: GameStateCommand) -> Self {
+		Self::Active(value)
+	}
+}
+
+impl<T> From<GameStateCommandExtended<T>> for StateEvent<GameStateCommandExtended<T>>
+where
+	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
+{
+	fn from(value: GameStateCommandExtended<T>) -> Self {
+		Self::Active(value)
+	}
+}
+
 impl<T> From<StateEvent<T>> for CommandState<T>
 where
 	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
