@@ -88,7 +88,7 @@ where
 
 		TGameState::add_game_state_systems(
 			app,
-			OnGameState::Enter(GameStateCommand::NewGame),
+			OnGameState::Enter(GameState::Command(GameStateCommand::NewGame)),
 			Level::<0>::spawn_default,
 		);
 

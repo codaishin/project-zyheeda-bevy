@@ -44,7 +44,7 @@ impl GameStatesWriteParam<'_, '_> {
 
 impl GameStates for GameStatesWriteParam<'_, '_> {
 	fn command(&self) -> Option<GameStateCommand> {
-		self.current.command_state.try_into().ok()
+		self.current.command_state.try_into_active()
 	}
 
 	fn ui(&self) -> &'_ HashSet<IngameUI> {
@@ -58,12 +58,10 @@ impl GameStatesMut for GameStatesWriteParam<'_, '_> {
 	where
 		Self: 'a;
 
-	fn get_game_state_setter(&mut self, activity: GameStateCommand) -> Option<SetGameState<'_>> {
-		let command = match (self.current.command_state, activity) {
-			(CommandState::Active(current), new) if current != new => new,
-			(CommandState::Active(GameStateCommand::Pause), GameStateCommand::Pause) => {
-				GameStateCommand::Play
-			}
+	fn get_game_state_setter(&mut self, new: GameStateCommand) -> Option<SetGameState<'_>> {
+		let command = match (self.current.command_state.try_into_active(), new) {
+			(Some(current), new) if current != new => new,
+			(Some(GameStateCommand::Pause), GameStateCommand::Pause) => GameStateCommand::Play,
 			_ => return None,
 		};
 
@@ -174,7 +172,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
-			.command_state = CommandState::Active(GameStateCommand::NewGame);
+			.command_state = CommandState::active(GameStateCommand::NewGame);
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWriteParam| {
@@ -184,7 +182,7 @@ mod tests {
 			})?;
 
 		assert_state_eq!(
-			&NextState::Pending(CommandState::Active(GameStateCommand::Play)),
+			&NextState::Pending(CommandState::active(GameStateCommand::Play)),
 			app.world().resource::<NextState<CommandState>>()
 		);
 		Ok(())
@@ -195,7 +193,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
-			.command_state = CommandState::Active(GameStateCommand::Pause);
+			.command_state = CommandState::active(GameStateCommand::Pause);
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWriteParam| {
@@ -205,7 +203,7 @@ mod tests {
 			})?;
 
 		assert_state_eq!(
-			&NextState::Pending(CommandState::Active(GameStateCommand::Play)),
+			&NextState::Pending(CommandState::active(GameStateCommand::Play)),
 			app.world().resource::<NextState<CommandState>>()
 		);
 		Ok(())
@@ -216,7 +214,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
-			.command_state = CommandState::Active(GameStateCommand::Play);
+			.command_state = CommandState::active(GameStateCommand::Play);
 
 		app.world_mut()
 			.run_system_once(move |mut w: GameStatesWriteParam| {
@@ -226,7 +224,7 @@ mod tests {
 			})?;
 
 		assert_state_eq!(
-			&NextState::Pending(CommandState::Active(GameStateCommand::Pause)),
+			&NextState::Pending(CommandState::active(GameStateCommand::Pause)),
 			app.world().resource::<NextState<CommandState>>()
 		);
 		Ok(())
@@ -285,7 +283,7 @@ mod tests {
 		let mut app = setup();
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
-			.command_state = CommandState::Active(GameStateCommand::Play);
+			.command_state = CommandState::active(GameStateCommand::Play);
 
 		let no_setter = app
 			.world_mut()

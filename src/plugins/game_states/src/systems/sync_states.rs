@@ -51,13 +51,13 @@ mod tests {
 	#[test]
 	fn sync_activity() {
 		let mut app = setup();
-		app.insert_state(CommandState::Active(GameStateCommand::Play));
+		app.insert_state(CommandState::active(GameStateCommand::Play));
 
 		app.update();
 
 		assert_eq!(
 			(
-				CommandState::Active(GameStateCommand::Play),
+				CommandState::active(GameStateCommand::Play),
 				&HashSet::default()
 			),
 			(
@@ -103,19 +103,19 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let mut app = setup();
-		app.insert_state(CommandState::Active(GameStateCommand::Play));
+		app.insert_state(CommandState::active(GameStateCommand::Play));
 		app.insert_state(Inventory::On);
 
 		app.update();
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
-			.command_state = CommandState::Active(GameStateCommand::Save);
+			.command_state = CommandState::active(GameStateCommand::Save);
 		app.world_mut().resource_mut::<GameStateContext>().ui = HashSet::from([IngameUI::Hud]);
 		app.update();
 
 		assert_eq!(
 			(
-				CommandState::Active(GameStateCommand::Save),
+				CommandState::active(GameStateCommand::Save),
 				&HashSet::from([IngameUI::Hud])
 			),
 			(
@@ -128,14 +128,14 @@ mod tests {
 	#[test]
 	fn act_again_if_activity_changed() {
 		let mut app = setup();
-		app.insert_state(CommandState::Active(GameStateCommand::Play));
+		app.insert_state(CommandState::active(GameStateCommand::Play));
 
 		app.update();
-		app.insert_state(CommandState::Active(GameStateCommand::Pause));
+		app.insert_state(CommandState::active(GameStateCommand::Pause));
 		app.update();
 
 		assert_eq!(
-			CommandState::Active(GameStateCommand::Pause),
+			CommandState::active(GameStateCommand::Pause),
 			app.world().resource::<GameStateContext>().command_state,
 		);
 	}

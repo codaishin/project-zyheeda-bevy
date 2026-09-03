@@ -10,7 +10,7 @@ pub struct GameStatesReadParam<'w> {
 
 impl GameStates for GameStatesReadParam<'_> {
 	fn command(&self) -> Option<GameStateCommand> {
-		self.current.command_state.try_into().ok()
+		self.current.command_state.try_into_active()
 	}
 
 	fn ui(&self) -> &'_ HashSet<IngameUI> {

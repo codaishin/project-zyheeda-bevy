@@ -65,7 +65,7 @@ where
 	) -> Result<(), TransitionsConfigError<GameStateCommandExtended<SaveGameIO>>> {
 		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			GameStateCommand::Save,
+			GameStateCommandExtended::Command(GameStateCommand::Save),
 			always,
 			hash_map! {
 				() => ActivityTransition::To(EXEC_SAVE),
@@ -81,7 +81,7 @@ where
 		)?;
 		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			GameStateCommand::Load,
+			GameStateCommandExtended::Command(GameStateCommand::Load),
 			Self::can_quick_load().pipe(|In(r)| Some(r)),
 			hash_map! {
 				true => ActivityTransition::To(EXEC_LOAD),
@@ -251,7 +251,7 @@ mod tests {
 	impl<T> AddActivityTransitions<GameStateCommandExtended<T>> for _Extended<T> {
 		fn add_activity_transitions<TResult, M>(
 			_: &mut App,
-			_: impl Into<GameStateCommandExtended<T>>,
+			_: impl Into<Option<GameStateCommandExtended<T>>>,
 			_: impl IntoSystem<(), Option<TResult>, M>,
 			_: impl Into<HashMap<TResult, ActivityTransition<GameStateCommandExtended<T>>>>,
 		) -> Result<(), TransitionsConfigError<GameStateCommandExtended<T>>>
@@ -265,7 +265,7 @@ mod tests {
 	impl<T> AddGameStateSystem<GameStateCommandExtended<T>> for _Extended<T> {
 		fn add_game_state_systems<M>(
 			_: &mut App,
-			_: impl Into<OnGameState<GameStateCommandExtended<T>>>,
+			_: OnGameState<GameStateCommandExtended<T>>,
 			_: impl IntoScheduleConfigs<ScheduleSystem, M>,
 		) {
 			panic!("NOT USED")

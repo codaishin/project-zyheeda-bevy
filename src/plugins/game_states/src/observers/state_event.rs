@@ -20,7 +20,12 @@ where
 		on_state: On<StateEvent<GameStateCommand>>,
 		mut next_state: ResMut<NextState<CommandState<GameStateCommandExtended<T>>>>,
 	) {
-		next_state.set(on_state.state.into());
+		let next = match on_state.state.try_into_active() {
+			Some(cmd) => CommandState::active(GameStateCommandExtended::Command(cmd)),
+			_ => CommandState::dirty(),
+		};
+
+		next_state.set(next);
 	}
 
 	pub(crate) fn set_game_state_extension(
@@ -28,12 +33,9 @@ where
 		mut commands: ZyheedaCommands,
 		mut next_state: ResMut<NextState<CommandState<GameStateCommandExtended<T>>>>,
 	) {
-		use CommandState::*;
-		use GameStateCommandExtended::*;
-
-		let base = match on_state.state {
-			Active(Command(cmd)) => Active(cmd),
-			_ => Dirty,
+		let base = match on_state.state.try_into_active() {
+			Some(GameStateCommandExtended::Command(cmd)) => CommandState::active(cmd),
+			_ => CommandState::dirty(),
 		};
 
 		commands.trigger_observers_for(StateEvent { state: base });

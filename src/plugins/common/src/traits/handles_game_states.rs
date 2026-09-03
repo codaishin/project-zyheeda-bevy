@@ -39,7 +39,7 @@ pub trait GameStatesWrite {
 pub trait AddGameStateSystem<TState = GameState> {
 	fn add_game_state_systems<M>(
 		app: &mut App,
-		on_state: impl Into<OnGameState<TState>>,
+		on_state: OnGameState<TState>,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	);
 }
@@ -47,7 +47,7 @@ pub trait AddGameStateSystem<TState = GameState> {
 pub trait AddActivityTransitions<TCommand = GameStateCommand> {
 	fn add_activity_transitions<TResult, M>(
 		app: &mut App,
-		from_state: impl Into<TCommand>,
+		from_state: impl Into<Option<TCommand>>,
 		check: impl IntoSystem<(), Option<TResult>, M>,
 		transitions: impl Into<HashMap<TResult, ActivityTransition<TCommand>>>,
 	) -> Result<(), TransitionsConfigError<TCommand>>
@@ -116,7 +116,7 @@ pub enum ActivityTransition<T = GameStateCommand> {
 
 #[derive(Debug, PartialEq)]
 pub enum TransitionsConfigError<T = GameStateCommand> {
-	AlreadyConfigured(T),
+	AlreadyConfigured(Option<T>),
 	MayNotTransitionToSelf(T),
 }
 

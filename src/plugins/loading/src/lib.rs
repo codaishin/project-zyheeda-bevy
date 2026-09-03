@@ -30,6 +30,8 @@ type AssetsIO = LoadAssetsExtension<AssetLoadPhase>;
 
 const LOAD_ASSETS: GameStateCommandExtended<AssetsIO> =
 	GameStateCommandExtended::Extended(LoadAssetsExtension::Load(AssetLoadPhase::Assets));
+const LOAD_ESSENTIAL_ASSETS: GameStateCommandExtended<AssetsIO> =
+	GameStateCommandExtended::Extended(LoadAssetsExtension::LoadEssentials(AssetLoadPhase::Assets));
 
 pub struct LoadingPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -46,7 +48,15 @@ where
 	) -> Result<(), TransitionsConfigError<GameStateCommandExtended<AssetsIO>>> {
 		TGameStates::TExtended::<AssetsIO>::add_activity_transitions(
 			app,
-			GameStateCommand::NewGame,
+			None,
+			always,
+			hash_map! {
+				() => ActivityTransition::To(LOAD_ESSENTIAL_ASSETS)
+			},
+		)?;
+		TGameStates::TExtended::<AssetsIO>::add_activity_transitions(
+			app,
+			GameStateCommandExtended::Command(GameStateCommand::NewGame),
 			always,
 			hash_map! {
 				() => ActivityTransition::To(LOAD_ASSETS)

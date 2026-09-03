@@ -43,7 +43,7 @@ impl GameStatesPlugin {
 		let PreviousStates(previous) = previous.into_inner();
 		let last = state_transitions.read().last().and_then(|t| t.exited);
 
-		let Some(CommandState::Active(exited)) = last else {
+		let Some(exited) = last.and_then(CommandState::try_into_active) else {
 			return;
 		};
 
@@ -51,8 +51,8 @@ impl GameStatesPlugin {
 	}
 
 	fn apply_transition_from<T>(
-		command: T,
-	) -> impl IntoSystem<In<Option<ActivityTransition<T>>>, Result<(), TransitionError<T>>, ()>
+		command: Option<T>,
+	) -> impl IntoSystem<In<Option<ActivityTransition<T>>>, Result<(), TransitionError<Option<T>>>, ()>
 	where
 		T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
 	{
@@ -71,7 +71,7 @@ impl GameStatesPlugin {
 			match to_state {
 				ActivityTransition::To(to_state) => {
 					commands.trigger_observers_for(StateEvent {
-						state: CommandState::Active(to_state)
+						state: CommandState::active(to_state)
 					});
 				}
 				ActivityTransition::ToPrevious => {
@@ -80,7 +80,7 @@ impl GameStatesPlugin {
 					};
 
 					commands.trigger_observers_for(StateEvent {
-						state: CommandState::Active(*previous)
+						state: CommandState::active(*previous)
 					});
 				}
 				ActivityTransition::ToPreviousOf(activity) => {
@@ -102,7 +102,7 @@ impl GameStatesPlugin {
 					};
 
 					commands.trigger_observers_for(StateEvent {
-						state: CommandState::Active(*previous)
+						state: CommandState::active(*previous)
 					});
 				}
 			};
@@ -121,7 +121,7 @@ where
 {
 	fn configure_transitions<TResult, M>(
 		app: &mut App,
-		from_state: impl Into<T>,
+		from_state: impl Into<Option<T>>,
 		check: impl IntoSystem<(), Option<TResult>, M>,
 		transitions: impl Into<HashMap<TResult, ActivityTransition<T>>>,
 	) -> Result<(), TransitionsConfigError<T>>
@@ -130,11 +130,14 @@ where
 	{
 		let from_state = from_state.into();
 		let transitions = transitions.into();
-		let any_self_transitions = transitions.values().any(
-			|to_state| matches!(to_state, ActivityTransition::To(to_state) if to_state == &from_state),
-		);
-		if any_self_transitions {
-			return Err(TransitionsConfigError::MayNotTransitionToSelf(from_state));
+
+		if let Some(from_state) = from_state {
+			let any_self_transitions = transitions.values().any(
+				|to_state| matches!(to_state, ActivityTransition::To(to_state) if to_state == &from_state),
+			);
+			if any_self_transitions {
+				return Err(TransitionsConfigError::MayNotTransitionToSelf(from_state));
+			}
 		}
 
 		if !Self::transition_unique(app, from_state) {
@@ -147,7 +150,7 @@ where
 				.pipe(move |In(result)| transitions.get(&result?).copied())
 				.pipe(GameStatesPlugin::apply_transition_from(from_state))
 				.pipe(OnError::log)
-				.run_if(in_state(CommandState::Active(from_state)))
+				.run_if(CommandState::in_state(from_state))
 				.in_set(GameStateSystems),
 		);
 
@@ -249,15 +252,15 @@ impl ExtendGameState for GameStatesPlugin {
 impl AddGameStateSystem for GameStatesPlugin {
 	fn add_game_state_systems<M>(
 		app: &mut App,
-		on_state: impl Into<OnGameState>,
+		on_state: OnGameState,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	) {
-		match on_state.into() {
+		match on_state {
 			OnGameState::Enter(GameState::Command(cmd)) => {
-				app.add_systems(OnEnter(CommandState::Active(cmd)), systems);
+				app.add_systems(OnEnter(CommandState::active(cmd)), systems);
 			}
 			OnGameState::Exit(GameState::Command(cmd)) => {
-				app.add_systems(OnExit(CommandState::Active(cmd)), systems);
+				app.add_systems(OnExit(CommandState::active(cmd)), systems);
 			}
 			OnGameState::Enter(GameState::IngameUI(ui)) => {
 				UIStates::on_enter(app, ui, systems);
@@ -276,27 +279,27 @@ where
 {
 	fn add_game_state_systems<M>(
 		app: &mut App,
-		on_state: impl Into<OnGameState<GameStateCommandExtended<T>>>,
+		on_state: OnGameState<GameStateCommandExtended<T>>,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	) {
 		Self::add_extended_plugin(app);
 
-		match on_state.into() {
+		match on_state {
 			OnGameState::Enter(cmd) => {
-				app.add_systems(OnEnter(CommandState::Active(cmd)), systems);
+				app.add_systems(OnEnter(CommandState::active(cmd)), systems);
 			}
 			OnGameState::Exit(cmd) => {
-				app.add_systems(OnExit(CommandState::Active(cmd)), systems);
+				app.add_systems(OnExit(CommandState::active(cmd)), systems);
 			}
 		}
 	}
 }
 
 impl TransitionUnique<GameStateCommand> for GameStatesPlugin {
-	fn transition_unique(app: &mut App, state: GameStateCommand) -> bool {
+	fn transition_unique(app: &mut App, state: Option<GameStateCommand>) -> bool {
 		let ConfiguredTransitions(configured) = app
 			.world_mut()
-			.get_resource_or_init::<ConfiguredTransitions<GameStateCommand>>()
+			.get_resource_or_init::<ConfiguredTransitions<Option<GameStateCommand>>>()
 			.into_inner();
 
 		configured.insert(state)
@@ -308,15 +311,16 @@ impl<T> TransitionUnique<GameStateCommandExtended<T>>
 where
 	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
 {
-	fn transition_unique(app: &mut App, state: GameStateCommandExtended<T>) -> bool {
-		use GameStateCommandExtended::Command;
+	fn transition_unique(app: &mut App, state: Option<GameStateCommandExtended<T>>) -> bool {
+		use GameStateCommandExtended::*;
 
 		match state {
-			Command(state) if !GameStatesPlugin::transition_unique(app, state) => false,
-			state => {
+			None => GameStatesPlugin::<GameStateCommand>::transition_unique(app, None),
+			Some(Command(state)) => GameStatesPlugin::transition_unique(app, Some(state)),
+			Some(Extended(state)) => {
 				let ConfiguredTransitions(configured) = app
 					.world_mut()
-					.get_resource_or_init::<ConfiguredTransitions<GameStateCommandExtended<T>>>()
+					.get_resource_or_init::<ConfiguredTransitions<T>>()
 					.into_inner();
 
 				configured.insert(state)
@@ -328,7 +332,7 @@ where
 impl AddActivityTransitions for GameStatesPlugin {
 	fn add_activity_transitions<TResult, M>(
 		app: &mut App,
-		from_state: impl Into<GameStateCommand>,
+		from_state: impl Into<Option<GameStateCommand>>,
 		check: impl IntoSystem<(), Option<TResult>, M>,
 		transitions: impl Into<HashMap<TResult, ActivityTransition<GameStateCommand>>>,
 	) -> Result<(), TransitionsConfigError<GameStateCommand>>
@@ -346,7 +350,7 @@ where
 {
 	fn add_activity_transitions<TResult, M>(
 		app: &mut App,
-		from_state: impl Into<GameStateCommandExtended<T>>,
+		from_state: impl Into<Option<GameStateCommandExtended<T>>>,
 		check: impl IntoSystem<(), Option<TResult>, M>,
 		transitions: impl Into<HashMap<TResult, ActivityTransition<GameStateCommandExtended<T>>>>,
 	) -> Result<(), TransitionsConfigError<GameStateCommandExtended<T>>>
@@ -377,18 +381,18 @@ where
 					return false;
 				};
 
-				let CommandState::Active(state) = state.get() else {
+				let Some(state) = state.get().try_into_active() else {
 					return false;
 				};
 
-				game_states.contains(state)
+				game_states.contains(&state)
 			},
 		)
 	}
 }
 
 pub trait TransitionUnique<T> {
-	fn transition_unique(app: &mut App, state: T) -> bool;
+	fn transition_unique(app: &mut App, state: Option<T>) -> bool;
 }
 
 #[derive(Resource)]
@@ -518,13 +522,13 @@ mod tests {
 
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_A));
+					state.set(CommandState::active(EXT_A));
 				},
 			)?;
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::Active(EXT_B)),
+				Some(CommandState::active(EXT_B)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -544,19 +548,19 @@ mod tests {
 
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_A));
+					state.set(CommandState::active(EXT_A));
 				},
 			)?;
 			app.update();
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_B));
+					state.set(CommandState::active(EXT_B));
 				},
 			)?;
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::Active(EXT_A)),
+				Some(CommandState::active(EXT_A)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -576,25 +580,25 @@ mod tests {
 
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_A));
+					state.set(CommandState::active(EXT_A));
 				},
 			)?;
 			app.update();
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_B));
+					state.set(CommandState::active(EXT_B));
 				},
 			)?;
 			app.update();
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_C));
+					state.set(CommandState::active(EXT_C));
 				},
 			)?;
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::Active(EXT_A)),
+				Some(CommandState::active(EXT_A)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -614,7 +618,7 @@ mod tests {
 
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_A));
+					state.set(CommandState::active(EXT_A));
 				},
 			)?;
 			app.update();
@@ -646,7 +650,7 @@ mod tests {
 
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_A));
+					state.set(CommandState::active(EXT_A));
 				},
 			)?;
 			app.update();
@@ -654,7 +658,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::Active(EXT_B)),
+				Some(CommandState::active(EXT_B)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -674,13 +678,13 @@ mod tests {
 
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_A));
+					state.set(CommandState::active(EXT_A));
 				},
 			)?;
 			app.update();
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_B));
+					state.set(CommandState::active(EXT_B));
 				},
 			)?;
 			app.update();
@@ -689,7 +693,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::Active(EXT_A)),
+				Some(CommandState::active(EXT_A)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -709,7 +713,7 @@ mod tests {
 
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_C));
+					state.set(CommandState::active(EXT_C));
 				},
 			)?;
 			app.update();
@@ -743,11 +747,14 @@ mod tests {
 				Ok(_) => panic!("Expected Error, but was value"),
 				Err(error) => error,
 			};
-			assert_eq!(TransitionsConfigError::AlreadyConfigured(EXT_A), error);
+			assert_eq!(
+				TransitionsConfigError::AlreadyConfigured(Some(EXT_A)),
+				error
+			);
 		}
 
 		#[test]
-		fn forbid_repeated_config_against_non_extended() {
+		fn forbid_repeated_config_against_extended() {
 			let mut app = setup();
 			_ = GameStatesPlugin::add_activity_transitions(
 				&mut app,
@@ -760,10 +767,10 @@ mod tests {
 
 			let result = _ExtendedPlugin::add_activity_transitions(
 				&mut app,
-				GameStateCommand::Play,
+				GameStateCommandExtended::Command(GameStateCommand::Play),
 				always,
 				hash_map! {
-					() => ActivityTransition::To(GameStateCommandExtended::<_Extension>::from(GameStateCommand::Pause)),
+					() => ActivityTransition::To(GameStateCommandExtended::from(GameStateCommand::Pause)),
 				},
 			);
 
@@ -772,11 +779,67 @@ mod tests {
 				Err(error) => error,
 			};
 			assert_eq!(
-				TransitionsConfigError::AlreadyConfigured(
-					GameStateCommandExtended::<_Extension>::from(GameStateCommand::Play)
-				),
+				TransitionsConfigError::AlreadyConfigured(Some(GameStateCommandExtended::<
+					_Extension,
+				>::from(GameStateCommand::Play))),
 				error
 			);
+		}
+
+		#[test]
+		fn forbid_repeated_config_against_extended_none() {
+			let mut app = setup();
+			_ = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				None,
+				always,
+				hash_map! {
+					() => ActivityTransition::To(GameStateCommand::Pause),
+				},
+			);
+
+			let result = _ExtendedPlugin::add_activity_transitions(
+				&mut app,
+				None,
+				always,
+				hash_map! {
+					() => ActivityTransition::To(GameStateCommandExtended::from(GameStateCommand::Pause)),
+				},
+			);
+
+			let error = match result {
+				Ok(_) => panic!("Expected Error, but was value"),
+				Err(error) => error,
+			};
+			assert_eq!(TransitionsConfigError::AlreadyConfigured(None), error);
+		}
+
+		#[test]
+		fn forbid_repeated_config_against_extended_none_reversed() {
+			let mut app = setup();
+			_ = _ExtendedPlugin::add_activity_transitions(
+				&mut app,
+				None,
+				always,
+				hash_map! {
+					() => ActivityTransition::To(GameStateCommandExtended::from(GameStateCommand::Pause)),
+				},
+			);
+
+			let result = GameStatesPlugin::add_activity_transitions(
+				&mut app,
+				None,
+				always,
+				hash_map! {
+					() => ActivityTransition::To(GameStateCommand::Pause),
+				},
+			);
+
+			let error = match result {
+				Ok(_) => panic!("Expected Error, but was value"),
+				Err(error) => error,
+			};
+			assert_eq!(TransitionsConfigError::AlreadyConfigured(None), error);
 		}
 
 		#[test]
@@ -821,13 +884,13 @@ mod tests {
 
 			app.world_mut().run_system_once(
 				|mut state: ResMut<NextState<CommandState<_GameStateExtended>>>| {
-					state.set(CommandState::Active(EXT_A));
+					state.set(CommandState::active(EXT_A));
 				},
 			)?;
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::Active(EXT_B)),
+				Some(CommandState::active(EXT_B)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -937,7 +1000,7 @@ mod tests {
 		#[test]
 		fn true_if_in_state() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			app.insert_state(CommandState::Active(EXT_A));
+			app.insert_state(CommandState::active(EXT_A));
 
 			let in_state = app
 				.world_mut()
@@ -950,7 +1013,20 @@ mod tests {
 		#[test]
 		fn false_if_not_in_state() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			app.insert_state(CommandState::Active(EXT_B));
+			app.insert_state(CommandState::active(EXT_B));
+
+			let in_state = app
+				.world_mut()
+				.run_system_once(_ExtendedPlugin::in_game_state([EXT_A]))?;
+
+			assert!(!in_state);
+			Ok(())
+		}
+
+		#[test]
+		fn false_if_in_default_state() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			app.init_state::<CommandState<_GameStateExtended>>();
 
 			let in_state = app
 				.world_mut()
@@ -963,7 +1039,7 @@ mod tests {
 		#[test]
 		fn false_if_state_dirty() -> Result<(), RunSystemError> {
 			let mut app = setup();
-			app.insert_state(CommandState::<_GameStateExtended>::Dirty);
+			app.insert_state(CommandState::<_GameStateExtended>::dirty());
 
 			let in_state = app
 				.world_mut()
