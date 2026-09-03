@@ -29,6 +29,13 @@ impl<'w, 's> ZyheedaCommands<'w, 's> {
 		self.commands.insert_resource(resource);
 	}
 
+	pub fn remove_resource<TResource>(&mut self)
+	where
+		TResource: Resource,
+	{
+		self.commands.remove_resource::<TResource>();
+	}
+
 	pub fn trigger_observers_for<TEvent>(&mut self, event: TEvent)
 	where
 		TEvent: for<'a> Event<Trigger<'a>: Default>,

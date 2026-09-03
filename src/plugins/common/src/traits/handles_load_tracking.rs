@@ -22,7 +22,7 @@ pub trait HandlesLoadTracking {
 	where
 		T: ThreadSafe;
 
-	fn is_loading(
+	fn is_loaded(
 		load_group: impl LoadGroup<Self::TLoadAssetState>,
 	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>;
 

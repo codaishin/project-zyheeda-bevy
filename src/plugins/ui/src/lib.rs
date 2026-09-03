@@ -347,8 +347,6 @@ where
 	}
 
 	fn general_systems(&self, app: &mut App) {
-		let ui_ready = not(TLoading::is_loading(LoadingEssentialAssets));
-
 		app.register_derived_component::<MenuBackground, Node>()
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
 			.add_tooltip::<TLocalization::TLocalizationServer, Token>()
@@ -369,7 +367,7 @@ where
 					)
 						.chain(),
 				)
-					.run_if(ui_ready),
+					.run_if(TLoading::is_loaded(LoadingEssentialAssets)),
 			)
 			.add_systems(Last, ButtonInteraction::system);
 	}
