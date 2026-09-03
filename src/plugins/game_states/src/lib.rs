@@ -59,51 +59,41 @@ impl GameStatesPlugin {
 		#[rustfmt::skip]
 		let system = move |
 			In(to_state): In<Option<ActivityTransition<T>>>,
-		  mut commands: ZyheedaCommands,
-		  previous: Res<PreviousStates<T>>
+			mut commands: ZyheedaCommands,
+			previous: Res<PreviousStates<T>>
 		| {
 			let Some(to_state) = to_state else {
 				return Ok(());
 			};
 			let PreviousStates(previous) = previous.into_inner();
 
-
 			match to_state {
 				ActivityTransition::To(to_state) => {
-					commands.trigger_observers_for(StateEvent {
-						state: CommandState::active(to_state)
-					});
+					commands.trigger_observers_for(StateEvent::Active(to_state));
 				}
 				ActivityTransition::ToPrevious => {
 					let Some(previous) = previous.last() else {
 						return Err(TransitionError::NoPreviousStateFor(command));
 					};
 
-					commands.trigger_observers_for(StateEvent {
-						state: CommandState::active(*previous)
-					});
+					commands.trigger_observers_for(StateEvent::Active(*previous));
 				}
 				ActivityTransition::ToPreviousOf(activity) => {
 					let get_previous = || {
-						previous
-							.iter()
-							.enumerate()
-							.find_map(|(i, a)| {
-								if a != &activity {
-									return None;
-								}
+						previous.iter().enumerate().find_map(|(i, a)| {
+							if a != &activity {
+								return None;
+							}
 
-								previous.get_index(i.checked_sub(1)?)
-							})
+							previous.get_index(i.checked_sub(1)?)
+						})
 					};
 
 					let Some(previous) = get_previous() else {
 						return Err(TransitionError::NoPreviousStateFor(command));
 					};
 
-					commands.trigger_observers_for(StateEvent {
-						state: CommandState::active(*previous)
-					});
+					commands.trigger_observers_for(StateEvent::Active(*previous));
 				}
 			};
 
@@ -484,12 +474,12 @@ mod tests {
 
 		#[derive(Resource, Debug, PartialEq, Default)]
 		struct _State {
-			state: Option<CommandState<_GameStateExtended>>,
+			state: Option<StateEvent<_GameStateExtended>>,
 		}
 
 		impl _State {
-			fn record(on: On<StateEvent<_GameStateExtended>>, mut s: ResMut<Self>) {
-				s.state = Some(on.state)
+			fn record(on_state: On<StateEvent<_GameStateExtended>>, mut s: ResMut<Self>) {
+				s.state = Some(*on_state)
 			}
 
 			fn clear(mut s: ResMut<Self>) {
@@ -528,7 +518,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::active(EXT_B)),
+				Some(StateEvent::Active(EXT_B)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -560,7 +550,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::active(EXT_A)),
+				Some(StateEvent::Active(EXT_A)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -598,7 +588,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::active(EXT_A)),
+				Some(StateEvent::Active(EXT_A)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -658,7 +648,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::active(EXT_B)),
+				Some(StateEvent::Active(EXT_B)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -693,7 +683,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::active(EXT_A)),
+				Some(StateEvent::Active(EXT_A)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())
@@ -890,7 +880,7 @@ mod tests {
 			app.update();
 
 			assert_eq!(
-				Some(CommandState::active(EXT_B)),
+				Some(StateEvent::Active(EXT_B)),
 				app.world().resource::<_State>().state
 			);
 			Ok(())

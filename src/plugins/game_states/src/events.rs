@@ -1,12 +1,25 @@
 use crate::states::command_state::CommandState;
 use bevy::prelude::*;
 use common::prelude::*;
-use std::{fmt::Debug, hash::Hash};
+use std::{any::TypeId, fmt::Debug, hash::Hash};
 
-#[derive(Debug, PartialEq, Event)]
-pub(crate) struct StateEvent<TCommand>
+#[derive(Debug, PartialEq, Event, Clone, Copy)]
+pub(crate) enum StateEvent<T>
 where
-	TCommand: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
+	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
 {
-	pub(crate) state: CommandState<TCommand>,
+	Dirty { issued_by: TypeId },
+	Active(T),
+}
+
+impl<T> From<StateEvent<T>> for CommandState<T>
+where
+	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
+{
+	fn from(value: StateEvent<T>) -> Self {
+		match value {
+			StateEvent::Dirty { .. } => Self::dirty(),
+			StateEvent::Active(v) => Self::active(v),
+		}
+	}
 }
