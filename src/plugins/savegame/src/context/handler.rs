@@ -62,7 +62,9 @@ where
 	where
 		T: SavableComponent,
 	{
-		let dto = serde_json::from_value::<T::TDto>(component).map_err(SerdeJsonError)?;
+		let dto_str =
+			serde_json::to_string_pretty(&component).map_err(SerdeJsonError::from_nested)?;
+		let dto = serde_json::from_str::<T::TDto>(&dto_str).map_err(SerdeJsonError::from_nested)?;
 		let Ok(component) = T::try_load_from(dto, asset_server);
 
 		entity.try_insert(component);
@@ -389,7 +391,7 @@ mod tests {
 			)?;
 
 			assert_eq!(
-				Err(SerdeJsonError(serde::de::Error::custom(
+				Err(SerdeJsonError::from_nested(serde::de::Error::custom(
 					"Fool! I refuse deserialization"
 				))),
 				result

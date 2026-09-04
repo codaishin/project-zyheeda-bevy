@@ -89,7 +89,7 @@ where
 			.filter_map(|handler| {
 				handler
 					.buffer_component(&mut self.buffers.save, entity)
-					.map_err(SerdeJsonError)
+					.map_err(SerdeJsonError::from_nested)
 					.err()
 			})
 			.collect::<Vec<_>>();
@@ -178,23 +178,25 @@ mod test_write_buffer {
 				.with_low_priority_handlers([
 					Mock_Handler::new_mock(|mock| {
 						mock.expect_buffer_component()
-							.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE")));
+							.returning(|_, _| Err(serde::ser::Error::custom("error a")));
 					}),
 					Mock_Handler::new_mock(|mock| {
 						mock.expect_buffer_component()
-							.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE AGAIN")));
+							.returning(|_, _| Err(serde::ser::Error::custom("error b")));
 					}),
 				]);
 
 			let result = context.write_buffer(entity);
 
 			assert_eq!(
-				Err("NOPE, U LOSE|NOPE, U LOSE AGAIN".to_owned()),
+				Err(vec![
+					"error a (location relative)".to_owned(),
+					"error b (location relative)".to_owned(),
+				]),
 				result.map_err(|EntitySerializationErrors(errors)| errors
 					.iter()
 					.map(|error| error.to_string())
-					.collect::<Vec<_>>()
-					.join("|"))
+					.collect::<Vec<_>>())
 			);
 		}
 	}
@@ -241,23 +243,25 @@ mod test_write_buffer {
 				.with_high_priority_handlers([
 					Mock_Handler::new_mock(|mock| {
 						mock.expect_buffer_component()
-							.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE")));
+							.returning(|_, _| Err(serde::ser::Error::custom("error a")));
 					}),
 					Mock_Handler::new_mock(|mock| {
 						mock.expect_buffer_component()
-							.returning(|_, _| Err(serde::ser::Error::custom("NOPE, U LOSE AGAIN")));
+							.returning(|_, _| Err(serde::ser::Error::custom("error b")));
 					}),
 				]);
 
 			let result = context.write_buffer(entity);
 
 			assert_eq!(
-				Err("NOPE, U LOSE|NOPE, U LOSE AGAIN".to_owned()),
+				Err(vec![
+					"error a (location relative)".to_owned(),
+					"error b (location relative)".to_owned(),
+				]),
 				result.map_err(|EntitySerializationErrors(errors)| errors
 					.iter()
 					.map(|error| error.to_string())
-					.collect::<Vec<_>>()
-					.join("|"))
+					.collect::<Vec<_>>()),
 			);
 		}
 	}
