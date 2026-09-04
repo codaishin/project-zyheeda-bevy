@@ -26,12 +26,12 @@ use std::{any::type_name, error::Error, fmt::Debug, marker::PhantomData};
 use systems::{begin_loading_folder_assets::begin_loading_folder_assets, is_loaded::is_loaded};
 use zyheeda_core::prelude::*;
 
-type AssetsIO = LoadAssetsExtension<AssetLoadPhase>;
+type LoadPhase = LoadAssetsExtension<AssetLoadPhase>;
 
-const LOAD_ASSETS: GameStateCommandExtended<AssetsIO> =
-	GameStateCommandExtended::Extended(LoadAssetsExtension::Load(AssetLoadPhase::Assets));
-const LOAD_ESSENTIAL_ASSETS: GameStateCommandExtended<AssetsIO> =
-	GameStateCommandExtended::Extended(LoadAssetsExtension::LoadEssentials(AssetLoadPhase::Assets));
+const LOAD_ASSETS: GameStateExtended<LoadPhase> =
+	GameState::extended(LoadPhase::Load(AssetLoadPhase::Assets));
+const LOAD_ESSENTIAL_ASSETS: GameStateExtended<LoadPhase> =
+	GameState::extended(LoadPhase::LoadEssentials(AssetLoadPhase::Assets));
 
 pub struct LoadingPlugin<TDependencies>(PhantomData<TDependencies>);
 
@@ -45,21 +45,21 @@ where
 
 	fn default_transitions(
 		app: &mut App,
-	) -> Result<(), TransitionsConfigError<GameStateCommandExtended<AssetsIO>>> {
+	) -> Result<(), TransitionsConfigError<GameStateExtended<LoadPhase>>> {
 		TGameStates::TExtended::add_activity_transitions(
 			app,
 			None,
 			always,
 			hash_map! {
-				() => ActivityTransition::To(LOAD_ESSENTIAL_ASSETS)
+				() => TransitionState::To(LOAD_ESSENTIAL_ASSETS)
 			},
 		)?;
 		TGameStates::TExtended::add_activity_transitions(
 			app,
-			GameStateCommandExtended::Command(GameStateCommand::NewGame),
+			GameStateExtended::Base(GameState::NewGame),
 			always,
 			hash_map! {
-				() => ActivityTransition::To(LOAD_ASSETS)
+				() => TransitionState::To(LOAD_ASSETS)
 			},
 		)?;
 
@@ -68,10 +68,10 @@ where
 
 	fn load_transitions<TLoadGroup>(
 		app: &mut App,
-		load_assets: GameStateCommandExtended<AssetsIO>,
-		load_deps: GameStateCommandExtended<AssetsIO>,
-		done: GameStateCommandExtended<AssetsIO>,
-	) -> Result<(), TransitionsConfigError<GameStateCommandExtended<AssetsIO>>>
+		load_assets: GameStateExtended<LoadPhase>,
+		load_deps: GameStateExtended<LoadPhase>,
+		done: GameStateExtended<LoadPhase>,
+	) -> Result<(), TransitionsConfigError<GameStateExtended<LoadPhase>>>
 	where
 		TLoadGroup: ThreadSafe,
 	{
@@ -79,14 +79,14 @@ where
 			app,
 			load_assets,
 			Track::<TLoadGroup, AssetsProgress>::is_done,
-			hash_map! { IsDone => ActivityTransition::To(load_deps) },
+			hash_map! { IsDone => TransitionState::To(load_deps) },
 		)?;
 
 		TGameStates::TExtended::add_activity_transitions(
 			app,
 			load_deps,
 			Track::<TLoadGroup, DependenciesProgress>::is_done,
-			hash_map! { IsDone => ActivityTransition::To(done) },
+			hash_map! { IsDone => TransitionState::To(done) },
 		)?;
 
 		Ok(())
@@ -96,11 +96,9 @@ where
 	where
 		TLoadGroup: LoadGroup<AssetLoadPhase> + ThreadSafe,
 	{
-		let load_assets =
-			GameStateCommandExtended::from(load_group.load_state(AssetLoadPhase::Assets));
-		let load_deps =
-			GameStateCommandExtended::from(load_group.load_state(AssetLoadPhase::Dependencies));
-		let done = GameStateCommandExtended::from(load_group.load_state_done());
+		let load_assets = GameState::extended(load_group.load_state(AssetLoadPhase::Assets));
+		let load_deps = GameState::extended(load_group.load_state(AssetLoadPhase::Dependencies));
+		let done = GameState::extended_base(load_group.load_state_done());
 
 		let is_loading_assets = TGameStates::TExtended::in_game_state([load_assets]);
 		let is_loading_deps = TGameStates::TExtended::in_game_state([load_deps]);
@@ -115,7 +113,7 @@ where
 
 		TGameStates::TExtended::add_game_state_systems(
 			app,
-			OnGameState::Enter(load_assets),
+			OnStateTransition::Enter(load_assets),
 			(
 				GroupLoaded::<TLoadGroup>::remove,
 				Track::<TLoadGroup, AssetsProgress>::init,
@@ -124,22 +122,22 @@ where
 		);
 		TGameStates::TExtended::add_game_state_systems(
 			app,
-			OnGameState::Exit(load_assets),
+			OnStateTransition::Exit(load_assets),
 			Track::<TLoadGroup, AssetsProgress>::remove,
 		);
 		TGameStates::TExtended::add_game_state_systems(
 			app,
-			OnGameState::Enter(load_deps),
+			OnStateTransition::Enter(load_deps),
 			Track::<TLoadGroup, DependenciesProgress>::init,
 		);
 		TGameStates::TExtended::add_game_state_systems(
 			app,
-			OnGameState::Exit(load_deps),
+			OnStateTransition::Exit(load_deps),
 			Track::<TLoadGroup, DependenciesProgress>::remove,
 		);
 		TGameStates::TExtended::add_game_state_systems(
 			app,
-			OnGameState::Enter(done),
+			OnStateTransition::Enter(done),
 			GroupLoaded::insert(load_group),
 		);
 
@@ -199,16 +197,16 @@ where
 
 	fn add_loading_systems<M>(
 		app: &mut App,
-		on_transition: OnGameState<impl LoadGroup<Self::TLoadAssetState>>,
+		on_transition: OnStateTransition<impl LoadGroup<Self::TLoadAssetState>>,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	) {
 		let on_state = match on_transition {
-			OnGameState::Enter(load_group) => OnGameState::Enter(GameStateCommandExtended::from(
-				load_group.load_state(AssetLoadPhase::Assets),
-			)),
-			OnGameState::Exit(load_group) => OnGameState::Exit(GameStateCommandExtended::from(
-				load_group.load_state(AssetLoadPhase::Dependencies),
-			)),
+			OnStateTransition::Enter(load_group) => OnStateTransition::Enter(
+				GameStateExtended::from(load_group.load_state(AssetLoadPhase::Assets)),
+			),
+			OnStateTransition::Exit(load_group) => OnStateTransition::Exit(
+				GameStateExtended::from(load_group.load_state(AssetLoadPhase::Dependencies)),
+			),
 		};
 
 		TGameStates::TExtended::add_game_state_systems(app, on_state, systems);
@@ -266,7 +264,7 @@ where
 		}
 
 		let phase = AssetLoadPhase::from(self.progress.is_processing());
-		let load_assets = GameStateCommandExtended::from(self.load_group.load_state(phase));
+		let load_assets = GameState::extended(self.load_group.load_state(phase));
 		let is_loading_assets = TGameState::TExtended::in_game_state([load_assets]);
 
 		app.add_systems(
@@ -350,7 +348,7 @@ where
 
 		TGameStates::TExtended::add_game_state_systems(
 			app,
-			OnGameState::Enter(GameStateCommandExtended::from(load_asset)),
+			OnStateTransition::Enter(GameStateExtended::from(load_asset)),
 			begin_loading_folder_assets::<TAsset, AssetServer>,
 		);
 	}
@@ -376,7 +374,7 @@ where
 			+ Debug,
 		for<'a> TDto: Deserialize<'a> + ThreadSafe + TypePath + AssetFileExtensions,
 	{
-		let loading = GameStateCommandExtended::from(load_group.load_state(AssetLoadPhase::Assets));
+		let loading = GameState::extended(load_group.load_state(AssetLoadPhase::Assets));
 		let loading_done = resource_exists::<TResource>;
 		let loading_incomplete =
 			TGameStates::TExtended::in_game_state([loading]).and_then(not(loading_done));
@@ -387,7 +385,7 @@ where
 
 		TGameStates::TExtended::add_game_state_systems(
 			app,
-			OnGameState::Enter(loading),
+			OnStateTransition::Enter(loading),
 			TResource::begin_loading(path),
 		);
 

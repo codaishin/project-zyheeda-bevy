@@ -59,7 +59,7 @@ impl InsertUiContent for StartMenu {
 					TextColor(PanelColors::DEFAULT.filled.text),
 				));
 			});
-		parent.spawn(StartMenuButton::triggers(GameStateCommand::NewGame).with_label(new_game));
-		parent.spawn(StartMenuButton::triggers(GameStateCommand::Load).with_label(continue_game));
+		parent.spawn(StartMenuButton::triggers(GameState::NewGame).with_label(new_game));
+		parent.spawn(StartMenuButton::triggers(GameState::Load).with_label(continue_game));
 	}
 }

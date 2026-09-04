@@ -3,11 +3,11 @@ use common::prelude::*;
 use std::{fmt::Debug, hash::Hash};
 
 #[derive(States, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub(crate) struct CommandState<T = GameStateCommand>(Variant<T>)
+pub(crate) struct StateInternal<T>(Variant<T>)
 where
 	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy;
 
-impl<T> CommandState<T>
+impl<T> StateInternal<T>
 where
 	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
 {
@@ -44,7 +44,7 @@ where
 	}
 }
 
-impl<T> FromWorld for CommandState<T>
+impl<T> FromWorld for StateInternal<T>
 where
 	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
 {
@@ -53,8 +53,8 @@ where
 	}
 }
 
-impl From<GameStateCommand> for CommandState {
-	fn from(value: GameStateCommand) -> Self {
+impl From<GameState> for StateInternal<GameState> {
+	fn from(value: GameState) -> Self {
 		Self::active(value)
 	}
 }

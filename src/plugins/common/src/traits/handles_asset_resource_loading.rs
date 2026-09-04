@@ -9,7 +9,7 @@ use serde::Deserialize;
 use std::{error::Error, fmt::Debug};
 
 pub trait HandlesAssetResourceLoading {
-	type TLoadAssetState: Default;
+	type TLoadAssetState;
 
 	fn register_custom_resource_loading<TResource, TDto>(
 		app: &mut App,

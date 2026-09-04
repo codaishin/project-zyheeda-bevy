@@ -1,4 +1,4 @@
-use crate::states::command_state::CommandState;
+use crate::states::state_internal::StateInternal;
 use bevy::prelude::*;
 use common::prelude::*;
 use std::{any::TypeId, fmt::Debug, hash::Hash};
@@ -12,22 +12,22 @@ where
 	Active(T),
 }
 
-impl From<GameStateCommand> for StateEvent<GameStateCommand> {
-	fn from(value: GameStateCommand) -> Self {
+impl From<GameState> for StateEvent<GameState> {
+	fn from(value: GameState) -> Self {
 		Self::Active(value)
 	}
 }
 
-impl<T> From<GameStateCommandExtended<T>> for StateEvent<GameStateCommandExtended<T>>
+impl<T> From<GameStateExtended<T>> for StateEvent<GameStateExtended<T>>
 where
 	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
 {
-	fn from(value: GameStateCommandExtended<T>) -> Self {
+	fn from(value: GameStateExtended<T>) -> Self {
 		Self::Active(value)
 	}
 }
 
-impl<T> From<StateEvent<T>> for CommandState<T>
+impl<T> From<StateEvent<T>> for StateInternal<T>
 where
 	T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
 {

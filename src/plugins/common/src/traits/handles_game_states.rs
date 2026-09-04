@@ -1,9 +1,6 @@
-use crate::{
-	tools::iter_helpers::{first, next},
-	traits::{
-		iteration::{FiniteIter, IterFinite},
-		thread_safe::ThreadSafe,
-	},
+use crate::traits::{
+	iteration::{FiniteIter, IterFinite},
+	thread_safe::ThreadSafe,
 };
 use bevy::{
 	ecs::system::{ScheduleSystem, SystemParam},
@@ -11,20 +8,22 @@ use bevy::{
 };
 use macros::EnumConversions;
 use std::{
-	collections::{HashMap, HashSet, hash_set::Iter as HashSetIter},
+	collections::{HashMap, HashSet},
 	fmt::{Debug, Display},
 	hash::Hash,
-	ops::{Deref, DerefMut},
+	ops::DerefMut,
 };
 
 pub trait HandlesGameStates:
-	InGameState<GameStateCommand>
-	+ InGameState<IngameUI>
+	InGameState<GameState>
+	+ InGameState<Gui>
 	+ GameStatesWrite
-	+ AddGameStateSystem
+	+ AddGameStateSystem<GameState>
+	+ AddGameStateSystem<Gui>
 	+ AddActivityTransitions
 	+ ExtendGameState
-	+ SetToNotPause
+	+ SetToNotPause<GameState>
+	+ SetToNotPause<Gui>
 	+ GamePaused
 {
 }
@@ -33,21 +32,21 @@ pub trait GameStatesWrite {
 	type TGameStatesMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>;
 }
 
-pub trait AddGameStateSystem<TState = GameState> {
+pub trait AddGameStateSystem<TState> {
 	fn add_game_state_systems<M>(
 		app: &mut App,
-		on_state: OnGameState<TState>,
+		on_state: OnStateTransition<TState>,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	);
 }
 
-pub trait AddActivityTransitions<TCommand = GameStateCommand> {
+pub trait AddActivityTransitions<TState = GameState> {
 	fn add_activity_transitions<TResult, M>(
 		app: &mut App,
-		from_state: impl Into<Option<TCommand>>,
+		from_state: impl Into<Option<TState>>,
 		check: impl IntoSystem<(), Option<TResult>, M>,
-		transitions: impl Into<HashMap<TResult, ActivityTransition<TCommand>>>,
-	) -> Result<(), TransitionsConfigError<TCommand>>
+		transitions: impl Into<HashMap<TResult, TransitionState<TState>>>,
+	) -> Result<(), TransitionsConfigError<TState>>
 	where
 		TResult: PartialEq + Eq + Hash + ThreadSafe;
 }
@@ -57,16 +56,16 @@ pub fn always() -> Option<()> {
 }
 
 pub trait ExtendGameState {
-	type TExtended<T>: InGameState<GameStateCommandExtended<T>>
-		+ AddGameStateSystem<GameStateCommandExtended<T>>
-		+ AddActivityTransitions<GameStateCommandExtended<T>>
+	type TExtended<T>: InGameState<GameStateExtended<T>>
+		+ AddGameStateSystem<GameStateExtended<T>>
+		+ AddActivityTransitions<GameStateExtended<T>>
 	where
 		T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy;
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, EnumConversions)]
-pub enum GameStateCommandExtended<T> {
-	Command(GameStateCommand),
+pub enum GameStateExtended<T> {
+	Base(GameState),
 	#[enum_conversions(skip)]
 	Extended(T),
 }
@@ -82,14 +81,14 @@ pub trait GamePaused {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub enum ActivityTransition<T = GameStateCommand> {
+pub enum TransitionState<T = GameState> {
 	To(T),
 	ToPrevious,
 	ToPreviousOf(T),
 }
 
 #[derive(Debug, PartialEq)]
-pub enum TransitionsConfigError<T = GameStateCommand> {
+pub enum TransitionsConfigError<T = GameState> {
 	AlreadyConfigured(Option<T>),
 	MayNotTransitionToSelf(T),
 }
@@ -113,55 +112,8 @@ where
 	}
 }
 
-pub trait SetToNotPause {
-	const DEFAULT_NON_PAUSE: &[GameState] = &[GameState::Command(GameStateCommand::Play)];
-
-	fn set_to_not_pause(app: &mut App, state: impl Into<GameState>);
-}
-
-pub trait GameStates {
-	fn command(&self) -> Option<GameStateCommand>;
-	fn ui(&self) -> &'_ HashSet<IngameUI>;
-}
-
-impl<T> GameStates for T
-where
-	T: Deref<Target: GameStates>,
-{
-	fn command(&self) -> Option<GameStateCommand> {
-		self.deref().command()
-	}
-
-	fn ui(&self) -> &'_ HashSet<IngameUI> {
-		self.deref().ui()
-	}
-}
-
-pub trait IterGameStates: GameStates {
-	fn iter(&self) -> GameStateIter<'_> {
-		GameStateIter {
-			command: self.command(),
-			ui: self.ui().iter(),
-		}
-	}
-}
-
-impl<T> IterGameStates for T where T: GameStates {}
-
-pub struct GameStateIter<'a> {
-	command: Option<GameStateCommand>,
-	ui: HashSetIter<'a, IngameUI>,
-}
-
-impl Iterator for GameStateIter<'_> {
-	type Item = GameState;
-
-	fn next(&mut self) -> Option<Self::Item> {
-		match self.command.take() {
-			Some(command) => Some(GameState::Command(command)),
-			None => self.ui.next().copied().map(GameState::IngameUI),
-		}
-	}
+pub trait SetToNotPause<TState> {
+	fn set_to_not_pause(app: &mut App, state: TState);
 }
 
 pub trait GameStatesMut {
@@ -170,12 +122,9 @@ pub trait GameStatesMut {
 		Self: 'a;
 
 	#[must_use]
-	fn get_game_state_setter(
-		&mut self,
-		command: GameStateCommand,
-	) -> Option<Self::TGameStateSetter<'_>>;
+	fn get_game_state_setter(&mut self, state: GameState) -> Option<Self::TGameStateSetter<'_>>;
 
-	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI>;
+	fn gui_mut(&mut self) -> &'_ mut HashSet<Gui>;
 }
 
 impl<T> GameStatesMut for T
@@ -187,15 +136,12 @@ where
 	where
 		Self: 'a;
 
-	fn get_game_state_setter(
-		&mut self,
-		command: GameStateCommand,
-	) -> Option<Self::TGameStateSetter<'_>> {
-		self.deref_mut().get_game_state_setter(command)
+	fn get_game_state_setter(&mut self, state: GameState) -> Option<Self::TGameStateSetter<'_>> {
+		self.deref_mut().get_game_state_setter(state)
 	}
 
-	fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
-		self.deref_mut().ui_mut()
+	fn gui_mut(&mut self) -> &'_ mut HashSet<Gui> {
+		self.deref_mut().gui_mut()
 	}
 }
 
@@ -204,53 +150,13 @@ pub trait SetGameState {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum OnGameState<T = GameState> {
+pub enum OnStateTransition<T> {
 	Enter(T),
 	Exit(T),
 }
 
-macro_rules! impl_on_game_state_conversions {
-	($fst:ty, $($rest:ty),+ $(,)?) => {
-		impl_on_game_state_conversions!($fst);
-		impl_on_game_state_conversions!($($rest),+);
-	};
-	($ty:ty) => {
-		impl From<OnGameState<$ty>> for OnGameState {
-			fn from(value: OnGameState<$ty>) -> Self {
-				match value {
-					OnGameState::Enter(s) => OnGameState::Enter(s.into()),
-					OnGameState::Exit(s) => OnGameState::Exit(s.into()),
-				}
-			}
-		}
-	};
-}
-
-impl_on_game_state_conversions!(GameStateCommand, IngameUI);
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, EnumConversions)]
-pub enum GameState {
-	Command(GameStateCommand),
-	IngameUI(IngameUI),
-}
-
-impl IterFinite for GameState {
-	fn iterator() -> FiniteIter<Self> {
-		FiniteIter(first(GameState::Command))
-	}
-
-	fn next(current: &FiniteIter<Self>) -> Option<Self> {
-		use GameState::*;
-
-		match current.0? {
-			Command(command) => next(Command, command).or(first(IngameUI)),
-			IngameUI(ingame_ui) => next(IngameUI, ingame_ui),
-		}
-	}
-}
-
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum GameStateCommand {
+pub enum GameState {
 	StartScreen,
 	NewGame,
 	Play,
@@ -259,7 +165,17 @@ pub enum GameStateCommand {
 	Load,
 }
 
-impl IterFinite for GameStateCommand {
+impl GameState {
+	pub const fn extended_base<T>(game_state: GameState) -> GameStateExtended<T> {
+		GameStateExtended::Base(game_state)
+	}
+
+	pub const fn extended<T>(extended: T) -> GameStateExtended<T> {
+		GameStateExtended::Extended(extended)
+	}
+}
+
+impl IterFinite for GameState {
 	fn iterator() -> FiniteIter<Self> {
 		FiniteIter(Some(Self::StartScreen))
 	}
@@ -282,7 +198,7 @@ pub enum SaveGameExtension<T> {
 	LoadGame(T),
 }
 
-impl<T> From<SaveGameExtension<T>> for GameStateCommandExtended<SaveGameExtension<T>> {
+impl<T> From<SaveGameExtension<T>> for GameStateExtended<SaveGameExtension<T>> {
 	fn from(ext: SaveGameExtension<T>) -> Self {
 		Self::Extended(ext)
 	}
@@ -294,31 +210,31 @@ pub enum LoadAssetsExtension<T> {
 	Load(T),
 }
 
-impl<T> From<LoadAssetsExtension<T>> for GameStateCommandExtended<LoadAssetsExtension<T>> {
+impl<T> From<LoadAssetsExtension<T>> for GameStateExtended<LoadAssetsExtension<T>> {
 	fn from(ext: LoadAssetsExtension<T>) -> Self {
 		Self::Extended(ext)
 	}
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub enum IngameUI {
+pub enum Gui {
 	Hud,
 	Inventory,
 	ComboOverview,
 	Settings,
 }
 
-impl IterFinite for IngameUI {
+impl IterFinite for Gui {
 	fn iterator() -> FiniteIter<Self> {
-		FiniteIter(Some(IngameUI::Hud))
+		FiniteIter(Some(Gui::Hud))
 	}
 
 	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
-			IngameUI::Hud => Some(IngameUI::Inventory),
-			IngameUI::Inventory => Some(IngameUI::ComboOverview),
-			IngameUI::ComboOverview => Some(IngameUI::Settings),
-			IngameUI::Settings => None,
+			Gui::Hud => Some(Gui::Inventory),
+			Gui::Inventory => Some(Gui::ComboOverview),
+			Gui::ComboOverview => Some(Gui::Settings),
+			Gui::Settings => None,
 		}
 	}
 }
@@ -331,63 +247,30 @@ mod tests {
 	fn iter_game_states() {
 		assert_eq!(
 			vec![
-				GameState::Command(GameStateCommand::StartScreen),
-				GameState::Command(GameStateCommand::NewGame),
-				GameState::Command(GameStateCommand::Play),
-				GameState::Command(GameStateCommand::Pause),
-				GameState::Command(GameStateCommand::Save),
-				GameState::Command(GameStateCommand::Load),
-				GameState::IngameUI(IngameUI::Hud),
-				GameState::IngameUI(IngameUI::Inventory),
-				GameState::IngameUI(IngameUI::ComboOverview),
-				GameState::IngameUI(IngameUI::Settings),
+				GameState::StartScreen,
+				GameState::NewGame,
+				GameState::Play,
+				GameState::Pause,
+				GameState::Save,
+				GameState::Load,
 			],
 			GameState::iterator().take(100).collect::<Vec<_>>()
 		);
 	}
 
 	#[test]
-	fn iter_ui_states() {
+	fn iter_ui() {
 		assert_eq!(
-			vec![
-				IngameUI::Hud,
-				IngameUI::Inventory,
-				IngameUI::ComboOverview,
-				IngameUI::Settings,
-			],
-			IngameUI::iterator().take(100).collect::<Vec<_>>()
+			vec![Gui::Hud, Gui::Inventory, Gui::ComboOverview, Gui::Settings,],
+			Gui::iterator().take(100).collect::<Vec<_>>()
 		);
 	}
 
 	#[test]
-	fn iter_game_state_collection() {
-		struct _GameStates {
-			command: Option<GameStateCommand>,
-			ui: HashSet<IngameUI>,
-		}
-
-		impl GameStates for &'_ _GameStates {
-			fn command(&self) -> Option<GameStateCommand> {
-				self.command
-			}
-
-			fn ui(&self) -> &'_ HashSet<IngameUI> {
-				&self.ui
-			}
-		}
-
-		let game_states = &_GameStates {
-			command: Some(GameStateCommand::Play),
-			ui: HashSet::from([IngameUI::Hud, IngameUI::Settings]),
-		};
-
+	fn iter_ui_states() {
 		assert_eq!(
-			HashSet::from([
-				GameState::Command(GameStateCommand::Play),
-				GameState::IngameUI(IngameUI::Hud),
-				GameState::IngameUI(IngameUI::Settings)
-			]),
-			game_states.iter().collect::<HashSet<_>>()
+			vec![Gui::Hud, Gui::Inventory, Gui::ComboOverview, Gui::Settings,],
+			Gui::iterator().take(100).collect::<Vec<_>>()
 		);
 	}
 }

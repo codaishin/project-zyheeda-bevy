@@ -26,10 +26,10 @@ use zyheeda_core::prelude::*;
 
 type SaveGameIO = SaveGameExtension<SaveFile>;
 
-const EXEC_SAVE: GameStateCommandExtended<SaveGameIO> =
-	GameStateCommandExtended::Extended(SaveGameExtension::SaveGame(SaveFile::Quick));
-const EXEC_LOAD: GameStateCommandExtended<SaveGameIO> =
-	GameStateCommandExtended::Extended(SaveGameExtension::LoadGame(SaveFile::Quick));
+const EXEC_SAVE: GameStateExtended<SaveGameIO> =
+	GameState::extended(SaveGameExtension::SaveGame(SaveFile::Quick));
+const EXEC_LOAD: GameStateExtended<SaveGameIO> =
+	GameState::extended(SaveGameExtension::LoadGame(SaveFile::Quick));
 
 pub struct SavegamePlugin<TDependencies> {
 	game_directory: PathBuf,
@@ -62,13 +62,13 @@ where
 {
 	fn add_transitions(
 		app: &mut App,
-	) -> Result<(), TransitionsConfigError<GameStateCommandExtended<SaveGameIO>>> {
+	) -> Result<(), TransitionsConfigError<GameStateExtended<SaveGameIO>>> {
 		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			GameStateCommandExtended::Command(GameStateCommand::Save),
+			GameStateExtended::Base(GameState::Save),
 			always,
 			hash_map! {
-				() => ActivityTransition::To(EXEC_SAVE),
+				() => TransitionState::To(EXEC_SAVE),
 			},
 		)?;
 		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
@@ -76,16 +76,16 @@ where
 			EXEC_SAVE,
 			always,
 			hash_map! {
-				() => ActivityTransition::ToPreviousOf(GameStateCommandExtended::from(GameStateCommand::Save)),
+				() => TransitionState::ToPreviousOf(GameStateExtended::from(GameState::Save)),
 			},
 		)?;
 		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			GameStateCommandExtended::Command(GameStateCommand::Load),
+			GameStateExtended::Base(GameState::Load),
 			Self::can_quick_load().pipe(|In(r)| Some(r)),
 			hash_map! {
-				true => ActivityTransition::To(EXEC_LOAD),
-				false => ActivityTransition::ToPrevious,
+				true => TransitionState::To(EXEC_LOAD),
+				false => TransitionState::ToPrevious,
 			},
 		)?;
 		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
@@ -93,7 +93,7 @@ where
 			EXEC_LOAD,
 			always,
 			hash_map! {
-				() => ActivityTransition::To(GameStateCommandExtended::from(GameStateCommand::Play)),
+				() => TransitionState::To(GameStateExtended::from(GameState::Play)),
 			},
 		)?;
 
@@ -124,7 +124,7 @@ where
 
 		TGameStates::TExtended::<SaveGameIO>::add_game_state_systems(
 			app,
-			OnGameState::Enter(EXEC_SAVE),
+			OnStateTransition::Enter(EXEC_SAVE),
 			(
 				SaveContext::write_buffer_system(quick_save.clone()).pipe(OnError::log),
 				SaveContext::write_file_system(quick_save.clone()).pipe(OnError::log),
@@ -135,7 +135,7 @@ where
 
 		TGameStates::TExtended::<SaveGameIO>::add_game_state_systems(
 			app,
-			OnGameState::Enter(EXEC_LOAD),
+			OnStateTransition::Enter(EXEC_LOAD),
 			(
 				PersistentEntity::despawn_all,
 				SaveContext::read_file_system(quick_save.clone()).pipe(OnError::log),
@@ -222,7 +222,7 @@ where
 	fn on_before_save<M>(app: &mut App, systems: impl IntoScheduleConfigs<ScheduleSystem, M>) {
 		TGameStates::TExtended::<SaveGameIO>::add_game_state_systems(
 			app,
-			OnGameState::Enter(EXEC_SAVE),
+			OnStateTransition::Enter(EXEC_SAVE),
 			systems.before(ExecuteSave),
 		);
 	}
@@ -248,13 +248,13 @@ mod tests {
 			T: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy;
 	}
 
-	impl<T> AddActivityTransitions<GameStateCommandExtended<T>> for _Extended<T> {
+	impl<T> AddActivityTransitions<GameStateExtended<T>> for _Extended<T> {
 		fn add_activity_transitions<TResult, M>(
 			_: &mut App,
-			_: impl Into<Option<GameStateCommandExtended<T>>>,
+			_: impl Into<Option<GameStateExtended<T>>>,
 			_: impl IntoSystem<(), Option<TResult>, M>,
-			_: impl Into<HashMap<TResult, ActivityTransition<GameStateCommandExtended<T>>>>,
-		) -> Result<(), TransitionsConfigError<GameStateCommandExtended<T>>>
+			_: impl Into<HashMap<TResult, TransitionState<GameStateExtended<T>>>>,
+		) -> Result<(), TransitionsConfigError<GameStateExtended<T>>>
 		where
 			TResult: PartialEq + Eq + Hash + ThreadSafe,
 		{
@@ -262,19 +262,19 @@ mod tests {
 		}
 	}
 
-	impl<T> AddGameStateSystem<GameStateCommandExtended<T>> for _Extended<T> {
+	impl<T> AddGameStateSystem<GameStateExtended<T>> for _Extended<T> {
 		fn add_game_state_systems<M>(
 			_: &mut App,
-			_: OnGameState<GameStateCommandExtended<T>>,
+			_: OnStateTransition<GameStateExtended<T>>,
 			_: impl IntoScheduleConfigs<ScheduleSystem, M>,
 		) {
 			panic!("NOT USED")
 		}
 	}
 
-	impl<T> InGameState<GameStateCommandExtended<T>> for _Extended<T> {
+	impl<T> InGameState<GameStateExtended<T>> for _Extended<T> {
 		fn in_game_state<const N: usize>(
-			_: [GameStateCommandExtended<T>; N],
+			_: [GameStateExtended<T>; N],
 		) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
 			IntoSystem::into_system(|| panic!("NOT USED"))
 		}

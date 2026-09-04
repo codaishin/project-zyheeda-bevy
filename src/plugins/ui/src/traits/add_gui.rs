@@ -3,44 +3,49 @@ use crate::systems::{despawn::despawn, spawn::spawn, update_children::update_chi
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::prelude::*;
 
-pub(crate) trait AddUI {
-	fn add_ui<TComponent, TLocalizationServer, TUICamera, TGameStates>(
+pub(crate) trait AddGui<TState> {
+	fn add_gui<TComponent, TLocalizationServer, TUICamera, TGameStates>(
 		&mut self,
-		state: impl Into<GameState>,
+		state: TState,
 	) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
 		TLocalizationServer: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 		TUICamera: for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi>,
-		TGameStates: AddGameStateSystem;
+		TGameStates: AddGameStateSystem<TState>;
 }
 
-impl AddUI for App {
-	fn add_ui<TComponent, TLocalizationServer, TUICamera, TGameStates>(
+impl<TState> AddGui<TState> for App
+where
+	TState: Copy,
+{
+	fn add_gui<TComponent, TLocalizationServer, TUICamera, TGameStates>(
 		&mut self,
-		state: impl Into<GameState>,
+		state: TState,
 	) -> &mut Self
 	where
 		TComponent: Component + LoadUi<AssetServer> + InsertUiContent,
 		TLocalizationServer: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 		TUICamera: for<'c> GetContextMut<CameraHandle, TContext<'c>: RenderUi>,
-		TGameStates: AddGameStateSystem,
+		TGameStates: AddGameStateSystem<TState>,
 	{
-		let state = state.into();
-
 		TGameStates::add_game_state_systems(
 			self,
-			OnGameState::Enter(state),
+			OnStateTransition::Enter(state),
 			spawn::<TComponent, AssetServer, TUICamera>,
 		);
-		TGameStates::add_game_state_systems(self, OnGameState::Exit(state), despawn::<TComponent>);
+		TGameStates::add_game_state_systems(
+			self,
+			OnStateTransition::Exit(state),
+			despawn::<TComponent>,
+		);
 
 		self.add_systems(Update, update_children::<TComponent, TLocalizationServer>)
 	}
 }
 
-pub(crate) trait AddLoadUI {
-	fn add_load_ui<TComponent, TLocalizationServer, TUICamera, TLoading>(
+pub(crate) trait AddLoadGui {
+	fn add_load_gui<TComponent, TLocalizationServer, TUICamera, TLoading>(
 		&mut self,
 		load_group: impl LoadGroup<TLoading::TLoadAssetState>,
 	) -> &mut Self
@@ -51,8 +56,8 @@ pub(crate) trait AddLoadUI {
 		TLoading: HandlesLoadTracking;
 }
 
-impl AddLoadUI for App {
-	fn add_load_ui<TComponent, TLocalizationServer, TUICamera, TLoading>(
+impl AddLoadGui for App {
+	fn add_load_gui<TComponent, TLocalizationServer, TUICamera, TLoading>(
 		&mut self,
 		load_group: impl LoadGroup<TLoading::TLoadAssetState>,
 	) -> &mut Self
@@ -64,10 +69,14 @@ impl AddLoadUI for App {
 	{
 		TLoading::add_loading_systems(
 			self,
-			OnGameState::Enter(load_group),
+			OnStateTransition::Enter(load_group),
 			spawn::<TComponent, AssetServer, TUICamera>,
 		);
-		TLoading::add_loading_systems(self, OnGameState::Exit(load_group), despawn::<TComponent>);
+		TLoading::add_loading_systems(
+			self,
+			OnStateTransition::Exit(load_group),
+			despawn::<TComponent>,
+		);
 
 		self.add_systems(Update, update_children::<TComponent, TLocalizationServer>)
 	}

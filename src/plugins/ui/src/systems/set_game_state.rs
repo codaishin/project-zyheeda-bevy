@@ -5,8 +5,8 @@ use bevy::{
 use common::prelude::*;
 use std::collections::HashMap;
 
-pub(crate) fn set_activity<TGameStatesMut, TInput>(
-	key_map: HashMap<ActionKey, GameStateCommand>,
+pub(crate) fn set_game_state<TGameStatesMut, TInput>(
+	key_map: HashMap<ActionKey, GameState>,
 ) -> impl IntoSystem<(), (), ()>
 where
 	TGameStatesMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>,
@@ -69,7 +69,7 @@ mod tests {
 
 	#[derive(Resource, Debug, PartialEq)]
 	struct _GameStates {
-		activity: GameStateCommand,
+		activity: GameState,
 	}
 
 	impl GameStatesMut for _GameStates {
@@ -78,21 +78,21 @@ mod tests {
 		where
 			Self: 'a;
 
-		fn get_game_state_setter(&mut self, activity: GameStateCommand) -> Option<_Setter<'_>> {
+		fn get_game_state_setter(&mut self, activity: GameState) -> Option<_Setter<'_>> {
 			Some(_Setter {
 				new: activity,
 				current: &mut self.activity,
 			})
 		}
 
-		fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
+		fn gui_mut(&mut self) -> &'_ mut HashSet<Gui> {
 			panic!("SHOULD NOT BE USED")
 		}
 	}
 
 	struct _Setter<'a> {
-		new: GameStateCommand,
-		current: &'a mut GameStateCommand,
+		new: GameState,
+		current: &'a mut GameState,
 	}
 
 	impl SetGameState for _Setter<'_> {
@@ -101,18 +101,14 @@ mod tests {
 		}
 	}
 
-	fn setup(
-		input: _Input,
-		game_states: _GameStates,
-		keys: HashMap<ActionKey, GameStateCommand>,
-	) -> App {
+	fn setup(input: _Input, game_states: _GameStates, keys: HashMap<ActionKey, GameState>) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(input);
 		app.insert_resource(game_states);
 		app.add_systems(
 			Update,
-			set_activity::<ResMut<_GameStates>, Res<_Input>>(keys),
+			set_game_state::<ResMut<_GameStates>, Res<_Input>>(keys),
 		);
 
 		app
@@ -129,10 +125,10 @@ mod tests {
 			});
 		});
 		let game_states = _GameStates {
-			activity: GameStateCommand::NewGame,
+			activity: GameState::NewGame,
 		};
 		let keys = hash_map! {
-			ActionKey::Slot(HandSlot::Left) => GameStateCommand::Play,
+			ActionKey::Slot(HandSlot::Left) => GameState::Play,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -140,7 +136,7 @@ mod tests {
 
 		assert_eq!(
 			&_GameStates {
-				activity: GameStateCommand::Play
+				activity: GameState::Play
 			},
 			app.world().resource::<_GameStates>()
 		);
@@ -157,10 +153,10 @@ mod tests {
 			});
 		});
 		let game_states = _GameStates {
-			activity: GameStateCommand::NewGame,
+			activity: GameState::NewGame,
 		};
 		let keys = hash_map! {
-			ActionKey::Slot(HandSlot::Left) => GameStateCommand::Play,
+			ActionKey::Slot(HandSlot::Left) => GameState::Play,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -168,7 +164,7 @@ mod tests {
 
 		assert_eq!(
 			&_GameStates {
-				activity: GameStateCommand::NewGame
+				activity: GameState::NewGame
 			},
 			app.world().resource::<_GameStates>()
 		);

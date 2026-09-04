@@ -1,2 +1,2 @@
-pub(crate) mod command_state;
-pub(crate) mod ui;
+pub(crate) mod gui;
+pub(crate) mod state_internal;

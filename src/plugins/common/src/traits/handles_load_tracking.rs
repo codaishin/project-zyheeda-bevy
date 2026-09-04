@@ -1,5 +1,5 @@
 use super::thread_safe::ThreadSafe;
-use crate::traits::handles_game_states::{GameStateCommand, LoadAssetsExtension, OnGameState};
+use crate::traits::handles_game_states::{GameState, LoadAssetsExtension, OnStateTransition};
 use bevy::{
 	app::AppLabel,
 	ecs::{schedule::ScheduleLabel, system::ScheduleSystem},
@@ -28,7 +28,7 @@ pub trait HandlesLoadTracking {
 
 	fn add_loading_systems<M>(
 		app: &mut App,
-		on_transition: OnGameState<impl LoadGroup<Self::TLoadAssetState>>,
+		on_transition: OnStateTransition<impl LoadGroup<Self::TLoadAssetState>>,
 		systems: impl IntoScheduleConfigs<ScheduleSystem, M>,
 	);
 }
@@ -36,7 +36,7 @@ pub trait HandlesLoadTracking {
 pub trait LoadGroup<TLoadAssetState>: internal::LoadGroup + ThreadSafe + Clone + Copy {
 	fn load_state(&self, load_state: TLoadAssetState) -> LoadAssetsExtension<TLoadAssetState>;
 
-	fn load_state_done(&self) -> GameStateCommand;
+	fn load_state_done(&self) -> GameState;
 }
 
 pub trait RunAfterLoadedInApp {
@@ -116,8 +116,8 @@ impl<TLoadSteps> LoadGroup<TLoadSteps> for LoadingEssentialAssets {
 		LoadAssetsExtension::LoadEssentials(load_steps)
 	}
 
-	fn load_state_done(&self) -> GameStateCommand {
-		GameStateCommand::StartScreen
+	fn load_state_done(&self) -> GameState {
+		GameState::StartScreen
 	}
 }
 
@@ -129,8 +129,8 @@ impl<TLoadSteps> LoadGroup<TLoadSteps> for LoadingGame {
 		LoadAssetsExtension::Load(load_steps)
 	}
 
-	fn load_state_done(&self) -> GameStateCommand {
-		GameStateCommand::Play
+	fn load_state_done(&self) -> GameState {
+		GameState::Play
 	}
 }
 

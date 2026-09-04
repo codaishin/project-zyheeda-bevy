@@ -50,11 +50,11 @@ mod tests {
 
 	#[derive(Component)]
 	struct _Component {
-		trigger: GameStateCommand,
+		trigger: GameState,
 	}
 
 	impl TriggerState for _Component {
-		fn trigger_state(&self) -> GameStateCommand {
+		fn trigger_state(&self) -> GameState {
 			self.trigger
 		}
 	}
@@ -70,12 +70,12 @@ mod tests {
 
 	#[derive(Resource, Debug, PartialEq)]
 	struct _States {
-		activity: GameStateCommand,
-		ui: HashSet<IngameUI>,
+		activity: GameState,
+		ui: HashSet<Gui>,
 	}
 
 	impl _States {
-		fn from_activity(activity: GameStateCommand) -> Self {
+		fn from_activity(activity: GameState) -> Self {
 			Self {
 				activity,
 				ui: HashSet::default(),
@@ -89,21 +89,21 @@ mod tests {
 		where
 			Self: 'a;
 
-		fn get_game_state_setter(&mut self, activity: GameStateCommand) -> Option<_Setter<'_>> {
+		fn get_game_state_setter(&mut self, activity: GameState) -> Option<_Setter<'_>> {
 			Some(_Setter {
 				new: activity,
 				current: &mut self.activity,
 			})
 		}
 
-		fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
+		fn gui_mut(&mut self) -> &'_ mut HashSet<Gui> {
 			&mut self.ui
 		}
 	}
 
 	struct _Setter<'a> {
-		new: GameStateCommand,
-		current: &'a mut GameStateCommand,
+		new: GameState,
+		current: &'a mut GameState,
 	}
 
 	impl SetGameState for _Setter<'_> {
@@ -112,7 +112,7 @@ mod tests {
 		}
 	}
 
-	fn setup(current: GameStateCommand) -> App {
+	fn setup(current: GameState) -> App {
 		let mut app = App::new();
 
 		app.insert_resource(_States::from_activity(current));
@@ -122,10 +122,10 @@ mod tests {
 
 	#[test]
 	fn trigger_when_released() -> Result<(), RunSystemError> {
-		let mut app = setup(GameStateCommand::Pause);
+		let mut app = setup(GameState::Pause);
 		app.world_mut().spawn((
 			_Component {
-				trigger: GameStateCommand::Play,
+				trigger: GameState::Play,
 			},
 			_Released(true),
 		));
@@ -134,7 +134,7 @@ mod tests {
 			.run_system_once(trigger_on_release::<ResMut<_States>, _Component, _Released>)?;
 
 		assert_eq!(
-			&_States::from_activity(GameStateCommand::Play),
+			&_States::from_activity(GameState::Play),
 			app.world().resource::<_States>()
 		);
 		Ok(())
@@ -142,10 +142,10 @@ mod tests {
 
 	#[test]
 	fn do_not_trigger_when_not_released() -> Result<(), RunSystemError> {
-		let mut app = setup(GameStateCommand::Pause);
+		let mut app = setup(GameState::Pause);
 		app.world_mut().spawn((
 			_Component {
-				trigger: GameStateCommand::Play,
+				trigger: GameState::Play,
 			},
 			_Released(false),
 		));
@@ -154,7 +154,7 @@ mod tests {
 			.run_system_once(trigger_on_release::<ResMut<_States>, _Component, _Released>)?;
 
 		assert_eq!(
-			&_States::from_activity(GameStateCommand::Pause),
+			&_States::from_activity(GameState::Pause),
 			app.world().resource::<_States>()
 		);
 		Ok(())

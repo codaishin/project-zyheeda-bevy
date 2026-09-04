@@ -32,11 +32,11 @@ use crate::{
 	},
 	systems::{
 		combos::update_combos_view::UpdateComboOverview,
-		set_activity::set_activity,
-		start_menu_button::set_activity::UIActivity,
+		set_game_state::set_game_state,
+		start_menu_button::set_game_state::GUIActivity,
 		toggle_ui::toggle_ui,
 	},
-	traits::add_ui::AddLoadUI,
+	traits::add_gui::AddLoadGui,
 	visualization::unusable::Unusable,
 };
 use bevy::prelude::*;
@@ -78,7 +78,7 @@ use systems::{
 	trigger_on_release::TriggerOnRelease,
 	update_panels::colors::panel_colors,
 };
-use traits::{LoadUi, add_dropdown::AddDropdown, add_tooltip::AddTooltip, add_ui::AddUI};
+use traits::{LoadUi, add_dropdown::AddDropdown, add_gui::AddGui, add_tooltip::AddTooltip};
 use zyheeda_core::hash_map;
 
 pub struct UIPlugin<TDependencies>(PhantomData<TDependencies>);
@@ -153,18 +153,19 @@ where
 
 	fn state_control(&self, app: &mut App) {
 		let changeable = in_state(MenusChangeable(true));
-		let in_game = TGameStates::in_game_state([GameStateCommand::Play, GameStateCommand::Pause]);
+		let in_game = TGameStates::in_game_state([GameState::Play, GameState::Pause]);
 		let changeable_and_in_game = changeable.and_then(in_game);
 
-		let set_activity = set_activity::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
-			ActionKey::Miscellaneous(Miscellaneous::Paused) => GameStateCommand::Pause,
-			ActionKey::Save(SaveKey::QuickLoad) => GameStateCommand::Load,
-			ActionKey::Save(SaveKey::QuickSave) => GameStateCommand::Save,
-		});
+		let set_game_state =
+			set_game_state::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
+				ActionKey::Miscellaneous(Miscellaneous::Paused) => GameState::Pause,
+				ActionKey::Save(SaveKey::QuickLoad) => GameState::Load,
+				ActionKey::Save(SaveKey::QuickSave) => GameState::Save,
+			});
 		let toggle_ui = toggle_ui::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
-			MenuKey::ComboOverview => IngameUI::ComboOverview,
-			MenuKey::Inventory => IngameUI::Inventory,
-			MenuKey::Settings => IngameUI::Settings,
+			MenuKey::ComboOverview => Gui::ComboOverview,
+			MenuKey::Inventory => Gui::Inventory,
+			MenuKey::Settings => Gui::Settings,
 		});
 
 		app.insert_state(MenusChangeable(true));
@@ -172,7 +173,7 @@ where
 			Update,
 			(
 				PreventMenuChange::menus_unchangeable_when_present,
-				(set_activity, toggle_ui).run_if(changeable_and_in_game),
+				(set_game_state, toggle_ui).run_if(changeable_and_in_game),
 			)
 				.chain(),
 		);
@@ -183,23 +184,23 @@ where
 		TLoadGroup: LoadGroup<TLoading::TLoadAssetState>,
 	{
 		app
-			.add_load_ui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TLoading>(
+			.add_load_gui::<LoadingScreen<AssetsProgress>, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TLoading>(
 				load_group
 			);
 	}
 
 	fn start_menu(&self, app: &mut App) {
-		let start_menu = GameStateCommand::StartScreen;
-		let load = GameStateCommand::Load;
+		let start_menu = GameState::StartScreen;
+		let load = GameState::Load;
 		let enable_or_disable_quick_load_button = TSavegame::can_quick_load()
 			.pipe(|In(can_quick_load)| match can_quick_load {
-				true => UIActivity::Enable,
-				false => UIActivity::Disable,
+				true => GUIActivity::Enable,
+				false => GUIActivity::Disable,
 			})
-			.pipe(StartMenuButton::set_activity(load));
+			.pipe(StartMenuButton::set_game_state(load));
 
 		app.add_prefab_observer::<StartMenuButton, ()>()
-			.add_ui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
+			.add_gui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 				start_menu,
 			)
 			.add_systems(
@@ -216,17 +217,17 @@ where
 	}
 
 	fn pause_menu(&self, app: &mut App) {
-		app.add_ui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
-			GameStateCommand::Pause,
+		app.add_gui::<PauseMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
+			GameState::Pause,
 		);
 	}
 
 	fn ui_overlay(&self, app: &mut App) {
-		let hud = IngameUI::Hud;
+		let hud = Gui::Hud;
 
-		TGameStates::set_to_not_pause(app, IngameUI::Hud);
+		TGameStates::set_to_not_pause(app, Gui::Hud);
 
-		app.add_ui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(hud)
+		app.add_gui::<UIOverlay, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(hud)
 			.add_observer(QuickbarPanel::add_input_control::<TInput::TActionKeyButton>)
 			.add_systems(
 				Update,
@@ -248,9 +249,9 @@ where
 		type HorizontalItem<TId> = ComboSkillButton<DropdownItem<Horizontal>, TId>;
 		type Trigger<TId> = ComboSkillButton<DropdownTrigger, TId>;
 
-		let combo_overview = IngameUI::ComboOverview;
+		let combo_overview = Gui::ComboOverview;
 
-		app.add_ui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
+		app.add_gui::<ComboOverview<TLoadout::TSkillID>, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 			combo_overview,
 		);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
@@ -302,9 +303,9 @@ where
 	}
 
 	fn inventory_screen(&self, app: &mut App) {
-		let inventory = IngameUI::Inventory;
+		let inventory = Gui::Inventory;
 
-		app.add_ui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
+		app.add_gui::<InventoryScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 			inventory,
 		)
 		.add_systems(
@@ -325,11 +326,11 @@ where
 		type KeyBindInput = KeyBind<Input<ActionKey>>;
 		type KeyRebindInput = KeyBind<Rebinding<ActionKey>>;
 
-		let settings = IngameUI::Settings;
+		let settings = Gui::Settings;
 
 		app.register_required_components::<KeyBindInput, Interaction>()
 			.register_required_components::<KeyRebindInput, PreventMenuChange>()
-			.add_ui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
+			.add_gui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 				settings,
 			)
 			.add_systems(

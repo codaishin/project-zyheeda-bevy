@@ -12,7 +12,7 @@ pub trait HandlesCustomAssets {
 }
 
 pub trait HandlesCustomFolderAssets {
-	type TLoadAssetState: Default;
+	type TLoadAssetState;
 
 	fn register_custom_folder_assets<TAsset, TDto>(
 		app: &mut App,

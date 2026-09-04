@@ -6,7 +6,7 @@ use common::prelude::*;
 use std::collections::HashMap;
 
 pub(crate) fn toggle_ui<TGameStatesMut, TInput>(
-	keys: HashMap<MenuKey, IngameUI>,
+	keys: HashMap<MenuKey, Gui>,
 ) -> impl IntoSystem<(), (), ()>
 where
 	TGameStatesMut: ThreadSafe + for<'w, 's> SystemParam<Item<'w, 's>: GameStatesMut>,
@@ -14,23 +14,23 @@ where
 {
 	let system = move |mut game_states: StaticSystemParam<TGameStatesMut>,
 	                   input: StaticSystemParam<TInput>| {
-		let ui = game_states.ui_mut();
+		let gui = game_states.gui_mut();
 		let ingame_ui = input
 			.get_all_input_states()
 			.filter_map(just_pressed_menu)
 			.find_map(|a| keys.get(&a));
 
 		match ingame_ui {
-			Some(ingame_ui) if ui.contains(ingame_ui) => {
-				ui.clear();
-				ui.insert(IngameUI::Hud);
+			Some(ingame_ui) if gui.contains(ingame_ui) => {
+				gui.clear();
+				gui.insert(Gui::Hud);
 			}
 			Some(ingame_ui) => {
-				ui.clear();
-				ui.insert(*ingame_ui);
+				gui.clear();
+				gui.insert(*ingame_ui);
 			}
-			None if ui.is_empty() => {
-				ui.insert(IngameUI::Hud);
+			None if gui.is_empty() => {
+				gui.insert(Gui::Hud);
 			}
 			None => {}
 		}
@@ -72,7 +72,7 @@ mod tests {
 
 	#[derive(Resource, Debug, PartialEq, Default)]
 	struct _GameStates {
-		ui: HashSet<IngameUI>,
+		ui: HashSet<Gui>,
 	}
 
 	impl GameStatesMut for _GameStates {
@@ -81,11 +81,11 @@ mod tests {
 		where
 			Self: 'a;
 
-		fn get_game_state_setter(&mut self, _: GameStateCommand) -> Option<_Setter> {
+		fn get_game_state_setter(&mut self, _: GameState) -> Option<_Setter> {
 			panic!("SHOULD NOT BE USED");
 		}
 
-		fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
+		fn gui_mut(&mut self) -> &'_ mut HashSet<Gui> {
 			&mut self.ui
 		}
 	}
@@ -96,7 +96,7 @@ mod tests {
 		fn set_game_state(self) {}
 	}
 
-	fn setup(input: _Input, game_states: _GameStates, keys: HashMap<MenuKey, IngameUI>) -> App {
+	fn setup(input: _Input, game_states: _GameStates, keys: HashMap<MenuKey, Gui>) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(input);
@@ -118,7 +118,7 @@ mod tests {
 		});
 		let game_states = _GameStates::default();
 		let keys = hash_map! {
-			MenuKey::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => Gui::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -126,7 +126,7 @@ mod tests {
 
 		assert_eq!(
 			&_GameStates {
-				ui: HashSet::from([IngameUI::Inventory])
+				ui: HashSet::from([Gui::Inventory])
 			},
 			app.world().resource::<_GameStates>(),
 		);
@@ -143,10 +143,10 @@ mod tests {
 			});
 		});
 		let game_states = _GameStates {
-			ui: HashSet::from([IngameUI::Inventory]),
+			ui: HashSet::from([Gui::Inventory]),
 		};
 		let keys = hash_map! {
-			MenuKey::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => Gui::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -154,7 +154,7 @@ mod tests {
 
 		assert_eq!(
 			&_GameStates {
-				ui: HashSet::from([IngameUI::Hud])
+				ui: HashSet::from([Gui::Hud])
 			},
 			app.world().resource::<_GameStates>(),
 		);
@@ -171,10 +171,10 @@ mod tests {
 			});
 		});
 		let game_states = _GameStates {
-			ui: HashSet::from([IngameUI::Settings, IngameUI::ComboOverview, IngameUI::Hud]),
+			ui: HashSet::from([Gui::Settings, Gui::ComboOverview, Gui::Hud]),
 		};
 		let keys = hash_map! {
-			MenuKey::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => Gui::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -182,7 +182,7 @@ mod tests {
 
 		assert_eq!(
 			&_GameStates {
-				ui: HashSet::from([IngameUI::Inventory])
+				ui: HashSet::from([Gui::Inventory])
 			},
 			app.world().resource::<_GameStates>(),
 		);
@@ -199,10 +199,10 @@ mod tests {
 			});
 		});
 		let game_states = _GameStates {
-			ui: HashSet::from([IngameUI::Inventory]),
+			ui: HashSet::from([Gui::Inventory]),
 		};
 		let keys = hash_map! {
-			MenuKey::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => Gui::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -210,7 +210,7 @@ mod tests {
 
 		assert_eq!(
 			&_GameStates {
-				ui: HashSet::from([IngameUI::Inventory])
+				ui: HashSet::from([Gui::Inventory])
 			},
 			app.world().resource::<_GameStates>(),
 		);
@@ -230,7 +230,7 @@ mod tests {
 			ui: HashSet::from([]),
 		};
 		let keys = hash_map! {
-			MenuKey::Inventory => IngameUI::Inventory,
+			MenuKey::Inventory => Gui::Inventory,
 		};
 		let mut app = setup(input, game_states, keys);
 
@@ -238,7 +238,7 @@ mod tests {
 
 		assert_eq!(
 			&_GameStates {
-				ui: HashSet::from([IngameUI::Hud])
+				ui: HashSet::from([Gui::Hud])
 			},
 			app.world().resource::<_GameStates>(),
 		);
