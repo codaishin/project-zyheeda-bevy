@@ -273,12 +273,9 @@ mod tests {
 	}
 
 	impl<T> InGameState<GameStateCommandExtended<T>> for _Extended<T> {
-		fn in_game_state<const N: usize, U>(
-			_: [U; N],
-		) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
-		where
-			U: Into<GameStateCommandExtended<T>>,
-		{
+		fn in_game_state<const N: usize>(
+			_: [GameStateCommandExtended<T>; N],
+		) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
 			IntoSystem::into_system(|| panic!("NOT USED"))
 		}
 	}

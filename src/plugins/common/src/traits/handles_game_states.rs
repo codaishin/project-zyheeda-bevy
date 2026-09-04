@@ -6,7 +6,7 @@ use crate::{
 	},
 };
 use bevy::{
-	ecs::system::{ReadOnlySystemParam, ScheduleSystem, StaticSystemParam, SystemParam},
+	ecs::system::{ScheduleSystem, SystemParam},
 	prelude::*,
 };
 use macros::EnumConversions;
@@ -18,7 +18,8 @@ use std::{
 };
 
 pub trait HandlesGameStates:
-	GameStatesRead
+	InGameState<GameStateCommand>
+	+ InGameState<IngameUI>
 	+ GameStatesWrite
 	+ AddGameStateSystem
 	+ AddActivityTransitions
@@ -26,10 +27,6 @@ pub trait HandlesGameStates:
 	+ SetToNotPause
 	+ GamePaused
 {
-}
-
-pub trait GameStatesRead {
-	type TGameStates: ThreadSafe + for<'w, 's> ReadOnlySystemParam<Item<'w, 's>: GameStates>;
 }
 
 pub trait GameStatesWrite {
@@ -74,33 +71,10 @@ pub enum GameStateCommandExtended<T> {
 	Extended(T),
 }
 
-pub trait InGameState<TState = GameState> {
-	fn in_game_state<const N: usize, T>(
-		game_states: [T; N],
-	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
-	where
-		T: Into<TState>;
-}
-
-impl<TPlugin> InGameState for TPlugin
-where
-	TPlugin: GameStatesRead,
-{
-	fn in_game_state<const N: usize, T>(
-		game_states: [T; N],
-	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
-	where
-		T: Into<GameState>,
-	{
-		let game_states = game_states.map(|s| s.into());
-
-		IntoSystem::into_system(move |states: StaticSystemParam<TPlugin::TGameStates>| {
-			game_states.iter().any(|game_state| match game_state {
-				GameState::Command(command) => states.command().as_ref() == Some(command),
-				GameState::IngameUI(ui) => states.ui().contains(ui),
-			})
-		})
-	}
+pub trait InGameState<TState> {
+	fn in_game_state<const N: usize>(
+		game_states: [TState; N],
+	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>;
 }
 
 pub trait GamePaused {
@@ -353,178 +327,67 @@ impl IterFinite for IngameUI {
 mod tests {
 	use super::*;
 
-	mod enum_variants {
-		use super::*;
-
-		#[test]
-		fn iter_game_states() {
-			assert_eq!(
-				vec![
-					GameState::Command(GameStateCommand::StartScreen),
-					GameState::Command(GameStateCommand::NewGame),
-					GameState::Command(GameStateCommand::Play),
-					GameState::Command(GameStateCommand::Pause),
-					GameState::Command(GameStateCommand::Save),
-					GameState::Command(GameStateCommand::Load),
-					GameState::IngameUI(IngameUI::Hud),
-					GameState::IngameUI(IngameUI::Inventory),
-					GameState::IngameUI(IngameUI::ComboOverview),
-					GameState::IngameUI(IngameUI::Settings),
-				],
-				GameState::iterator().take(100).collect::<Vec<_>>()
-			);
-		}
-
-		#[test]
-		fn iter_ui_states() {
-			assert_eq!(
-				vec![
-					IngameUI::Hud,
-					IngameUI::Inventory,
-					IngameUI::ComboOverview,
-					IngameUI::Settings,
-				],
-				IngameUI::iterator().take(100).collect::<Vec<_>>()
-			);
-		}
-
-		#[test]
-		fn iter_game_state_collection() {
-			struct _GameStates {
-				command: Option<GameStateCommand>,
-				ui: HashSet<IngameUI>,
-			}
-
-			impl GameStates for &'_ _GameStates {
-				fn command(&self) -> Option<GameStateCommand> {
-					self.command
-				}
-
-				fn ui(&self) -> &'_ HashSet<IngameUI> {
-					&self.ui
-				}
-			}
-
-			let game_states = &_GameStates {
-				command: Some(GameStateCommand::Play),
-				ui: HashSet::from([IngameUI::Hud, IngameUI::Settings]),
-			};
-
-			assert_eq!(
-				HashSet::from([
-					GameState::Command(GameStateCommand::Play),
-					GameState::IngameUI(IngameUI::Hud),
-					GameState::IngameUI(IngameUI::Settings)
-				]),
-				game_states.iter().collect::<HashSet<_>>()
-			);
-		}
+	#[test]
+	fn iter_game_states() {
+		assert_eq!(
+			vec![
+				GameState::Command(GameStateCommand::StartScreen),
+				GameState::Command(GameStateCommand::NewGame),
+				GameState::Command(GameStateCommand::Play),
+				GameState::Command(GameStateCommand::Pause),
+				GameState::Command(GameStateCommand::Save),
+				GameState::Command(GameStateCommand::Load),
+				GameState::IngameUI(IngameUI::Hud),
+				GameState::IngameUI(IngameUI::Inventory),
+				GameState::IngameUI(IngameUI::ComboOverview),
+				GameState::IngameUI(IngameUI::Settings),
+			],
+			GameState::iterator().take(100).collect::<Vec<_>>()
+		);
 	}
 
-	mod helper_system {
-		use super::*;
-		use testing::SingleThreadedApp;
+	#[test]
+	fn iter_ui_states() {
+		assert_eq!(
+			vec![
+				IngameUI::Hud,
+				IngameUI::Inventory,
+				IngameUI::ComboOverview,
+				IngameUI::Settings,
+			],
+			IngameUI::iterator().take(100).collect::<Vec<_>>()
+		);
+	}
 
-		struct _Plugin;
-
-		impl GameStatesRead for _Plugin {
-			type TGameStates = _Param<'static>;
-		}
-
-		#[derive(Resource)]
-		struct _States {
+	#[test]
+	fn iter_game_state_collection() {
+		struct _GameStates {
 			command: Option<GameStateCommand>,
 			ui: HashSet<IngameUI>,
 		}
 
-		#[derive(SystemParam)]
-		struct _Param<'w> {
-			states: Res<'w, _States>,
-		}
-
-		impl GameStates for _Param<'_> {
+		impl GameStates for &'_ _GameStates {
 			fn command(&self) -> Option<GameStateCommand> {
-				self.states.command
+				self.command
 			}
 
 			fn ui(&self) -> &'_ HashSet<IngameUI> {
-				&self.states.ui
+				&self.ui
 			}
 		}
 
-		#[derive(Resource, Debug, PartialEq, Default)]
-		struct SystemRun(bool);
+		let game_states = &_GameStates {
+			command: Some(GameStateCommand::Play),
+			ui: HashSet::from([IngameUI::Hud, IngameUI::Settings]),
+		};
 
-		impl SystemRun {
-			fn check(run: ResMut<Self>) {
-				let Self(run) = run.into_inner();
-
-				*run = true;
-			}
-		}
-
-		fn setup<const N: usize>(command: GameStateCommand, ui: [IngameUI; N]) -> App {
-			let mut app = App::new().single_threaded(Update);
-
-			app.init_resource::<SystemRun>();
-			app.insert_resource(_States {
-				command: Some(command),
-				ui: HashSet::from(ui),
-			});
-
-			app
-		}
-
-		#[test]
-		fn run_active() {
-			let mut app = setup(GameStateCommand::Play, []);
-			app.add_systems(
-				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state([GameStateCommand::Play])),
-			);
-
-			app.update();
-
-			assert_eq!(&SystemRun(true), app.world().resource::<SystemRun>());
-		}
-
-		#[test]
-		fn do_not_run_if_not_active() {
-			let mut app = setup(GameStateCommand::Pause, []);
-			app.add_systems(
-				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state([GameStateCommand::Play])),
-			);
-
-			app.update();
-
-			assert_eq!(&SystemRun(false), app.world().resource::<SystemRun>());
-		}
-
-		#[test]
-		fn run_if_ui_active() {
-			let mut app = setup(GameStateCommand::Pause, [IngameUI::Hud]);
-			app.add_systems(
-				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state([IngameUI::Hud])),
-			);
-
-			app.update();
-
-			assert_eq!(&SystemRun(true), app.world().resource::<SystemRun>());
-		}
-
-		#[test]
-		fn do_not_run_ingame_ui_not_active() {
-			let mut app = setup(GameStateCommand::Pause, []);
-			app.add_systems(
-				Update,
-				SystemRun::check.run_if(_Plugin::in_game_state([IngameUI::Hud])),
-			);
-
-			app.update();
-
-			assert_eq!(&SystemRun(false), app.world().resource::<SystemRun>());
-		}
+		assert_eq!(
+			HashSet::from([
+				GameState::Command(GameStateCommand::Play),
+				GameState::IngameUI(IngameUI::Hud),
+				GameState::IngameUI(IngameUI::Settings)
+			]),
+			game_states.iter().collect::<HashSet<_>>()
+		);
 	}
 }

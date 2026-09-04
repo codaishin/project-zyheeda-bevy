@@ -198,8 +198,35 @@ impl SystemSetDefinition for GameStatesPlugin {
 
 impl HandlesGameStates for GameStatesPlugin {}
 
-impl GameStatesRead for GameStatesPlugin {
-	type TGameStates = GameStatesReadParam<'static>;
+impl InGameState<GameStateCommand> for GameStatesPlugin {
+	fn in_game_state<const N: usize>(
+		game_states: [GameStateCommand; N],
+	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
+		IntoSystem::into_system(move |state: Option<Res<State<CommandState>>>| {
+			let Some(state) = state else {
+				return false;
+			};
+
+			match state.get().try_into_active() {
+				Some(state) => game_states.contains(&state),
+				None => false,
+			}
+		})
+	}
+}
+
+impl InGameState<IngameUI> for GameStatesPlugin {
+	fn in_game_state<const N: usize>(
+		game_states: [IngameUI; N],
+	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
+		IntoSystem::into_system(move |ui: Option<UIStates>| {
+			let Some(ui) = ui else {
+				return false;
+			};
+
+			game_states.iter().any(|s| ui.is_on(s))
+		})
+	}
 }
 
 impl GameStatesWrite for GameStatesPlugin {
@@ -361,14 +388,9 @@ impl<TExtended> InGameState<GameStateCommandExtended<TExtended>>
 where
 	TExtended: ThreadSafe + Debug + PartialEq + Eq + Hash + Clone + Copy,
 {
-	fn in_game_state<const N: usize, T>(
-		game_states: [T; N],
-	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem>
-	where
-		T: Into<GameStateCommandExtended<TExtended>>,
-	{
-		let game_states = game_states.map(T::into);
-
+	fn in_game_state<const N: usize>(
+		game_states: [GameStateCommandExtended<TExtended>; N],
+	) -> impl IntoSystem<(), bool, (), System: ReadOnlySystem> {
 		IntoSystem::into_system(
 			move |state: Option<Res<State<CommandState<GameStateCommandExtended<TExtended>>>>>| {
 				let Some(state) = state else {
@@ -887,6 +909,135 @@ mod tests {
 				Some(StateEvent::Active(EXT_B)),
 				app.world().resource::<_State>().state
 			);
+			Ok(())
+		}
+	}
+
+	mod in_game_state {
+		use super::*;
+		use test_case::test_case;
+
+		fn setup() -> App {
+			let mut app = App::new().single_threaded(Update);
+
+			app.add_plugins(StatesPlugin);
+
+			app
+		}
+
+		#[test]
+		fn false_if_state_missing() -> Result<(), RunSystemError> {
+			let mut app = setup();
+
+			let in_state = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::in_game_state([GameStateCommand::NewGame]))?;
+
+			assert!(!in_state);
+			Ok(())
+		}
+
+		#[test]
+		fn true_if_state_present() -> Result<(), RunSystemError> {
+			let mut app = setup();
+			app.insert_state(CommandState::active(GameStateCommand::NewGame));
+
+			let in_state = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::in_game_state([GameStateCommand::NewGame]))?;
+
+			assert!(in_state);
+			Ok(())
+		}
+
+		#[test_case(CommandState::active(GameStateCommand::Play); "other state")]
+		#[test_case(CommandState::dirty(); "dirty")]
+		#[test_case(CommandState::none(); "none")]
+		fn false_if_state_does_no_match(state: CommandState) -> Result<(), RunSystemError> {
+			let mut app = setup();
+			app.insert_state(state);
+
+			let in_state = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::in_game_state([GameStateCommand::NewGame]))?;
+
+			assert!(!in_state);
+			Ok(())
+		}
+	}
+
+	mod use_ui_state {
+		use crate::system_params::ui_states::UIStatesMut;
+
+		use super::*;
+		use test_case::test_case;
+
+		fn setup() -> App {
+			let mut app = App::new().single_threaded(Update);
+
+			app.add_plugins(StatesPlugin);
+
+			app
+		}
+
+		#[test_case(IngameUI::Hud; "ui")]
+		#[test_case(IngameUI::Inventory; "inventory")]
+		#[test_case(IngameUI::ComboOverview; "combos")]
+		#[test_case(IngameUI::Settings; "settings")]
+		fn false_if_state_missing(ui: IngameUI) -> Result<(), RunSystemError> {
+			let mut app = setup();
+
+			let in_state = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::in_game_state([ui]))?;
+
+			assert!(!in_state);
+
+			Ok(())
+		}
+
+		#[test_case(IngameUI::Hud; "ui")]
+		#[test_case(IngameUI::Inventory; "inventory")]
+		#[test_case(IngameUI::ComboOverview; "combos")]
+		#[test_case(IngameUI::Settings; "settings")]
+		fn true_if_state_present(ui: IngameUI) -> Result<(), RunSystemError> {
+			let mut app = setup();
+			UIStates::init(&mut app);
+			app.world_mut().run_system_once(move |mut s: UIStatesMut| {
+				s.set_on(ui);
+			})?;
+			app.update();
+
+			let in_state = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::in_game_state([ui]))?;
+
+			assert!(in_state);
+
+			Ok(())
+		}
+
+		#[test_case(IngameUI::Hud, IngameUI::Inventory; "ui")]
+		#[test_case(IngameUI::Inventory, IngameUI::ComboOverview; "inventory")]
+		#[test_case(IngameUI::ComboOverview, IngameUI::Settings; "combos")]
+		#[test_case(IngameUI::Settings, IngameUI::Hud; "settings")]
+		fn false_if_state_does_no_match(
+			ui: IngameUI,
+			other: IngameUI,
+		) -> Result<(), RunSystemError> {
+			let mut app = setup();
+			UIStates::init(&mut app);
+			app.world_mut().run_system_once(move |mut s: UIStatesMut| {
+				s.set_on(ui);
+			})?;
+			app.update();
+
+			let in_state = app
+				.world_mut()
+				.run_system_once(GameStatesPlugin::in_game_state([other]))?;
+
+			assert!(!in_state);
+
 			Ok(())
 		}
 	}
