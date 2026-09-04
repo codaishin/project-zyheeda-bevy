@@ -7,11 +7,33 @@ use std::{
 use zyheeda_core::prelude::*;
 
 #[derive(Debug)]
-pub(crate) struct SerdeJsonError(pub(crate) serde_json::Error);
+pub(crate) struct SerdeJsonError {
+	pub(crate) error: serde_json::Error,
+	pub(crate) location_relative: bool,
+}
+
+impl SerdeJsonError {
+	pub(crate) fn from_root(error: serde_json::Error) -> Self {
+		Self {
+			error,
+			location_relative: false,
+		}
+	}
+
+	pub(crate) fn from_nested(error: serde_json::Error) -> Self {
+		Self {
+			error,
+			location_relative: true,
+		}
+	}
+}
 
 impl Display for SerdeJsonError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		self.0.fmt(f)
+		match self.location_relative {
+			true => write!(f, "{} (location relative)", self.error),
+			false => write!(f, "{}", self.error),
+		}
 	}
 }
 
@@ -27,7 +49,8 @@ impl PartialEq for SerdeJsonError {
 	fn eq(&self, other: &Self) -> bool {
 		SERDE_FIELD_EQUALITIES
 			.iter()
-			.all(|field_equal| field_equal(&self.0, &other.0))
+			.all(|field_equal| field_equal(&self.error, &other.error))
+			&& self.location_relative == other.location_relative
 	}
 }
 

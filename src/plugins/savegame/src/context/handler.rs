@@ -62,7 +62,9 @@ where
 	where
 		T: SavableComponent,
 	{
-		let dto = serde_json::from_value::<T::TDto>(component).map_err(SerdeJsonError)?;
+		let dto_str =
+			serde_json::to_string_pretty(&component).map_err(SerdeJsonError::from_nested)?;
+		let dto = serde_json::from_str::<T::TDto>(&dto_str).map_err(SerdeJsonError::from_nested)?;
 		let Ok(component) = T::try_load_from(dto, asset_server);
 
 		entity.try_insert(component);
@@ -384,16 +386,49 @@ mod tests {
 					let entity = &mut commands.entity(entity);
 					let asset_server = asset_server.as_mut();
 
-					handler.insert_component(entity, json!("{v: 42}"), asset_server)
+					handler.insert_component(entity, json!({"v": 42}), asset_server)
 				},
 			)?;
 
 			assert_eq!(
-				Err(SerdeJsonError(serde::de::Error::custom(
+				Err(SerdeJsonError::from_nested(serde::de::Error::custom(
 					"Fool! I refuse deserialization"
 				))),
 				result
 			);
+			Ok(())
+		}
+
+		#[test]
+		fn return_errors_from_pretty_string() -> Result<(), RunSystemError> {
+			#[derive(
+				Component, SavableComponent, Clone, Serialize, Deserialize, Debug, PartialEq,
+			)]
+			#[savable_component(id = "parse")]
+			struct Data {
+				a: f32,
+				b: bool,
+			}
+
+			let mut app = setup();
+			let entity = app.world_mut().spawn_empty().id();
+			let handler = ComponentHandler::<_LoadAsset>::new::<Data>();
+
+			let result = app.world_mut().run_system_once(
+				move |mut commands: Commands, mut asset_server: ResMut<_LoadAsset>| {
+					let entity = &mut commands.entity(entity);
+					let asset_server = asset_server.as_mut();
+
+					handler.insert_component(entity, json!({"a": 42, "b": "HEllO"}), asset_server)
+				},
+			)?;
+
+			let pretty_string =
+				serde_json::to_string_pretty(&json!({"a": 42, "b": "HEllO"})).unwrap();
+			let Err(expected_error) = serde_json::from_str::<Data>(&pretty_string) else {
+				panic!("expected error, but got value")
+			};
+			assert_eq!(Err(SerdeJsonError::from_nested(expected_error)), result);
 			Ok(())
 		}
 

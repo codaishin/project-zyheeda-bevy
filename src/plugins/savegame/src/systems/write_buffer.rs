@@ -105,8 +105,8 @@ mod test_save {
 		let context = Mock_SaveContext::new_mock(|mock| {
 			mock.expect_write_buffer().returning(|_| {
 				Err(EntitySerializationErrors(vec![
-					SerdeJsonError(serde::ser::Error::custom("that")),
-					SerdeJsonError(serde::ser::Error::custom("failed")),
+					SerdeJsonError::from_nested(serde::ser::Error::custom("error a")),
+					SerdeJsonError::from_nested(serde::ser::Error::custom("error b")),
 				]))
 			});
 		});
@@ -118,8 +118,20 @@ mod test_save {
 
 		assert_eq!(
 			Err(HashMap::from([
-				(a, "that failed".to_owned()),
-				(b, "that failed".to_owned()),
+				(
+					a,
+					vec![
+						"error a (location relative)".to_owned(),
+						"error b (location relative)".to_owned()
+					],
+				),
+				(
+					b,
+					vec![
+						"error a (location relative)".to_owned(),
+						"error b (location relative)".to_owned()
+					],
+				),
 			])),
 			// that hurts, but of course serde's errors are not comparable...,
 			// so we convert the errors to strings
@@ -134,7 +146,6 @@ mod test_save {
 								.iter()
 								.map(|error| error.to_string())
 								.collect::<Vec<_>>()
-								.join(" ")
 						))
 						.collect::<HashMap<_, _>>(),
 			})
