@@ -143,7 +143,10 @@ where
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) enum InsertionError<TNoInsert> {
-	CouldNotInsert(TNoInsert),
+	CouldNotInsert {
+		id: UniqueComponentId,
+		error: TNoInsert,
+	},
 	UnknownComponents(HashSet<String>),
 }
 
@@ -153,7 +156,10 @@ where
 {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			InsertionError::CouldNotInsert(error) => write!(f, "Failed Insertion: {error}"),
+			InsertionError::CouldNotInsert { error, id } => {
+				let id = String::from(id);
+				write!(f, "{id:?}: Failed Insertion: {error}")
+			}
 			InsertionError::UnknownComponents(components) => {
 				write_iter!(f, "UnknownComponents: ", components)
 			}
