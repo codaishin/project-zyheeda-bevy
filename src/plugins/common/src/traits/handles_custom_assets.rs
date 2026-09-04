@@ -12,11 +12,14 @@ pub trait HandlesCustomAssets {
 }
 
 pub trait HandlesCustomFolderAssets {
-	fn register_custom_folder_assets<TAsset, TDto, TLoadGroup>(app: &mut App)
-	where
+	type TLoadAssetState;
+
+	fn register_custom_folder_assets<TAsset, TDto>(
+		app: &mut App,
+		load_group: impl LoadGroup<Self::TLoadAssetState>,
+	) where
 		TAsset: Asset + AssetFolderPath + TryLoadFrom<TDto> + Clone + Debug,
-		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + TypePath + ThreadSafe,
-		TLoadGroup: ThreadSafe + LoadGroup;
+		for<'a> TDto: Deserialize<'a> + AssetFileExtensions + TypePath + ThreadSafe;
 }
 
 pub trait AssetFolderPath {

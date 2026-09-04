@@ -3041,6 +3041,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "common",
+ "macros",
  "test-case",
  "testing",
  "zyheeda_core",

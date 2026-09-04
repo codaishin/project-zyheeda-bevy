@@ -44,7 +44,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	};
 	let game_dir = home.join("Games").join("Project Zyheeda");
 
-	let game_states = GameStatesPlugin;
+	let game_states = GameStatesPlugin::default();
 	let loading = LoadingPlugin::from_plugins(&game_states);
 	let input = InputPlugin::from_plugin(&loading);
 	let localization = LocalizationPlugin::from_plugin(&loading);

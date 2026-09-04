@@ -1,7 +1,7 @@
-use crate::resources::game_state_roles::GameStateRoles;
+use crate::resources::pause_control::PauseControl;
 use bevy::prelude::*;
 
-impl GameStateRoles {
+impl PauseControl {
 	pub(crate) fn pause(In(paused): In<bool>, mut time: ResMut<Time<Virtual>>) {
 		if paused {
 			time.pause();
@@ -21,7 +21,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(TimePlugin);
-		app.add_systems(Update, (move || paused).pipe(GameStateRoles::pause));
+		app.add_systems(Update, (move || paused).pipe(PauseControl::pause));
 
 		app
 	}

@@ -1,7 +1,7 @@
 use crate::{
 	resources::game_state_context::GameStateContext,
-	states::activity::ActivityState,
-	system_params::ui_states::UIStates,
+	states::state_internal::StateInternal,
+	system_params::gui_states::GuiStates,
 };
 use bevy::prelude::*;
 use common::prelude::*;
@@ -10,15 +10,15 @@ use std::collections::HashSet;
 impl GameStateContext {
 	pub(crate) fn sync_states(
 		mut ctx: ResMut<Self>,
-		activity: Res<State<ActivityState>>,
-		ui: UIStates,
+		game_state: Res<State<StateInternal<GameState>>>,
+		gui: GuiStates,
 	) {
-		if !activity.is_changed() && !ui.is_changed() {
+		if !game_state.is_changed() && !gui.is_changed() {
 			return;
 		}
 
-		ctx.activity = Activity::from(activity.get());
-		ctx.ui = HashSet::from_iter(IngameUI::iterator().filter(|ui_state| ui.is_on(ui_state)));
+		ctx.game_state = *game_state.get();
+		ctx.gui = HashSet::from_iter(Gui::iterator().filter(|ui_state| gui.is_on(ui_state)));
 	}
 }
 
@@ -27,10 +27,10 @@ mod tests {
 	use super::*;
 	use crate::{
 		states::{
-			activity::ActivityState,
-			ui::{ComboOverview, Hud, Inventory, Settings},
+			gui::{ComboOverview, Hud, Inventory, Settings},
+			state_internal::StateInternal,
 		},
-		system_params::ui_states::UIStates,
+		system_params::gui_states::GuiStates,
 	};
 	use bevy::state::{app::StatesPlugin, state::FreelyMutableState};
 	use test_case::test_case;
@@ -40,8 +40,8 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(StatesPlugin);
-		UIStates::init(&mut app);
-		app.init_state::<ActivityState>();
+		GuiStates::init(&mut app);
+		app.init_state::<StateInternal<GameState>>();
 		app.init_resource::<GameStateContext>();
 		app.add_systems(Update, GameStateContext::sync_states);
 
@@ -49,29 +49,26 @@ mod tests {
 	}
 
 	#[test]
-	fn sync_activity() {
+	fn sync_game_state() {
 		let mut app = setup();
-		app.insert_state(ActivityState(Activity::Settable(SettableActivity::Play)));
+		app.insert_state(StateInternal::active(GameState::Play));
 
 		app.update();
 
 		assert_eq!(
+			(StateInternal::active(GameState::Play), &HashSet::default()),
 			(
-				Activity::Settable(SettableActivity::Play),
-				&HashSet::default()
-			),
-			(
-				app.world().resource::<GameStateContext>().activity,
-				&app.world().resource::<GameStateContext>().ui,
+				app.world().resource::<GameStateContext>().game_state,
+				&app.world().resource::<GameStateContext>().gui,
 			),
 		);
 	}
 
-	#[test_case(Hud::On, IngameUI::Hud; "hud")]
-	#[test_case(Inventory::On, IngameUI::Inventory; "inventory")]
-	#[test_case(ComboOverview::On, IngameUI::ComboOverview; "combos")]
-	#[test_case(Settings::On, IngameUI::Settings; "settings")]
-	fn sync_ui<T>(state: T, ui: IngameUI)
+	#[test_case(Hud::On, Gui::Hud; "hud")]
+	#[test_case(Inventory::On, Gui::Inventory; "inventory")]
+	#[test_case(ComboOverview::On, Gui::ComboOverview; "combos")]
+	#[test_case(Settings::On, Gui::Settings; "settings")]
+	fn sync_gui<T>(state: T, ui: Gui)
 	where
 		T: FreelyMutableState,
 	{
@@ -82,12 +79,12 @@ mod tests {
 
 		assert_eq!(
 			&HashSet::from([ui]),
-			&app.world().resource::<GameStateContext>().ui
+			&app.world().resource::<GameStateContext>().gui
 		);
 	}
 
 	#[test]
-	fn sync_uis() {
+	fn sync_guis() {
 		let mut app = setup();
 		app.insert_state(Hud::On);
 		app.insert_state(ComboOverview::On);
@@ -95,55 +92,56 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			&HashSet::from([IngameUI::Hud, IngameUI::ComboOverview]),
-			&app.world().resource::<GameStateContext>().ui
+			&HashSet::from([Gui::Hud, Gui::ComboOverview]),
+			&app.world().resource::<GameStateContext>().gui
 		);
 	}
 
 	#[test]
 	fn act_only_once() {
 		let mut app = setup();
-		app.insert_state(ActivityState(Activity::Settable(SettableActivity::Play)));
+		app.insert_state(StateInternal::active(GameState::Play));
 		app.insert_state(Inventory::On);
 
 		app.update();
-		app.world_mut().resource_mut::<GameStateContext>().activity =
-			Activity::Settable(SettableActivity::SaveCmd);
-		app.world_mut().resource_mut::<GameStateContext>().ui = HashSet::from([IngameUI::Hud]);
+		app.world_mut()
+			.resource_mut::<GameStateContext>()
+			.game_state = StateInternal::active(GameState::Save);
+		app.world_mut().resource_mut::<GameStateContext>().gui = HashSet::from([Gui::Hud]);
 		app.update();
 
 		assert_eq!(
 			(
-				Activity::Settable(SettableActivity::SaveCmd),
-				&HashSet::from([IngameUI::Hud])
+				StateInternal::active(GameState::Save),
+				&HashSet::from([Gui::Hud])
 			),
 			(
-				app.world().resource::<GameStateContext>().activity,
-				&app.world().resource::<GameStateContext>().ui
+				app.world().resource::<GameStateContext>().game_state,
+				&app.world().resource::<GameStateContext>().gui
 			)
 		);
 	}
 
 	#[test]
-	fn act_again_if_activity_changed() {
+	fn act_again_if_game_state_changed() {
 		let mut app = setup();
-		app.insert_state(ActivityState(Activity::Settable(SettableActivity::Play)));
+		app.insert_state(StateInternal::active(GameState::Play));
 
 		app.update();
-		app.insert_state(ActivityState(Activity::Settable(SettableActivity::Paused)));
+		app.insert_state(StateInternal::active(GameState::Pause));
 		app.update();
 
 		assert_eq!(
-			Activity::Settable(SettableActivity::Paused),
-			app.world().resource::<GameStateContext>().activity,
+			StateInternal::active(GameState::Pause),
+			app.world().resource::<GameStateContext>().game_state,
 		);
 	}
 
-	#[test_case(Hud::On, IngameUI::Hud; "hud")]
-	#[test_case(Inventory::On, IngameUI::Inventory; "inventory")]
-	#[test_case(ComboOverview::On, IngameUI::ComboOverview; "combos")]
-	#[test_case(Settings::On, IngameUI::Settings; "settings")]
-	fn act_again_if_ui_changed<T>(state: T, ui: IngameUI)
+	#[test_case(Hud::On, Gui::Hud; "hud")]
+	#[test_case(Inventory::On, Gui::Inventory; "inventory")]
+	#[test_case(ComboOverview::On, Gui::ComboOverview; "combos")]
+	#[test_case(Settings::On, Gui::Settings; "settings")]
+	fn act_again_if_gui_changed<T>(state: T, ui: Gui)
 	where
 		T: FreelyMutableState,
 	{
@@ -155,7 +153,7 @@ mod tests {
 
 		assert_eq!(
 			&HashSet::from([ui]),
-			&app.world().resource::<GameStateContext>().ui,
+			&app.world().resource::<GameStateContext>().gui,
 		);
 	}
 }

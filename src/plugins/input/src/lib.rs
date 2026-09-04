@@ -38,8 +38,9 @@ where
 {
 	fn build(&self, app: &mut App) {
 		let path = Path::from("settings/key_map.keys");
-		TLoading::register_custom_resource_loading::<KeyMap, KeyMapDto, LoadingEssentialAssets>(
+		TLoading::register_custom_resource_loading::<KeyMap, KeyMapDto>(
 			app,
+			LoadingEssentialAssets,
 			path.clone(),
 		);
 

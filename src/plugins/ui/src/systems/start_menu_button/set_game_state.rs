@@ -3,9 +3,9 @@ use bevy::prelude::*;
 use common::prelude::*;
 
 impl StartMenuButton {
-	pub(crate) fn set_activity(
-		target_trigger_state: SettableActivity,
-	) -> impl Fn(In<UIActivity>, ZyheedaCommands, Query<(Entity, &StartMenuButton)>) {
+	pub(crate) fn set_game_state(
+		target_trigger_state: GameState,
+	) -> impl Fn(In<GUIActivity>, ZyheedaCommands, Query<(Entity, &StartMenuButton)>) {
 		move |In(activity), mut commands, buttons| {
 			for (entity, StartMenuButton { trigger_state, .. }) in buttons {
 				if trigger_state != &target_trigger_state {
@@ -13,10 +13,10 @@ impl StartMenuButton {
 				}
 
 				match activity {
-					UIActivity::Enable => commands.try_apply_on(&entity, |mut e| {
+					GUIActivity::Enable => commands.try_apply_on(&entity, |mut e| {
 						e.try_remove::<UIDisabled>();
 					}),
-					UIActivity::Disable => commands.try_apply_on(&entity, |mut e| {
+					GUIActivity::Disable => commands.try_apply_on(&entity, |mut e| {
 						e.try_insert(UIDisabled);
 					}),
 				};
@@ -25,7 +25,7 @@ impl StartMenuButton {
 	}
 }
 
-pub(crate) enum UIActivity {
+pub(crate) enum GUIActivity {
 	Enable,
 	Disable,
 }
@@ -46,15 +46,12 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				UIDisabled,
-				StartMenuButton::triggers(SettableActivity::NewGame),
-			))
+			.spawn((UIDisabled, StartMenuButton::triggers(GameState::NewGame)))
 			.id();
 
 		app.world_mut().run_system_once_with(
-			StartMenuButton::set_activity(SettableActivity::NewGame),
-			UIActivity::Enable,
+			StartMenuButton::set_game_state(GameState::NewGame),
+			GUIActivity::Enable,
 		)?;
 
 		assert!(!app.world().entity(entity).contains::<UIDisabled>());
@@ -66,12 +63,12 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(StartMenuButton::triggers(SettableActivity::NewGame))
+			.spawn(StartMenuButton::triggers(GameState::NewGame))
 			.id();
 
 		app.world_mut().run_system_once_with(
-			StartMenuButton::set_activity(SettableActivity::NewGame),
-			UIActivity::Disable,
+			StartMenuButton::set_game_state(GameState::NewGame),
+			GUIActivity::Disable,
 		)?;
 
 		assert!(app.world().entity(entity).contains::<UIDisabled>());
@@ -83,15 +80,12 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				UIDisabled,
-				StartMenuButton::triggers(SettableActivity::NewGame),
-			))
+			.spawn((UIDisabled, StartMenuButton::triggers(GameState::NewGame)))
 			.id();
 
 		app.world_mut().run_system_once_with(
-			StartMenuButton::set_activity(SettableActivity::Play),
-			UIActivity::Enable,
+			StartMenuButton::set_game_state(GameState::Play),
+			GUIActivity::Enable,
 		)?;
 
 		assert!(app.world().entity(entity).contains::<UIDisabled>());

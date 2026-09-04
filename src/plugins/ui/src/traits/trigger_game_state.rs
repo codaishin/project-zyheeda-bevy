@@ -1,5 +1,5 @@
-use common::traits::handles_game_states::SettableActivity;
+use common::prelude::*;
 
 pub(crate) trait TriggerState {
-	fn trigger_state(&self) -> SettableActivity;
+	fn trigger_state(&self) -> GameState;
 }

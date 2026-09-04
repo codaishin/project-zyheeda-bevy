@@ -42,7 +42,7 @@ where
 	TLoading: HandlesLoadTracking + ThreadSafe,
 {
 	fn build(&self, app: &mut App) {
-		TLoading::register_load_tracking::<FtlServer, LoadingEssentialAssets, AssetsProgress>()
+		TLoading::register_load_tracking::<FtlServer>(LoadingEssentialAssets, AssetsProgress)
 			.in_app(app, FtlServer::all_fallback_files_loaded);
 
 		app.init_asset::<Ftl>()

@@ -12,7 +12,7 @@ pub(crate) mod menus_unchangeable_when_present;
 pub(crate) mod quickbar_panel;
 pub(crate) mod rebind;
 pub(crate) mod render_ui;
-pub(crate) mod set_activity;
+pub(crate) mod set_game_state;
 pub(crate) mod set_key_bindings;
 pub(crate) mod spawn;
 pub(crate) mod start_menu_button;

@@ -68,11 +68,11 @@ where
 	TPhysics: ThreadSafe + HandlesRaycast + HandlesPhysicsConfig,
 {
 	fn build(&self, app: &mut App) {
-		TLoading::register_load_tracking::<Map, LoadingGame, AssetsProgress>()
+		TLoading::register_load_tracking::<Map>(LoadingGame, AssetsProgress)
 			.in_app(app, Map::is_loaded);
-		TLoading::register_load_tracking::<Spawner<AgentType>, LoadingGame, AssetsProgress>()
+		TLoading::register_load_tracking::<Spawner<AgentType>>(LoadingGame, AssetsProgress)
 			.in_app(app, Spawner::<AgentType>::is_loaded);
-		TLoading::register_load_tracking::<Spawner<InteractiveType>, LoadingGame, AssetsProgress>()
+		TLoading::register_load_tracking::<Spawner<InteractiveType>>(LoadingGame, AssetsProgress)
 			.in_app(app, Spawner::<InteractiveType>::is_loaded);
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
@@ -88,7 +88,7 @@ where
 
 		TGameState::add_game_state_systems(
 			app,
-			OnGameState::Enter(SettableActivity::NewGame),
+			OnStateTransition::Enter(GameState::NewGame),
 			Level::<0>::spawn_default,
 		);
 

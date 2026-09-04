@@ -95,8 +95,11 @@ where
 	}
 
 	fn track_render_pipeline_ready(app: &mut App) {
-		TLoading::register_load_tracking::<PipelineCache, LoadingGame, AssetsProgress>()
-			.in_sub_app(app, RenderApp, no_waiting_pipelines);
+		TLoading::register_load_tracking::<PipelineCache>(LoadingGame, AssetsProgress).in_sub_app(
+			app,
+			RenderApp,
+			no_waiting_pipelines,
+		);
 	}
 
 	fn shading(app: &mut App) {

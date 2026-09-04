@@ -34,11 +34,11 @@ fn trigger_on_release<TGameStatesMut, TComponent, TInteraction>(
 			continue;
 		}
 
-		let Some(setter) = states.get_activity_setter(trigger.trigger_state()) else {
+		let Some(setter) = states.get_game_state_setter(trigger.trigger_state()) else {
 			continue;
 		};
 
-		setter.set_activity();
+		setter.set_game_state();
 	}
 }
 
@@ -46,16 +46,15 @@ fn trigger_on_release<TGameStatesMut, TComponent, TInteraction>(
 mod tests {
 	use super::*;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use common::traits::handles_game_states::SettableActivity;
 	use std::collections::HashSet;
 
 	#[derive(Component)]
 	struct _Component {
-		trigger: SettableActivity,
+		trigger: GameState,
 	}
 
 	impl TriggerState for _Component {
-		fn trigger_state(&self) -> SettableActivity {
+		fn trigger_state(&self) -> GameState {
 			self.trigger
 		}
 	}
@@ -71,12 +70,12 @@ mod tests {
 
 	#[derive(Resource, Debug, PartialEq)]
 	struct _States {
-		activity: SettableActivity,
-		ui: HashSet<IngameUI>,
+		activity: GameState,
+		ui: HashSet<Gui>,
 	}
 
 	impl _States {
-		fn from_activity(activity: SettableActivity) -> Self {
+		fn from_activity(activity: GameState) -> Self {
 			Self {
 				activity,
 				ui: HashSet::default(),
@@ -85,35 +84,35 @@ mod tests {
 	}
 
 	impl GameStatesMut for _States {
-		type TActivitySetter<'a>
+		type TGameStateSetter<'a>
 			= _Setter<'a>
 		where
 			Self: 'a;
 
-		fn get_activity_setter(&mut self, activity: SettableActivity) -> Option<_Setter<'_>> {
+		fn get_game_state_setter(&mut self, activity: GameState) -> Option<_Setter<'_>> {
 			Some(_Setter {
 				new: activity,
 				current: &mut self.activity,
 			})
 		}
 
-		fn ui_mut(&mut self) -> &'_ mut HashSet<IngameUI> {
+		fn gui_mut(&mut self) -> &'_ mut HashSet<Gui> {
 			&mut self.ui
 		}
 	}
 
 	struct _Setter<'a> {
-		new: SettableActivity,
-		current: &'a mut SettableActivity,
+		new: GameState,
+		current: &'a mut GameState,
 	}
 
-	impl SetActivity for _Setter<'_> {
-		fn set_activity(self) {
+	impl SetGameState for _Setter<'_> {
+		fn set_game_state(self) {
 			*self.current = self.new;
 		}
 	}
 
-	fn setup(current: SettableActivity) -> App {
+	fn setup(current: GameState) -> App {
 		let mut app = App::new();
 
 		app.insert_resource(_States::from_activity(current));
@@ -123,10 +122,10 @@ mod tests {
 
 	#[test]
 	fn trigger_when_released() -> Result<(), RunSystemError> {
-		let mut app = setup(SettableActivity::Paused);
+		let mut app = setup(GameState::Pause);
 		app.world_mut().spawn((
 			_Component {
-				trigger: SettableActivity::Play,
+				trigger: GameState::Play,
 			},
 			_Released(true),
 		));
@@ -135,7 +134,7 @@ mod tests {
 			.run_system_once(trigger_on_release::<ResMut<_States>, _Component, _Released>)?;
 
 		assert_eq!(
-			&_States::from_activity(SettableActivity::Play),
+			&_States::from_activity(GameState::Play),
 			app.world().resource::<_States>()
 		);
 		Ok(())
@@ -143,10 +142,10 @@ mod tests {
 
 	#[test]
 	fn do_not_trigger_when_not_released() -> Result<(), RunSystemError> {
-		let mut app = setup(SettableActivity::Paused);
+		let mut app = setup(GameState::Pause);
 		app.world_mut().spawn((
 			_Component {
-				trigger: SettableActivity::Play,
+				trigger: GameState::Play,
 			},
 			_Released(false),
 		));
@@ -155,7 +154,7 @@ mod tests {
 			.run_system_once(trigger_on_release::<ResMut<_States>, _Component, _Released>)?;
 
 		assert_eq!(
-			&_States::from_activity(SettableActivity::Paused),
+			&_States::from_activity(GameState::Pause),
 			app.world().resource::<_States>()
 		);
 		Ok(())
