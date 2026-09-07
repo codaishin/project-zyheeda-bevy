@@ -30,6 +30,7 @@ use crate::{
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		motion_controller::{MotionController, MotionControllerOf},
+		self_skill_scale::SelfSkillScale,
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::SkillTargetInternal,
@@ -123,6 +124,7 @@ where
 		TSaveGame::register_savable_component::<ApplyMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);
 		TSaveGame::register_savable_component::<SkillTargetInternal>(app);
+		TSaveGame::register_savable_component::<SelfSkillScale>(app);
 		TSaveGame::register_savable_component::<LinearVelocity>(app);
 		TSaveGame::register_savable_component::<CharacterGravity>(app);
 
