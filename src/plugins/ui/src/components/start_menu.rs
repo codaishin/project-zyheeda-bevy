@@ -60,6 +60,6 @@ impl InsertUiContent for StartMenu {
 				));
 			});
 		parent.spawn(StartMenuButton::triggers(GameState::NewGame).with_label(new_game));
-		parent.spawn(StartMenuButton::triggers(GameState::Load).with_label(continue_game));
+		parent.spawn(StartMenuButton::triggers(GameState::LoadGame).with_label(continue_game));
 	}
 }

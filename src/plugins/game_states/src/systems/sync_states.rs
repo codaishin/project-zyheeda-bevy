@@ -106,13 +106,13 @@ mod tests {
 		app.update();
 		app.world_mut()
 			.resource_mut::<GameStateContext>()
-			.game_state = StateInternal::active(GameState::Save);
+			.game_state = StateInternal::active(GameState::SaveGame);
 		app.world_mut().resource_mut::<GameStateContext>().gui = HashSet::from([Gui::Hud]);
 		app.update();
 
 		assert_eq!(
 			(
-				StateInternal::active(GameState::Save),
+				StateInternal::active(GameState::SaveGame),
 				&HashSet::from([Gui::Hud])
 			),
 			(
