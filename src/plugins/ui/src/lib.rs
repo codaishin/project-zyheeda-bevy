@@ -159,8 +159,8 @@ where
 		let set_game_state =
 			set_game_state::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
 				ActionKey::Miscellaneous(Miscellaneous::Paused) => GameState::Pause,
-				ActionKey::Save(SaveKey::QuickLoad) => GameState::Load,
-				ActionKey::Save(SaveKey::QuickSave) => GameState::Save,
+				ActionKey::Save(SaveKey::QuickLoad) => GameState::LoadGame,
+				ActionKey::Save(SaveKey::QuickSave) => GameState::SaveGame,
 			});
 		let toggle_ui = toggle_ui::<TGameStates::TGameStatesMut, TInput::TInput>(hash_map! {
 			MenuKey::ComboOverview => Gui::ComboOverview,
@@ -191,7 +191,7 @@ where
 
 	fn start_menu(&self, app: &mut App) {
 		let start_menu = GameState::StartScreen;
-		let load = GameState::Load;
+		let load = GameState::LoadGame;
 		let enable_or_disable_quick_load_button = TSavegame::can_quick_load()
 			.pipe(|In(can_quick_load)| match can_quick_load {
 				true => GUIActivity::Enable,

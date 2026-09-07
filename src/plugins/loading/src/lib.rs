@@ -62,6 +62,14 @@ where
 				() => TransitionState::To(LOAD_ASSETS)
 			},
 		)?;
+		TGameStates::TExtended::add_activity_transitions(
+			app,
+			GameStateExtended::Base(GameState::LoadAssets),
+			always,
+			hash_map! {
+				() => TransitionState::To(LOAD_ASSETS)
+			},
+		)?;
 
 		Ok(())
 	}

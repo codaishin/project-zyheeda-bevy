@@ -71,7 +71,7 @@ mod tests {
 	#[test]
 	fn iter() -> Result<(), RunSystemError> {
 		let mut app = setup(GameStateContext {
-			game_state: StateInternal::active(GameState::Save),
+			game_state: StateInternal::active(GameState::SaveGame),
 			gui: HashSet::from([Gui::ComboOverview, Gui::Inventory]),
 		});
 
@@ -81,7 +81,7 @@ mod tests {
 
 		assert_eq!(
 			HashSet::from([
-				Pausable::GameState(GameState::Save),
+				Pausable::GameState(GameState::SaveGame),
 				Pausable::Gui(Gui::ComboOverview),
 				Pausable::Gui(Gui::Inventory)
 			]),

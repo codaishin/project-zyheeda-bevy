@@ -65,7 +65,7 @@ where
 	) -> Result<(), TransitionsConfigError<GameStateExtended<SaveGameIO>>> {
 		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			GameStateExtended::Base(GameState::Save),
+			GameStateExtended::Base(GameState::SaveGame),
 			always,
 			hash_map! {
 				() => TransitionState::To(EXEC_SAVE),
@@ -76,12 +76,12 @@ where
 			EXEC_SAVE,
 			always,
 			hash_map! {
-				() => TransitionState::ToPreviousOf(GameStateExtended::from(GameState::Save)),
+				() => TransitionState::ToPreviousOf(GameStateExtended::from(GameState::SaveGame)),
 			},
 		)?;
 		TGameStates::TExtended::<SaveGameIO>::add_activity_transitions(
 			app,
-			GameStateExtended::Base(GameState::Load),
+			GameStateExtended::Base(GameState::LoadGame),
 			Self::can_quick_load().pipe(|In(r)| Some(r)),
 			hash_map! {
 				true => TransitionState::To(EXEC_LOAD),
@@ -93,7 +93,7 @@ where
 			EXEC_LOAD,
 			always,
 			hash_map! {
-				() => TransitionState::To(GameStateExtended::from(GameState::Play)),
+				() => TransitionState::To(GameStateExtended::from(GameState::LoadAssets)),
 			},
 		)?;
 

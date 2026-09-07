@@ -161,8 +161,9 @@ pub enum GameState {
 	NewGame,
 	Play,
 	Pause,
-	Save,
-	Load,
+	SaveGame,
+	LoadGame,
+	LoadAssets,
 }
 
 impl GameState {
@@ -185,9 +186,10 @@ impl IterFinite for GameState {
 			Self::StartScreen => Some(Self::NewGame),
 			Self::NewGame => Some(Self::Play),
 			Self::Play => Some(Self::Pause),
-			Self::Pause => Some(Self::Save),
-			Self::Save => Some(Self::Load),
-			Self::Load => None,
+			Self::Pause => Some(Self::SaveGame),
+			Self::SaveGame => Some(Self::LoadGame),
+			Self::LoadGame => Some(Self::LoadAssets),
+			Self::LoadAssets => None,
 		}
 	}
 }
@@ -251,8 +253,9 @@ mod tests {
 				GameState::NewGame,
 				GameState::Play,
 				GameState::Pause,
-				GameState::Save,
-				GameState::Load,
+				GameState::SaveGame,
+				GameState::LoadGame,
+				GameState::LoadAssets,
 			],
 			GameState::iterator().take(100).collect::<Vec<_>>()
 		);

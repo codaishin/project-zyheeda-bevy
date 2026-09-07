@@ -109,14 +109,14 @@ mod tests {
 
 		app.world_mut()
 			.trigger(StateEvent::Active(GameStateExtended::<_A>::Base(
-				GameState::Save,
+				GameState::SaveGame,
 			)));
 		app.update();
 
 		assert_eq!(
 			(
-				&StateInternal::active(GameState::Save),
-				&StateInternal::active(GameStateExtended::Base(GameState::Save)),
+				&StateInternal::active(GameState::SaveGame),
+				&StateInternal::active(GameStateExtended::Base(GameState::SaveGame)),
 			),
 			(
 				app.world()
