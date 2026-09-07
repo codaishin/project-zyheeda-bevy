@@ -116,10 +116,13 @@ where
 				let Some(component) = components.remove(&**handler.id()) else {
 					continue;
 				};
-				let Err(err) = handler.insert_component(&mut entity, component, assets) else {
+				let Err(error) = handler.insert_component(&mut entity, component, assets) else {
 					continue;
 				};
-				self.errors.items.push(InsertionError::CouldNotInsert(err));
+				self.errors.items.push(InsertionError::CouldNotInsert {
+					error,
+					id: handler.id().clone(),
+				});
 			}
 		}
 
@@ -344,7 +347,10 @@ mod tests {
 
 		assert_eq!(
 			Err(DeserializationOrLockError::DeserializationErrors(
-				IOErrors::from(vec![InsertionError::CouldNotInsert(NoInsert)])
+				IOErrors::from(vec![InsertionError::CouldNotInsert {
+					error: NoInsert,
+					id: UniqueComponentId::from_str("a")
+				}])
 			)),
 			result,
 		);
@@ -368,7 +374,10 @@ mod tests {
 
 		assert_eq!(
 			Err(DeserializationOrLockError::DeserializationErrors(
-				IOErrors::from(vec![InsertionError::CouldNotInsert(NoInsert)])
+				IOErrors::from(vec![InsertionError::CouldNotInsert {
+					id: UniqueComponentId::from_str("a"),
+					error: NoInsert
+				}])
 			)),
 			result,
 		);

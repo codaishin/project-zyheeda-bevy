@@ -32,7 +32,7 @@ where
 			context.buffers.load = match serde_json::from_str::<SerializedEntities>(&entities) {
 				Err(error) => {
 					return Err(ContextIOError::SerdeErrors(IOErrors::from(vec![
-						SerdeJsonError(error),
+						SerdeJsonError::from_root(error),
 					])));
 				}
 				Ok(components) => components,
@@ -144,7 +144,7 @@ mod tests {
 
 		assert_eq!(
 			Err(ContextIOError::SerdeErrors(IOErrors::from(vec![
-				SerdeJsonError(error)
+				SerdeJsonError::from_root(error)
 			]))),
 			result
 		);

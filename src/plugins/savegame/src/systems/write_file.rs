@@ -36,7 +36,7 @@ impl<TFileIO> SaveContext<TFileIO> {
 			.map(|(_, components)| match to_value(&components) {
 				Ok(value) => Some(value),
 				Err(error) => {
-					errors.push(SerdeJsonError(error));
+					errors.push(SerdeJsonError::from_nested(error));
 					None
 				}
 			})
@@ -50,7 +50,7 @@ impl<TFileIO> SaveContext<TFileIO> {
 			Ok(json) => json,
 			Err(error) => {
 				return Err(ContextIOError::SerdeErrors(IOErrors::from(vec![
-					SerdeJsonError(error),
+					SerdeJsonError::from_nested(error),
 				])));
 			}
 		};
