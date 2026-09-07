@@ -93,7 +93,7 @@ where
 			EXEC_LOAD,
 			always,
 			hash_map! {
-				() => TransitionState::To(GameStateExtended::from(GameState::Play)),
+				() => TransitionState::To(GameStateExtended::from(GameState::LoadAssets)),
 			},
 		)?;
 
