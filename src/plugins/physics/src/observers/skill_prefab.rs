@@ -11,7 +11,7 @@ use crate::components::{
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
-use std::time::Duration;
+use std::{fmt::Display, time::Duration};
 
 impl<T> SkillPrefab for T where
 	T: Component
@@ -36,20 +36,22 @@ pub(crate) trait SkillPrefab:
 		on_insert: On<Insert, Self>,
 		mut commands: ZyheedaCommands,
 		casters: Query<&SelfSkillScale>,
-		skills: Query<(&Self, &PersistentEntity)>,
-	) {
+		skills: Query<(&Self, &PersistentEntity, Option<&SelfSkillScale>)>,
+	) -> Result<(), SkillSpawnError> {
 		let root = on_insert.entity;
-		let Ok((skill, persistent_entity)) = skills.get(root) else {
-			return;
+		let Ok((skill, persistent_entity, cached_scale)) = skills.get(root) else {
+			return Ok(());
 		};
-		let Some(caster) = commands.get(&skill.get_caster()) else {
-			return;
+		let scale_from_caster = || {
+			commands
+				.get(&skill.get_caster())
+				.and_then(|e| casters.get(e).ok())
 		};
-		let Ok(self_skill_scale) = casters.get(caster) else {
-			return;
+		let Some(self_skill_scale) = get_scale(cached_scale, scale_from_caster) else {
+			return Err(SkillSpawnError::SelfSkillScaleMissing(*persistent_entity));
 		};
 		let Some(mut entity) = commands.get_mut(&root) else {
-			return;
+			return Ok(());
 		};
 		let rigid_body = skill.apply_motion_prefab(&mut entity);
 		let (obj, cont_model, cont_collider, cont_effects) =
@@ -67,6 +69,7 @@ pub(crate) trait SkillPrefab:
 			rigid_body,
 			SkillContactRoot,
 			cont_effects,
+			*self_skill_scale,
 			children![
 				(
 					SkillTransformOf(root),
@@ -104,11 +107,21 @@ pub(crate) trait SkillPrefab:
 			],
 		));
 
-		let Some(lifetime) = skill.get_lifetime() else {
-			return;
+		if let Some(lifetime) = skill.get_lifetime() {
+			entity.try_insert(Lifetime::from(lifetime));
 		};
 
-		entity.try_insert(Lifetime::from(lifetime));
+		Ok(())
+	}
+}
+
+fn get_scale<'a>(
+	cached: Option<&'a SelfSkillScale>,
+	from_caster: impl Fn() -> Option<&'a SelfSkillScale>,
+) -> Option<&'a SelfSkillScale> {
+	match cached {
+		Some(scale) => Some(scale),
+		None => from_caster(),
 	}
 }
 
@@ -154,6 +167,35 @@ pub(crate) struct ProjectionCollider {
 pub(crate) struct ContactCollider {
 	pub(crate) shape: ColliderShape,
 	pub(crate) transform: Transform,
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum SkillSpawnError {
+	SelfSkillScaleMissing(PersistentEntity),
+}
+
+impl Display for SkillSpawnError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		use SkillSpawnError::*;
+
+		match self {
+			SelfSkillScaleMissing(e) => write!(f, "{e:?}: missing `SelfSkillScale`"),
+		}
+	}
+}
+
+impl ErrorData for SkillSpawnError {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Skill spawn error"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
+	}
 }
 
 #[cfg(test)]
@@ -300,19 +342,59 @@ mod tests {
 		};
 	}
 
+	#[derive(Resource, Debug, PartialEq)]
+	struct _Result(Result<(), SkillSpawnError>);
+
+	impl _Result {
+		fn record(In(result): In<Result<(), SkillSpawnError>>, mut c: Commands) {
+			c.insert_resource(_Result(result));
+		}
+	}
+
 	fn setup_with_caster(self_sill_scale: Scale<3>) -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(CommonPlugin::with_asset_loading(false));
 		app.world_mut()
 			.spawn((*CASTER, SelfSkillScale(self_sill_scale)));
-		app.add_observer(_Skill::prefab);
+		app.add_observer(_Skill::prefab.pipe(_Result::record));
+
+		app
+	}
+
+	fn setup_with_caster_without_scale() -> App {
+		let mut app = App::new().single_threaded(Update);
+
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
+		app.world_mut().spawn(*CASTER);
+		app.add_observer(_Skill::prefab.pipe(_Result::record));
+
+		app
+	}
+
+	fn setup_without_caster() -> App {
+		let mut app = App::new().single_threaded(Update);
+
+		app.add_plugins(CommonPlugin::with_asset_loading(false));
+		app.add_observer(_Skill::prefab.pipe(_Result::record));
 
 		app
 	}
 
 	mod root {
 		use super::*;
+
+		#[test]
+		fn error_if_self_skill_scale_missing() {
+			let mut app = setup_with_caster_without_scale();
+
+			app.world_mut().spawn(_Skill::default());
+
+			assert_eq!(
+				&_Result(Err(SkillSpawnError::SelfSkillScaleMissing(*SKILL))),
+				app.world().resource::<_Result>(),
+			);
+		}
 
 		#[test]
 		fn insert_blockable() {
@@ -372,6 +454,18 @@ mod tests {
 
 			assert_projection_count!(1, app, skill);
 		}
+
+		#[test]
+		fn insert_self_skill_scale() {
+			let mut app = setup_with_caster(scale!(1., 2., 3.));
+
+			let skill = app.world_mut().spawn(_Skill::default());
+
+			assert_eq!(
+				Some(&SelfSkillScale(scale!(1., 2., 3.))),
+				skill.get::<SelfSkillScale>()
+			);
+		}
 	}
 
 	mod contact {
@@ -394,6 +488,42 @@ mod tests {
 
 			assert_eq!(
 				Some(&scale!(1., 2., 3.)),
+				app.world()
+					.entity(skill)
+					.get::<_Skill>()
+					.and_then(|s| s.used_contact_scale.get()),
+			);
+		}
+
+		#[test]
+		fn prefer_own_scale() {
+			let mut app = setup_with_caster(scale!(1., 2., 3.));
+
+			let skill = app
+				.world_mut()
+				.spawn((SelfSkillScale(scale!(3., 2., 1.)), _Skill::default()))
+				.id();
+
+			assert_eq!(
+				Some(&scale!(3., 2., 1.)),
+				app.world()
+					.entity(skill)
+					.get::<_Skill>()
+					.and_then(|s| s.used_contact_scale.get()),
+			);
+		}
+
+		#[test]
+		fn use_own_scale_if_caster_missing() {
+			let mut app = setup_without_caster();
+
+			let skill = app
+				.world_mut()
+				.spawn((SelfSkillScale(scale!(3., 2., 1.)), _Skill::default()))
+				.id();
+
+			assert_eq!(
+				Some(&scale!(3., 2., 1.)),
 				app.world()
 					.entity(skill)
 					.get::<_Skill>()
@@ -553,6 +683,42 @@ mod tests {
 
 			assert_eq!(
 				Some(&scale!(1., 2., 3.)),
+				app.world()
+					.entity(skill)
+					.get::<_Skill>()
+					.and_then(|s| s.used_projection_scale.get()),
+			);
+		}
+
+		#[test]
+		fn prefer_own_scale_scale() {
+			let mut app = setup_with_caster(scale!(1., 2., 3.));
+
+			let skill = app
+				.world_mut()
+				.spawn((SelfSkillScale(scale!(3., 2., 1.)), _Skill::default()))
+				.id();
+
+			assert_eq!(
+				Some(&scale!(3., 2., 1.)),
+				app.world()
+					.entity(skill)
+					.get::<_Skill>()
+					.and_then(|s| s.used_projection_scale.get()),
+			);
+		}
+
+		#[test]
+		fn use_own_scale_if_caster_missing() {
+			let mut app = setup_without_caster();
+
+			let skill = app
+				.world_mut()
+				.spawn((SelfSkillScale(scale!(3., 2., 1.)), _Skill::default()))
+				.id();
+
+			assert_eq!(
+				Some(&scale!(3., 2., 1.)),
 				app.world()
 					.entity(skill)
 					.get::<_Skill>()
