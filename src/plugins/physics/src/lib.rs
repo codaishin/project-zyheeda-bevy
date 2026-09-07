@@ -165,7 +165,7 @@ where
 					.in_set(PhysicsSystems::Resolve),
 			)
 			// Skills
-			.add_observer(Skill::prefab)
+			.add_observer(Skill::prefab.pipe(OnError::log))
 			// Colliders/Bodies
 			.add_prefab_observer::<ColliderShape, ()>()
 			.add_prefab_observer::<Body, ()>()
