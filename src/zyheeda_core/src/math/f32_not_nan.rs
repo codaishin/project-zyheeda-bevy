@@ -3,7 +3,6 @@ pub mod non_zero;
 pub mod positive;
 
 use crate::math::f32_not_nan::{finite::Finite, non_zero::NonZero, positive::Positive};
-use macros::serde_model;
 use serde::{Deserialize, Serialize};
 use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ops::Deref};
 
@@ -32,11 +31,8 @@ macro_rules! new_f32 {
 
 pub use new_f32;
 
-#[serde_model(no_default_deserialize)]
 #[derive(Debug)]
-pub struct F32NotNanBase<TConstraint = ()>(f32, PhantomData<TConstraint>)
-where
-	TConstraint: Serialize;
+pub struct F32NotNanBase<TConstraint = ()>(f32, PhantomData<TConstraint>);
 
 impl F32NotNanBase {
 	pub const ZERO: Self = Self(0., PhantomData);
@@ -61,6 +57,15 @@ impl TryFrom<f32> for F32NotNanBase {
 
 	fn try_from(value: f32) -> Result<Self, Self::Error> {
 		Self::try_from_f32(value)
+	}
+}
+
+impl<TConstraint> Serialize for F32NotNanBase<TConstraint> {
+	fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+	where
+		S: serde::Serializer,
+	{
+		serializer.serialize_f32(self.0)
 	}
 }
 
@@ -294,7 +299,9 @@ mod constraints {
 
 #[cfg(test)]
 mod tests {
+	#![allow(clippy::unwrap_used)]
 	use super::*;
+	use serde_json::json;
 	use std::{
 		cmp::Ordering,
 		hash::{DefaultHasher, Hasher},
@@ -400,5 +407,33 @@ mod tests {
 	#[test_case(F32NotNan::raw(-0.), F32NotNan::raw(0.), Ordering::Equal; "0 equal 0")]
 	fn order(a: F32NotNan, b: F32NotNan, ordering: Ordering) {
 		assert_eq!(ordering, a.cmp(&b))
+	}
+
+	#[test]
+	fn serialize_as_f32() {
+		let value = new_f32!(F32NotNan(11.));
+
+		let value = serde_json::to_value(value).unwrap();
+
+		assert_eq!(json!(11.), value);
+	}
+
+	#[test]
+	fn de_serialize_as_f32() {
+		let value = json!(11.);
+
+		let value = serde_json::from_value::<F32NotNan>(value).unwrap();
+
+		assert_eq!(new_f32!(F32NotNan(11.)), value);
+	}
+
+	#[test]
+	fn special_case_serialization_round_trip() {
+		let value = new_f32!(F32FiniteStrictlyPositive(42.));
+
+		let value = serde_json::to_value(value).unwrap();
+		let value = serde_json::from_value::<F32FiniteStrictlyPositive>(value).unwrap();
+
+		assert_eq!(new_f32!(F32FiniteStrictlyPositive(42.)), value);
 	}
 }
