@@ -68,7 +68,7 @@ impl GetProjectionPrefab for Skill {
 						.with_rotation(Quat::from_rotation_x(PI / 2.)),
 				},
 				ProjectionCollider {
-					shape: ColliderShape::Cylinder {
+					shape: ColliderShape::Capsule {
 						half_y: Units::from(1.),
 						radius: Units::from(BEAM_PROJECTION_RADIUS),
 					},

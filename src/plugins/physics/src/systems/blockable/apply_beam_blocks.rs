@@ -103,7 +103,7 @@ impl Blockable {
 				// move beam center in the middle of both ends
 				transform.translation.z = -half_length;
 
-				// beams are y-aligned cylinders rotated forward, so we need to scale y direction
+				// beams are y-aligned cylinders/capsules rotated forward, so we need to scale y direction
 				match collider {
 					// update collider shape to trigger reinsertion for immediate collider update
 					Some(ColliderShape::Cylinder { radius, half_y }) => {
@@ -112,6 +112,17 @@ impl Blockable {
 						}
 						commands.try_apply_on(&entity, |mut e| {
 							e.try_insert(ColliderShape::Cylinder {
+								half_y: Units::from(half_length),
+								radius: *radius,
+							});
+						});
+					}
+					Some(ColliderShape::Capsule { radius, half_y }) => {
+						if **half_y == half_length {
+							continue;
+						}
+						commands.try_apply_on(&entity, |mut e| {
+							e.try_insert(ColliderShape::Capsule {
 								half_y: Units::from(half_length),
 								radius: *radius,
 							});
@@ -700,10 +711,35 @@ mod tests {
 
 	mod colliders {
 		use super::*;
+		use test_case::test_case;
 		use testing::IsChanged;
 
-		#[test]
-		fn update_cylinder_collider() -> Result<(), RunSystemError> {
+		#[test_case(
+			ColliderShape::Cylinder {
+				half_y: Units::from(0.5),
+				radius: Units::from(2.),
+			},
+			ColliderShape::Cylinder {
+				half_y: Units::from(5500.),
+				radius: Units::from(2.)
+			};
+			"cylinder"
+		)]
+		#[test_case(
+			ColliderShape::Capsule {
+				half_y: Units::from(0.5),
+				radius: Units::from(2.),
+			},
+			ColliderShape::Capsule {
+				half_y: Units::from(5500.),
+				radius: Units::from(2.)
+			};
+			"capsule"
+		)]
+		fn update_cylinder_collider(
+			collider: ColliderShape,
+			expected: ColliderShape,
+		) -> Result<(), RunSystemError> {
 			let mut app = setup(|_| {
 				Mock_RayCaster::new_mock(|mock| {
 					mock.expect_cast_ray_continuously_sorted()
@@ -732,13 +768,7 @@ mod tests {
 				.id();
 			let skill_transform = app
 				.world_mut()
-				.spawn((
-					SkillTransformOf(entity),
-					ColliderShape::Cylinder {
-						half_y: Units::from(0.5),
-						radius: Units::from(2.),
-					},
-				))
+				.spawn((SkillTransformOf(entity), collider))
 				.id();
 
 			_ = app.world_mut().run_system_once(
@@ -751,10 +781,7 @@ mod tests {
 						translation: Vec3::ZERO.with_z(-5500.),
 						..default()
 					}),
-					Some(&ColliderShape::Cylinder {
-						half_y: Units::from(5500.),
-						radius: Units::from(2.)
-					}),
+					Some(&expected),
 				),
 				(
 					app.world().entity(skill_transform).get::<Transform>(),

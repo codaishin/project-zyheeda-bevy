@@ -76,7 +76,7 @@ impl GetContactPrefab for Skill {
 						.with_rotation(Quat::from_rotation_x(PI / 2.)),
 				},
 				ContactCollider {
-					shape: ColliderShape::Cylinder {
+					shape: ColliderShape::Capsule {
 						half_y: Units::from(1.),
 						radius: Units::from(BEAM_CONTACT_RADIUS),
 					},
