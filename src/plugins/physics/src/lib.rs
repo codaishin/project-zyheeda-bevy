@@ -99,12 +99,13 @@ impl<TDependencies> PhysicsPlugin<TDependencies> {
 	}
 }
 
-impl<TSaveGame, TAnimations> PhysicsPlugin<(TSaveGame, TAnimations)>
+impl<TGameState, TSaveGame, TAnimations> PhysicsPlugin<(TGameState, TSaveGame, TAnimations)>
 where
+	TGameState: ThreadSafe + HandlesGameStates,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
-	pub fn new(target_fps: u32, _: &TSaveGame, _: &TAnimations) -> Self {
+	pub fn new(target_fps: u32, _: &TGameState, _: &TSaveGame, _: &TAnimations) -> Self {
 		Self {
 			target_fps,
 			_p: PhantomData,
@@ -112,8 +113,10 @@ where
 	}
 }
 
-impl<TSaveGame, TAnimations> Plugin for PhysicsPlugin<(TSaveGame, TAnimations)>
+impl<TGameState, TSaveGame, TAnimations> Plugin
+	for PhysicsPlugin<(TGameState, TSaveGame, TAnimations)>
 where
+	TGameState: ThreadSafe + HandlesGameStates,
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
@@ -212,7 +215,13 @@ where
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
 			// Anchor
 			.add_observer(AnchorDirty::process::<RayCasterMut>.pipe(OnError::log))
-			.add_systems(Update, Anchor::mark_dirty.in_set(PhysicsSystems::Prep))
+			.add_systems(
+				Update,
+				Anchor::mark_dirty
+					.in_set(PhysicsSystems::Prep)
+					.run_if(not(TGameState::game_paused())),
+			)
+			// Collisions
 			.add_systems(
 				Update,
 				(
