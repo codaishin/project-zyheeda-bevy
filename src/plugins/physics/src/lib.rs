@@ -29,6 +29,7 @@ use crate::{
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
+		model::PhysicsModel,
 		motion_controller::{MotionController, MotionControllerOf},
 		self_skill_scale::SelfSkillScale,
 		set_velocity_forward::SetVelocityForward,
@@ -142,6 +143,8 @@ where
 				Update,
 				WorldCamera::reset_camera.in_set(PhysicsSystems::Prep),
 			)
+			// Models
+			.add_prefab_observer::<PhysicsModel, ()>()
 			// Character Motion
 			.add_prefab_observer::<MotionControllerOf, ()>()
 			.add_observer(MotionControllerOf::spawn)
