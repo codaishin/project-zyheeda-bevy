@@ -15,12 +15,8 @@ use std::time::Duration;
 pub struct ForceEffect(pub(crate) Force);
 
 impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies> {
-	type TEffectComponent = ForceEffect;
+	type TEffectAdded = Added<ForceEffect>;
 	type TAffectedComponent = ForceAffected;
-
-	fn into_effect_component(effect: Force) -> ForceEffect {
-		ForceEffect(effect)
-	}
 }
 
 impl UpdateBlockers for ForceEffect {

@@ -9,7 +9,10 @@ use crate::{
 		handles_physics::physical_bodies::{Blocker, BodyConfig},
 	},
 };
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+	ecs::{query::QueryFilter, system::SystemParam},
+	prelude::*,
+};
 use macros::{EntityKey, serde_model};
 use std::{
 	collections::HashSet,
@@ -190,10 +193,8 @@ pub trait HandlesPhysicalEffect<TEffect>
 where
 	TEffect: PhysicalEffect,
 {
-	type TEffectComponent: Component;
+	type TEffectAdded: QueryFilter;
 	type TAffectedComponent: Component;
-
-	fn into_effect_component(effect: TEffect) -> Self::TEffectComponent;
 }
 
 pub trait HandlesLife:

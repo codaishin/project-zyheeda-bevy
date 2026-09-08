@@ -14,12 +14,8 @@ use std::time::Duration;
 pub struct HealthDamageEffect(pub(crate) HealthDamage);
 
 impl<TSaveGame> HandlesPhysicalEffect<HealthDamage> for PhysicsPlugin<TSaveGame> {
-	type TEffectComponent = HealthDamageEffect;
+	type TEffectAdded = Added<HealthDamageEffect>;
 	type TAffectedComponent = Life;
-
-	fn into_effect_component(effect: HealthDamage) -> HealthDamageEffect {
-		HealthDamageEffect(effect)
-	}
 }
 
 impl UpdateBlockers for HealthDamageEffect {}

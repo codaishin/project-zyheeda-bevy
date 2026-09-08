@@ -14,12 +14,8 @@ use std::time::Duration;
 pub struct GravityEffect(pub(crate) Gravity);
 
 impl<TDependencies> HandlesPhysicalEffect<Gravity> for PhysicsPlugin<TDependencies> {
-	type TEffectComponent = GravityEffect;
+	type TEffectAdded = Added<GravityEffect>;
 	type TAffectedComponent = GravityAffected;
-
-	fn into_effect_component(effect: Gravity) -> GravityEffect {
-		GravityEffect(effect)
-	}
 }
 
 impl UpdateBlockers for GravityEffect {}
