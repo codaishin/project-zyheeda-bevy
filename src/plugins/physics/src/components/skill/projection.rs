@@ -3,9 +3,10 @@ use crate::{
 		async_collider::ColliderType,
 		collider::ColliderShape,
 		effects::Effects,
+		model::PhysicsModel,
 		self_skill_scale::SelfSkillScale,
 		skill::{
-			BEAM_MODEL,
+			BEAM_PROJECTION_MODEL,
 			BEAM_PROJECTION_RADIUS,
 			HALF_FORWARD,
 			PROJECTILE_PROJECTION_RADIUS,
@@ -30,7 +31,7 @@ impl GetProjectionPrefab for Skill {
 		let (model, collider) = match &self.shape {
 			SkillShape::SphereAoE(SphereAoE { radius, .. }) => (
 				SubModel {
-					model: Model::scene(SPHERE_MODEL),
+					model: PhysicsModel::Model(Model::scene(SPHERE_MODEL)),
 					transform: Transform::from_scale(Vec3::splat(**radius * 2.)),
 				},
 				ProjectionCollider {
@@ -43,7 +44,7 @@ impl GetProjectionPrefab for Skill {
 			),
 			SkillShape::Projectile(..) => (
 				SubModel {
-					model: Model::scene(SPHERE_MODEL),
+					model: PhysicsModel::Model(Model::scene(SPHERE_MODEL)),
 					transform: Transform::from_scale(Vec3::splat(
 						PROJECTILE_PROJECTION_RADIUS * 2.,
 					)),
@@ -58,14 +59,8 @@ impl GetProjectionPrefab for Skill {
 			),
 			SkillShape::Beam(Beam { .. }) => (
 				SubModel {
-					model: Model::Mesh(InsertAsset::shared::<Beam>(BEAM_MODEL)),
-					transform: HALF_FORWARD
-						.with_scale(Vec3 {
-							x: BEAM_PROJECTION_RADIUS * 2.,
-							y: 1.,
-							z: BEAM_PROJECTION_RADIUS * 2.,
-						})
-						.with_rotation(Quat::from_rotation_x(PI / 2.)),
+					model: BEAM_PROJECTION_MODEL,
+					transform: HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),
 				},
 				ProjectionCollider {
 					shape: ColliderShape::Capsule {
@@ -77,7 +72,7 @@ impl GetProjectionPrefab for Skill {
 			),
 			SkillShape::Shield(Shield) => (
 				SubModel {
-					model: Model::scene(SHIELD_PROJECTION_MODEL),
+					model: PhysicsModel::Model(Model::scene(SHIELD_PROJECTION_MODEL)),
 					transform: Transform::from_scale(Vec3::from(*self_skill_scale)),
 				},
 				ProjectionCollider {

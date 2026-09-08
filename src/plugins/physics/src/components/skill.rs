@@ -5,7 +5,7 @@ mod lifetime;
 mod motion;
 mod projection;
 
-use crate::components::{collider::ColliderRoot, skill::dto::SkillDto};
+use crate::components::{collider::ColliderRoot, model::PhysicsModel, skill::dto::SkillDto};
 use bevy::prelude::*;
 use common::prelude::*;
 use macros::{SavableComponent, asset_path, serde_model};
@@ -39,12 +39,15 @@ pub(crate) enum CreatedFrom {
 
 const SPHERE_MODEL: &str = asset_path!("generic/models/sphere.glb");
 
-const BEAM_MODEL: fn() -> Mesh = || {
-	Mesh::from(Cylinder {
-		radius: 1.,
-		half_height: 0.5,
-	})
+const BEAM_CONTACT_MODEL: PhysicsModel = PhysicsModel::Beam {
+	half_y: Units::from_f32(0.5),
+	radius: Units::from_f32(BEAM_CONTACT_RADIUS),
 };
+const BEAM_PROJECTION_MODEL: PhysicsModel = PhysicsModel::Beam {
+	half_y: Units::from_f32(0.5),
+	radius: Units::from_f32(BEAM_PROJECTION_RADIUS),
+};
+
 const BEAM_CONTACT_RADIUS: f32 = 0.003;
 const BEAM_PROJECTION_RADIUS: f32 = 0.2;
 

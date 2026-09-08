@@ -3,10 +3,11 @@ use crate::{
 		async_collider::ColliderType,
 		collider::ColliderShape,
 		effects::Effects,
+		model::PhysicsModel,
 		self_skill_scale::SelfSkillScale,
 		skill::{
+			BEAM_CONTACT_MODEL,
 			BEAM_CONTACT_RADIUS,
-			BEAM_MODEL,
 			HALF_FORWARD,
 			PROJECTILE_CONTACT_RADIUS,
 			SHIELD_CONTACT_COLLIDER,
@@ -33,7 +34,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: Blocker::none(),
 				},
 				SubModel {
-					model: Model::scene(SPHERE_MODEL),
+					model: PhysicsModel::Model(Model::scene(SPHERE_MODEL)),
 					transform: Transform::from_scale(Vec3::splat(**radius * 2.)),
 				},
 				ContactCollider {
@@ -49,7 +50,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: destroyed_by.clone().into(),
 				},
 				SubModel {
-					model: Model::scene(SPHERE_MODEL),
+					model: PhysicsModel::Model(Model::scene(SPHERE_MODEL)),
 					transform: Transform::from_scale(Vec3::splat(PROJECTILE_CONTACT_RADIUS * 2.)),
 				},
 				ContactCollider {
@@ -66,14 +67,8 @@ impl GetContactPrefab for Skill {
 					blocked_by: blocked_by.clone().into(),
 				},
 				SubModel {
-					model: Model::Mesh(InsertAsset::shared::<Beam>(BEAM_MODEL)),
-					transform: HALF_FORWARD
-						.with_scale(Vec3 {
-							x: BEAM_CONTACT_RADIUS * 2.,
-							y: 1.,
-							z: BEAM_CONTACT_RADIUS * 2.,
-						})
-						.with_rotation(Quat::from_rotation_x(PI / 2.)),
+					model: BEAM_CONTACT_MODEL,
+					transform: HALF_FORWARD.with_rotation(Quat::from_rotation_x(PI / 2.)),
 				},
 				ContactCollider {
 					shape: ColliderShape::Capsule {
@@ -88,7 +83,7 @@ impl GetContactPrefab for Skill {
 					destroyed_by: Blocker::none(),
 				},
 				SubModel {
-					model: Model::scene(SHIELD_CONTACT_MODEL),
+					model: PhysicsModel::Model(Model::scene(SHIELD_CONTACT_MODEL)),
 					transform: Transform::from_scale(Vec3::from(*self_skill_scale)),
 				},
 				ContactCollider {

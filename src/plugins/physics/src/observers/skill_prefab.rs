@@ -3,6 +3,7 @@ use crate::components::{
 	collider::{AGENTS_GROUP, ColliderShape, RAY_GROUP, SKILLS_GROUP},
 	collision_domains::Physical,
 	effects::Effects,
+	model::PhysicsModel,
 	persistent_root::PersistentRoot,
 	self_skill_scale::SelfSkillScale,
 	skill::{SkillContactRoot, SkillProjectionRoot},
@@ -153,7 +154,7 @@ pub(crate) trait ApplyMotionPrefab {
 
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct SubModel {
-	pub(crate) model: Model,
+	pub(crate) model: PhysicsModel,
 	pub(crate) transform: Transform,
 }
 
@@ -240,7 +241,7 @@ mod tests {
 
 		fn default_model() -> SubModel {
 			SubModel {
-				model: Model::None,
+				model: PhysicsModel::Model(Model::None),
 				transform: Transform::default(),
 			}
 		}
@@ -541,7 +542,7 @@ mod tests {
 					contact: (
 						_Skill::default_object(),
 						SubModel {
-							model: Model::scene("asset/path"),
+							model: PhysicsModel::Model(Model::scene("asset/path")),
 							transform: Transform::from_xyz(1., 2., 3.),
 						},
 						_Skill::default_contact_collider(),
@@ -554,10 +555,10 @@ mod tests {
 			let [model, ..] = assert_children_count!(3, app, skill);
 			assert_eq!(
 				(
-					Some(&Model::scene("asset/path")),
+					Some(&PhysicsModel::Model(Model::scene("asset/path"))),
 					Some(&Transform::from_xyz(1., 2., 3.))
 				),
-				(model.get::<Model>(), model.get::<Transform>(),),
+				(model.get::<PhysicsModel>(), model.get::<Transform>(),),
 			);
 		}
 
@@ -735,7 +736,7 @@ mod tests {
 				.spawn(_Skill {
 					projection: (
 						SubModel {
-							model: Model::scene("asset/path"),
+							model: PhysicsModel::Model(Model::scene("asset/path")),
 							transform: Transform::from_xyz(1., 2., 3.),
 						},
 						_Skill::default_projection_collider(),
@@ -749,10 +750,10 @@ mod tests {
 			let [model, ..] = assert_children_count!(2, app, projection);
 			assert_eq!(
 				(
-					Some(&Model::scene("asset/path")),
+					Some(&PhysicsModel::Model(Model::scene("asset/path"))),
 					Some(&Transform::from_xyz(1., 2., 3.))
 				),
-				(model.get::<Model>(), model.get::<Transform>(),),
+				(model.get::<PhysicsModel>(), model.get::<Transform>(),),
 			);
 		}
 
