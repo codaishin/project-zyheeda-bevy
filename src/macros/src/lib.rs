@@ -680,6 +680,14 @@ pub fn entity_key(input: TokenStream) -> TokenStream {
 				self.entity
 			}
 		}
+
+		impl From<bevy::prelude::Entity> for #ident {
+			fn from(entity: bevy::prelude::Entity) -> Self {
+				Self {
+					entity
+				}
+			}
+		}
 	})
 }
 
