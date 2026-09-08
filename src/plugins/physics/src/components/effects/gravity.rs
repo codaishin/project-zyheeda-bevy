@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::{SavableComponent, serde_model};
+use macros::{EntityKey, SavableComponent, serde_model};
 use std::time::Duration;
 
 #[serde_model]
@@ -13,9 +13,15 @@ use std::time::Duration;
 #[savable_component(id = "gravity_effect")]
 pub struct GravityEffect(pub(crate) Gravity);
 
+#[derive(EntityKey)]
+pub struct GravityEntity {
+	entity: Entity,
+}
+
 impl<TDependencies> HandlesPhysicalEffect<Gravity> for PhysicsPlugin<TDependencies> {
 	type TEffectAdded = Added<GravityEffect>;
-	type TAffectedComponent = GravityAffected;
+	type TAffectedEntity = GravityEntity;
+	type TAffected = Query<'static, 'static, Ref<'static, GravityAffected>>;
 }
 
 impl UpdateBlockers for GravityEffect {}

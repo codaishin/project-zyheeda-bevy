@@ -5,7 +5,7 @@ use crate::{
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Units, speed::Speed},
 	traits::{
-		accessors::get::{GetContext, TryGetContextMut, View, ViewField},
+		accessors::get::{GetContext, TryGetContext, TryGetContextMut, View, ViewField},
 		handles_physics::physical_bodies::{Blocker, BodyConfig},
 	},
 };
@@ -194,16 +194,23 @@ where
 	TEffect: PhysicalEffect,
 {
 	type TEffectAdded: QueryFilter;
-	type TAffectedComponent: Component;
+	type TAffectedEntity: From<Entity>;
+	type TAffected: TryGetContext<Self::TAffectedEntity>;
 }
 
 pub trait HandlesLife:
-	HandlesPhysicalEffect<HealthDamage, TAffectedComponent: View<Health>>
+	HandlesPhysicalEffect<
+		HealthDamage,
+		TAffected: for<'c> TryGetContext<Self::TAffectedEntity, TContext<'c>: View<Health>>,
+	>
 {
 }
 
 impl<T> HandlesLife for T where
-	T: HandlesPhysicalEffect<HealthDamage, TAffectedComponent: View<Health>>
+	T: HandlesPhysicalEffect<
+			HealthDamage,
+			TAffected: for<'c> TryGetContext<Self::TAffectedEntity, TContext<'c>: View<Health>>,
+		>
 {
 }
 

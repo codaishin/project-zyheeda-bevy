@@ -5,67 +5,79 @@ use crate::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::prelude::*;
 
-type NewBars<'a, TSource> = (Entity, &'a GlobalTransform, &'a TSource, &'a mut Bar);
-type OldBars<'a, TSource, TValue> = (
+type NewBars<'a> = (Entity, &'a GlobalTransform, &'a mut Bar);
+type OldBars<'a, TValue> = (
+	Entity,
 	&'a GlobalTransform,
-	&'a TSource,
 	&'a mut Bar,
 	&'a mut BarValues<TValue>,
 );
 
 #[allow(clippy::type_complexity)]
-pub(crate) fn bar<TSource, TValue, TCamera>(
+pub(crate) fn bar<TSource, TSourceEntity, TValue, TCamera>(
 	commands: ZyheedaCommands,
-	without_bar_values: Query<NewBars<TSource>, Without<BarValues<TValue>>>,
-	with_bar_values: Query<OldBars<TSource, TValue>>,
+	without_bar_values: Query<NewBars, Without<BarValues<TValue>>>,
+	with_bar_values: Query<OldBars<TValue>>,
+	sources: StaticSystemParam<TSource>,
 	mut camera: StaticSystemParam<TCamera>,
 ) where
 	TValue: ThreadSafe + for<'a> ViewField<TValue<'a> = TValue>,
 	BarValues<TValue>: UIBarUpdate<TValue>,
-	TSource: Component + View<TValue>,
+	TSourceEntity: From<Entity>,
+	TSource: for<'c> TryGetContext<TSourceEntity, TContext<'c>: View<TValue>>,
 	TCamera: for<'c> GetContextMut<CameraHandle, TContext<'c>: ScreenPosition>,
 {
 	let camera = TCamera::get_context_mut(&mut camera, CameraHandle);
 
-	add_bar_values(commands, without_bar_values, &camera);
-	update_bar_values(with_bar_values, &camera);
+	add_bar_values(commands, without_bar_values, &sources, &camera);
+	update_bar_values(with_bar_values, &sources, &camera);
 }
 
-fn add_bar_values<TSource, TValue, TCamera>(
+fn add_bar_values<TSource, TSourceEntity, TValue, TCamera>(
 	mut commands: ZyheedaCommands,
-	mut agents: Query<(Entity, &GlobalTransform, &TSource, &mut Bar), Without<BarValues<TValue>>>,
+	mut agents: Query<NewBars, Without<BarValues<TValue>>>,
+	sources: &StaticSystemParam<TSource>,
 	camera: &TCamera,
 ) where
 	TValue: ThreadSafe + for<'a> ViewField<TValue<'a> = TValue>,
-	TSource: Component + View<TValue>,
+	TSourceEntity: From<Entity>,
+	TSource: for<'c> TryGetContext<TSourceEntity, TContext<'c>: View<TValue>>,
 	TCamera: ScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
-	for (id, transform, display, mut bar) in &mut agents {
+	for (entity, transform, mut bar) in agents.iter_mut() {
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.screen_position(world_position);
 		let mut bar_values = BarValues::default();
-		bar_values.update(&display.view());
 
-		commands.try_apply_on(&id, |mut e| {
+		if let Some(display) = TSource::try_get_context(sources, TSourceEntity::from(entity)) {
+			bar_values.update(&display.view());
+		};
+
+		commands.try_apply_on(&entity, |mut e| {
 			e.try_insert(bar_values);
 		});
 	}
 }
 
-fn update_bar_values<TSource, TValue, TCamera>(
-	mut agents: Query<(&GlobalTransform, &TSource, &mut Bar, &mut BarValues<TValue>)>,
+fn update_bar_values<TSource, TSourceEntity, TValue, TCamera>(
+	mut agents: Query<OldBars<TValue>>,
+	sources: &StaticSystemParam<TSource>,
 	camera: &TCamera,
 ) where
 	TValue: ThreadSafe + for<'a> ViewField<TValue<'a> = TValue>,
-	TSource: Component + View<TValue>,
+	TSourceEntity: From<Entity>,
+	TSource: for<'c> TryGetContext<TSourceEntity, TContext<'c>: View<TValue>>,
 	TCamera: ScreenPosition,
 	BarValues<TValue>: UIBarUpdate<TValue>,
 {
-	for (transform, display, mut bar, mut bar_values) in &mut agents {
+	for (entity, transform, mut bar, mut bar_values) in &mut agents {
 		let world_position = transform.translation() + bar.offset;
 		bar.position = camera.screen_position(world_position);
-		bar_values.update(&display.view());
+
+		if let Some(display) = TSource::try_get_context(sources, TSourceEntity::from(entity)) {
+			bar_values.update(&display.view());
+		};
 	}
 }
 
@@ -77,7 +89,7 @@ mod tests {
 		app::{App, Update},
 		math::{Vec2, Vec3},
 	};
-	use macros::NestedMocks;
+	use macros::{EntityKey, NestedMocks};
 	use mockall::{automock, predicate::eq};
 	use std::{collections::VecDeque, ops::DerefMut};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -102,6 +114,11 @@ mod tests {
 
 	#[derive(Component, Default)]
 	struct _Source(_Value);
+
+	#[derive(EntityKey)]
+	struct _SourceEntity {
+		entity: Entity,
+	}
 
 	impl ViewField for _Value {
 		type TValue<'a> = Self;
@@ -128,7 +145,10 @@ mod tests {
 
 	fn setup(camera: Option<_Camera>) -> App {
 		let mut app = App::new().single_threaded(Update);
-		app.add_systems(Update, bar::<_Source, _Value, ResMut<_Camera>>);
+		app.add_systems(
+			Update,
+			bar::<Query<Ref<_Source>>, _SourceEntity, _Value, ResMut<_Camera>>,
+		);
 
 		match camera {
 			None => {
