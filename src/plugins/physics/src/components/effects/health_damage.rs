@@ -5,7 +5,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::{SavableComponent, serde_model};
+use macros::{EntityKey, SavableComponent, serde_model};
 use std::time::Duration;
 
 #[serde_model]
@@ -13,13 +13,15 @@ use std::time::Duration;
 #[savable_component(id = "health_damage")]
 pub struct HealthDamageEffect(pub(crate) HealthDamage);
 
-impl<TSaveGame> HandlesPhysicalEffect<HealthDamage> for PhysicsPlugin<TSaveGame> {
-	type TEffectComponent = HealthDamageEffect;
-	type TAffectedComponent = Life;
+#[derive(EntityKey)]
+pub struct HealthEntity {
+	entity: Entity,
+}
 
-	fn into_effect_component(effect: HealthDamage) -> HealthDamageEffect {
-		HealthDamageEffect(effect)
-	}
+impl<TSaveGame> HandlesPhysicalEffect<HealthDamage> for PhysicsPlugin<TSaveGame> {
+	type TEffectAdded = Added<HealthDamageEffect>;
+	type TAffectedEntity = HealthEntity;
+	type TAffected = Query<'static, 'static, Ref<'static, Life>>;
 }
 
 impl UpdateBlockers for HealthDamageEffect {}

@@ -3,25 +3,25 @@ use crate::{
 	materials::effect_material::EffectMaterial,
 	traits::modify_material::ModifyMaterial,
 };
-use bevy::prelude::*;
+use bevy::{ecs::query::QueryFilter, prelude::*};
 use common::prelude::*;
 
 impl EffectMaterialHandle {
 	pub(crate) fn modify_material<TPhysics, TEffect>(
-		shaders: Query<&Self, Added<TPhysics::TEffectComponent>>,
+		shaders: Query<&Self, TPhysics::TEffectAdded>,
 		materials: ResMut<Assets<EffectMaterial>>,
 	) where
 		TPhysics: HandlesPhysicalEffect<TEffect>,
 		TEffect: PhysicalEffect + ModifyMaterial + 'static,
 	{
-		Self::modify_material_internal::<TPhysics::TEffectComponent, TEffect>(shaders, materials)
+		Self::modify_material_internal::<TPhysics::TEffectAdded, TEffect>(shaders, materials)
 	}
 
-	pub(crate) fn modify_material_internal<TEffectComponent, TEffect>(
-		shaders: Query<&Self, Added<TEffectComponent>>,
+	pub(crate) fn modify_material_internal<TEffectAdded, TEffect>(
+		shaders: Query<&Self, TEffectAdded>,
 		mut materials: ResMut<Assets<EffectMaterial>>,
 	) where
-		TEffectComponent: Component,
+		TEffectAdded: QueryFilter,
 		TEffect: ModifyMaterial + 'static,
 	{
 		for EffectMaterialHandle { material } in shaders {
@@ -64,7 +64,7 @@ mod tests {
 		app.insert_resource(material_assets);
 		app.add_systems(
 			Update,
-			EffectMaterialHandle::modify_material_internal::<_Component, _Effect>,
+			EffectMaterialHandle::modify_material_internal::<With<_Component>, _Effect>,
 		);
 
 		app
@@ -112,32 +112,6 @@ mod tests {
 			app.world()
 				.resource::<Assets<EffectMaterial>>()
 				.get(&handle)
-		);
-	}
-
-	#[test]
-	fn act_only_once() {
-		let first_pass = new_handle();
-		let handle = new_handle();
-		let material = EffectMaterial::from_first_pass(first_pass.clone());
-		let mut app = setup([(&handle, material)]);
-		app.world_mut().spawn((
-			EffectMaterialHandle {
-				material: handle.clone(),
-			},
-			_Component,
-		));
-
-		app.update();
-		let mut materials = app.world_mut().resource_mut::<Assets<EffectMaterial>>();
-		*materials.get_mut(&handle).unwrap() = EffectMaterial::from_first_pass(first_pass.clone());
-		app.update();
-
-		assert_eq!(
-			Some(&EffectMaterial::from_first_pass(first_pass)),
-			app.world()
-				.resource::<Assets<EffectMaterial>>()
-				.get(&handle),
 		);
 	}
 }

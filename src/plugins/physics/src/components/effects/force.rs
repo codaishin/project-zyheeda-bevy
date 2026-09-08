@@ -6,7 +6,7 @@ use crate::{
 };
 use bevy::prelude::*;
 use common::prelude::*;
-use macros::{SavableComponent, serde_model};
+use macros::{EntityKey, SavableComponent, serde_model};
 use std::time::Duration;
 
 #[serde_model]
@@ -14,13 +14,15 @@ use std::time::Duration;
 #[savable_component(id = "force_effect")]
 pub struct ForceEffect(pub(crate) Force);
 
-impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies> {
-	type TEffectComponent = ForceEffect;
-	type TAffectedComponent = ForceAffected;
+#[derive(EntityKey)]
+pub struct ForceEntity {
+	entity: Entity,
+}
 
-	fn into_effect_component(effect: Force) -> ForceEffect {
-		ForceEffect(effect)
-	}
+impl<TDependencies> HandlesPhysicalEffect<Force> for PhysicsPlugin<TDependencies> {
+	type TEffectAdded = Added<ForceEffect>;
+	type TAffectedEntity = ForceEntity;
+	type TAffected = Query<'static, 'static, Ref<'static, ForceAffected>>;
 }
 
 impl UpdateBlockers for ForceEffect {

@@ -5,11 +5,14 @@ use crate::{
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
 	tools::{Units, speed::Speed},
 	traits::{
-		accessors::get::{GetContext, TryGetContextMut, View, ViewField},
+		accessors::get::{GetContext, TryGetContext, TryGetContextMut, View, ViewField},
 		handles_physics::physical_bodies::{Blocker, BodyConfig},
 	},
 };
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+	ecs::{query::QueryFilter, system::SystemParam},
+	prelude::*,
+};
 use macros::{EntityKey, serde_model};
 use std::{
 	collections::HashSet,
@@ -190,19 +193,24 @@ pub trait HandlesPhysicalEffect<TEffect>
 where
 	TEffect: PhysicalEffect,
 {
-	type TEffectComponent: Component;
-	type TAffectedComponent: Component;
-
-	fn into_effect_component(effect: TEffect) -> Self::TEffectComponent;
+	type TEffectAdded: QueryFilter;
+	type TAffectedEntity: From<Entity>;
+	type TAffected: TryGetContext<Self::TAffectedEntity>;
 }
 
 pub trait HandlesLife:
-	HandlesPhysicalEffect<HealthDamage, TAffectedComponent: View<Health>>
+	HandlesPhysicalEffect<
+		HealthDamage,
+		TAffected: for<'c> TryGetContext<Self::TAffectedEntity, TContext<'c>: View<Health>>,
+	>
 {
 }
 
 impl<T> HandlesLife for T where
-	T: HandlesPhysicalEffect<HealthDamage, TAffectedComponent: View<Health>>
+	T: HandlesPhysicalEffect<
+			HealthDamage,
+			TAffected: for<'c> TryGetContext<Self::TAffectedEntity, TContext<'c>: View<Health>>,
+		>
 {
 }
 

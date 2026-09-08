@@ -28,7 +28,8 @@ where
 	TGraphics: ThreadSafe + HandlesCameras,
 {
 	fn build(&self, app: &mut App) {
-		let update_life_bars = bar::<TPhysics::TAffectedComponent, Health, TGraphics::TCameraMut>;
+		let update_life_bars =
+			bar::<TPhysics::TAffected, TPhysics::TAffectedEntity, Health, TGraphics::TCameraMut>;
 		let render_life_bars = render_bar::<Health, TGraphics::TCameraMut>;
 
 		app.manage_ownership::<Bar>(Update);
