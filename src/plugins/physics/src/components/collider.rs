@@ -91,7 +91,7 @@ impl Prefab<()> for ColliderShape {
 		entity.try_insert_if_new((
 			CollidingEntities::default(),
 			ActiveEvents::COLLISION_EVENTS,
-			ActiveCollisionTypes::default(),
+			ActiveCollisionTypes::default() | ActiveCollisionTypes::STATIC_STATIC,
 		));
 
 		let collider = match *self {
@@ -239,5 +239,103 @@ mod tests {
 		entity.insert(shapes[1]);
 
 		assert_eq!(1, colliders_count(entity));
+	}
+
+	mod collisions {
+		use super::*;
+		use crate::tests::TestCollisionsPlugin;
+
+		fn setup() -> App {
+			let mut app = App::new().single_threaded(Update);
+
+			app.add_plugins(TestCollisionsPlugin);
+			app.add_prefab_observer::<ColliderShape, ()>();
+
+			app
+		}
+
+		#[test]
+		fn static_dynamic_collisions() {
+			let mut app = setup();
+
+			let a = app
+				.world_mut()
+				.spawn((
+					RigidBody::Fixed,
+					ColliderShape::Sphere {
+						radius: Units::from_f32(1.),
+						hollow: false,
+					},
+				))
+				.id();
+			let b = app
+				.world_mut()
+				.spawn((
+					RigidBody::Dynamic,
+					ColliderShape::Sphere {
+						radius: Units::from_f32(1.),
+						hollow: false,
+					},
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				(Some(vec![b]), Some(vec![a])),
+				(
+					app.world()
+						.entity(a)
+						.get::<CollidingEntities>()
+						.map(|e| e.iter().collect::<Vec<_>>()),
+					app.world()
+						.entity(b)
+						.get::<CollidingEntities>()
+						.map(|e| e.iter().collect::<Vec<_>>())
+				)
+			);
+		}
+
+		#[test]
+		fn static_static_collisions() {
+			let mut app = setup();
+
+			let a = app
+				.world_mut()
+				.spawn((
+					RigidBody::Fixed,
+					ColliderShape::Sphere {
+						radius: Units::from_f32(1.),
+						hollow: false,
+					},
+				))
+				.id();
+			let b = app
+				.world_mut()
+				.spawn((
+					RigidBody::Fixed,
+					ColliderShape::Sphere {
+						radius: Units::from_f32(1.),
+						hollow: false,
+					},
+				))
+				.id();
+
+			app.update();
+
+			assert_eq!(
+				(Some(vec![b]), Some(vec![a])),
+				(
+					app.world()
+						.entity(a)
+						.get::<CollidingEntities>()
+						.map(|e| e.iter().collect::<Vec<_>>()),
+					app.world()
+						.entity(b)
+						.get::<CollidingEntities>()
+						.map(|e| e.iter().collect::<Vec<_>>())
+				)
+			);
+		}
 	}
 }
