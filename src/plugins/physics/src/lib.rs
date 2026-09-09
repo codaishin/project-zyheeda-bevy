@@ -19,8 +19,8 @@ use crate::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
 		anchor::{Anchor, AnchorDirty},
 		async_collider::AsyncCollider,
-		blockable::Blockable,
 		body::Body,
+		cast_rays::CastRays,
 		character_gravity::CharacterGravity,
 		character_motion::ApplyMotion,
 		collider::{ColliderRoot, ColliderShape},
@@ -83,8 +83,11 @@ impl<TDependencies> PhysicsPlugin<TDependencies> {
 
 	fn configure_physics(&self, app: &mut App, rapier_schedule: impl ScheduleLabel + Clone) {
 		let rapier = RapierPhysicsPlugin::<()>::default().in_schedule(rapier_schedule.clone());
-		let apply_beam_blocks = Blockable::apply_beam_blocks
-			.pipe(OnError::log)
+		let apply_beam_blocks = (
+			CastRays::for_beams.pipe(OnError::log),
+			CastRays::apply_beam_blocks,
+		)
+			.chain()
 			// make sure beam blocks are applied after rapier has updated positions from movement/forces
 			.after(RapierTransformPropagateSet)
 			.before(RapierBevyComponentApply)
@@ -263,7 +266,9 @@ where
 			)
 			.add_systems(
 				FixedPostUpdate,
-				apply_fragile_blocks.after(PhysicsSystems::Resolve),
+				(apply_fragile_blocks, CastRays::clear)
+					.chain()
+					.after(PhysicsSystems::Resolve),
 			);
 	}
 }

@@ -1,7 +1,6 @@
 use crate::{
 	components::{
-		RayCasterArgs,
-		RayFilter,
+		cast_rays::{RayCasterArgs, RayFilter},
 		collider::{AGENTS_GROUP, Colliders, RAY_GROUP, TERRAIN_GROUP},
 		collision_domains::Physical,
 		prevent_tunneling::PreventTunneling,
