@@ -1,4 +1,4 @@
-use crate::math::f32_not_nan::{F32Finite, F32Invalid, F32NotNanBase};
+use crate::math::f32_not_nan::{F32Finite, F32Invalid, F32NotNanBase, F32SpecializationName};
 use serde::Serialize;
 use std::marker::PhantomData;
 
@@ -24,5 +24,11 @@ impl F32Finite {
 impl Default for F32Finite {
 	fn default() -> Self {
 		Self(0., PhantomData)
+	}
+}
+
+impl F32SpecializationName for Finite {
+	fn f32_specialization_name() -> impl std::fmt::Display {
+		"Finite"
 	}
 }

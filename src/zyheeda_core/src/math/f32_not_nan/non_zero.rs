@@ -1,4 +1,4 @@
-use crate::math::f32_not_nan::{F32Invalid, F32NotNanBase};
+use crate::math::f32_not_nan::{F32Invalid, F32NotNanBase, F32SpecializationName};
 use serde::Serialize;
 use std::marker::PhantomData;
 
@@ -14,6 +14,12 @@ impl NonZero {
 		}
 
 		Ok(F32NotNanBase(v, PhantomData))
+	}
+}
+
+impl F32SpecializationName for NonZero {
+	fn f32_specialization_name() -> impl std::fmt::Display {
+		"NonZero"
 	}
 }
 
