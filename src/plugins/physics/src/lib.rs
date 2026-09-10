@@ -89,6 +89,7 @@ impl<TDependencies> PhysicsPlugin<TDependencies> {
 				.pipe(CastRays::execute)
 				.pipe(OnError::log),
 			CastRays::apply_beam_blocks,
+			CastRays::apply_beam_impacts,
 		)
 			.chain()
 			// make sure beam blocks are applied after rapier has updated positions from movement/forces
