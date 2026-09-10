@@ -1,10 +1,8 @@
-use crate::components::impacted::Impacted;
 use bevy::prelude::*;
 use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(Component, Debug, PartialEq, Default, Clone)]
-#[require(Impacted)]
 pub(crate) struct BlockerTypes(pub(crate) HashSet<Blocker>);
 
 impl<TBlocks> From<TBlocks> for BlockerTypes
