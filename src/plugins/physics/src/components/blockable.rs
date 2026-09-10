@@ -1,9 +1,9 @@
-use crate::components::skill_transform::SkillTransforms;
+use crate::components::{cast_rays::CastRays, skill_transform::SkillTransforms};
 use bevy::prelude::*;
 use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Clone)]
-#[require(GlobalTransform, SkillTransforms)]
+#[require(GlobalTransform, SkillTransforms, CastRays)]
 pub struct Blockable(pub(crate) PhysicalObject);
 
 impl From<PhysicalObject> for Blockable {

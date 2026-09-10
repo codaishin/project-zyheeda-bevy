@@ -1,239 +1,59 @@
 use crate::{
 	components::{
-		RayCasterArgs,
-		RayFilter,
-		collider::{AGENTS_GROUP, Colliders, RAY_GROUP, TERRAIN_GROUP},
+		cast_rays::{CastRayFor, CastRays},
+		collider::Colliders,
 		collision_domains::Physical,
-		prevent_tunneling::PreventTunneling,
 	},
-	system_params::update_root_collisions::UpdateRootCollisions,
-	traits::{
-		ray_cast::{CastRayContinuouslySorted, GetContinuousSortedRayCaster, InvalidIntersections},
-		send_collision_interaction::PushInteractingColliders,
-	},
+	traits::send_collision_interaction::PushInteractingColliders,
 };
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
 };
-use bevy_rapier3d::prelude::*;
-use common::prelude::*;
-use std::time::Duration;
 
-impl UpdateRootCollisions<'_, '_, Physical> {
-	pub(crate) fn prevent_tunneling(
-		delta: In<Duration>,
-		cast_ray: StaticSystemParam<ReadRapierContext>,
-		interactions: StaticSystemParam<Self>,
-		colliders: Query<(
-			Entity,
-			&PreventTunneling,
-			&Velocity,
-			&GlobalTransform,
-			&Colliders,
-		)>,
-
-		physical: Query<&Physical>,
-	) -> Result<(), TunnelingRayError> {
-		system_internal(delta, cast_ray, interactions, colliders, physical)
-	}
+impl<T> PreventTunneling for T where
+	T: for<'w, 's> SystemParam<Item<'w, 's>: PushInteractingColliders>
+{
 }
 
-fn system_internal<TInteractions, TGetRayCaster, TCasterError>(
-	In(delta): In<Duration>,
-	cast_ray: StaticSystemParam<TGetRayCaster>,
-	mut interactions: StaticSystemParam<TInteractions>,
-	entities: Query<(
-		Entity,
-		&PreventTunneling,
-		&Velocity,
-		&GlobalTransform,
-		&Colliders,
-	)>,
-
-	physical: Query<&Physical>,
-) -> Result<(), TunnelingRayError<TCasterError>>
-where
-	TGetRayCaster: for<'w, 's> SystemParam<
-		Item<'w, 's>: GetContinuousSortedRayCaster<RayCasterArgs, TError = TCasterError>,
-	>,
-	TInteractions: for<'w, 's> SystemParam<Item<'w, 's>: PushInteractingColliders>,
+pub(crate) trait PreventTunneling:
+	for<'w, 's> SystemParam<Item<'w, 's>: PushInteractingColliders>
 {
-	let cast_ray = match cast_ray.get_continuous_sorted_ray_caster() {
-		Ok(cast_ray) => cast_ray,
-		Err(error) => return Err(TunnelingRayError::NoRayCaster(error)),
-	};
-	let delta_secs = delta.as_secs_f32();
-	let mut invalid_rays = vec![];
-
-	for (entity, PreventTunneling { leading_edge }, velocity, transform, colliders) in entities {
-		let max_toi = velocity.linear.length() * delta_secs;
-		let Ok(max_toi) = TimeOfImpact::try_from_f32(max_toi) else {
-			invalid_rays.push(InvalidRay {
-				entity,
-				invalid_intersections: InvalidIntersections(vec![]),
-				invalid_forward: Some(InvalidForward {
-					delta_secs,
-					velocity: *velocity,
-				}),
-			});
-			continue;
-		};
-		let Ok(direction) = Dir3::try_from(velocity.linear) else {
-			continue;
-		};
-		let origin = transform.translation() + direction * **leading_edge;
-		let ray = RayCasterArgs {
-			max_toi,
-			direction,
-			origin,
-			solid: true,
-			filter: RayFilter {
-				exclude_rigid_body: Some(entity),
-				groups: Some(CollisionGroups {
-					memberships: RAY_GROUP,
-					filters: TERRAIN_GROUP | AGENTS_GROUP,
-				}),
-				..default()
-			},
-		};
-		let hits = match cast_ray.cast_ray_continuously_sorted(&ray) {
-			Ok(hits) => hits,
-			Err(invalid_intersections) => {
-				invalid_rays.push(InvalidRay {
-					entity,
-					invalid_intersections,
-					invalid_forward: None,
-				});
-				continue;
-			}
-		};
-
-		for entity in colliders.iter() {
-			let Ok(Physical::Contact) = physical.get(entity) else {
+	fn prevent_tunneling(
+		mut interactions: StaticSystemParam<Self>,
+		colliders: Query<(&CastRays, &Colliders)>,
+		physical: Query<&Physical>,
+	) {
+		for (cast_rays, colliders) in colliders {
+			let Some(result) = cast_rays.results.get(&CastRayFor::TunnelingPrevention) else {
 				continue;
 			};
 
-			for hit in hits.iter() {
-				interactions.push_interacting_colliders(hit.entity, entity);
-				interactions.push_interacting_colliders(entity, hit.entity);
+			let Some(hit) = result.hit else {
+				continue;
+			};
+
+			for entity in colliders.iter() {
+				let Ok(Physical::Contact) = physical.get(entity) else {
+					continue;
+				};
+
+				interactions.push_interacting_colliders(hit, entity);
+				interactions.push_interacting_colliders(entity, hit);
 			}
 		}
 	}
-
-	if !invalid_rays.is_empty() {
-		return Err(TunnelingRayError::InvalidRays(invalid_rays));
-	}
-
-	Ok(())
-}
-
-#[derive(Debug, PartialEq)]
-pub(crate) enum TunnelingRayError<TCasterError = BevyError> {
-	NoRayCaster(TCasterError),
-	InvalidRays(Vec<InvalidRay>),
-}
-
-#[derive(Debug, PartialEq)]
-pub(crate) struct InvalidRay {
-	entity: Entity,
-	invalid_intersections: InvalidIntersections,
-	invalid_forward: Option<InvalidForward>,
-}
-
-impl ErrorData for TunnelingRayError {
-	fn level(&self) -> Level {
-		Level::Error
-	}
-
-	fn label() -> impl std::fmt::Display {
-		"Tunneling Ray Error"
-	}
-
-	fn into_details(self) -> impl std::fmt::Display {
-		match self {
-			TunnelingRayError::NoRayCaster(error) => format!("No ray caster: {error:?}"),
-			TunnelingRayError::InvalidRays(rays) => format!("Invalid rays: {rays:?}"),
-		}
-	}
-}
-
-#[derive(Debug)]
-#[cfg_attr(not(test), derive(PartialEq))]
-pub(crate) struct InvalidForward {
-	delta_secs: f32,
-	velocity: Velocity,
 }
 
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use crate::{
-		components::collider::ColliderOf,
-		traits::ray_cast::{InvalidIntersections, RayHit},
-	};
-	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
-	use core::f32;
-	use macros::{NestedMocks, simple_mock};
+	use crate::components::{cast_rays::RayCastResult, collider::ColliderOf};
+	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use testing::{Mock, NestedMocks, SingleThreadedApp, assert_eq_approx, fake_entity};
-	use zyheeda_core::prelude::Sorted;
-
-	// Implement equality for `NaN` values for testing only
-	impl PartialEq for InvalidForward {
-		fn eq(&self, other: &Self) -> bool {
-			let deltas_match = self.delta_secs == other.delta_secs
-				|| self.delta_secs.is_nan() && other.delta_secs.is_nan();
-			let velocities_match = self.velocity == other.velocity
-				|| self.velocity.linear.is_nan() && other.velocity.linear.is_nan();
-
-			deltas_match && velocities_match
-		}
-	}
-
-	#[derive(Debug, PartialEq)]
-	struct _Error;
-
-	#[derive(Resource)]
-	struct _GetRayCaster {
-		mock: Option<Mock_RayCaster>,
-	}
-
-	impl GetContinuousSortedRayCaster<RayCasterArgs> for Res<'_, _GetRayCaster> {
-		type TError = _Error;
-
-		type TRayCaster<'a>
-			= &'a Mock_RayCaster
-		where
-			Self: 'a;
-
-		fn get_continuous_sorted_ray_caster(&self) -> Result<Self::TRayCaster<'_>, Self::TError> {
-			match self.mock.as_ref() {
-				Some(mock) => Ok(mock),
-				None => Err(_Error),
-			}
-		}
-	}
-
-	simple_mock! {
-		_RayCaster {}
-		impl CastRayContinuouslySorted<RayCasterArgs> for _RayCaster {
-			fn cast_ray_continuously_sorted(
-				&self,
-				ray: &RayCasterArgs,
-			) -> Result<Sorted<RayHit>, InvalidIntersections>;
-		}
-	}
-
-	impl CastRayContinuouslySorted<RayCasterArgs> for &'_ Mock_RayCaster {
-		fn cast_ray_continuously_sorted(
-			&self,
-			ray: &RayCasterArgs,
-		) -> Result<Sorted<RayHit>, InvalidIntersections> {
-			(*self).cast_ray_continuously_sorted(ray)
-		}
-	}
+	use std::collections::HashMap;
+	use testing::{NestedMocks, SingleThreadedApp, fake_entity};
 
 	#[derive(Resource, NestedMocks)]
 	struct _OngoingCollisions {
@@ -261,40 +81,34 @@ mod tests {
 		}
 	}
 
-	fn setup(ray_caster: Option<Mock_RayCaster>) -> App {
+	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
 		app.init_resource::<_OngoingCollisions>();
-		app.insert_resource(_GetRayCaster { mock: ray_caster });
+		app.add_systems(Update, ResMut::<_OngoingCollisions>::prevent_tunneling);
 
 		app
 	}
 
 	#[test]
-	fn push_physical_contact_colliders() -> Result<(), RunSystemError> {
-		let mut app = setup(None);
+	fn push_physical_contact_colliders() {
+		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				PreventTunneling {
-					leading_edge: Units::from_u8(1),
-				},
-				Velocity::linear(Vec3::X),
-			))
+			.spawn((CastRays {
+				results: HashMap::from([(
+					CastRayFor::TunnelingPrevention,
+					RayCastResult {
+						hit: Some(fake_entity!(123)),
+						..default()
+					},
+				)]),
+			},))
 			.id();
 		let collider = app
 			.world_mut()
 			.spawn((ColliderOf(entity), Physical::Contact))
 			.id();
-		app.insert_resource(_GetRayCaster {
-			mock: Some(Mock_RayCaster::new_mock(|mock| {
-				mock.expect_cast_ray_continuously_sorted()
-					.return_const(Ok(Sorted::from([RayHit {
-						entity: fake_entity!(123),
-						toi: TimeOfImpact::from(Units::from_u8(42)),
-					}])));
-			})),
-		});
 		app.insert_resource(_OngoingCollisions::new().with_mock(|mock| {
 			mock.expect_push_interacting_colliders()
 				.times(1)
@@ -306,207 +120,6 @@ mod tests {
 				.return_const(());
 		}));
 
-		_ = app.world_mut().run_system_once_with(
-			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
-			Duration::from_secs(1),
-		)?;
-
-		Ok(())
-	}
-
-	#[test]
-	fn do_not_push_physical_projection_colliders() -> Result<(), RunSystemError> {
-		let mut app = setup(None);
-		app.world_mut().spawn((
-			PreventTunneling {
-				leading_edge: Units::from_u8(1),
-			},
-			Velocity::linear(Vec3::X),
-			related!(Colliders[Physical::Projection]),
-		));
-		app.insert_resource(_GetRayCaster {
-			mock: Some(Mock_RayCaster::new_mock(|mock| {
-				mock.expect_cast_ray_continuously_sorted()
-					.return_const(Ok(Sorted::from([RayHit {
-						entity: fake_entity!(123),
-						toi: TimeOfImpact::from(Units::from_u8(42)),
-					}])));
-			})),
-		});
-		app.insert_resource(_OngoingCollisions::new().with_mock(|mock| {
-			mock.expect_push_interacting_colliders()
-				.never()
-				.return_const(());
-		}));
-
-		_ = app.world_mut().run_system_once_with(
-			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
-			Duration::from_secs(1),
-		)?;
-
-		Ok(())
-	}
-
-	#[test]
-	fn cast_with_proper_ray() -> Result<(), RunSystemError> {
-		let mut app = setup(None);
-		let entity = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::from_xyz(1., 2., 3.),
-				Velocity::linear(Vec3::new(4., 5., 6.)),
-				PreventTunneling {
-					leading_edge: Units::from_u8(1),
-				},
-				related!(Colliders[]),
-			))
-			.id();
-		app.world_mut().insert_resource(_GetRayCaster {
-			mock: Some(Mock_RayCaster::new_mock(|mock| {
-				mock.expect_cast_ray_continuously_sorted()
-					.times(1)
-					.withf(move |ray| {
-						assert_eq_approx!(
-							RayCasterArgs {
-								origin: Vec3::new(1., 2., 3.) + Vec3::new(4., 5., 6.).normalize(),
-								direction: Dir3::try_from(Vec3::new(4., 5., 6.).normalize())
-									.unwrap(),
-								filter: RayFilter {
-									exclude_rigid_body: Some(entity),
-									groups: Some(CollisionGroups {
-										memberships: RAY_GROUP,
-										filters: TERRAIN_GROUP | AGENTS_GROUP,
-									}),
-									..default()
-								},
-								solid: true,
-								max_toi: TimeOfImpact::from(Units::from(
-									Vec3::new(4., 5., 6.).length() * 0.5
-								)),
-							},
-							ray,
-							0.001,
-						);
-
-						true
-					})
-					.return_const(Ok(Sorted::default()));
-			})),
-		});
-
-		_ = app.world_mut().run_system_once_with(
-			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
-			Duration::from_millis(500),
-		)?;
-
-		Ok(())
-	}
-
-	#[test]
-	fn return_no_ray_caster() -> Result<(), RunSystemError> {
-		let mut app = setup(None);
-		app.world_mut().spawn(PreventTunneling {
-			leading_edge: Units::from_u8(1),
-		});
-
-		let result = app.world_mut().run_system_once_with(
-			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
-			Duration::from_secs(1),
-		)?;
-
-		assert_eq!(Err(TunnelingRayError::NoRayCaster(_Error)), result);
-		Ok(())
-	}
-
-	#[test]
-	fn return_invalid_velocity() -> Result<(), RunSystemError> {
-		let mut app = setup(Some(Mock_RayCaster::new_mock(|mock| {
-			mock.expect_cast_ray_continuously_sorted()
-				.return_const(Ok(Sorted::default()));
-		})));
-		let entity = app
-			.world_mut()
-			.spawn((
-				PreventTunneling {
-					leading_edge: Units::from_u8(1),
-				},
-				Velocity::linear(Vec3::new(f32::NAN, 2., 3.)),
-				related!(Colliders[]),
-			))
-			.id();
-
-		let result = app.world_mut().run_system_once_with(
-			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
-			Duration::from_secs(2),
-		)?;
-
-		assert_eq!(
-			Err(TunnelingRayError::InvalidRays(vec![InvalidRay {
-				entity,
-				invalid_intersections: InvalidIntersections(vec![]),
-				invalid_forward: Some(InvalidForward {
-					delta_secs: 2.,
-					velocity: Velocity::linear(Vec3::new(f32::NAN, 2., 3.))
-				})
-			}])),
-			result
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn return_invalid_hits() -> Result<(), RunSystemError> {
-		let mut app = setup(Some(Mock_RayCaster::new_mock(|mock| {
-			mock.expect_cast_ray_continuously_sorted()
-				.return_const(Err(InvalidIntersections(vec![Vec3::new(1., 2., 3.)])));
-		})));
-		let entity = app
-			.world_mut()
-			.spawn((
-				PreventTunneling {
-					leading_edge: Units::from_u8(1),
-				},
-				Velocity::linear(Vec3::X),
-				related!(Colliders[]),
-			))
-			.id();
-
-		let result = app.world_mut().run_system_once_with(
-			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
-			Duration::from_secs(1),
-		)?;
-
-		assert_eq!(
-			Err(TunnelingRayError::InvalidRays(vec![InvalidRay {
-				entity,
-				invalid_intersections: InvalidIntersections(vec![Vec3::new(1., 2., 3.)]),
-				invalid_forward: None
-			}])),
-			result
-		);
-		Ok(())
-	}
-
-	#[test]
-	fn return_ok() -> Result<(), RunSystemError> {
-		let mut app = setup(Some(Mock_RayCaster::new_mock(|mock| {
-			mock.expect_cast_ray_continuously_sorted()
-				.return_const(Ok(Sorted::default()));
-		})));
-		app.world_mut().spawn((
-			PreventTunneling {
-				leading_edge: Units::from_u8(1),
-			},
-			Velocity::linear(Vec3::X),
-			related!(Colliders[]),
-		));
-
-		let result = app.world_mut().run_system_once_with(
-			system_internal::<ResMut<_OngoingCollisions>, Res<_GetRayCaster>, _Error>,
-			Duration::from_secs(1),
-		)?;
-
-		assert_eq!(Ok(()), result);
-		Ok(())
+		app.update();
 	}
 }
