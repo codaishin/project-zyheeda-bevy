@@ -30,6 +30,10 @@ impl ApproxEqual<f32> for CastRays {
 				return false;
 			};
 
+			if s_result.hit != o_result.hit {
+				return false;
+			}
+
 			if !s_result.toi.approx_equal(&o_result.toi, tolerance) {
 				return false;
 			}
@@ -46,11 +50,13 @@ impl ApproxEqual<f32> for CastRays {
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub(crate) enum CastRayFor {
 	Beam,
+	TunnelingPrevention,
 }
 
 #[derive(Debug, PartialEq, Default, Clone)]
 pub(crate) struct RayCastResult {
 	pub(crate) args: RayCasterArgs,
+	pub(crate) hit: Option<Entity>,
 	pub(crate) toi: TimeOfImpact,
 }
 

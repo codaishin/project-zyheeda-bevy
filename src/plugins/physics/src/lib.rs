@@ -53,6 +53,7 @@ use crate::{
 		insert_affected::InsertAffected,
 		interactions::push_ongoing_collisions::PushOngoingCollisions,
 		interpolate_position::OverstepFraction,
+		prevent_tunneling::PreventTunneling,
 	},
 };
 use bevy::{ecs::schedule::ScheduleLabel, prelude::*};
@@ -84,7 +85,9 @@ impl<TDependencies> PhysicsPlugin<TDependencies> {
 	fn configure_physics(&self, app: &mut App, rapier_schedule: impl ScheduleLabel + Clone) {
 		let rapier = RapierPhysicsPlugin::<()>::default().in_schedule(rapier_schedule.clone());
 		let apply_beam_blocks = (
-			CastRays::for_beams.pipe(OnError::log),
+			CastRays::for_beams
+				.pipe(CastRays::execute)
+				.pipe(OnError::log),
 			CastRays::apply_beam_blocks,
 		)
 			.chain()
@@ -249,8 +252,10 @@ where
 					(
 						RootCollisions::<Physical>::clear,
 						FixedPostUpdate::delta
-							.pipe(UpdateRootCollisions::<Physical>::prevent_tunneling)
+							.pipe(CastRays::to_prevent_tunneling)
+							.pipe(CastRays::execute)
 							.pipe(OnError::log),
+						UpdateRootCollisions::<Physical>::prevent_tunneling,
 						UpdateRootCollisions::<Physical>::push_ongoing_collisions,
 					)
 						.chain(),
