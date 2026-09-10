@@ -4,7 +4,13 @@ pub mod positive;
 
 use crate::math::f32_not_nan::{finite::Finite, non_zero::NonZero, positive::Positive};
 use serde::{Deserialize, Serialize};
-use std::{cmp::Ordering, fmt::Display, hash::Hash, marker::PhantomData, ops::Deref};
+use std::{
+	cmp::Ordering,
+	fmt::{Debug, Display},
+	hash::Hash,
+	marker::PhantomData,
+	ops::Deref,
+};
 
 constraints::implement!(Finite);
 constraints::implement!(Positive);
@@ -31,7 +37,6 @@ macro_rules! new_f32 {
 
 pub use new_f32;
 
-#[derive(Debug)]
 pub struct F32NotNanBase<TConstraint = ()>(f32, PhantomData<TConstraint>);
 
 impl F32NotNanBase {
@@ -43,6 +48,17 @@ impl F32NotNanBase {
 		}
 
 		Ok(Self(value, PhantomData))
+	}
+}
+
+impl<TConstraint> Debug for F32NotNanBase<TConstraint>
+where
+	F32NotNanBase<TConstraint>: F32SpecializationName,
+{
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		let name = format!("F32<NotNan{}>", Self::f32_specialization_name());
+
+		f.debug_tuple(&name).field(&self.0).finish()
 	}
 }
 
@@ -189,6 +205,16 @@ impl<const N: usize> Display for IsNaN<N> {
 	}
 }
 
+trait F32SpecializationName {
+	fn f32_specialization_name() -> impl Display;
+}
+
+impl F32SpecializationName for F32NotNan {
+	fn f32_specialization_name() -> impl Display {
+		""
+	}
+}
+
 #[derive(Debug, PartialEq)]
 pub enum F32ParseError {
 	IsNaN(IsNaN<1>),
@@ -207,7 +233,7 @@ impl F32ParseError {
 impl Display for F32ParseError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		match self {
-			F32ParseError::IsNaN(err) => err.fmt(f),
+			F32ParseError::IsNaN(err) => Display::fmt(err, f),
 			F32ParseError::Invalid(F32Invalid::Infinite(v)) => write!(f, "{v}: is infinite"),
 			F32ParseError::Invalid(F32Invalid::Negative(v)) => write!(f, "{v}: is negative"),
 			F32ParseError::Invalid(F32Invalid::Zero(v)) => write!(f, "{v}: is zero"),
@@ -229,8 +255,29 @@ impl From<F32Invalid> for F32ParseError {
 }
 
 mod constraints {
+	macro_rules! implement_name {
+		($ty:ident $(,)?) => {
+			impl F32SpecializationName for F32NotNanBase<$ty> {
+				fn f32_specialization_name() -> impl Display {
+					format!(", {}", $ty::f32_specialization_name())
+				}
+			}
+		};
+		($($ty:ident,)+ $(,)?) => {
+			impl F32SpecializationName for F32NotNanBase<($($ty,)+)> {
+				fn f32_specialization_name() -> impl Display {
+					format!(", {}", vec![$($ty::f32_specialization_name().to_string(),)+].join(", "))
+				}
+			}
+		};
+	}
+
+	pub(super) use implement_name;
+
 	macro_rules! implement {
-		($t_fst:ty $(, $t_rest:ty)*) => {
+		($t_fst:ident $(, $t_rest:ident)*) => {
+			constraints::implement_name!($t_fst, $($t_rest,)*);
+
 			#[allow(unused_parens)]
 			impl F32NotNanBase<($t_fst $(, $t_rest)*)>
 			where
@@ -427,13 +474,15 @@ mod tests {
 		assert_eq!(new_f32!(F32NotNan(11.)), value);
 	}
 
-	#[test]
-	fn special_case_serialization_round_trip() {
-		let value = new_f32!(F32FiniteStrictlyPositive(42.));
+	#[test_case(new_f32!(F32Finite(42.)); "finite")]
+	#[test_case(new_f32!(F32FiniteStrictlyPositive(42.)); "strictly positive")]
+	fn round_trip<T>(test: T)
+	where
+		T: Serialize + for<'de> Deserialize<'de> + Debug + PartialEq + Copy,
+	{
+		let value = serde_json::to_value(test).unwrap();
+		let value = serde_json::from_value::<T>(value).unwrap();
 
-		let value = serde_json::to_value(value).unwrap();
-		let value = serde_json::from_value::<F32FiniteStrictlyPositive>(value).unwrap();
-
-		assert_eq!(new_f32!(F32FiniteStrictlyPositive(42.)), value);
+		assert_eq!(test, value);
 	}
 }
