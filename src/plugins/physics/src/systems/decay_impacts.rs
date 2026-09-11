@@ -1,5 +1,6 @@
-use crate::components::impacted::{ImpactStrength, Impacted};
+use crate::components::impacted::Impacted;
 use bevy::prelude::*;
+use common::prelude::*;
 use std::time::Duration;
 
 impl Impacted {

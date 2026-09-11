@@ -28,7 +28,7 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
-		impacted::{ImpactStrength, Impacted},
+		impacted::Impacted,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		model::PhysicsModel,
 		motion_controller::{MotionController, MotionControllerOf},

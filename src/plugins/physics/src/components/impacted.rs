@@ -1,9 +1,6 @@
 use bevy::prelude::*;
-use common::tools::vec_not_nan::VecNotNan;
+use common::prelude::*;
 use std::collections::HashMap;
-use zyheeda_core::prelude::*;
-
-pub(crate) type ImpactStrength = F32FiniteStrictlyPositive;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct Impacted {
