@@ -2,7 +2,7 @@ use crate::{
 	components::{
 		anchor::Anchor,
 		ground_target::GroundTarget,
-		prevent_tunneling::PreventTunneling,
+		projectile::Projectile,
 		set_velocity_forward::SetVelocityForward,
 		skill::{
 			CreatedFrom,
@@ -33,7 +33,7 @@ impl ApplyMotionPrefab for Skill {
 				entity.try_insert((
 					GravityScale(0.),
 					Ccd::enabled(),
-					PreventTunneling {
+					Projectile {
 						leading_edge: Units::from(PROJECTILE_CONTACT_RADIUS),
 					},
 					WhenTraveled::distance(PROJECTILE_RANGE).destroy(),

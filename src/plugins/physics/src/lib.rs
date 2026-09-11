@@ -28,6 +28,7 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
+		impacted::{ImpactStrength, Impacted},
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		model::PhysicsModel,
 		motion_controller::{MotionController, MotionControllerOf},
@@ -50,6 +51,7 @@ use crate::{
 	},
 	systems::{
 		apply_pull::ApplyPull,
+		decay_impacts::DecayPerSecond,
 		insert_affected::InsertAffected,
 		interactions::push_ongoing_collisions::PushOngoingCollisions,
 		interpolate_position::OverstepFraction,
@@ -63,6 +65,7 @@ use components::effects::{gravity::GravityEffect, health_damage::HealthDamageEff
 use std::{marker::PhantomData, time::Duration};
 use systems::interactions::apply_fragile_blocks::apply_fragile_blocks;
 use traits::act_on::ActOn;
+use zyheeda_core::prelude::*;
 
 pub struct PhysicsPlugin<TDependencies> {
 	target_fps: u32,
@@ -70,6 +73,8 @@ pub struct PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> PhysicsPlugin<TDependencies> {
+	const IMPACT_DECAY: DecayPerSecond = DecayPerSecond(new_f32!(ImpactStrength(1.0)));
+
 	fn configure_schedules(app: &mut App, label: impl ScheduleLabel) {
 		app.configure_sets(
 			label,
@@ -89,6 +94,7 @@ impl<TDependencies> PhysicsPlugin<TDependencies> {
 				.pipe(CastRays::execute)
 				.pipe(OnError::log),
 			CastRays::apply_beam_blocks,
+			CastRays::apply_beam_impacts,
 		)
 			.chain()
 			// make sure beam blocks are applied after rapier has updated positions from movement/forces
@@ -257,6 +263,7 @@ where
 							.pipe(OnError::log),
 						UpdateRootCollisions::<Physical>::prevent_tunneling,
 						UpdateRootCollisions::<Physical>::push_ongoing_collisions,
+						RootCollisions::<Physical>::apply_projectile_impacts,
 					)
 						.chain(),
 					// Collect interactive collisions
@@ -269,11 +276,18 @@ where
 					.chain()
 					.in_set(PhysicsSystems::Prep),
 			)
+			// Cleanup
 			.add_systems(
 				FixedPostUpdate,
 				(apply_fragile_blocks, CastRays::clear)
 					.chain()
 					.after(PhysicsSystems::Resolve),
+			)
+			.add_systems(
+				Update,
+				Update::delta
+					.pipe(Impacted::decay_impacts(Self::IMPACT_DECAY))
+					.chain(),
 			);
 	}
 }

@@ -5,7 +5,7 @@ use crate::{
 		cast_rays::{CastRayFor, CastRays, RayCastResult, RayCasterArgs, RayFilter},
 		collider::{AGENTS_GROUP, ColliderOf, RAY_GROUP, SKILLS_GROUP, TERRAIN_GROUP},
 		collision_domains::Physical,
-		prevent_tunneling::PreventTunneling,
+		projectile::Projectile,
 	},
 	traits::ray_cast::{
 		CastRayContinuouslySorted,
@@ -230,19 +230,11 @@ pub(crate) struct PreventTunnelingStrategy {
 }
 
 impl CastRayStrategy for PreventTunnelingStrategy {
-	type TQuery = (
-		&'static Blockable,
-		&'static Velocity,
-		&'static PreventTunneling,
-	);
+	type TQuery = (&'static Blockable, &'static Velocity, &'static Projectile);
 
 	fn instance<'a>(
 		&self,
-		(Blockable(obj), velocity, PreventTunneling { leading_edge }): ROQueryItem<
-			'a,
-			'a,
-			Self::TQuery,
-		>,
+		(Blockable(obj), velocity, Projectile { leading_edge }): ROQueryItem<'a, 'a, Self::TQuery>,
 	) -> Option<Strategy<'a>> {
 		let PhysicalObject::Fragile { destroyed_by } = obj else {
 			return None;
