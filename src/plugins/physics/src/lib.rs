@@ -263,6 +263,7 @@ where
 							.pipe(OnError::log),
 						UpdateRootCollisions::<Physical>::prevent_tunneling,
 						UpdateRootCollisions::<Physical>::push_ongoing_collisions,
+						RootCollisions::<Physical>::apply_projectile_impacts,
 					)
 						.chain(),
 					// Collect interactive collisions

@@ -4,6 +4,6 @@ use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(Velocity, GlobalTransform)]
-pub(crate) struct PreventTunneling {
+pub(crate) struct Projectile {
 	pub(crate) leading_edge: Units,
 }
