@@ -1,13 +1,9 @@
 use crate::{
-	components::{
-		collision_domains::Physical,
-		impacted::{ImpactStrength, Impacted},
-		projectile::Projectile,
-	},
+	components::{collision_domains::Physical, impacted::Impacted, projectile::Projectile},
 	resources::root_collisions::RootCollisions,
 };
 use bevy::prelude::*;
-use common::tools::vec_not_nan::VecNotNan;
+use common::prelude::*;
 use zyheeda_core::prelude::*;
 
 impl RootCollisions<Physical> {

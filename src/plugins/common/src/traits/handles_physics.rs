@@ -3,7 +3,7 @@ pub mod physical_bodies;
 use crate::{
 	attributes::{effect_target::EffectTarget, health::Health},
 	effects::{force::Force, gravity::Gravity, health_damage::HealthDamage},
-	tools::{Units, speed::Speed},
+	tools::{Units, speed::Speed, vec_not_nan::VecNotNan},
 	traits::{
 		accessors::get::{GetContext, TryGetContext, TryGetContextMut, View, ViewField},
 		handles_physics::physical_bodies::{Blocker, BodyConfig},
@@ -217,6 +217,26 @@ impl<T> HandlesLife for T where
 pub trait PhysicalEffect {
 	type TTarget;
 }
+
+pub trait HandlesImpacts {
+	type TImpacted: for<'c> TryGetContext<Impacted, TContext<'c>: Iterate<'c, TItem = Impact>>;
+}
+
+#[derive(EntityKey)]
+pub struct Impacted {
+	pub entity: Entity,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct Impact {
+	pub position: GlobalVec3,
+	pub strength: ImpactStrength,
+}
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct GlobalVec3(pub VecNotNan<3>);
+
+pub type ImpactStrength = F32FiniteStrictlyPositive;
 
 #[serde_model]
 #[derive(Debug, PartialEq, Clone, Copy)]

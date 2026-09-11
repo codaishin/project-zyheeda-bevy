@@ -28,7 +28,7 @@ use crate::{
 		default_attributes::DefaultAttributes,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
-		impacted::{ImpactStrength, Impacted},
+		impacted::Impacted,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		model::PhysicsModel,
 		motion_controller::{MotionController, MotionControllerOf},
@@ -44,6 +44,7 @@ use crate::{
 	resources::{root_collisions::RootCollisions, world_camera::WorldCamera},
 	system_params::{
 		config::ConfigParamMut,
+		impacted::ImpactedParam,
 		interactive::InteractiveParam,
 		ray_caster::RayCasterMut,
 		skill_agent::{SkillAgent, SkillAgentMut},
@@ -343,4 +344,8 @@ impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependenci
 
 impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies> {
 	type TInteractions = InteractiveParam<'static>;
+}
+
+impl<TDependencies> HandlesImpacts for PhysicsPlugin<TDependencies> {
+	type TImpacted = ImpactedParam<'static, 'static>;
 }
