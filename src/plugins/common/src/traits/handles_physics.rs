@@ -219,7 +219,29 @@ pub trait PhysicalEffect {
 }
 
 pub trait HandlesImpacts {
-	type TImpacted: for<'c> TryGetContext<Impacted, TContext<'c>: Iterate<'c, TItem = Impact>>;
+	type TImpacted: for<'c> TryGetContext<Impacted, TContext<'c>: IterImpacts>;
+}
+
+pub trait IterImpacts {
+	type TIter<'a>: Iterator<Item = Impact>
+	where
+		Self: 'a;
+
+	fn iter_impacts(&self) -> Self::TIter<'_>;
+}
+
+impl<T> IterImpacts for T
+where
+	T: Deref<Target: IterImpacts>,
+{
+	type TIter<'a>
+		= <T::Target as IterImpacts>::TIter<'a>
+	where
+		Self: 'a;
+
+	fn iter_impacts(&self) -> Self::TIter<'_> {
+		self.deref().iter_impacts()
+	}
 }
 
 #[derive(EntityKey)]
