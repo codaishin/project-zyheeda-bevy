@@ -229,9 +229,12 @@ pub struct Impacted {
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub struct Impact {
-	pub global_position: VecNotNan<3>,
+	pub position: GlobalVec3,
 	pub strength: ImpactStrength,
 }
+
+#[derive(Debug, PartialEq, Eq, Hash)]
+pub struct GlobalVec3(pub VecNotNan<3>);
 
 pub type ImpactStrength = F32FiniteStrictlyPositive;
 

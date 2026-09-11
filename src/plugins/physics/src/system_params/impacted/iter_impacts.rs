@@ -21,10 +21,10 @@ impl Iterator for Iter<'_> {
 	type Item = Impact;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		let (global_position, strength) = self.it.next()?;
+		let (position, strength) = self.it.next()?;
 
 		Some(Impact {
-			global_position: *global_position,
+			position: GlobalVec3(*position),
 			strength: *strength,
 		})
 	}
@@ -71,11 +71,11 @@ mod tests {
 		assert_eq!(
 			HashSet::from([
 				Impact {
-					global_position: vec_not_nan!(1., 2., 3.),
+					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
 					strength: new_f32!(ImpactStrength(1.))
 				},
 				Impact {
-					global_position: vec_not_nan!(3., 4., 5.),
+					position: GlobalVec3(vec_not_nan!(3., 4., 5.)),
 					strength: new_f32!(ImpactStrength(0.5))
 				}
 			]),
