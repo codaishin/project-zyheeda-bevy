@@ -39,7 +39,7 @@ use bevy::{
 use common::{components::essence::Essence, prelude::*};
 use components::{
 	camera_labels::{UiPass, WorldPass},
-	effect_material_handle::EffectMaterialHandle,
+	effect_material_data::EffectMaterialData,
 	material_override::MaterialOverride,
 };
 use materials::essence_material::EssenceMaterial;
@@ -111,8 +111,8 @@ where
 			.setup_post_process_pipeline()
 			.setup_distance_pipeline()
 			.add_observer(MaterialOverride::update_essence_shader)
-			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillContact>)
-			.add_observer(EffectMaterialHandle::add_to::<TPhysics::TSkillProjection>)
+			.add_observer(EffectMaterialData::add_to::<TPhysics::TSkillContact>)
+			.add_observer(EffectMaterialData::add_to::<TPhysics::TSkillProjection>)
 			.add_observer(StandardMaterials::track_inserted)
 			.add_observer(StandardMaterials::track_discarded)
 			.add_observer(StandardMaterials::set_invisible_material("Invisible"))
@@ -120,10 +120,10 @@ where
 				Update,
 				(
 					ModelRenderLayers::systems(),
-					EffectMaterialHandle::modify_material::<TPhysics, Force>,
-					EffectMaterialHandle::modify_material::<TPhysics, Gravity>,
-					EffectMaterialHandle::modify_material::<TPhysics, HealthDamage>,
-					EffectMaterialHandle::propagate_material,
+					EffectMaterialData::modify_material::<TPhysics, Force>,
+					EffectMaterialData::modify_material::<TPhysics, Gravity>,
+					EffectMaterialData::modify_material::<TPhysics, HealthDamage>,
+					EffectMaterialData::propagate_material,
 					StandardMaterials::set_lit_type,
 					StandardMaterials::replace_with_lit_material,
 				)

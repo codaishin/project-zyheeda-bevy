@@ -1,15 +1,13 @@
 use crate::{
-	components::{camera_labels::WorldPass, effect_material_handle::EffectMaterialHandle},
-	materials::effect_material::EffectMaterial,
+	components::{camera_labels::WorldPass, effect_material_data::EffectMaterialData},
 	resources::camera_render_target::CameraRenderTarget,
 };
 use bevy::prelude::*;
 use common::prelude::*;
 
-impl EffectMaterialHandle {
+impl EffectMaterialData {
 	pub(crate) fn add_to<TComponent>(
 		on_add: On<Add, TComponent>,
-		mut materials: ResMut<Assets<EffectMaterial>>,
 		mut commands: ZyheedaCommands,
 		first_pass_image: Res<CameraRenderTarget<WorldPass>>,
 	) where
@@ -19,10 +17,7 @@ impl EffectMaterialHandle {
 			return;
 		};
 
-		let material = EffectMaterial::from_first_pass(first_pass_image.handle.clone());
-		let material = EffectMaterialHandle {
-			material: materials.add(material),
-		};
+		let material = EffectMaterialData::from_first_pass(first_pass_image.handle.clone());
 
 		entity.try_insert((material, Visibility::Hidden));
 	}
@@ -40,8 +35,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(CameraRenderTarget::<WorldPass>::from(first_pass));
-		app.init_resource::<Assets<EffectMaterial>>();
-		app.add_observer(EffectMaterialHandle::add_to::<_Component>);
+		app.add_observer(EffectMaterialData::add_to::<_Component>);
 
 		app
 	}
@@ -52,20 +46,7 @@ mod tests {
 
 		let entity = app.world_mut().spawn(_Component);
 
-		assert!(entity.contains::<EffectMaterialHandle>());
-	}
-
-	macro_rules! get_material {
-		($app:expr, $entity:expr) => {
-			$app.world()
-				.entity($entity)
-				.get::<EffectMaterialHandle>()
-				.and_then(|shader| {
-					$app.world()
-						.resource::<Assets<EffectMaterial>>()
-						.get(&shader.material)
-				})
-		};
+		assert!(entity.contains::<EffectMaterialData>());
 	}
 
 	#[test]
@@ -76,8 +57,8 @@ mod tests {
 		let entity = app.world_mut().spawn(_Component).id();
 
 		assert_eq!(
-			Some(&EffectMaterial::from_first_pass(first_pass)),
-			get_material!(app, entity),
+			Some(&EffectMaterialData::from_first_pass(first_pass)),
+			app.world().entity(entity).get::<EffectMaterialData>(),
 		);
 	}
 
@@ -102,9 +83,9 @@ mod tests {
 		let mut app = setup(new_handle());
 
 		let mut entity = app.world_mut().spawn(_Component);
-		entity.remove::<EffectMaterialHandle>();
+		entity.remove::<EffectMaterialData>();
 		entity.insert(_Component);
 
-		assert!(!entity.contains::<EffectMaterialHandle>());
+		assert!(!entity.contains::<EffectMaterialData>());
 	}
 }

@@ -2,8 +2,8 @@ mod force;
 mod gravity;
 mod health_damage;
 
-use crate::materials::effect_material::EffectMaterial;
+use crate::components::effect_material_data::EffectMaterialData;
 
 pub(crate) trait ModifyMaterial {
-	fn modify_material(material: &mut EffectMaterial);
+	fn modify_material(material: &mut EffectMaterialData);
 }
