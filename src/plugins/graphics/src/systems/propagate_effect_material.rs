@@ -11,6 +11,7 @@ impl EffectMaterialData {
 	pub(crate) fn propagate_material(
 		mut commands: ZyheedaCommands,
 		meshes: Query<(&Self, &mut Visibility, &ChildMeshes), DataOrMeshesChanged>,
+		effect_materials: Query<&MeshMaterial3d<EffectMaterial>>,
 		mut assets: ResMut<Assets<EffectMaterial>>,
 	) {
 		for (data, mut visibility, child_meshes) in meshes {
@@ -18,6 +19,18 @@ impl EffectMaterialData {
 				commands.try_apply_on(&entity, |mut e| {
 					e.try_remove::<MeshMaterial3d<StandardMaterial>>();
 					e.try_remove::<MeshMaterial3d<StandardLitMaterial>>();
+
+					{
+						let effect_material = effect_materials
+							.get(entity)
+							.map(|MeshMaterial3d(id)| assets.get_mut(id));
+
+						if let Ok(Some(mut effect_material)) = effect_material {
+							*effect_material = EffectMaterial::from(data.clone());
+							return;
+						};
+					}
+
 					e.try_insert(MeshMaterial3d(
 						assets.add(EffectMaterial::from(data.clone())),
 					));
@@ -89,6 +102,109 @@ mod tests {
 			))),
 			app.world().resource::<Assets<EffectMaterial>>().get(handle),
 		);
+	}
+
+	#[test]
+	fn reuse_material_handle() {
+		let first_pass = new_handle();
+		let old_handle = new_handle();
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn(EffectMaterialData::from_first_pass(first_pass.clone()))
+			.id();
+		let child = app
+			.world_mut()
+			.spawn((
+				ChildMeshOf(entity),
+				MeshMaterial3d::<EffectMaterial>(old_handle.clone()),
+			))
+			.id();
+		_ = app
+			.world_mut()
+			.resource_mut::<Assets<EffectMaterial>>()
+			.insert(&old_handle, EffectMaterial::default());
+
+		app.update();
+
+		let MeshMaterial3d(handle) = app
+			.world()
+			.entity(child)
+			.get::<MeshMaterial3d<EffectMaterial>>()
+			.unwrap();
+		assert_eq!(
+			(
+				Some(&EffectMaterial::from(EffectMaterialData::from_first_pass(
+					first_pass
+				))),
+				&old_handle
+			),
+			(
+				app.world()
+					.resource::<Assets<EffectMaterial>>()
+					.get(&old_handle),
+				handle
+			)
+		);
+	}
+
+	#[test]
+	fn set_material_data_if_old_handle_invalid() {
+		let first_pass = new_handle();
+		let old_handle = new_handle();
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn(EffectMaterialData::from_first_pass(first_pass.clone()))
+			.id();
+		let child = app
+			.world_mut()
+			.spawn((
+				ChildMeshOf(entity),
+				MeshMaterial3d::<EffectMaterial>(old_handle.clone()),
+			))
+			.id();
+
+		app.update();
+
+		let MeshMaterial3d(handle) = app
+			.world()
+			.entity(child)
+			.get::<MeshMaterial3d<EffectMaterial>>()
+			.unwrap();
+		assert_eq!(
+			Some(&EffectMaterial::from(EffectMaterialData::from_first_pass(
+				first_pass
+			))),
+			app.world().resource::<Assets<EffectMaterial>>().get(handle),
+		);
+	}
+
+	#[test]
+	fn drop_old_handle_if_invalid() {
+		let first_pass = new_handle();
+		let old_handle = new_handle();
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn(EffectMaterialData::from_first_pass(first_pass.clone()))
+			.id();
+		let child = app
+			.world_mut()
+			.spawn((
+				ChildMeshOf(entity),
+				MeshMaterial3d::<EffectMaterial>(old_handle.clone()),
+			))
+			.id();
+
+		app.update();
+
+		let MeshMaterial3d(handle) = app
+			.world()
+			.entity(child)
+			.get::<MeshMaterial3d<EffectMaterial>>()
+			.unwrap();
+		assert_ne!(handle, &old_handle);
 	}
 
 	#[test]
