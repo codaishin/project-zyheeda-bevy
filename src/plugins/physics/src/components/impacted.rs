@@ -5,6 +5,7 @@ use std::collections::HashMap;
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct Impacted {
 	pub(crate) impact_points: HashMap<VecNotNan<3>, ImpactStrength>,
+	pub(crate) old_impact_points: HashMap<VecNotNan<3>, ImpactStrength>,
 }
 
 #[cfg(test)]

@@ -54,6 +54,7 @@ mod tests {
 					vec_not_nan!(1., 2., 3.),
 					new_f32!(ImpactStrength(1.0)),
 				)]),
+				..default()
 			})
 			.id();
 
@@ -66,6 +67,7 @@ mod tests {
 					vec_not_nan!(1., 2., 3.),
 					new_f32!(ImpactStrength(0.9)),
 				)]),
+				..default()
 			}),
 			app.world().entity(entity).get::<Impacted>(),
 			0.01,
@@ -84,6 +86,7 @@ mod tests {
 					vec_not_nan!(1., 2., 3.),
 					new_f32!(ImpactStrength(1.0)),
 				)]),
+				..default()
 			})
 			.id();
 
@@ -93,6 +96,7 @@ mod tests {
 		assert_eq!(
 			Some(&Impacted {
 				impact_points: HashMap::from([]),
+				..default()
 			}),
 			app.world().entity(entity).get::<Impacted>(),
 		);

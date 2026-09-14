@@ -277,18 +277,18 @@ where
 					.chain()
 					.in_set(PhysicsSystems::Prep),
 			)
+			// Tracking
+			.add_systems(FixedPreUpdate, Impacted::track_old)
 			// Cleanup
 			.add_systems(
 				FixedPostUpdate,
-				(apply_fragile_blocks, CastRays::clear)
+				(
+					apply_fragile_blocks,
+					CastRays::clear,
+					FixedPostUpdate::delta.pipe(Impacted::decay_impacts(Self::IMPACT_DECAY)),
+				)
 					.chain()
 					.after(PhysicsSystems::Resolve),
-			)
-			.add_systems(
-				Update,
-				Update::delta
-					.pipe(Impacted::decay_impacts(Self::IMPACT_DECAY))
-					.chain(),
 			);
 	}
 }

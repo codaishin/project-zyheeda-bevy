@@ -29,9 +29,8 @@ pub struct ImpactedContext<'ctx> {
 	impacted: Ref<'ctx, Impacted>,
 }
 
-// FIXME: COMPARE STATE
 impl ContextChanged for ImpactedContext<'_> {
 	fn context_changed(&self) -> bool {
-		self.impacted.is_changed()
+		self.impacted.impact_points != self.impacted.old_impact_points
 	}
 }

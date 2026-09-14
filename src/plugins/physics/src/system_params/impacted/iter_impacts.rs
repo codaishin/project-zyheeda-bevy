@@ -60,6 +60,7 @@ mod tests {
 					(vec_not_nan!(1., 2., 3.), new_f32!(ImpactStrength(1.))),
 					(vec_not_nan!(3., 4., 5.), new_f32!(ImpactStrength(0.5))),
 				]),
+				..default()
 			})
 			.id();
 

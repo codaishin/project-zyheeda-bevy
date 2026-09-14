@@ -73,7 +73,8 @@ mod tests {
 				impact_points: HashMap::from([(
 					vec_not_nan!(1.5, 2., 3.),
 					new_f32!(ImpactStrength(1.))
-				)])
+				)]),
+				..default()
 			}),
 			app.world().entity(a).get::<Impacted>(),
 		);

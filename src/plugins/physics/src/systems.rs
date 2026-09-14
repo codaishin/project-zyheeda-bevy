@@ -15,6 +15,7 @@ pub(crate) mod root_collisions;
 pub(crate) mod set_motion_done;
 pub(crate) mod set_motion_translation;
 pub(crate) mod set_velocity_forward;
+pub(crate) mod track_old;
 pub(crate) mod update_target_pitch;
 pub(crate) mod when_traveled;
 pub(crate) mod world_camera;
