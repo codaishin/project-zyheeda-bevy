@@ -31,13 +31,12 @@ pub(crate) struct EffectMaterial {
 }
 
 impl EffectMaterial {
-	fn compute_impacts(impacts: &[Impact], transform: &GlobalTransform) -> ShaderBuffer {
-		let inverse = transform.affine().inverse();
+	fn compute_impacts(impacts: &[Impact]) -> ShaderBuffer {
 		let to_local = |Impact { position, strength }: &Impact| {
-			let local = inverse.transform_point3(Vec3::from(position.0));
+			let position = Vec3::from(position.0);
 			let strength = **strength;
 
-			LocalImpact { local, strength }
+			LocalImpact { position, strength }
 		};
 
 		ShaderBuffer::from(impacts.iter().map(to_local).collect::<Vec<_>>())
@@ -47,25 +46,15 @@ impl EffectMaterial {
 		self.impacts = NO_IMPACTS.clone();
 	}
 
-	fn new_impacts(
-		&mut self,
-		buffers: &mut Assets<ShaderBuffer>,
-		impacts: &[Impact],
-		transform: &GlobalTransform,
-	) {
-		self.impacts = buffers.add(Self::compute_impacts(impacts, transform));
+	fn new_impacts(&mut self, buffers: &mut Assets<ShaderBuffer>, impacts: &[Impact]) {
+		self.impacts = buffers.add(Self::compute_impacts(impacts));
 	}
 
-	fn updated_impacts(
-		&mut self,
-		buffers: &mut Assets<ShaderBuffer>,
-		impacts: &[Impact],
-		transform: &GlobalTransform,
-	) {
+	fn updated_impacts(&mut self, buffers: &mut Assets<ShaderBuffer>, impacts: &[Impact]) {
 		if let Some(mut buffer) = buffers.get_mut(&self.impacts) {
-			*buffer = Self::compute_impacts(impacts, transform);
+			*buffer = Self::compute_impacts(impacts);
 		} else {
-			self.impacts = buffers.add(Self::compute_impacts(impacts, transform));
+			self.impacts = buffers.add(Self::compute_impacts(impacts));
 		}
 	}
 }
@@ -98,7 +87,7 @@ impl Material for EffectMaterial {
 
 #[derive(Debug, PartialEq, ShaderType)]
 pub(crate) struct LocalImpact {
-	local: Vec3,
+	position: Vec3,
 	strength: f32,
 }
 
@@ -106,12 +95,7 @@ impl UpdateMaterial for EffectMaterial {
 	type TData = EffectMaterialData;
 	type TBuffer = Assets<ShaderBuffer>;
 
-	fn update_material(
-		&mut self,
-		buffers: &mut Assets<ShaderBuffer>,
-		data: &EffectMaterialData,
-		transform: &GlobalTransform,
-	) {
+	fn update_material(&mut self, buffers: &mut Assets<ShaderBuffer>, data: &EffectMaterialData) {
 		let EffectMaterialData {
 			first_pass,
 			base_color,
@@ -129,8 +113,8 @@ impl UpdateMaterial for EffectMaterial {
 
 		match impacts {
 			[] => self.empty_impacts(),
-			_ if self.impacts == *NO_IMPACTS => self.new_impacts(buffers, impacts, transform),
-			_ => self.updated_impacts(buffers, impacts, transform),
+			_ if self.impacts == *NO_IMPACTS => self.new_impacts(buffers, impacts),
+			_ => self.updated_impacts(buffers, impacts),
 		}
 	}
 }
@@ -139,433 +123,232 @@ impl UpdateMaterial for EffectMaterial {
 mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use bevy::{
-		color::palettes::css::{RED, WHITE},
-		ecs::system::{RunSystemError, RunSystemOnce},
-	};
-	use testing::{SingleThreadedApp, assert_count, new_handle};
+	use bevy::color::palettes::css::{RED, WHITE};
+	use testing::new_handle;
 	use zyheeda_core::prelude::*;
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Wrapper(EffectMaterial);
-
-	fn setup() -> App {
-		let mut app = App::new().single_threaded(Update);
-
-		app.init_resource::<Assets<ShaderBuffer>>();
-		app.add_plugins(MinimalPlugins);
-		app.add_plugins(TransformPlugin);
-
-		app
-	}
-
 	#[test]
-	fn set_data() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				_Wrapper(EffectMaterial::default()),
-			))
-			.id();
+	fn set_data() {
+		let mut buffers = Assets::default();
+		let mut material = EffectMaterial::default();
 		let first_pass = new_handle();
-		let first_pass_clone = first_pass.clone();
 
-		app.world_mut().run_system_once(
-			move |mut buffers: ResMut<Assets<ShaderBuffer>>,
-			      mut transform: Query<(&GlobalTransform, &mut _Wrapper)>| {
-				let (transform, mut material) = transform.get_mut(entity).unwrap();
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						first_pass: first_pass_clone.clone(),
-						base_color: LinearRgba::from(WHITE),
-						fresnel_color: LinearRgba::from(RED),
-						flags: 2,
-						..default()
-					},
-					transform,
-				);
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				first_pass: first_pass.clone(),
+				base_color: LinearRgba::from(WHITE),
+				fresnel_color: LinearRgba::from(RED),
+				flags: 2,
+				..default()
 			},
-		)?;
+		);
 
 		assert_eq!(
-			Some(&_Wrapper(EffectMaterial {
+			EffectMaterial {
 				first_pass,
 				base_color: LinearRgba::from(WHITE),
 				fresnel_color: LinearRgba::from(RED),
 				flags: 2,
 				..default()
-			})),
-			app.world().entity(entity).get::<_Wrapper>()
+			},
+			material
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn set_impacts() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				_Wrapper(EffectMaterial::default()),
-			))
-			.id();
+	fn set_impacts() {
+		let mut buffers = Assets::default();
+		let mut material = EffectMaterial::default();
 
-		app.world_mut().run_system_once(
-			move |mut buffers: ResMut<Assets<ShaderBuffer>>,
-			      mut transform: Query<(&GlobalTransform, &mut _Wrapper)>| {
-				let (transform, mut material) = transform.get_mut(entity).unwrap();
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-							strength: new_f32!(ImpactStrength(0.5)),
-						}],
-						..default()
-					},
-					transform,
-				);
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					strength: new_f32!(ImpactStrength(0.5)),
+				}],
+				..default()
 			},
-		)?;
+		);
 
-		let mut materials = app.world_mut().query::<&_Wrapper>();
-		let [_Wrapper(material)] = assert_count!(1, materials.iter(app.world()));
 		assert_eq!(
 			Some(
 				&ShaderBuffer::from(vec![LocalImpact {
-					local: Vec3::new(1., 2., 3.),
+					position: Vec3::new(1., 2., 3.),
 					strength: 0.5
 				}])
 				.data
 			),
-			app.world()
-				.resource::<Assets<ShaderBuffer>>()
-				.get(&material.impacts)
-				.map(|b| &b.data)
+			buffers.get(&material.impacts).map(|b| &b.data)
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn do_not_use_default_handle() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				_Wrapper(EffectMaterial::default()),
-			))
-			.id();
+	fn do_not_use_default_handle() {
+		let mut buffers = Assets::default();
+		let mut material = EffectMaterial::default();
 
-		app.world_mut().run_system_once(
-			move |mut buffers: ResMut<Assets<ShaderBuffer>>,
-			      mut transform: Query<(&GlobalTransform, &mut _Wrapper)>| {
-				let (transform, mut material) = transform.get_mut(entity).unwrap();
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-							strength: new_f32!(ImpactStrength(0.5)),
-						}],
-						..default()
-					},
-					transform,
-				);
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					strength: new_f32!(ImpactStrength(0.5)),
+				}],
+				..default()
 			},
-		)?;
+		);
 
-		let mut materials = app.world_mut().query::<&_Wrapper>();
-		let [_Wrapper(material)] = assert_count!(1, materials.iter(app.world()));
-		assert_ne!(&*NO_IMPACTS, &material.impacts);
-		Ok(())
+		assert_ne!(*NO_IMPACTS, material.impacts);
 	}
 
 	#[test]
-	fn use_default_handle_when_impacts_empty() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				_Wrapper(EffectMaterial::default()),
-			))
-			.id();
+	fn use_default_handle_when_impacts_empty() {
+		let mut buffers = Assets::default();
+		let mut material = EffectMaterial::default();
 
-		app.world_mut().run_system_once(
-			move |mut buffers: ResMut<Assets<ShaderBuffer>>,
-			      mut transform: Query<(&GlobalTransform, &mut _Wrapper)>| {
-				let (transform, mut material) = transform.get_mut(entity).unwrap();
-				material
-					.0
-					.update_material(&mut buffers, &EffectMaterialData::default(), transform);
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![],
+				..default()
 			},
-		)?;
+		);
 
-		let mut materials = app.world_mut().query::<&_Wrapper>();
-		let [_Wrapper(material)] = assert_count!(1, materials.iter(app.world()));
-		assert_eq!(&*NO_IMPACTS, &material.impacts);
-		Ok(())
+		assert_eq!(*NO_IMPACTS, material.impacts);
 	}
 
 	#[test]
-	fn use_default_handle_when_impacts_empty_after_some_impacts_were_set()
-	-> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				_Wrapper(EffectMaterial::default()),
-			))
-			.id();
+	fn use_default_handle_when_impacts_empty_after_some_impacts_were_set() {
+		let mut buffers = Assets::default();
+		let mut material = EffectMaterial::default();
 
-		app.world_mut().run_system_once(
-			move |mut buffers: ResMut<Assets<ShaderBuffer>>,
-			      mut transform: Query<(&GlobalTransform, &mut _Wrapper)>| {
-				let (transform, mut material) = transform.get_mut(entity).unwrap();
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(VecNotNan::default()),
-							strength: new_f32!(ImpactStrength(1.0)),
-						}],
-						..default()
-					},
-					transform,
-				);
-				material
-					.0
-					.update_material(&mut buffers, &EffectMaterialData::default(), transform);
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					position: GlobalVec3(VecNotNan::default()),
+					strength: new_f32!(ImpactStrength(1.0)),
+				}],
+				..default()
 			},
-		)?;
+		);
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![],
+				..default()
+			},
+		);
 
-		let mut materials = app.world_mut().query::<&_Wrapper>();
-		let [_Wrapper(material)] = assert_count!(1, materials.iter(app.world()));
-		assert_eq!(&*NO_IMPACTS, &material.impacts);
-		Ok(())
+		assert_eq!(*NO_IMPACTS, material.impacts);
 	}
 
 	#[test]
-	fn reuse_handle() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				_Wrapper(EffectMaterial::default()),
-			))
-			.id();
-
-		let first_handle = app.world_mut().run_system_once(
-			move |mut buffers: ResMut<Assets<ShaderBuffer>>,
-			      mut transform: Query<(&GlobalTransform, &mut _Wrapper)>| {
-				let (transform, mut material) = transform.get_mut(entity).unwrap();
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-							strength: new_f32!(ImpactStrength(0.5)),
-						}],
-						..default()
-					},
-					transform,
-				);
-				let first_handle = material.0.impacts.clone();
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(vec_not_nan!(2., 3., 4.)),
-							strength: new_f32!(ImpactStrength(0.5)),
-						}],
-						..default()
-					},
-					transform,
-				);
-				first_handle
+	fn reuse_handle() {
+		let mut buffers = Assets::default();
+		let mut material = EffectMaterial::default();
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					strength: new_f32!(ImpactStrength(0.5)),
+				}],
+				..default()
 			},
-		)?;
+		);
 
-		let mut materials = app.world_mut().query::<&_Wrapper>();
-		let [_Wrapper(material)] = assert_count!(1, materials.iter(app.world()));
-		assert_eq!(&first_handle, &material.impacts);
-		Ok(())
+		let first_handle = material.impacts.clone();
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					strength: new_f32!(ImpactStrength(0.4)),
+				}],
+				..default()
+			},
+		);
+
+		assert_eq!(first_handle, material.impacts);
 	}
 
 	#[test]
-	fn set_new_impacts() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				_Wrapper(EffectMaterial::default()),
-			))
-			.id();
-
-		app.world_mut().run_system_once(
-			move |mut buffers: ResMut<Assets<ShaderBuffer>>,
-			      mut transform: Query<(&GlobalTransform, &mut _Wrapper)>| {
-				let (transform, mut material) = transform.get_mut(entity).unwrap();
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-							strength: new_f32!(ImpactStrength(0.5)),
-						}],
-						..default()
-					},
-					transform,
-				);
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(vec_not_nan!(2., 3., 4.)),
-							strength: new_f32!(ImpactStrength(0.5)),
-						}],
-						..default()
-					},
-					transform,
-				);
+	fn set_new_impacts() {
+		let mut buffers = Assets::default();
+		let mut material = EffectMaterial::default();
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					strength: new_f32!(ImpactStrength(0.5)),
+				}],
+				..default()
 			},
-		)?;
+		);
 
-		let mut materials = app.world_mut().query::<&_Wrapper>();
-		let [_Wrapper(material)] = assert_count!(1, materials.iter(app.world()));
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					position: GlobalVec3(vec_not_nan!(2., 3., 4.)),
+					strength: new_f32!(ImpactStrength(0.5)),
+				}],
+				..default()
+			},
+		);
+
 		assert_eq!(
 			Some(
 				&ShaderBuffer::from(vec![LocalImpact {
-					local: Vec3::new(2., 3., 4.),
+					position: Vec3::new(2., 3., 4.),
 					strength: 0.5
 				}])
 				.data
 			),
-			app.world()
-				.resource::<Assets<ShaderBuffer>>()
-				.get(&material.impacts)
-				.map(|b| &b.data)
+			buffers.get(&material.impacts).map(|b| &b.data)
 		);
-		Ok(())
 	}
 
 	#[test]
-	fn set_new_impacts_when_assets_data_missing() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				GlobalTransform::default(),
-				_Wrapper(EffectMaterial::default()),
-			))
-			.id();
+	fn set_new_impacts_when_assets_data_missing() {
+		let mut buffers = Assets::default();
+		let mut material = EffectMaterial::default();
 
-		app.world_mut().run_system_once(
-			move |mut buffers: ResMut<Assets<ShaderBuffer>>,
-			      mut transform: Query<(&GlobalTransform, &mut _Wrapper)>| {
-				let (transform, mut material) = transform.get_mut(entity).unwrap();
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-							strength: new_f32!(ImpactStrength(0.5)),
-						}],
-						..default()
-					},
-					transform,
-				);
-				buffers.remove(&material.0.impacts);
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(vec_not_nan!(2., 3., 4.)),
-							strength: new_f32!(ImpactStrength(0.5)),
-						}],
-						..default()
-					},
-					transform,
-				);
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					strength: new_f32!(ImpactStrength(0.5)),
+				}],
+				..default()
 			},
-		)?;
+		);
+		buffers.remove(&material.impacts);
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					position: GlobalVec3(vec_not_nan!(2., 3., 4.)),
+					strength: new_f32!(ImpactStrength(0.5)),
+				}],
+				..default()
+			},
+		);
 
-		let mut materials = app.world_mut().query::<&_Wrapper>();
-		let [_Wrapper(material)] = assert_count!(1, materials.iter(app.world()));
 		assert_eq!(
 			Some(
 				&ShaderBuffer::from(vec![LocalImpact {
-					local: Vec3::new(2., 3., 4.),
+					position: Vec3::new(2., 3., 4.),
 					strength: 0.5
 				}])
 				.data
 			),
-			app.world()
-				.resource::<Assets<ShaderBuffer>>()
-				.get(&material.impacts)
-				.map(|b| &b.data)
+			buffers.get(&material.impacts).map(|b| &b.data)
 		);
-		Ok(())
-	}
-
-	#[test]
-	fn translate_impacts_into_local() -> Result<(), RunSystemError> {
-		let mut app = setup();
-		let parent = app
-			.world_mut()
-			.spawn((Transform::from_xyz(0., 1., 0.),))
-			.id();
-		let entity = app
-			.world_mut()
-			.spawn((
-				ChildOf(parent),
-				Transform::from_xyz(1., 0., 0.).looking_to(Dir3::Z, Dir3::Y),
-				_Wrapper(EffectMaterial::default()),
-			))
-			.id();
-		app.update();
-
-		app.world_mut().run_system_once(
-			move |mut buffers: ResMut<Assets<ShaderBuffer>>,
-			      mut transform: Query<(&GlobalTransform, &mut _Wrapper)>| {
-				let (transform, mut material) = transform.get_mut(entity).unwrap();
-				material.0.update_material(
-					&mut buffers,
-					&EffectMaterialData {
-						impacts: vec![Impact {
-							position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-							strength: new_f32!(ImpactStrength(0.5)),
-						}],
-						..default()
-					},
-					transform,
-				);
-			},
-		)?;
-
-		let mut materials = app.world_mut().query::<&_Wrapper>();
-		let [_Wrapper(material)] = assert_count!(1, materials.iter(app.world()));
-		assert_eq!(
-			Some(
-				&ShaderBuffer::from(vec![LocalImpact {
-					local: Vec3::new(0., 1., -3.),
-					strength: 0.5
-				}])
-				.data
-			),
-			app.world()
-				.resource::<Assets<ShaderBuffer>>()
-				.get(&material.impacts)
-				.map(|b| &b.data)
-		);
-		Ok(())
 	}
 }

@@ -10,7 +10,6 @@ pub trait PropagateMaterial: Component + Sized {
 	fn propagate_material<TMaterial>(
 		mut commands: ZyheedaCommands,
 		meshes: Query<(&Self, &mut Visibility, &ChildMeshes), DataOrMeshesChanged<Self>>,
-		transforms: Query<&GlobalTransform>,
 		effect_materials: Query<&MeshMaterial3d<TMaterial>>,
 		mut assets: ResMut<Assets<TMaterial>>,
 		mut buffers: ResMut<TMaterial::TBuffer>,
@@ -19,10 +18,6 @@ pub trait PropagateMaterial: Component + Sized {
 	{
 		for (data, mut visibility, child_meshes) in meshes {
 			for entity in child_meshes.iter() {
-				let Ok(transform) = transforms.get(entity) else {
-					continue;
-				};
-
 				commands.try_apply_on(&entity, |mut e| {
 					e.try_remove::<MeshMaterial3d<StandardMaterial>>();
 					e.try_remove::<MeshMaterial3d<StandardLitMaterial>>();
@@ -33,16 +28,14 @@ pub trait PropagateMaterial: Component + Sized {
 							.map(|MeshMaterial3d(id)| assets.get_mut(id));
 
 						if let Ok(Some(mut effect_material)) = effect_material {
-							effect_material.update_material(&mut buffers, data, transform);
+							effect_material.update_material(&mut buffers, data);
 							return;
 						};
 					}
 
-					e.try_insert(MeshMaterial3d(assets.add(TMaterial::from_data(
-						&mut buffers,
-						data,
-						transform,
-					))));
+					e.try_insert(MeshMaterial3d(
+						assets.add(TMaterial::from_data(&mut buffers, data)),
+					));
 				});
 			}
 			*visibility = Visibility::Visible;
@@ -54,23 +47,14 @@ pub(crate) trait UpdateMaterial {
 	type TData: Component;
 	type TBuffer: Resource<Mutability = Mutable>;
 
-	fn update_material(
-		&mut self,
-		buffers: &mut Self::TBuffer,
-		data: &Self::TData,
-		transform: &GlobalTransform,
-	);
+	fn update_material(&mut self, buffers: &mut Self::TBuffer, data: &Self::TData);
 }
 
 trait FromData: Default + UpdateMaterial {
-	fn from_data(
-		buffers: &mut Self::TBuffer,
-		data: &Self::TData,
-		transform: &GlobalTransform,
-	) -> Self {
+	fn from_data(buffers: &mut Self::TBuffer, data: &Self::TData) -> Self {
 		let mut value = Self::default();
 
-		value.update_material(buffers, data, transform);
+		value.update_material(buffers, data);
 
 		value
 	}
@@ -94,7 +78,6 @@ mod tests {
 	struct _Material {
 		from_default: bool,
 		data: Option<_Data>,
-		transform: Option<GlobalTransform>,
 	}
 
 	impl Default for _Material {
@@ -102,7 +85,6 @@ mod tests {
 			Self {
 				from_default: true,
 				data: None,
-				transform: None,
 			}
 		}
 	}
@@ -113,14 +95,8 @@ mod tests {
 		type TData = _Data;
 		type TBuffer = _Buffers;
 
-		fn update_material(
-			&mut self,
-			_: &mut Self::TBuffer,
-			data: &_Data,
-			transform: &GlobalTransform,
-		) {
+		fn update_material(&mut self, _: &mut Self::TBuffer, data: &_Data) {
 			self.data = Some(data.clone());
-			self.transform = Some(*transform);
 		}
 	}
 
@@ -141,10 +117,7 @@ mod tests {
 	fn add_material() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Data).id();
-		let child = app
-			.world_mut()
-			.spawn((ChildMeshOf(entity), GlobalTransform::from_xyz(1., 2., 3.)))
-			.id();
+		let child = app.world_mut().spawn(ChildMeshOf(entity)).id();
 
 		app.update();
 
@@ -159,10 +132,7 @@ mod tests {
 	fn set_material_data() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Data).id();
-		let child = app
-			.world_mut()
-			.spawn((ChildMeshOf(entity), GlobalTransform::from_xyz(1., 2., 3.)))
-			.id();
+		let child = app.world_mut().spawn(ChildMeshOf(entity)).id();
 
 		app.update();
 
@@ -174,7 +144,6 @@ mod tests {
 		assert_eq!(
 			Some(&_Material {
 				data: Some(_Data),
-				transform: Some(GlobalTransform::from_xyz(1., 2., 3.)),
 				..default()
 			}),
 			app.world().resource::<Assets<_Material>>().get(handle),
@@ -191,7 +160,6 @@ mod tests {
 			.spawn((
 				ChildMeshOf(entity),
 				MeshMaterial3d::<_Material>(old_handle.clone()),
-				GlobalTransform::from_xyz(1., 2., 3.),
 			))
 			.id();
 		_ = app.world_mut().resource_mut::<Assets<_Material>>().insert(
@@ -213,7 +181,6 @@ mod tests {
 			(
 				Some(&_Material {
 					data: Some(_Data),
-					transform: Some(GlobalTransform::from_xyz(1., 2., 3.)),
 					from_default: false,
 				}),
 				&old_handle
@@ -235,7 +202,6 @@ mod tests {
 			.spawn((
 				ChildMeshOf(entity),
 				MeshMaterial3d::<_Material>(old_handle.clone()),
-				GlobalTransform::from_xyz(1., 2., 3.),
 			))
 			.id();
 
@@ -249,7 +215,6 @@ mod tests {
 		assert_eq!(
 			Some(&_Material {
 				data: Some(_Data),
-				transform: Some(GlobalTransform::from_xyz(1., 2., 3.)),
 				..default()
 			}),
 			app.world().resource::<Assets<_Material>>().get(handle),
@@ -266,7 +231,6 @@ mod tests {
 			.spawn((
 				ChildMeshOf(entity),
 				MeshMaterial3d::<_Material>(old_handle.clone()),
-				GlobalTransform::from_xyz(1., 2., 3.),
 			))
 			.id();
 
@@ -289,7 +253,6 @@ mod tests {
 			.spawn((
 				ChildMeshOf(entity),
 				MeshMaterial3d(new_handle::<StandardMaterial>()),
-				GlobalTransform::from_xyz(1., 2., 3.),
 			))
 			.id();
 
@@ -312,7 +275,6 @@ mod tests {
 			.spawn((
 				ChildMeshOf(entity),
 				MeshMaterial3d(new_handle::<StandardLitMaterial>()),
-				GlobalTransform::from_xyz(1., 2., 3.),
 			))
 			.id();
 
@@ -333,7 +295,6 @@ mod tests {
 		app.world_mut().spawn((
 			ChildMeshOf(entity),
 			MeshMaterial3d(new_handle::<StandardMaterial>()),
-			GlobalTransform::from_xyz(1., 2., 3.),
 		));
 
 		app.update();
@@ -348,10 +309,7 @@ mod tests {
 	fn act_only_once() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Data).id();
-		let child = app
-			.world_mut()
-			.spawn((ChildMeshOf(entity), GlobalTransform::from_xyz(1., 2., 3.)))
-			.id();
+		let child = app.world_mut().spawn(ChildMeshOf(entity)).id();
 
 		app.update();
 		app.world_mut()
@@ -369,10 +327,7 @@ mod tests {
 	fn act_again_if_children_changed() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Data).id();
-		let child = app
-			.world_mut()
-			.spawn((ChildMeshOf(entity), GlobalTransform::from_xyz(1., 2., 3.)))
-			.id();
+		let child = app.world_mut().spawn(ChildMeshOf(entity)).id();
 
 		app.update();
 		app.world_mut()
@@ -395,10 +350,7 @@ mod tests {
 	fn act_again_if_effect_data_changed() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(_Data).id();
-		let child = app
-			.world_mut()
-			.spawn((ChildMeshOf(entity), GlobalTransform::from_xyz(1., 2., 3.)))
-			.id();
+		let child = app.world_mut().spawn(ChildMeshOf(entity)).id();
 
 		app.update();
 		app.world_mut()
