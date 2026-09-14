@@ -95,7 +95,8 @@ mod tests {
 				impact_points: HashMap::from([(
 					vec_not_nan!(1., 13., 3.),
 					new_f32!(F32FiniteStrictlyPositive(1.))
-				)])
+				)]),
+				..default()
 			}),
 			app.world().entity(hit).get::<Impacted>(),
 		);
@@ -128,7 +129,8 @@ mod tests {
 				impact_points: HashMap::from([(
 					vec_not_nan!(1., 13., 3.),
 					new_f32!(F32FiniteStrictlyPositive(1.))
-				)])
+				)]),
+				..default()
 			}),
 			app.world().entity(root).get::<Impacted>(),
 		);

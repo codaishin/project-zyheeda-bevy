@@ -31,6 +31,7 @@ use crate::{
 		highlight::{HighlightParam, HighlightParamMut},
 		lights::RolesParamMut,
 	},
+	systems::propagate_material::PropagateMaterial,
 };
 use bevy::{
 	prelude::*,
@@ -64,7 +65,8 @@ where
 		+ SystemSetDefinition
 		+ HandlesRaycast
 		+ HandlesAllPhysicalEffects
-		+ HandlesSkillPhysics,
+		+ HandlesSkillPhysics
+		+ HandlesImpacts,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self {
@@ -84,7 +86,8 @@ where
 		+ SystemSetDefinition
 		+ HandlesRaycast
 		+ HandlesAllPhysicalEffects
-		+ HandlesSkillPhysics,
+		+ HandlesSkillPhysics
+		+ HandlesImpacts,
 {
 	#[cfg(feature = "debug-utils")]
 	pub fn new(debug_cam: fn() -> TDebugCam, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
@@ -117,13 +120,18 @@ where
 			.add_observer(StandardMaterials::track_discarded)
 			.add_observer(StandardMaterials::set_invisible_material("Invisible"))
 			.add_systems(
+				Startup,
+				EffectMaterial::set_default_impacts.pipe(OnError::log),
+			)
+			.add_systems(
 				Update,
 				(
 					ModelRenderLayers::systems(),
 					EffectMaterialData::modify_material::<TPhysics, Force>,
 					EffectMaterialData::modify_material::<TPhysics, Gravity>,
 					EffectMaterialData::modify_material::<TPhysics, HealthDamage>,
-					EffectMaterialData::propagate_material,
+					EffectMaterialData::read_impacts::<TPhysics::TImpacted>,
+					EffectMaterialData::propagate_material::<EffectMaterial>,
 					StandardMaterials::set_lit_type,
 					StandardMaterials::replace_with_lit_material,
 				)
@@ -187,7 +195,8 @@ where
 		+ SystemSetDefinition
 		+ HandlesRaycast
 		+ HandlesAllPhysicalEffects
-		+ HandlesSkillPhysics,
+		+ HandlesSkillPhysics
+		+ HandlesImpacts,
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);

@@ -13,6 +13,12 @@
 @group(#{MATERIAL_BIND_GROUP}) @binding(2) var<uniform> base_color: vec4<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(3) var<uniform> fresnel_color: vec4<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(4) var<uniform> effect_flags: u32;
+@group(#{MATERIAL_BIND_GROUP}) @binding(5) var<storage> impacts: array<Impact>;
+
+struct Impact {
+    position: vec3<f32>,
+    strength: f32,
+}
 
 struct PulseParams {
     speed: f32,
@@ -26,6 +32,8 @@ struct FresnelParams {
 const COLOR_EFFECT: u32 = 1 << 0;
 const FRESNEL_EFFECT: u32 = 1 << 1;
 const DISTORTION_EFFECT: u32 = 1 << 2;
+
+const IMPACT_FALLOFF: f32 = 1.0;
 
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
@@ -43,6 +51,8 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
         output += distortion_effect(mesh);
     }
 
+    output += impact_strength(mesh);
+
     return output;
 }
 
@@ -50,6 +60,24 @@ fn fresnel_effect(mesh: VertexOutput) -> vec4<f32> {
     let fresnel = fresnel(mesh, 5.);
 
     return vec4(fresnel_color.rgb, fresnel_color.a * fresnel);
+}
+
+fn impact_strength(mesh: VertexOutput) -> vec4<f32> {
+    var highest_strength = 0.0;
+
+    for (var i = u32(0); i < arrayLength(&impacts); i++) {
+        let impact = impacts[i];
+        let distance = length(mesh.world_position.xyz - impact.position);
+        let strength = max(0.3 - distance * IMPACT_FALLOFF, 0.0) * impact.strength;
+
+        if strength < highest_strength {
+            continue;
+        }
+
+        highest_strength = strength;
+    }
+
+    return vec4(highest_strength);
 }
 
 fn distortion_effect(mesh: VertexOutput) -> vec4<f32> {

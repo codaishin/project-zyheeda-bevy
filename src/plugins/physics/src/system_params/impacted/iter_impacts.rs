@@ -1,12 +1,13 @@
 use crate::system_params::impacted::ImpactedContext;
 use common::prelude::*;
-use zyheeda_core::prelude::*;
 
-impl<'c> Iterate<'c> for ImpactedContext<'c> {
-	type TItem = Impact;
-	type TIter = Iter<'c>;
+impl IterImpacts for ImpactedContext<'_> {
+	type TIter<'a>
+		= Iter<'a>
+	where
+		Self: 'a;
 
-	fn iterate(&'c self) -> Self::TIter {
+	fn iter_impacts(&self) -> Self::TIter<'_> {
 		Iter {
 			it: self.impacted.impact_points.iter(),
 		}
@@ -43,6 +44,7 @@ mod tests {
 	use common::traits::handles_physics::Impacted as ImpactedKey;
 	use std::collections::{HashMap, HashSet};
 	use testing::SingleThreadedApp;
+	use zyheeda_core::prelude::*;
 
 	fn setup() -> App {
 		App::new().single_threaded(Update)
@@ -58,6 +60,7 @@ mod tests {
 					(vec_not_nan!(1., 2., 3.), new_f32!(ImpactStrength(1.))),
 					(vec_not_nan!(3., 4., 5.), new_f32!(ImpactStrength(0.5))),
 				]),
+				..default()
 			})
 			.id();
 
@@ -65,7 +68,7 @@ mod tests {
 			app.world_mut()
 				.run_system_once(move |i: StaticSystemParam<ImpactedParam>| {
 					let ctx = ImpactedParam::try_get_context(&i, ImpactedKey { entity }).unwrap();
-					ctx.iterate().collect::<HashSet<_>>()
+					ctx.iter_impacts().collect::<HashSet<_>>()
 				})?;
 
 		assert_eq!(

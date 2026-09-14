@@ -1,4 +1,5 @@
 use bevy::{
+	asset::InvalidGenerationError,
 	ecs::{error::BevyError, query::QueryEntityError},
 	math::InvalidDirectionError,
 	reflect::TypePath,
@@ -228,6 +229,20 @@ impl ErrorData for QueryEntityError {
 
 	fn label() -> impl Display {
 		"Query Entity Error"
+	}
+
+	fn into_details(self) -> impl Display {
+		self
+	}
+}
+
+impl ErrorData for InvalidGenerationError {
+	fn level(&self) -> Level {
+		Level::Error
+	}
+
+	fn label() -> impl Display {
+		"Invalid Asset Generation"
 	}
 
 	fn into_details(self) -> impl Display {
