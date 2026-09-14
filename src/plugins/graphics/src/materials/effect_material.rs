@@ -1,6 +1,15 @@
-use bevy::{prelude::*, render::render_resource::AsBindGroup, shader::ShaderRef};
-
 use crate::components::effect_material_data::EffectMaterialData;
+use bevy::{
+	prelude::*,
+	render::{
+		render_resource::{AsBindGroup, ShaderType},
+		storage::ShaderBuffer,
+	},
+	shader::ShaderRef,
+};
+use std::sync::LazyLock;
+
+pub static NO_IMPACTS: LazyLock<Handle<ShaderBuffer>> = LazyLock::new(Handle::default);
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, PartialEq, Clone)]
 pub(crate) struct EffectMaterial {
@@ -13,6 +22,8 @@ pub(crate) struct EffectMaterial {
 	fresnel_color: LinearRgba,
 	#[uniform(4)]
 	flags: u32,
+	#[storage(5, read_only)]
+	impacts: Handle<ShaderBuffer>,
 }
 
 impl From<EffectMaterialData> for EffectMaterial {
@@ -22,6 +33,7 @@ impl From<EffectMaterialData> for EffectMaterial {
 			base_color,
 			fresnel_color,
 			flags,
+			..
 		}: EffectMaterialData,
 	) -> Self {
 		Self {
@@ -29,6 +41,7 @@ impl From<EffectMaterialData> for EffectMaterial {
 			base_color,
 			fresnel_color,
 			flags,
+			impacts: NO_IMPACTS.clone(),
 		}
 	}
 }
@@ -45,4 +58,10 @@ impl Material for EffectMaterial {
 	fn enable_shadows() -> bool {
 		false
 	}
+}
+
+#[derive(Debug, PartialEq, ShaderType)]
+pub(crate) struct LocalImpact {
+	local: Vec3,
+	strength: f32,
 }

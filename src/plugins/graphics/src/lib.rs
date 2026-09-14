@@ -117,6 +117,10 @@ where
 			.add_observer(StandardMaterials::track_discarded)
 			.add_observer(StandardMaterials::set_invisible_material("Invisible"))
 			.add_systems(
+				Startup,
+				EffectMaterial::set_default_impacts.pipe(OnError::log),
+			)
+			.add_systems(
 				Update,
 				(
 					ModelRenderLayers::systems(),
