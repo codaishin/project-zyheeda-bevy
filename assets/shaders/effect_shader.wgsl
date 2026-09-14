@@ -68,7 +68,7 @@ fn impact_strength(mesh: VertexOutput) -> vec4<f32> {
     for (var i = u32(0); i < arrayLength(&impacts); i++) {
         let impact = impacts[i];
         let distance = length(mesh.world_position.xyz - impact.position);
-        let strength = max(1.0 - distance * IMPACT_FALLOFF, 0.0) * impact.strength;
+        let strength = max(0.3 - distance * IMPACT_FALLOFF, 0.0) * impact.strength;
 
         if strength < highest_strength {
             continue;

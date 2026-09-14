@@ -74,7 +74,7 @@ pub struct PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> PhysicsPlugin<TDependencies> {
-	const IMPACT_DECAY: DecayPerSecond = DecayPerSecond(new_f32!(ImpactStrength(1.0)));
+	const IMPACT_DECAY: DecayPerSecond = DecayPerSecond(new_f32!(ImpactStrength(2.0)));
 
 	fn configure_schedules(app: &mut App, label: impl ScheduleLabel) {
 		app.configure_sets(
