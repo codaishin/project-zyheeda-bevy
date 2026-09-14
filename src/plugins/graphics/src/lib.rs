@@ -65,7 +65,8 @@ where
 		+ SystemSetDefinition
 		+ HandlesRaycast
 		+ HandlesAllPhysicalEffects
-		+ HandlesSkillPhysics,
+		+ HandlesSkillPhysics
+		+ HandlesImpacts,
 {
 	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self {
@@ -85,7 +86,8 @@ where
 		+ SystemSetDefinition
 		+ HandlesRaycast
 		+ HandlesAllPhysicalEffects
-		+ HandlesSkillPhysics,
+		+ HandlesSkillPhysics
+		+ HandlesImpacts,
 {
 	#[cfg(feature = "debug-utils")]
 	pub fn new(debug_cam: fn() -> TDebugCam, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
@@ -128,6 +130,7 @@ where
 					EffectMaterialData::modify_material::<TPhysics, Force>,
 					EffectMaterialData::modify_material::<TPhysics, Gravity>,
 					EffectMaterialData::modify_material::<TPhysics, HealthDamage>,
+					EffectMaterialData::read_impacts::<TPhysics::TImpacted>,
 					EffectMaterialData::propagate_material::<EffectMaterial>,
 					StandardMaterials::set_lit_type,
 					StandardMaterials::replace_with_lit_material,
@@ -192,7 +195,8 @@ where
 		+ SystemSetDefinition
 		+ HandlesRaycast
 		+ HandlesAllPhysicalEffects
-		+ HandlesSkillPhysics,
+		+ HandlesSkillPhysics
+		+ HandlesImpacts,
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);

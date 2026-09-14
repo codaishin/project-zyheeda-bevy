@@ -4,6 +4,7 @@ pub(crate) mod modify_material;
 pub(crate) mod no_waiting_pipelines;
 pub(crate) mod process_new_ui_pass;
 pub(crate) mod propagate_material;
+pub(crate) mod read_impacts;
 pub(crate) mod replace_with_lit_material;
 pub(crate) mod set_default_impacts;
 pub(crate) mod set_lit_material_player_position;
