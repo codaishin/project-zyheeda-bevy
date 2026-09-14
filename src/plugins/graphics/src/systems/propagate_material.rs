@@ -10,8 +10,8 @@ pub trait PropagateMaterial: Component + Sized {
 	fn propagate_material<TMaterial>(
 		mut commands: ZyheedaCommands,
 		meshes: Query<(&Self, &mut Visibility, &ChildMeshes), DataOrMeshesChanged<Self>>,
-		effect_materials: Query<&MeshMaterial3d<TMaterial>>,
-		mut assets: ResMut<Assets<TMaterial>>,
+		materials: Query<&MeshMaterial3d<TMaterial>>,
+		mut material_assets: ResMut<Assets<TMaterial>>,
 		mut buffers: ResMut<TMaterial::TBuffer>,
 	) where
 		TMaterial: Material + Default + UpdateMaterial<TData = Self>,
@@ -23,18 +23,18 @@ pub trait PropagateMaterial: Component + Sized {
 					e.try_remove::<MeshMaterial3d<StandardLitMaterial>>();
 
 					{
-						let effect_material = effect_materials
+						let material = materials
 							.get(entity)
-							.map(|MeshMaterial3d(id)| assets.get_mut(id));
+							.map(|MeshMaterial3d(id)| material_assets.get_mut(id));
 
-						if let Ok(Some(mut effect_material)) = effect_material {
-							effect_material.update_material(&mut buffers, data);
+						if let Ok(Some(mut material)) = material {
+							material.update_material(&mut buffers, data);
 							return;
 						};
 					}
 
 					e.try_insert(MeshMaterial3d(
-						assets.add(TMaterial::from_data(&mut buffers, data)),
+						material_assets.add(TMaterial::from_data(&mut buffers, data)),
 					));
 				});
 			}
