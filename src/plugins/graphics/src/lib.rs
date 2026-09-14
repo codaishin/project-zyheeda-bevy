@@ -31,6 +31,7 @@ use crate::{
 		highlight::{HighlightParam, HighlightParamMut},
 		lights::RolesParamMut,
 	},
+	systems::propagate_material::PropagateMaterial,
 };
 use bevy::{
 	prelude::*,
@@ -127,7 +128,7 @@ where
 					EffectMaterialData::modify_material::<TPhysics, Force>,
 					EffectMaterialData::modify_material::<TPhysics, Gravity>,
 					EffectMaterialData::modify_material::<TPhysics, HealthDamage>,
-					EffectMaterialData::propagate_material,
+					EffectMaterialData::propagate_material::<EffectMaterial>,
 					StandardMaterials::set_lit_type,
 					StandardMaterials::replace_with_lit_material,
 				)

@@ -3,7 +3,7 @@ pub(crate) mod model_render_layers;
 pub(crate) mod modify_material;
 pub(crate) mod no_waiting_pipelines;
 pub(crate) mod process_new_ui_pass;
-pub(crate) mod propagate_effect_material;
+pub(crate) mod propagate_material;
 pub(crate) mod replace_with_lit_material;
 pub(crate) mod set_default_impacts;
 pub(crate) mod set_lit_material_player_position;
