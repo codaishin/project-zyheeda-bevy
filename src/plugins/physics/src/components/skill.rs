@@ -7,7 +7,7 @@ mod projection;
 
 use crate::components::{
 	collider::ColliderRoot,
-	impacted::Impacted,
+	impact_able::ImpactAble,
 	model::PhysicsModel,
 	skill::dto::SkillDto,
 };
@@ -28,7 +28,7 @@ pub struct Skill {
 }
 
 #[derive(Component, Debug, PartialEq)]
-#[require(ColliderRoot, Transform, Visibility, Impacted)]
+#[require(ColliderRoot, Transform, Visibility, ImpactAble)]
 pub struct SkillContactRoot;
 
 #[derive(Component, Debug, PartialEq)]

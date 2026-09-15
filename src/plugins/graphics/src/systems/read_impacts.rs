@@ -1,26 +1,22 @@
-use crate::components::effect_material_data::EffectMaterialData;
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use crate::components::effect_material_data::{EffectMaterialData, Impact};
+use bevy::prelude::*;
 use common::prelude::*;
 
 impl EffectMaterialData {
-	pub(crate) fn read_impacts<TImpacts>(
-		impacted: StaticSystemParam<TImpacts>,
-		effect_data: Query<(Entity, &mut Self)>,
+	pub(crate) fn read_impacts<TImpactEvent>(
+		impact: On<TImpactEvent>,
+		mut effect_data: Query<&mut Self>,
 	) where
-		TImpacts: for<'c> TryGetContext<Impacted, TContext<'c>: IterImpacts>,
+		TImpactEvent: EntityEvent + View<GlobalVec3>,
 	{
-		for (entity, mut data) in effect_data {
-			let key = Impacted { entity };
-			let Some(impacted) = TImpacts::try_get_context(&impacted, key) else {
-				continue;
-			};
+		let impacted = impact.event_target();
+		let position = impact.view();
 
-			if !impacted.context_changed() {
-				continue;
-			}
+		let Ok(mut data) = effect_data.get_mut(impacted) else {
+			return;
+		};
 
-			data.impacts = impacted.iter_impacts().collect();
-		}
+		data.impacts.push(Impact::from_global(*position));
 	}
 }
 
@@ -28,29 +24,23 @@ impl EffectMaterialData {
 mod tests {
 	use super::*;
 	use testing::SingleThreadedApp;
-	use zyheeda_core::prelude::*;
 
-	#[derive(Component)]
-	struct _Impacted(Vec<Impact>);
+	#[derive(EntityEvent)]
+	struct _ImpactEvent {
+		entity: Entity,
+		position: VecNotNan<3>,
+	}
 
-	impl IterImpacts for _Impacted {
-		type TIter<'a>
-			= std::iter::Copied<std::slice::Iter<'a, Impact>>
-		where
-			Self: 'a;
-
-		fn iter_impacts(&self) -> Self::TIter<'_> {
-			self.0.iter().copied()
+	impl View<GlobalVec3> for _ImpactEvent {
+		fn view(&self) -> <GlobalVec3 as ViewField>::TValue<'_> {
+			&self.position
 		}
 	}
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(
-			Update,
-			EffectMaterialData::read_impacts::<Query<Ref<_Impacted>>>,
-		);
+		app.add_observer(EffectMaterialData::read_impacts::<_ImpactEvent>);
 
 		app
 	}
@@ -60,83 +50,18 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn((
-				EffectMaterialData::default(),
-				_Impacted(vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-					strength: new_f32!(ImpactStrength(0.6)),
-				}]),
-			))
+			.spawn(EffectMaterialData::default())
+			.trigger(|entity| _ImpactEvent {
+				entity,
+				position: vec_not_nan!(1., 2., 3.),
+			})
 			.id();
 
 		app.update();
 
 		assert_eq!(
 			Some(&EffectMaterialData {
-				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-					strength: new_f32!(ImpactStrength(0.6)),
-				}],
-				..default()
-			}),
-			app.world().entity(entity).get::<EffectMaterialData>()
-		);
-	}
-
-	#[test]
-	fn act_oly_once() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				EffectMaterialData::default(),
-				_Impacted(vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-					strength: new_f32!(ImpactStrength(0.6)),
-				}]),
-			))
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(EffectMaterialData::default());
-		app.update();
-
-		assert_eq!(
-			Some(&EffectMaterialData::default()),
-			app.world().entity(entity).get::<EffectMaterialData>()
-		);
-	}
-
-	#[test]
-	fn act_again_if_context_changed() {
-		let mut app = setup();
-		let entity = app
-			.world_mut()
-			.spawn((
-				EffectMaterialData::default(),
-				_Impacted(vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-					strength: new_f32!(ImpactStrength(0.6)),
-				}]),
-			))
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(EffectMaterialData::default())
-			.get_mut::<_Impacted>()
-			.as_deref_mut();
-		app.update();
-
-		assert_eq!(
-			Some(&EffectMaterialData {
-				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
-					strength: new_f32!(ImpactStrength(0.6)),
-				}],
+				impacts: vec![Impact::from_global(vec_not_nan!(1., 2., 3.))],
 				..default()
 			}),
 			app.world().entity(entity).get::<EffectMaterialData>()

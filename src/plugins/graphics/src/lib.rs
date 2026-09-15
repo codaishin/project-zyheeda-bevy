@@ -9,6 +9,7 @@ mod traits;
 use crate::{
 	components::{
 		camera_labels::{AgentsPass, OutlinePass, WorldLight},
+		effect_material_data::ImpactStrength,
 		los::{LoS, LoSCameras},
 		model_render_layers::ModelRenderLayers,
 		only_depth_prepass::OnlyDepthPrepass,
@@ -32,6 +33,7 @@ use crate::{
 		lights::RolesParamMut,
 	},
 	systems::{
+		decay_impacts::DecayPerSecond,
 		propagate_material::PropagateMaterial,
 		update_material_buffer::UpdateMaterialBuffer,
 	},
@@ -50,6 +52,7 @@ use materials::essence_material::EssenceMaterial;
 use resources::window_size::WindowSize;
 use std::{hash::Hash, marker::PhantomData};
 use systems::no_waiting_pipelines::no_waiting_pipelines;
+use zyheeda_core::prelude::*;
 
 #[cfg(not(feature = "debug-utils"))]
 use components::no_debug_cam::NoDebugCam;
@@ -92,6 +95,8 @@ where
 		+ HandlesSkillPhysics
 		+ HandlesImpacts,
 {
+	const IMPACT_DECAY: DecayPerSecond = DecayPerSecond(new_f32!(ImpactStrength(2.)));
+
 	#[cfg(feature = "debug-utils")]
 	pub fn new(debug_cam: fn() -> TDebugCam, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
 		Self {
@@ -122,6 +127,7 @@ where
 			.add_observer(StandardMaterials::track_inserted)
 			.add_observer(StandardMaterials::track_discarded)
 			.add_observer(StandardMaterials::set_invisible_material("Invisible"))
+			.add_observer(EffectMaterialData::read_impacts::<TPhysics::TImpactEvent>)
 			.add_systems(
 				Startup,
 				EffectMaterial::set_default_impacts.pipe(OnError::log),
@@ -133,9 +139,9 @@ where
 					EffectMaterialData::modify_material::<TPhysics, Force>,
 					EffectMaterialData::modify_material::<TPhysics, Gravity>,
 					EffectMaterialData::modify_material::<TPhysics, HealthDamage>,
-					EffectMaterialData::read_impacts::<TPhysics::TImpacted>,
 					EffectMaterialData::update_material_buffer::<EffectMaterial>,
 					EffectMaterialData::propagate_material::<EffectMaterial>,
+					Update::delta.pipe(EffectMaterialData::decay_impacts(Self::IMPACT_DECAY)),
 					StandardMaterials::set_lit_type,
 					StandardMaterials::replace_with_lit_material,
 				)

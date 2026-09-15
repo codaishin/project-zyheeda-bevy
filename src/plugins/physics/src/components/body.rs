@@ -10,7 +10,7 @@ use crate::components::{
 		TERRAIN_GROUP,
 	},
 	collision_domains::{Interactive, Physical},
-	impacted::Impacted,
+	impact_able::ImpactAble,
 	motion_controller::MotionCollider,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
@@ -29,7 +29,7 @@ impl Body {
 
 	fn terrain(shape: Shape, blockers: HashSet<Blocker>) -> impl Bundle {
 		(
-			Impacted::default(),
+			ImpactAble,
 			ColliderShape::from(shape),
 			BlockerTypes(blockers),
 			Physical::Contact,
