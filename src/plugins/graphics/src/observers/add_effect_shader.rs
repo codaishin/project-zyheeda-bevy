@@ -1,5 +1,6 @@
 use crate::{
 	components::{camera_labels::WorldPass, effect_material_data::EffectMaterialData},
+	materials::effect_material::EffectMaterial,
 	resources::camera_render_target::CameraRenderTarget,
 };
 use bevy::prelude::*;
@@ -10,6 +11,7 @@ impl EffectMaterialData {
 		on_add: On<Add, TComponent>,
 		mut commands: ZyheedaCommands,
 		first_pass_image: Res<CameraRenderTarget<WorldPass>>,
+		mut materials: ResMut<Assets<EffectMaterial>>,
 	) where
 		TComponent: Component,
 	{
@@ -17,7 +19,14 @@ impl EffectMaterialData {
 			return;
 		};
 
-		let material = EffectMaterialData::from_first_pass(first_pass_image.handle.clone());
+		let material = materials.add(EffectMaterial::from_first_pass(
+			first_pass_image.handle.clone(),
+		));
+
+		let material = EffectMaterialData {
+			material,
+			..default()
+		};
 
 		entity.try_insert((material, Visibility::Hidden));
 	}
@@ -26,7 +35,7 @@ impl EffectMaterialData {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use testing::{SingleThreadedApp, new_handle};
+	use testing::{SingleThreadedApp, assert_some, new_handle};
 
 	#[derive(Component)]
 	struct _Component;
@@ -34,6 +43,7 @@ mod tests {
 	fn setup(first_pass: Handle<Image>) -> App {
 		let mut app = App::new().single_threaded(Update);
 
+		app.init_resource::<Assets<EffectMaterial>>();
 		app.insert_resource(CameraRenderTarget::<WorldPass>::from(first_pass));
 		app.add_observer(EffectMaterialData::add_to::<_Component>);
 
@@ -56,9 +66,12 @@ mod tests {
 
 		let entity = app.world_mut().spawn(_Component).id();
 
+		let data = assert_some!(app.world().entity(entity).get::<EffectMaterialData>());
 		assert_eq!(
-			Some(&EffectMaterialData::from_first_pass(first_pass)),
-			app.world().entity(entity).get::<EffectMaterialData>(),
+			Some(&EffectMaterial::from_first_pass(first_pass)),
+			app.world()
+				.resource::<Assets<EffectMaterial>>()
+				.get(&data.material),
 		);
 	}
 

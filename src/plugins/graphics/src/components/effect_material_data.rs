@@ -1,4 +1,7 @@
-use crate::components::{camera_labels::CompositePass, model_render_layers::ModelRenderLayers};
+use crate::{
+	components::{camera_labels::CompositePass, model_render_layers::ModelRenderLayers},
+	materials::effect_material::EffectMaterial,
+};
 use bevy::prelude::*;
 use common::prelude::*;
 
@@ -10,6 +13,7 @@ pub struct EffectMaterialData {
 	pub(crate) fresnel_color: LinearRgba,
 	pub(crate) flags: u32,
 	pub(crate) impacts: Vec<Impact>,
+	pub(crate) material: Handle<EffectMaterial>,
 }
 
 impl EffectMaterialData {
@@ -26,6 +30,8 @@ impl EffectMaterialData {
 		alpha: 0.,
 	};
 
+	#[cfg(test)]
+	#[deprecated]
 	pub(crate) fn from_first_pass(first_pass: Handle<Image>) -> Self {
 		Self {
 			first_pass,
@@ -59,6 +65,7 @@ impl Default for EffectMaterialData {
 			fresnel_color: LinearRgba::from(Self::DEFAULT_FRESNEL),
 			flags: 0,
 			impacts: vec![],
+			material: Handle::default(),
 		}
 	}
 }

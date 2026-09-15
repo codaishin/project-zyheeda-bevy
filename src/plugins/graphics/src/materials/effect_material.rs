@@ -31,6 +31,13 @@ pub(crate) struct EffectMaterial {
 }
 
 impl EffectMaterial {
+	pub(crate) fn from_first_pass(first_pass: Handle<Image>) -> Self {
+		Self {
+			first_pass,
+			..default()
+		}
+	}
+
 	fn compute_impacts(impacts: &[Impact]) -> ShaderBuffer {
 		let to_local = |Impact { position, strength }: &Impact| {
 			let position = Vec3::from(position.0);
@@ -102,6 +109,7 @@ impl UpdateMaterial for EffectMaterial {
 			fresnel_color,
 			flags,
 			impacts,
+			..
 		} = data;
 
 		self.base_color = *base_color;
