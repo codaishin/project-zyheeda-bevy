@@ -45,7 +45,6 @@ use crate::{
 	resources::{root_collisions::RootCollisions, world_camera::WorldCamera},
 	system_params::{
 		config::ConfigParamMut,
-		impacted::ImpactedParam,
 		interactive::InteractiveParam,
 		ray_caster::RayCasterMut,
 		skill_agent::{SkillAgent, SkillAgentMut},
@@ -338,6 +337,5 @@ impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies>
 }
 
 impl<TDependencies> HandlesImpacts for PhysicsPlugin<TDependencies> {
-	type TImpacted = ImpactedParam;
 	type TImpactEvent = ImpactEvent;
 }

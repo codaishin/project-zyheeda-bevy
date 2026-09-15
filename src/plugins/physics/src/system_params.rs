@@ -1,5 +1,4 @@
 pub(crate) mod config;
-pub(crate) mod impacted;
 pub(crate) mod interactive;
 pub(crate) mod mount_points_lookup;
 pub(crate) mod ray_caster;
