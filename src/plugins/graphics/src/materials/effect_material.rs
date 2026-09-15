@@ -1,6 +1,6 @@
 use crate::{
 	components::effect_material_data::EffectMaterialData,
-	systems::propagate_material::UpdateMaterial,
+	systems::update_material_buffer::UpdateMaterial,
 };
 use bevy::{
 	prelude::*,
@@ -31,6 +31,19 @@ pub(crate) struct EffectMaterial {
 }
 
 impl EffectMaterial {
+	const DEFAULT_COLOR: Srgba = Srgba {
+		red: 1.,
+		green: 1.,
+		blue: 1.,
+		alpha: 0.,
+	};
+	const DEFAULT_FRESNEL: Srgba = Srgba {
+		red: 0.,
+		green: 0.,
+		blue: 0.,
+		alpha: 0.,
+	};
+
 	pub(crate) fn from_first_pass(first_pass: Handle<Image>) -> Self {
 		Self {
 			first_pass,
@@ -43,7 +56,7 @@ impl EffectMaterial {
 			let position = Vec3::from(position.0);
 			let strength = **strength;
 
-			LocalImpact { position, strength }
+			ImpactEffect { position, strength }
 		};
 
 		ShaderBuffer::from(impacts.iter().map(to_local).collect::<Vec<_>>())
@@ -87,8 +100,8 @@ impl Default for EffectMaterial {
 	fn default() -> Self {
 		Self {
 			first_pass: default(),
-			base_color: default(),
-			fresnel_color: default(),
+			base_color: LinearRgba::from(Self::DEFAULT_COLOR),
+			fresnel_color: LinearRgba::from(Self::DEFAULT_FRESNEL),
 			flags: default(),
 			impacts: NO_IMPACTS.clone(),
 		}
@@ -137,7 +150,7 @@ impl From<EffectFlag> for u32 {
 }
 
 #[derive(Debug, PartialEq, ShaderType)]
-pub(crate) struct LocalImpact {
+pub(crate) struct ImpactEffect {
 	position: Vec3,
 	strength: f32,
 }
@@ -147,19 +160,7 @@ impl UpdateMaterial for EffectMaterial {
 	type TBuffer = Assets<ShaderBuffer>;
 
 	fn update_material(&mut self, buffers: &mut Assets<ShaderBuffer>, data: &EffectMaterialData) {
-		let EffectMaterialData {
-			first_pass,
-			base_color,
-			fresnel_color,
-			flags,
-			impacts,
-			..
-		} = data;
-
-		self.base_color = *base_color;
-		self.fresnel_color = *fresnel_color;
-		self.first_pass = first_pass.clone();
-		self.flags = *flags;
+		let EffectMaterialData { impacts, .. } = data;
 
 		let impacts = impacts.as_slice();
 
@@ -173,40 +174,8 @@ impl UpdateMaterial for EffectMaterial {
 
 #[cfg(test)]
 mod tests {
-	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use bevy::color::palettes::css::{RED, WHITE};
-	use testing::new_handle;
 	use zyheeda_core::prelude::*;
-
-	#[test]
-	fn set_data() {
-		let mut buffers = Assets::default();
-		let mut material = EffectMaterial::default();
-		let first_pass = new_handle();
-
-		material.update_material(
-			&mut buffers,
-			&EffectMaterialData {
-				first_pass: first_pass.clone(),
-				base_color: LinearRgba::from(WHITE),
-				fresnel_color: LinearRgba::from(RED),
-				flags: 2,
-				..default()
-			},
-		);
-
-		assert_eq!(
-			EffectMaterial {
-				first_pass,
-				base_color: LinearRgba::from(WHITE),
-				fresnel_color: LinearRgba::from(RED),
-				flags: 2,
-				..default()
-			},
-			material
-		);
-	}
 
 	#[test]
 	fn set_impacts() {
@@ -226,7 +195,7 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![LocalImpact {
+				&ShaderBuffer::from(vec![ImpactEffect {
 					position: Vec3::new(1., 2., 3.),
 					strength: 0.5
 				}])
@@ -355,7 +324,7 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![LocalImpact {
+				&ShaderBuffer::from(vec![ImpactEffect {
 					position: Vec3::new(2., 3., 4.),
 					strength: 0.5
 				}])
@@ -394,7 +363,7 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![LocalImpact {
+				&ShaderBuffer::from(vec![ImpactEffect {
 					position: Vec3::new(2., 3., 4.),
 					strength: 0.5
 				}])

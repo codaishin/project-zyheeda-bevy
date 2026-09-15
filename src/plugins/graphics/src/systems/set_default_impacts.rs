@@ -1,4 +1,4 @@
-use crate::materials::effect_material::{EffectMaterial, LocalImpact, NO_IMPACTS};
+use crate::materials::effect_material::{EffectMaterial, ImpactEffect, NO_IMPACTS};
 use bevy::{asset::InvalidGenerationError, prelude::*, render::storage::ShaderBuffer};
 
 impl EffectMaterial {
@@ -7,7 +7,7 @@ impl EffectMaterial {
 	) -> Result<(), InvalidGenerationError> {
 		buffers.insert(
 			&*NO_IMPACTS,
-			ShaderBuffer::from(Vec::<LocalImpact>::default()),
+			ShaderBuffer::from(Vec::<ImpactEffect>::default()),
 		)
 	}
 }
@@ -38,7 +38,7 @@ mod tests {
 			.run_system_once(EffectMaterial::set_default_impacts);
 
 		assert_eq!(
-			Some(&ShaderBuffer::from(Vec::<LocalImpact>::default()).data),
+			Some(&ShaderBuffer::from(Vec::<ImpactEffect>::default()).data),
 			app.world()
 				.resource::<Assets<ShaderBuffer>>()
 				.get(&*NO_IMPACTS)

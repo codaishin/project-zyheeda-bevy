@@ -10,5 +10,6 @@ pub(crate) mod set_default_impacts;
 pub(crate) mod set_lit_material_player_position;
 pub(crate) mod set_lit_type;
 pub(crate) mod update_los_camera_positions;
+pub(crate) mod update_material_buffer;
 pub(crate) mod update_only_depth_prepass_render_target;
 pub(crate) mod update_target_ray;
