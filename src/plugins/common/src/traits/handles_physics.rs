@@ -220,6 +220,8 @@ pub trait PhysicalEffect {
 
 pub trait HandlesImpacts {
 	type TImpacted: for<'c> TryGetContext<Impacted, TContext<'c>: IterImpacts>;
+
+	type TImpactEvent: EntityEvent + View<GlobalVec3>;
 }
 
 pub trait IterImpacts {
@@ -257,6 +259,10 @@ pub struct Impact {
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct GlobalVec3(pub VecNotNan<3>);
+
+impl ViewField for GlobalVec3 {
+	type TValue<'a> = &'a VecNotNan<3>;
+}
 
 pub type ImpactStrength = F32FiniteStrictlyPositive;
 

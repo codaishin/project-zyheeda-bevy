@@ -1,5 +1,6 @@
 mod app;
 mod components;
+mod events;
 mod messages;
 mod observers;
 mod resources;
@@ -39,6 +40,7 @@ use crate::{
 		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
 	},
+	events::impact_event::ImpactEvent,
 	messages::RayEvent,
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
 	resources::{root_collisions::RootCollisions, world_camera::WorldCamera},
@@ -348,4 +350,5 @@ impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies>
 
 impl<TDependencies> HandlesImpacts for PhysicsPlugin<TDependencies> {
 	type TImpacted = ImpactedParam<'static, 'static>;
+	type TImpactEvent = ImpactEvent;
 }
