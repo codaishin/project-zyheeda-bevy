@@ -1,4 +1,5 @@
 pub(crate) mod apply_changed_camera_parameters;
+pub(crate) mod decay_impacts;
 pub(crate) mod model_render_layers;
 pub(crate) mod modify_material;
 pub(crate) mod no_waiting_pipelines;
