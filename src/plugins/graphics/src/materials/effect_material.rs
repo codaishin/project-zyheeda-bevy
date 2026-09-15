@@ -50,15 +50,15 @@ impl EffectMaterial {
 		}
 	}
 
-	fn compute_impacts(impacts: &[Impact]) -> ShaderBuffer {
-		let to_local = |Impact { global, strength }: &Impact| {
-			let position = Vec3::from(global);
+	fn compute_impacts(impacts: &[Impact], transform: &GlobalTransform) -> ShaderBuffer {
+		let to_global = |Impact { local, strength }: &Impact| {
+			let position = transform.transform_point(*local);
 			let strength = **strength;
 
 			ImpactEffect { position, strength }
 		};
 
-		ShaderBuffer::from(impacts.iter().map(to_local).collect::<Vec<_>>())
+		ShaderBuffer::from(impacts.iter().map(to_global).collect::<Vec<_>>())
 	}
 
 	pub(crate) fn add_flag(&mut self, effect: EffectFlag) {
@@ -82,15 +82,25 @@ impl EffectMaterial {
 		self.impacts = NO_IMPACTS.clone();
 	}
 
-	fn new_impacts(&mut self, buffers: &mut Assets<ShaderBuffer>, impacts: &[Impact]) {
-		self.impacts = buffers.add(Self::compute_impacts(impacts));
+	fn new_impacts(
+		&mut self,
+		buffers: &mut Assets<ShaderBuffer>,
+		impacts: &[Impact],
+		transform: &GlobalTransform,
+	) {
+		self.impacts = buffers.add(Self::compute_impacts(impacts, transform));
 	}
 
-	fn updated_impacts(&mut self, buffers: &mut Assets<ShaderBuffer>, impacts: &[Impact]) {
+	fn updated_impacts(
+		&mut self,
+		buffers: &mut Assets<ShaderBuffer>,
+		impacts: &[Impact],
+		transform: &GlobalTransform,
+	) {
 		if let Some(mut buffer) = buffers.get_mut(&self.impacts) {
-			*buffer = Self::compute_impacts(impacts);
+			*buffer = Self::compute_impacts(impacts, transform);
 		} else {
-			self.impacts = buffers.add(Self::compute_impacts(impacts));
+			self.impacts = buffers.add(Self::compute_impacts(impacts, transform));
 		}
 	}
 }
@@ -158,15 +168,20 @@ impl UpdateMaterial for EffectMaterial {
 	type TData = EffectMaterialData;
 	type TBuffer = Assets<ShaderBuffer>;
 
-	fn update_material(&mut self, buffers: &mut Assets<ShaderBuffer>, data: &EffectMaterialData) {
+	fn update_material(
+		&mut self,
+		buffers: &mut Assets<ShaderBuffer>,
+		data: &EffectMaterialData,
+		transform: &GlobalTransform,
+	) {
 		let EffectMaterialData { impacts, .. } = data;
 
 		let impacts = impacts.as_slice();
 
 		match impacts {
 			[] => self.empty_impacts(),
-			_ if self.impacts == *NO_IMPACTS => self.new_impacts(buffers, impacts),
-			_ => self.updated_impacts(buffers, impacts),
+			_ if self.impacts == *NO_IMPACTS => self.new_impacts(buffers, impacts, transform),
+			_ => self.updated_impacts(buffers, impacts, transform),
 		}
 	}
 }
@@ -175,7 +190,6 @@ impl UpdateMaterial for EffectMaterial {
 mod tests {
 	use super::*;
 	use crate::components::effect_material_data::ImpactStrength;
-	use common::{tools::vec_not_nan::VecNotNan, vec_not_nan};
 	use zyheeda_core::prelude::*;
 
 	#[test]
@@ -187,17 +201,47 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 
 		assert_eq!(
 			Some(
 				&ShaderBuffer::from(vec![ImpactEffect {
 					position: Vec3::new(1., 2., 3.),
+					strength: 0.5
+				}])
+				.data
+			),
+			buffers.get(&material.impacts).map(|b| &b.data)
+		);
+	}
+
+	#[test]
+	fn set_impacts_with_regenerated_global_position() {
+		let mut buffers = Assets::default();
+		let mut material = EffectMaterial::default();
+
+		material.update_material(
+			&mut buffers,
+			&EffectMaterialData {
+				impacts: vec![Impact {
+					local: Vec3::new(1., 2., 3.),
+					strength: new_f32!(ImpactStrength(0.5)),
+				}],
+				..default()
+			},
+			&GlobalTransform::from(Transform::from_xyz(2., 3., 0.).looking_to(Dir3::Z, Dir3::Y)),
+		);
+
+		assert_eq!(
+			Some(
+				&ShaderBuffer::from(vec![ImpactEffect {
+					position: Vec3::new(1., 5., -3.),
 					strength: 0.5
 				}])
 				.data
@@ -215,11 +259,12 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 
 		assert_ne!(*NO_IMPACTS, material.impacts);
@@ -236,6 +281,7 @@ mod tests {
 				impacts: vec![],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 
 		assert_eq!(*NO_IMPACTS, material.impacts);
@@ -250,11 +296,12 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					global: VecNotNan::default(),
+					local: Vec3::ZERO,
 					strength: new_f32!(ImpactStrength(1.0)),
 				}],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 		material.update_material(
 			&mut buffers,
@@ -262,6 +309,7 @@ mod tests {
 				impacts: vec![],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 
 		assert_eq!(*NO_IMPACTS, material.impacts);
@@ -275,11 +323,12 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 
 		let first_handle = material.impacts.clone();
@@ -287,11 +336,12 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.4)),
 				}],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 
 		assert_eq!(first_handle, material.impacts);
@@ -305,22 +355,24 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 
 		material.update_material(
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(2., 3., 4.),
+					local: Vec3::new(2., 3., 4.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 
 		assert_eq!(
@@ -344,22 +396,24 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 		buffers.remove(&material.impacts);
 		material.update_material(
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(2., 3., 4.),
+					local: Vec3::new(2., 3., 4.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
 			},
+			&GlobalTransform::default(),
 		);
 
 		assert_eq!(
