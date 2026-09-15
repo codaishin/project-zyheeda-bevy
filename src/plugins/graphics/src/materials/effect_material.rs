@@ -1,6 +1,6 @@
 use crate::{
 	components::effect_material_data::EffectMaterialData,
-	systems::propagate_material::UpdateMaterial,
+	systems::update_material_buffer::UpdateMaterial,
 };
 use bevy::{
 	prelude::*,
@@ -19,27 +19,64 @@ pub static NO_IMPACTS: LazyLock<Handle<ShaderBuffer>> = LazyLock::new(Handle::de
 pub(crate) struct EffectMaterial {
 	#[texture(0)]
 	#[sampler(1)]
-	first_pass: Handle<Image>,
+	pub(crate) first_pass: Handle<Image>,
 	#[uniform(2)]
-	base_color: LinearRgba,
+	pub(crate) base_color: LinearRgba,
 	#[uniform(3)]
-	fresnel_color: LinearRgba,
+	pub(crate) fresnel_color: LinearRgba,
 	#[uniform(4)]
-	flags: u32,
+	pub(crate) flags: u32,
 	#[storage(5, read_only)]
-	impacts: Handle<ShaderBuffer>,
+	pub(crate) impacts: Handle<ShaderBuffer>,
 }
 
 impl EffectMaterial {
+	const DEFAULT_COLOR: Srgba = Srgba {
+		red: 1.,
+		green: 1.,
+		blue: 1.,
+		alpha: 0.,
+	};
+	const DEFAULT_FRESNEL: Srgba = Srgba {
+		red: 0.,
+		green: 0.,
+		blue: 0.,
+		alpha: 0.,
+	};
+
+	pub(crate) fn from_first_pass(first_pass: Handle<Image>) -> Self {
+		Self {
+			first_pass,
+			..default()
+		}
+	}
+
 	fn compute_impacts(impacts: &[Impact]) -> ShaderBuffer {
 		let to_local = |Impact { position, strength }: &Impact| {
 			let position = Vec3::from(position.0);
 			let strength = **strength;
 
-			LocalImpact { position, strength }
+			ImpactEffect { position, strength }
 		};
 
 		ShaderBuffer::from(impacts.iter().map(to_local).collect::<Vec<_>>())
+	}
+
+	pub(crate) fn add_flag(&mut self, effect: EffectFlag) {
+		match effect {
+			EffectFlag::BaseColor(base_color) => self.base_color = base_color,
+			EffectFlag::Fresnel(fresnel_color) => self.fresnel_color = fresnel_color,
+			EffectFlag::Distortion => {}
+		}
+
+		self.set_flag_internal(effect, true);
+	}
+
+	fn set_flag_internal(&mut self, flag: impl Into<u32>, to: bool) {
+		match to {
+			true => self.flags |= flag.into(),
+			false => self.flags &= !flag.into(),
+		}
 	}
 
 	fn empty_impacts(&mut self) {
@@ -63,8 +100,8 @@ impl Default for EffectMaterial {
 	fn default() -> Self {
 		Self {
 			first_pass: default(),
-			base_color: default(),
-			fresnel_color: default(),
+			base_color: LinearRgba::from(Self::DEFAULT_COLOR),
+			fresnel_color: LinearRgba::from(Self::DEFAULT_FRESNEL),
 			flags: default(),
 			impacts: NO_IMPACTS.clone(),
 		}
@@ -85,8 +122,35 @@ impl Material for EffectMaterial {
 	}
 }
 
+#[derive(Debug, PartialEq)]
+pub(crate) enum EffectFlag {
+	BaseColor(LinearRgba),
+	Fresnel(LinearRgba),
+	Distortion,
+}
+
+impl EffectFlag {
+	pub(crate) fn fresnel(color: impl Into<LinearRgba>) -> Self {
+		Self::Fresnel(color.into())
+	}
+
+	pub(crate) fn base_color(color: impl Into<LinearRgba>) -> Self {
+		Self::BaseColor(color.into())
+	}
+}
+
+impl From<EffectFlag> for u32 {
+	fn from(flag: EffectFlag) -> Self {
+		match flag {
+			EffectFlag::BaseColor(_) => 1 << 0,
+			EffectFlag::Fresnel(_) => 1 << 1,
+			EffectFlag::Distortion => 1 << 2,
+		}
+	}
+}
+
 #[derive(Debug, PartialEq, ShaderType)]
-pub(crate) struct LocalImpact {
+pub(crate) struct ImpactEffect {
 	position: Vec3,
 	strength: f32,
 }
@@ -96,18 +160,7 @@ impl UpdateMaterial for EffectMaterial {
 	type TBuffer = Assets<ShaderBuffer>;
 
 	fn update_material(&mut self, buffers: &mut Assets<ShaderBuffer>, data: &EffectMaterialData) {
-		let EffectMaterialData {
-			first_pass,
-			base_color,
-			fresnel_color,
-			flags,
-			impacts,
-		} = data;
-
-		self.base_color = *base_color;
-		self.fresnel_color = *fresnel_color;
-		self.first_pass = first_pass.clone();
-		self.flags = *flags;
+		let EffectMaterialData { impacts, .. } = data;
 
 		let impacts = impacts.as_slice();
 
@@ -121,40 +174,8 @@ impl UpdateMaterial for EffectMaterial {
 
 #[cfg(test)]
 mod tests {
-	#![allow(clippy::unwrap_used)]
 	use super::*;
-	use bevy::color::palettes::css::{RED, WHITE};
-	use testing::new_handle;
 	use zyheeda_core::prelude::*;
-
-	#[test]
-	fn set_data() {
-		let mut buffers = Assets::default();
-		let mut material = EffectMaterial::default();
-		let first_pass = new_handle();
-
-		material.update_material(
-			&mut buffers,
-			&EffectMaterialData {
-				first_pass: first_pass.clone(),
-				base_color: LinearRgba::from(WHITE),
-				fresnel_color: LinearRgba::from(RED),
-				flags: 2,
-				..default()
-			},
-		);
-
-		assert_eq!(
-			EffectMaterial {
-				first_pass,
-				base_color: LinearRgba::from(WHITE),
-				fresnel_color: LinearRgba::from(RED),
-				flags: 2,
-				..default()
-			},
-			material
-		);
-	}
 
 	#[test]
 	fn set_impacts() {
@@ -174,7 +195,7 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![LocalImpact {
+				&ShaderBuffer::from(vec![ImpactEffect {
 					position: Vec3::new(1., 2., 3.),
 					strength: 0.5
 				}])
@@ -303,7 +324,7 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![LocalImpact {
+				&ShaderBuffer::from(vec![ImpactEffect {
 					position: Vec3::new(2., 3., 4.),
 					strength: 0.5
 				}])
@@ -342,7 +363,7 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![LocalImpact {
+				&ShaderBuffer::from(vec![ImpactEffect {
 					position: Vec3::new(2., 3., 4.),
 					strength: 0.5
 				}])
@@ -350,5 +371,34 @@ mod tests {
 			),
 			buffers.get(&material.impacts).map(|b| &b.data)
 		);
+	}
+
+	mod flags {
+		use super::*;
+		use test_case::test_case;
+
+		#[test_case(0b0000, 1, 0b0001; "1 to 1")]
+		#[test_case(0b0110, 1, 0b0111; "1 added")]
+		#[test_case(0b0000, 2, 0b0010; "2 to 2")]
+		#[test_case(0b0101, 2, 0b0111; "2 added")]
+		fn set_bit(flags: u32, flag: u32, expected: u32) {
+			let mut material = EffectMaterial { flags, ..default() };
+
+			material.set_flag_internal(flag, true);
+
+			assert_eq!(expected, material.flags);
+		}
+
+		#[test_case(0b0001, 1, 0b0000; "1 to 0")]
+		#[test_case(0b0111, 1, 0b0110; "1 removed")]
+		#[test_case(0b0010, 2, 0b0000; "2 to 0")]
+		#[test_case(0b0111, 2, 0b0101; "2 removed")]
+		fn unset_bit(flags: u32, flag: u32, expected: u32) {
+			let mut material = EffectMaterial { flags, ..default() };
+
+			material.set_flag_internal(flag, false);
+
+			assert_eq!(expected, material.flags);
+		}
 	}
 }

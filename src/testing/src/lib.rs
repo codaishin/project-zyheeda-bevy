@@ -156,13 +156,26 @@ macro_rules! assert_count {
 		let vec_len = vec.len();
 		let Ok(array) = <[_; $count]>::try_from(vec) else {
 			panic!(
-				"assert count failed:\n    expected: {}\n    actual: {}\n",
+				"assert count failed:\n expected: {}\n   actual: {}\n",
 				format!("\x1b[32m{:?}\x1b[0m", $count),
 				format!("\x1b[31m{:?}\x1b[0m", vec_len),
 			);
 		};
 
 		array
+	}};
+}
+
+#[macro_export]
+macro_rules! assert_some {
+	($value:expr) => {{
+		let Some(value) = $value else {
+			panic!(
+				"assert some failed:\n expected: \x1b[32mSome\x1b[0m\n   actual: \x1b[31mNone\x1b[0m\n",
+			);
+		};
+
+		value
 	}};
 }
 
