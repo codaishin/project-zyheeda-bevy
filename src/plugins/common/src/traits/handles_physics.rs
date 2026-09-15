@@ -219,6 +219,7 @@ pub trait PhysicalEffect {
 }
 
 pub trait HandlesImpacts {
+	#[deprecated]
 	type TImpacted: for<'c> TryGetContext<Impacted, TContext<'c>: IterImpacts>;
 
 	type TImpactEvent: EntityEvent + View<GlobalVec3>;

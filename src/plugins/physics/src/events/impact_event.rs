@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use common::prelude::*;
 
-#[derive(EntityEvent, Debug, PartialEq)]
+#[derive(EntityEvent, Debug, PartialEq, Clone, Copy)]
 pub struct ImpactEvent {
 	pub(crate) entity: Entity,
 	pub(crate) position: VecNotNan<3>,

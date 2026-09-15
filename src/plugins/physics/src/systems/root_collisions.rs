@@ -1,2 +1,2 @@
-pub(crate) mod apply_projectile_impacts;
 pub(crate) mod clear;
+pub(crate) mod emit_projectile_impacts;

@@ -1,36 +1,26 @@
 pub mod iter_impacts;
 
-use crate::components::impacted::Impacted;
-use bevy::{
-	ecs::system::{SystemParam, SystemParamItem},
-	prelude::*,
-};
+use bevy::ecs::system::{SystemParam, SystemParamItem};
 use common::{prelude::*, traits::handles_physics::Impacted as ImpactedKey};
 
 #[derive(SystemParam)]
-pub struct ImpactedParam<'w, 's> {
-	impacted: Query<'w, 's, Ref<'static, Impacted>>,
-}
+pub struct ImpactedParam {}
 
-impl TryGetContext<ImpactedKey> for ImpactedParam<'static, 'static> {
-	type TContext<'ctx> = ImpactedContext<'ctx>;
+impl TryGetContext<ImpactedKey> for ImpactedParam {
+	type TContext<'ctx> = ImpactedContext;
 
 	fn try_get_context<'ctx>(
-		param: &'ctx SystemParamItem<Self>,
-		ImpactedKey { entity }: ImpactedKey,
+		_: &'ctx SystemParamItem<Self>,
+		_: ImpactedKey,
 	) -> Option<Self::TContext<'ctx>> {
-		let impacted = param.impacted.get(entity).ok()?;
-
-		Some(ImpactedContext { impacted })
+		None
 	}
 }
 
-pub struct ImpactedContext<'ctx> {
-	impacted: Ref<'ctx, Impacted>,
-}
+pub struct ImpactedContext {}
 
-impl ContextChanged for ImpactedContext<'_> {
+impl ContextChanged for ImpactedContext {
 	fn context_changed(&self) -> bool {
-		self.impacted.impact_points != self.impacted.old_impact_points
+		false
 	}
 }
