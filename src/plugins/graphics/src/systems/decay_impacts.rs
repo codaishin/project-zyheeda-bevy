@@ -36,7 +36,6 @@ pub(crate) struct DecayPerSecond(pub(crate) ImpactStrength);
 mod tests {
 	use super::*;
 	use crate::components::effect_material_data::Impact;
-	use common::vec_not_nan;
 	use testing::{IsChanged, SingleThreadedApp};
 	use zyheeda_core::new_f32;
 
@@ -65,7 +64,7 @@ mod tests {
 			.world_mut()
 			.spawn(EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(1.)),
 				}],
 				..default()
@@ -77,7 +76,7 @@ mod tests {
 		assert_eq!(
 			Some(&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.6)),
 				}],
 				..default()
@@ -96,7 +95,7 @@ mod tests {
 			.world_mut()
 			.spawn(EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(1.)),
 				}],
 				..default()
@@ -108,7 +107,7 @@ mod tests {
 		assert_eq!(
 			Some(&EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.8)),
 				}],
 				..default()
@@ -127,7 +126,7 @@ mod tests {
 			.world_mut()
 			.spawn(EffectMaterialData {
 				impacts: vec![Impact {
-					global: vec_not_nan!(1., 2., 3.),
+					local: Vec3::new(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(1.)),
 				}],
 				..default()

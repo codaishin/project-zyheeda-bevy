@@ -5,18 +5,23 @@ use common::prelude::*;
 impl EffectMaterialData {
 	pub(crate) fn read_impacts<TImpactEvent>(
 		impact: On<TImpactEvent>,
-		mut effect_data: Query<&mut Self>,
+		mut effect_data: Query<(&mut Self, &GlobalTransform)>,
 	) where
 		TImpactEvent: EntityEvent + View<GlobalVec3>,
 	{
 		let impacted = impact.event_target();
 		let position = impact.view();
 
-		let Ok(mut data) = effect_data.get_mut(impacted) else {
+		let Ok((mut data, transform)) = effect_data.get_mut(impacted) else {
 			return;
 		};
 
-		data.impacts.push(Impact::from_global(*position));
+		let local = transform
+			.affine()
+			.inverse()
+			.transform_point3(Vec3::from(*position));
+
+		data.impacts.push(Impact::from_local(local));
 	}
 }
 
@@ -61,7 +66,33 @@ mod tests {
 
 		assert_eq!(
 			Some(&EffectMaterialData {
-				impacts: vec![Impact::from_global(vec_not_nan!(1., 2., 3.))],
+				impacts: vec![Impact::from_local(Vec3::new(1., 2., 3.))],
+				..default()
+			}),
+			app.world().entity(entity).get::<EffectMaterialData>()
+		);
+	}
+
+	#[test]
+	fn set_impacts_with_local_offset() {
+		let mut app = setup();
+		let entity = app
+			.world_mut()
+			.spawn((
+				EffectMaterialData::default(),
+				GlobalTransform::from(Transform::from_xyz(3., 5., 6.).looking_to(Dir3::Z, Dir3::Y)),
+			))
+			.trigger(|entity| _ImpactEvent {
+				entity,
+				position: vec_not_nan!(1., 2., 3.),
+			})
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&EffectMaterialData {
+				impacts: vec![Impact::from_local(Vec3::new(2., -3., 3.))],
 				..default()
 			}),
 			app.world().entity(entity).get::<EffectMaterialData>()
