@@ -19,15 +19,15 @@ pub static NO_IMPACTS: LazyLock<Handle<ShaderBuffer>> = LazyLock::new(Handle::de
 pub(crate) struct EffectMaterial {
 	#[texture(0)]
 	#[sampler(1)]
-	first_pass: Handle<Image>,
+	pub(crate) first_pass: Handle<Image>,
 	#[uniform(2)]
-	base_color: LinearRgba,
+	pub(crate) base_color: LinearRgba,
 	#[uniform(3)]
-	fresnel_color: LinearRgba,
+	pub(crate) fresnel_color: LinearRgba,
 	#[uniform(4)]
-	flags: u32,
+	pub(crate) flags: u32,
 	#[storage(5, read_only)]
-	impacts: Handle<ShaderBuffer>,
+	pub(crate) impacts: Handle<ShaderBuffer>,
 }
 
 impl EffectMaterial {
@@ -47,6 +47,23 @@ impl EffectMaterial {
 		};
 
 		ShaderBuffer::from(impacts.iter().map(to_local).collect::<Vec<_>>())
+	}
+
+	pub(crate) fn add_flag(&mut self, effect: EffectFlag) {
+		match effect {
+			EffectFlag::BaseColor(base_color) => self.base_color = base_color,
+			EffectFlag::Fresnel(fresnel_color) => self.fresnel_color = fresnel_color,
+			EffectFlag::Distortion => {}
+		}
+
+		self.set_flag_internal(effect, true);
+	}
+
+	fn set_flag_internal(&mut self, flag: impl Into<u32>, to: bool) {
+		match to {
+			true => self.flags |= flag.into(),
+			false => self.flags &= !flag.into(),
+		}
 	}
 
 	fn empty_impacts(&mut self) {
@@ -89,6 +106,33 @@ impl Material for EffectMaterial {
 
 	fn enable_shadows() -> bool {
 		false
+	}
+}
+
+#[derive(Debug, PartialEq)]
+pub(crate) enum EffectFlag {
+	BaseColor(LinearRgba),
+	Fresnel(LinearRgba),
+	Distortion,
+}
+
+impl EffectFlag {
+	pub(crate) fn fresnel(color: impl Into<LinearRgba>) -> Self {
+		Self::Fresnel(color.into())
+	}
+
+	pub(crate) fn base_color(color: impl Into<LinearRgba>) -> Self {
+		Self::BaseColor(color.into())
+	}
+}
+
+impl From<EffectFlag> for u32 {
+	fn from(flag: EffectFlag) -> Self {
+		match flag {
+			EffectFlag::BaseColor(_) => 1 << 0,
+			EffectFlag::Fresnel(_) => 1 << 1,
+			EffectFlag::Distortion => 1 << 2,
+		}
 	}
 }
 
@@ -358,5 +402,34 @@ mod tests {
 			),
 			buffers.get(&material.impacts).map(|b| &b.data)
 		);
+	}
+
+	mod flags {
+		use super::*;
+		use test_case::test_case;
+
+		#[test_case(0b0000, 1, 0b0001; "1 to 1")]
+		#[test_case(0b0110, 1, 0b0111; "1 added")]
+		#[test_case(0b0000, 2, 0b0010; "2 to 2")]
+		#[test_case(0b0101, 2, 0b0111; "2 added")]
+		fn set_bit(flags: u32, flag: u32, expected: u32) {
+			let mut material = EffectMaterial { flags, ..default() };
+
+			material.set_flag_internal(flag, true);
+
+			assert_eq!(expected, material.flags);
+		}
+
+		#[test_case(0b0001, 1, 0b0000; "1 to 0")]
+		#[test_case(0b0111, 1, 0b0110; "1 removed")]
+		#[test_case(0b0010, 2, 0b0000; "2 to 0")]
+		#[test_case(0b0111, 2, 0b0101; "2 removed")]
+		fn unset_bit(flags: u32, flag: u32, expected: u32) {
+			let mut material = EffectMaterial { flags, ..default() };
+
+			material.set_flag_internal(flag, false);
+
+			assert_eq!(expected, material.flags);
+		}
 	}
 }
