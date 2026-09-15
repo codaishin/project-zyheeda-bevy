@@ -1,5 +1,5 @@
 use crate::{
-	components::effect_material_data::EffectMaterialData,
+	components::effect_material_data::{EffectMaterialData, Impact},
 	systems::update_material_buffer::UpdateMaterial,
 };
 use bevy::{
@@ -10,7 +10,6 @@ use bevy::{
 	},
 	shader::ShaderRef,
 };
-use common::prelude::*;
 use std::sync::LazyLock;
 
 pub static NO_IMPACTS: LazyLock<Handle<ShaderBuffer>> = LazyLock::new(Handle::default);
@@ -52,8 +51,8 @@ impl EffectMaterial {
 	}
 
 	fn compute_impacts(impacts: &[Impact]) -> ShaderBuffer {
-		let to_local = |Impact { position, strength }: &Impact| {
-			let position = Vec3::from(position.0);
+		let to_local = |Impact { global, strength }: &Impact| {
+			let position = Vec3::from(global);
 			let strength = **strength;
 
 			ImpactEffect { position, strength }
@@ -175,6 +174,8 @@ impl UpdateMaterial for EffectMaterial {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::components::effect_material_data::ImpactStrength;
+	use common::{tools::vec_not_nan::VecNotNan, vec_not_nan};
 	use zyheeda_core::prelude::*;
 
 	#[test]
@@ -186,7 +187,7 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					global: vec_not_nan!(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
@@ -214,7 +215,7 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					global: vec_not_nan!(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
@@ -249,7 +250,7 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					position: GlobalVec3(VecNotNan::default()),
+					global: VecNotNan::default(),
 					strength: new_f32!(ImpactStrength(1.0)),
 				}],
 				..default()
@@ -274,7 +275,7 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					global: vec_not_nan!(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
@@ -286,7 +287,7 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					global: vec_not_nan!(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.4)),
 				}],
 				..default()
@@ -304,7 +305,7 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					global: vec_not_nan!(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
@@ -315,7 +316,7 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(2., 3., 4.)),
+					global: vec_not_nan!(2., 3., 4.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
@@ -343,7 +344,7 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(1., 2., 3.)),
+					global: vec_not_nan!(1., 2., 3.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()
@@ -354,7 +355,7 @@ mod tests {
 			&mut buffers,
 			&EffectMaterialData {
 				impacts: vec![Impact {
-					position: GlobalVec3(vec_not_nan!(2., 3., 4.)),
+					global: vec_not_nan!(2., 3., 4.),
 					strength: new_f32!(ImpactStrength(0.5)),
 				}],
 				..default()

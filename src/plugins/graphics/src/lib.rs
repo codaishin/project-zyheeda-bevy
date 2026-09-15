@@ -122,6 +122,7 @@ where
 			.add_observer(StandardMaterials::track_inserted)
 			.add_observer(StandardMaterials::track_discarded)
 			.add_observer(StandardMaterials::set_invisible_material("Invisible"))
+			.add_observer(EffectMaterialData::read_impacts::<TPhysics::TImpactEvent>)
 			.add_systems(
 				Startup,
 				EffectMaterial::set_default_impacts.pipe(OnError::log),
@@ -133,7 +134,6 @@ where
 					EffectMaterialData::modify_material::<TPhysics, Force>,
 					EffectMaterialData::modify_material::<TPhysics, Gravity>,
 					EffectMaterialData::modify_material::<TPhysics, HealthDamage>,
-					EffectMaterialData::read_impacts::<TPhysics::TImpacted>,
 					EffectMaterialData::update_material_buffer::<EffectMaterial>,
 					EffectMaterialData::propagate_material::<EffectMaterial>,
 					StandardMaterials::set_lit_type,
