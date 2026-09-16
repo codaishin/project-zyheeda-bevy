@@ -36,14 +36,17 @@ const DISTORTION_EFFECT: u32 = 1 << 2;
 const IMPACT_FALLOFF: f32 = 1.0;
 
 @fragment
-fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
+fn fragment(
+    mesh: VertexOutput,
+    @builtin(front_facing) is_front: bool,
+) -> @location(0) vec4<f32> {
     var output = vec4(0.);
 
     if (effect_flags & COLOR_EFFECT) != 0u {
         output = base_color;
     }
 
-    if (effect_flags & FRESNEL_EFFECT) != 0u {
+    if is_front && (effect_flags & FRESNEL_EFFECT) != 0u {
         output += fresnel_effect(mesh);
     }
 
