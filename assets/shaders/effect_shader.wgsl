@@ -50,7 +50,7 @@ fn fragment(
         output += fresnel_effect(mesh);
     }
 
-    if (effect_flags & DISTORTION_EFFECT) != 0u {
+    if is_front && (effect_flags & DISTORTION_EFFECT) != 0u {
         output += distortion_effect(mesh);
     }
 
