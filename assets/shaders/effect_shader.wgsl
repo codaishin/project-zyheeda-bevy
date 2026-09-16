@@ -33,27 +33,39 @@ const COLOR_EFFECT: u32 = 1 << 0;
 const FRESNEL_EFFECT: u32 = 1 << 1;
 const DISTORTION_EFFECT: u32 = 1 << 2;
 
-const IMPACT_FALLOFF: f32 = 1.0;
+const IMPACT_RADIUS: f32 = 0.5;
+const IMPACT_SMOOTHNESS: f32 = 8;
+const IMPACT_INTENSITY: f32 = 10;
 
 @fragment
-fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
+fn fragment(
+    mesh: VertexOutput,
+    @builtin(front_facing) is_front: bool,
+) -> @location(0) vec4<f32> {
     var output = vec4(0.);
+    var impact_color = vec4(0.);
 
     if (effect_flags & COLOR_EFFECT) != 0u {
-        output = base_color;
+        if is_front {
+            output = base_color;
+        }
+
+        impact_color = base_color;
     }
 
     if (effect_flags & FRESNEL_EFFECT) != 0u {
-        output += fresnel_effect(mesh);
+        if is_front {
+            output += fresnel_effect(mesh);
+        }
+
+        impact_color += fresnel_color;
     }
 
-    if (effect_flags & DISTORTION_EFFECT) != 0u {
+    if (effect_flags & DISTORTION_EFFECT) != 0u && is_front {
         output += distortion_effect(mesh);
     }
 
-    output += impact_strength(mesh);
-
-    return output;
+    return mix(output, vec4(impact_color.rgb * IMPACT_INTENSITY, 1.), impact_strength(mesh));
 }
 
 fn fresnel_effect(mesh: VertexOutput) -> vec4<f32> {
@@ -62,13 +74,14 @@ fn fresnel_effect(mesh: VertexOutput) -> vec4<f32> {
     return vec4(fresnel_color.rgb, fresnel_color.a * fresnel);
 }
 
-fn impact_strength(mesh: VertexOutput) -> vec4<f32> {
+fn impact_strength(mesh: VertexOutput) -> f32 {
     var highest_strength = 0.0;
 
     for (var i = u32(0); i < arrayLength(&impacts); i++) {
         let impact = impacts[i];
         let distance = length(mesh.world_position.xyz - impact.position);
-        let strength = max(0.3 - distance * IMPACT_FALLOFF, 0.0) * impact.strength;
+        let distance_relative = min(distance / IMPACT_RADIUS, 1.0);
+        let strength = pow(1.0 - distance_relative, IMPACT_SMOOTHNESS) * impact.strength;
 
         if strength < highest_strength {
             continue;
@@ -77,7 +90,7 @@ fn impact_strength(mesh: VertexOutput) -> vec4<f32> {
         highest_strength = strength;
     }
 
-    return vec4(highest_strength);
+    return highest_strength;
 }
 
 fn distortion_effect(mesh: VertexOutput) -> vec4<f32> {

@@ -129,6 +129,17 @@ impl Material for EffectMaterial {
 	fn enable_shadows() -> bool {
 		false
 	}
+
+	fn specialize(
+		_: &bevy::pbr::MaterialPipeline,
+		descriptor: &mut bevy::material::descriptor::RenderPipelineDescriptor,
+		_: &bevy::mesh::MeshVertexBufferLayoutRef,
+		_: bevy::pbr::MaterialPipelineKey<Self>,
+	) -> Result<(), bevy::material::specialize::SpecializedMeshPipelineError> {
+		descriptor.primitive.cull_mode = None;
+
+		Ok(())
+	}
 }
 
 #[derive(Debug, PartialEq)]

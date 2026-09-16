@@ -95,7 +95,7 @@ where
 		+ HandlesSkillPhysics
 		+ HandlesImpacts,
 {
-	const IMPACT_DECAY: DecayPerSecond = DecayPerSecond(new_f32!(ImpactStrength(2.)));
+	const IMPACT_DECAY: DecayPerSecond = DecayPerSecond(new_f32!(ImpactStrength(3.)));
 
 	#[cfg(feature = "debug-utils")]
 	pub fn new(debug_cam: fn() -> TDebugCam, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
