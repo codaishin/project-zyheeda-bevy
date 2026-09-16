@@ -33,8 +33,8 @@ const COLOR_EFFECT: u32 = 1 << 0;
 const FRESNEL_EFFECT: u32 = 1 << 1;
 const DISTORTION_EFFECT: u32 = 1 << 2;
 
-const IMPACT_FALLOFF: f32 = 1;
-const IMPACT_SMOOTHNESS: f32 = 10;
+const IMPACT_RADIUS: f32 = 0.5;
+const IMPACT_SMOOTHNESS: f32 = 8;
 const IMPACT_INTENSITY: f32 = 10;
 
 @fragment
@@ -80,8 +80,8 @@ fn impact_strength(mesh: VertexOutput) -> f32 {
     for (var i = u32(0); i < arrayLength(&impacts); i++) {
         let impact = impacts[i];
         let distance = length(mesh.world_position.xyz - impact.position);
-        let normalized_distance = clamp(distance * IMPACT_FALLOFF, 0.0, 1.0);
-        let strength = pow(1.0 - normalized_distance, IMPACT_SMOOTHNESS) * impact.strength;
+        let distance_relative = min(distance / IMPACT_RADIUS, 1.0);
+        let strength = pow(1.0 - distance_relative, IMPACT_SMOOTHNESS) * impact.strength;
 
         if strength < highest_strength {
             continue;
