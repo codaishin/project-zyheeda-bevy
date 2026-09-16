@@ -42,7 +42,7 @@ fn fragment(
 ) -> @location(0) vec4<f32> {
     var output = vec4(0.);
 
-    if (effect_flags & COLOR_EFFECT) != 0u {
+    if is_front && (effect_flags & COLOR_EFFECT) != 0u {
         output = base_color;
     }
 
