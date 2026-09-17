@@ -15,7 +15,7 @@ impl Light {
 		match light_type {
 			LightType::Roof => {
 				let intensity = 1_000_000.0;
-				let color = Color::WHITE;
+				let color = Color::from(LinearRgba::from_u8_array_no_alpha(WorldLight::COLOR));
 
 				entity.try_insert((
 					#[cfg(debug_assertions)]
@@ -25,6 +25,7 @@ impl Light {
 					SpotLight {
 						color,
 						intensity,
+						outer_angle: 60_f32.to_radians(),
 						..default()
 					},
 				));

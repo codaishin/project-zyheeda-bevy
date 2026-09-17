@@ -14,12 +14,14 @@ use bevy::{
 	color::palettes::tailwind,
 	core_pipeline::{prepass::DepthPrepass, tonemapping::Tonemapping},
 	ecs::system::StaticSystemParam,
+	light::light_consts::lux,
 	post_process::bloom::Bloom,
 	prelude::*,
 	render::extract_component::ExtractComponent,
 };
 use common::prelude::*;
 use macros::{SavableComponent, serde_model};
+use zyheeda_core::prelude::*;
 
 const WORLD_PASS: Layer = 0;
 const AGENTS_PASS: Layer = 1;
@@ -224,6 +226,10 @@ impl From<WorldLight> for RenderLayers {
 	}
 }
 
+impl WorldLight {
+	pub(crate) const COLOR: [u8; 3] = u8_array_from_hex!("E8EDDF");
+}
+
 impl Prefab<()> for WorldLight {
 	type TError = Unreachable;
 	type TSystemParam = ();
@@ -233,7 +239,8 @@ impl Prefab<()> for WorldLight {
 		entity: &mut impl PrefabEntityCommands,
 		_: StaticSystemParam<()>,
 	) -> Result<(), Self::TError> {
-		let illuminance = 2500.;
+		let illuminance = lux::AMBIENT_DAYLIGHT * 0.25;
+		let color = Color::from(LinearRgba::from_u8_array_no_alpha(Self::COLOR));
 		let to_left = Quat::from_axis_angle(Vec3::Y, (-25_f32).to_radians());
 		let to_right = Quat::from_axis_angle(Vec3::Y, (25_f32).to_radians());
 
@@ -242,6 +249,7 @@ impl Prefab<()> for WorldLight {
 				Transform::default().with_rotation(to_left),
 				DirectionalLight {
 					illuminance,
+					color,
 					..default()
 				},
 			))
