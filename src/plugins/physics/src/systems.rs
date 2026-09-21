@@ -1,3 +1,4 @@
+pub(crate) mod anchored_colliders;
 pub(crate) mod apply_gravity;
 pub(crate) mod apply_pull;
 pub(crate) mod async_collider;
@@ -15,6 +16,5 @@ pub(crate) mod set_motion_done;
 pub(crate) mod set_motion_translation;
 pub(crate) mod set_velocity_forward;
 pub(crate) mod update_target_pitch;
-pub(crate) mod weak_anchors;
 pub(crate) mod when_traveled;
 pub(crate) mod world_camera;

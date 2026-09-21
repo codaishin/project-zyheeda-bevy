@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		anchor::Anchor,
+		anchored_skill::AnchoredSkill,
 		ground_target::GroundTarget,
 		projectile::Projectile,
 		set_velocity_forward::SetVelocityForward,
@@ -41,7 +41,7 @@ impl ApplyMotionPrefab for Skill {
 
 				if self.created_from == CreatedFrom::Spawn {
 					entity.try_insert((
-						Anchor::attach_to(self.caster.0)
+						AnchoredSkill::to(self.caster.0)
 							.on(self.mount)
 							.looking_at_skill_target()
 							.once(),
@@ -53,7 +53,7 @@ impl ApplyMotionPrefab for Skill {
 			}
 			SkillShape::Beam(..) => {
 				entity.try_insert(
-					Anchor::attach_to(self.caster.0)
+					AnchoredSkill::to(self.caster.0)
 						.on(self.mount)
 						.looking_at_skill_target()
 						.always(),
@@ -63,7 +63,7 @@ impl ApplyMotionPrefab for Skill {
 			}
 			SkillShape::Shield(..) => {
 				entity.try_insert(
-					Anchor::attach_to(self.caster.0)
+					AnchoredSkill::to(self.caster.0)
 						.on(self.mount)
 						.with_attached_rotation()
 						.always(),

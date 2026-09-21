@@ -1,12 +1,12 @@
-use crate::components::weak_anchor::{WeakAnchoredTo, WeakAnchors};
+use crate::components::anchored_colliders::{AnchoredColliderTo, AnchoredColliders};
 use bevy::prelude::*;
 
-impl WeakAnchors {
-	pub(crate) fn drag_anchors(
-		anchored: Query<(&WeakAnchoredTo, &mut Transform)>,
+impl AnchoredColliders {
+	pub(crate) fn drag(
+		anchored: Query<(&AnchoredColliderTo, &mut Transform)>,
 		anchors: Query<&GlobalTransform>,
 	) {
-		for (WeakAnchoredTo(anchor), mut transform) in anchored {
+		for (AnchoredColliderTo(anchor), mut transform) in anchored {
 			let Ok(anchor) = anchors.get(*anchor) else {
 				continue;
 			};
@@ -24,7 +24,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, WeakAnchors::drag_anchors);
+		app.add_systems(Update, AnchoredColliders::drag);
 
 		app
 	}
@@ -38,7 +38,7 @@ mod tests {
 				.looking_to(Dir3::X, Dir3::Y),
 		);
 		let anchor = app.world_mut().spawn(global).id();
-		let anchored = app.world_mut().spawn(WeakAnchoredTo(anchor)).id();
+		let anchored = app.world_mut().spawn(AnchoredColliderTo(anchor)).id();
 
 		app.update();
 

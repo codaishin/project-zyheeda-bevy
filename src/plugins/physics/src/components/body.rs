@@ -1,4 +1,5 @@
 use crate::components::{
+	anchored_colliders::AnchoredColliderTo,
 	blocker_types::BlockerTypes,
 	collider::{
 		AGENTS_GROUP,
@@ -12,7 +13,6 @@ use crate::components::{
 	collision_domains::{Interactive, Physical},
 	impact_able::ImpactAble,
 	motion_controller::MotionCollider,
-	weak_anchor::WeakAnchoredTo,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -79,7 +79,7 @@ impl Prefab<()> for Body {
 			Some(core) => {
 				let entity = match core.shape {
 					Shape::StaticGltfMesh3d => {
-						commands.spawn(WeakAnchoredTo(entity.entity_id())).id()
+						commands.spawn(AnchoredColliderTo(entity.entity_id())).id()
 					}
 					_ => entity.entity_id(),
 				};
@@ -362,8 +362,8 @@ mod tests {
 
 				let mut anchored = app
 					.world_mut()
-					.query_filtered::<&WeakAnchoredTo, With<BlockerTypes>>();
-				let [WeakAnchoredTo(anchor)] = assert_count!(1, anchored.iter(app.world()));
+					.query_filtered::<&AnchoredColliderTo, With<BlockerTypes>>();
+				let [AnchoredColliderTo(anchor)] = assert_count!(1, anchored.iter(app.world()));
 				assert_eq!(&entity, anchor);
 			}
 		}

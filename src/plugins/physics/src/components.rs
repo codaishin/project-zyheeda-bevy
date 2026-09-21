@@ -1,5 +1,6 @@
 pub(crate) mod affected;
-pub(crate) mod anchor;
+pub(crate) mod anchored_colliders;
+pub(crate) mod anchored_skill;
 pub(crate) mod async_collider;
 pub(crate) mod blockable;
 pub(crate) mod blocker_types;
@@ -28,5 +29,4 @@ pub(crate) mod skill;
 pub(crate) mod skill_transform;
 pub(crate) mod target;
 pub(crate) mod velocity;
-pub(crate) mod weak_anchor;
 pub(crate) mod when_traveled;

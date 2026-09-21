@@ -1,6 +1,6 @@
 use crate::{
 	components::{
-		anchor::{Anchor, AnchorDirty, AnchorRotation},
+		anchored_skill::{AnchorRotation, AnchoredSkill, AnchoredSkillDirty},
 		offset::{CenterOffset, ComputeOffsetTranslation},
 		target::SkillTargetInternal,
 	},
@@ -14,13 +14,13 @@ use bevy::{
 use common::prelude::*;
 use std::fmt::Display;
 
-impl AnchorDirty {
+impl AnchoredSkillDirty {
 	pub(crate) fn process<TRayCaster>(
 		on_add: On<Add, Self>,
 		commands: ZyheedaCommands,
 		lookup: StaticSystemParam<MountPointsLookup<SkillMountBone>>,
 		ray_caster: StaticSystemParam<TRayCaster>,
-		agents: Query<(&Anchor, &mut Transform)>,
+		agents: Query<(&AnchoredSkill, &mut Transform)>,
 		targets: Query<&SkillTargetInternal>,
 		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 	) -> Result<(), AnchorError<MountPointError<SkillMountBone>>>
@@ -37,7 +37,7 @@ impl AnchorDirty {
 		mut commands: ZyheedaCommands,
 		mut lookup: StaticSystemParam<TLookup>,
 		ray_caster: StaticSystemParam<TRayCaster>,
-		mut agents: Query<(&Anchor, &mut Transform)>,
+		mut agents: Query<(&AnchoredSkill, &mut Transform)>,
 		targets: Query<&SkillTargetInternal>,
 		transforms: Query<(&GlobalTransform, Option<&CenterOffset>)>,
 	) -> Result<(), AnchorError<TMountError>>
@@ -53,9 +53,9 @@ impl AnchorDirty {
 
 		commands.try_apply_on(&on_add.entity, |mut e| {
 			if anchor.persistent {
-				e.try_remove::<AnchorDirty>();
+				e.try_remove::<AnchoredSkillDirty>();
 			} else {
-				e.try_remove::<(AnchorDirty, Anchor)>();
+				e.try_remove::<(AnchoredSkillDirty, AnchoredSkill)>();
 			}
 		});
 
@@ -267,11 +267,10 @@ mod tests {
 
 		app.register_persistent_entities();
 		app.add_observer(
-			AnchorDirty::system_internal::<ResMut<_Lookup>, ResMut<_RayCaster>, _Error>.pipe(
-				|In(result), mut commands: Commands| {
+			AnchoredSkillDirty::system_internal::<ResMut<_Lookup>, ResMut<_RayCaster>, _Error>
+				.pipe(|In(result), mut commands: Commands| {
 					commands.insert_resource(_Result(result));
-				},
-			),
+				}),
 		);
 		app.init_resource::<_RayCaster>();
 		app.insert_resource(_Lookup {
@@ -299,7 +298,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)))
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)))
 			.id();
 
 		assert_eq!(
@@ -328,7 +327,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.).looking_to(Dir3::NEG_Z, Dir3::Y)),
@@ -359,7 +358,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 16., 9.).looking_to(Dir3::NEG_Z, Dir3::Y)),
@@ -387,7 +386,7 @@ mod tests {
 		});
 
 		let anchor = app.world_mut().spawn(
-			Anchor::attach_to(*AGENT)
+			AnchoredSkill::to(*AGENT)
 				.on(SkillMount::Bone(bone))
 				.with_attached_rotation(),
 		);
@@ -423,7 +422,7 @@ mod tests {
 			.spawn((target, GlobalTransform::from_xyz(11., -20., 3.)));
 
 		let anchor = app.world_mut().spawn(
-			Anchor::attach_to(*AGENT)
+			AnchoredSkill::to(*AGENT)
 				.on(SkillMount::Bone(bone))
 				.looking_at_skill_target(),
 		);
@@ -467,7 +466,7 @@ mod tests {
 			));
 
 			let anchor = app.world_mut().spawn(
-				Anchor::attach_to(*AGENT)
+				AnchoredSkill::to(*AGENT)
 					.on(SkillMount::Bone(BONE))
 					.looking_at_skill_target(),
 			);
@@ -510,7 +509,7 @@ mod tests {
 			}));
 
 			let anchor = app.world_mut().spawn(
-				Anchor::attach_to(*AGENT)
+				AnchoredSkill::to(*AGENT)
 					.on(SkillMount::Bone(BONE))
 					.looking_at_skill_target(),
 			);
@@ -560,7 +559,7 @@ mod tests {
 			}));
 
 			let anchor = app.world_mut().spawn(
-				Anchor::attach_to(*AGENT)
+				AnchoredSkill::to(*AGENT)
 					.on(SkillMount::Bone(BONE))
 					.looking_at_skill_target(),
 			);
@@ -610,7 +609,7 @@ mod tests {
 			}));
 
 			let anchor = app.world_mut().spawn(
-				Anchor::attach_to(*AGENT)
+				AnchoredSkill::to(*AGENT)
 					.on(SkillMount::Bone(BONE))
 					.looking_at_skill_target(),
 			);
@@ -645,7 +644,7 @@ mod tests {
 			));
 
 			let anchor = app.world_mut().spawn(
-				Anchor::attach_to(*AGENT)
+				AnchoredSkill::to(*AGENT)
 					.on(SkillMount::Center)
 					.looking_at_skill_target(),
 			);
@@ -681,7 +680,7 @@ mod tests {
 			}));
 
 			let anchor = app.world_mut().spawn(
-				Anchor::attach_to(*AGENT)
+				AnchoredSkill::to(*AGENT)
 					.on(SkillMount::Center)
 					.looking_at_skill_target(),
 			);
@@ -724,7 +723,7 @@ mod tests {
 			}));
 
 			let anchor = app.world_mut().spawn(
-				Anchor::attach_to(*AGENT)
+				AnchoredSkill::to(*AGENT)
 					.on(SkillMount::Center)
 					.looking_at_skill_target(),
 			);
@@ -767,7 +766,7 @@ mod tests {
 			}));
 
 			let anchor = app.world_mut().spawn(
-				Anchor::attach_to(*AGENT)
+				AnchoredSkill::to(*AGENT)
 					.on(SkillMount::Center)
 					.looking_at_skill_target(),
 			);
@@ -804,7 +803,7 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			Some(&Transform::from_xyz(4., 11., 9.)),
@@ -830,9 +829,9 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)).once());
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)).once());
 
-		assert!(!anchor.contains::<AnchorDirty>());
+		assert!(!anchor.contains::<AnchoredSkillDirty>());
 	}
 
 	#[test]
@@ -852,12 +851,12 @@ mod tests {
 		});
 
 		let anchor = app.world_mut().spawn(
-			Anchor::attach_to(*AGENT)
+			AnchoredSkill::to(*AGENT)
 				.on(SkillMount::Bone(bone))
 				.always(),
 		);
 
-		assert!(!anchor.contains::<AnchorDirty>());
+		assert!(!anchor.contains::<AnchoredSkillDirty>());
 	}
 
 	#[test]
@@ -878,9 +877,9 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)).once());
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)).once());
 
-		assert!(!anchor.contains::<Anchor>());
+		assert!(!anchor.contains::<AnchoredSkill>());
 	}
 
 	#[test]
@@ -900,12 +899,12 @@ mod tests {
 		});
 
 		let anchor = app.world_mut().spawn(
-			Anchor::attach_to(*AGENT)
+			AnchoredSkill::to(*AGENT)
 				.on(SkillMount::Bone(bone))
 				.always(),
 		);
 
-		assert!(anchor.contains::<Anchor>());
+		assert!(anchor.contains::<AnchoredSkill>());
 	}
 
 	#[test]
@@ -915,13 +914,13 @@ mod tests {
 
 		let anchor = app
 			.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)).once());
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)).once());
 
 		assert_eq!(
 			(false, false),
 			(
-				anchor.contains::<Anchor>(),
-				anchor.contains::<AnchorDirty>(),
+				anchor.contains::<AnchoredSkill>(),
+				anchor.contains::<AnchoredSkillDirty>(),
 			)
 		);
 	}
@@ -932,7 +931,7 @@ mod tests {
 		let bone = SkillMountBone::Slot(SlotKey(22));
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::EntityNotFound(*AGENT))),
@@ -947,7 +946,7 @@ mod tests {
 		app.world_mut().spawn(*AGENT);
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::MountError(_Error))),
@@ -966,7 +965,7 @@ mod tests {
 		});
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::EntityWithoutTransform(agent))),
@@ -988,7 +987,7 @@ mod tests {
 		});
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::EntityWithoutTransform(mount_entity))),
@@ -1013,7 +1012,7 @@ mod tests {
 		});
 
 		app.world_mut()
-			.spawn(Anchor::attach_to(*AGENT).on(SkillMount::Bone(bone)));
+			.spawn(AnchoredSkill::to(*AGENT).on(SkillMount::Bone(bone)));
 
 		assert_eq!(
 			&_Result(Err(AnchorError::TranslationNaN(mount_entity))),
@@ -1038,7 +1037,7 @@ mod tests {
 		});
 
 		app.world_mut().spawn(
-			Anchor::attach_to(*AGENT)
+			AnchoredSkill::to(*AGENT)
 				.on(SkillMount::Bone(bone))
 				.looking_at_skill_target(),
 		);

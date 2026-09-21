@@ -18,7 +18,8 @@ use crate::{
 	app::add_physics::AddPhysics,
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
-		anchor::{Anchor, AnchorDirty},
+		anchored_colliders::AnchoredColliders,
+		anchored_skill::{AnchoredSkill, AnchoredSkillDirty},
 		async_collider::AsyncCollider,
 		body::Body,
 		cast_rays::CastRays,
@@ -37,7 +38,6 @@ use crate::{
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::SkillTargetInternal,
 		velocity::LinearVelocity,
-		weak_anchor::WeakAnchors,
 		when_traveled::DestroyAfterDistanceTraveled,
 	},
 	events::impact_event::ImpactEvent,
@@ -224,20 +224,20 @@ where
 				ForceAffected::insert_from::<DefaultAttributes>,
 			)
 			// General Lifetime relationship
-			.add_observer(LifetimeTiedTo::insert_on::<Anchor>)
+			.add_observer(LifetimeTiedTo::insert_on::<AnchoredSkill>)
 			.add_observer(TiedLifetimes::despawn_relationships_on_remove)
-			// Anchor
-			.add_observer(AnchorDirty::process::<RayCasterMut>.pipe(OnError::log))
+			// Anchored Skills
+			.add_observer(AnchoredSkillDirty::process::<RayCasterMut>.pipe(OnError::log))
 			.add_systems(
 				Update,
-				Anchor::mark_dirty
+				AnchoredSkill::mark_dirty
 					.in_set(PhysicsSystems::Prep)
 					.run_if(not(TGameState::game_paused())),
 			)
-			// Weak Anchors
+			// Anchored Colliders
 			.add_systems(
 				FixedPreUpdate,
-				WeakAnchors::drag_anchors
+				AnchoredColliders::drag
 					.in_set(PhysicsSystems::Interpolate)
 					.run_if(not(TGameState::game_paused())),
 			)

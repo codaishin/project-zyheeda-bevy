@@ -2,20 +2,20 @@ use bevy::prelude::*;
 use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Transform, AnchorDirty)]
-pub(crate) struct Anchor {
+#[require(Transform, AnchoredSkillDirty)]
+pub(crate) struct AnchoredSkill {
 	pub(crate) attached_to: PersistentEntity,
 	pub(crate) mount: SkillMount,
 	pub(crate) rotation: AnchorRotation,
 	pub(crate) persistent: bool,
 }
 
-impl Anchor {
-	pub(crate) fn attach_to<TEntity>(entity: TEntity) -> AnchorAttachment
+impl AnchoredSkill {
+	pub(crate) fn to<TEntity>(entity: TEntity) -> AnchoredSkillAttachment
 	where
 		TEntity: Into<PersistentEntity>,
 	{
-		AnchorAttachment {
+		AnchoredSkillAttachment {
 			attached_to: entity.into(),
 		}
 	}
@@ -41,7 +41,7 @@ impl Anchor {
 	}
 }
 
-impl View<PersistentEntity> for Anchor {
+impl View<PersistentEntity> for AnchoredSkill {
 	fn view(&self) -> PersistentEntity {
 		self.attached_to
 	}
@@ -49,15 +49,15 @@ impl View<PersistentEntity> for Anchor {
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[component(immutable)]
-pub(crate) struct AnchorDirty;
+pub(crate) struct AnchoredSkillDirty;
 
-pub(crate) struct AnchorAttachment {
+pub(crate) struct AnchoredSkillAttachment {
 	attached_to: PersistentEntity,
 }
 
-impl AnchorAttachment {
-	pub(crate) fn on(self, mount: SkillMount) -> Anchor {
-		Anchor {
+impl AnchoredSkillAttachment {
+	pub(crate) fn on(self, mount: SkillMount) -> AnchoredSkill {
+		AnchoredSkill {
 			attached_to: self.attached_to,
 			mount,
 			rotation: AnchorRotation::OfMount,

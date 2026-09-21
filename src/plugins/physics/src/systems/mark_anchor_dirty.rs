@@ -1,15 +1,15 @@
-use crate::components::anchor::{Anchor, AnchorDirty};
+use crate::components::anchored_skill::{AnchoredSkill, AnchoredSkillDirty};
 use bevy::prelude::*;
 use common::prelude::*;
 
-impl Anchor {
+impl AnchoredSkill {
 	pub(crate) fn mark_dirty(
 		mut commands: ZyheedaCommands,
-		anchors: Query<Entity, (With<Self>, Without<AnchorDirty>)>,
+		anchors: Query<Entity, (With<Self>, Without<AnchoredSkillDirty>)>,
 	) {
 		for entity in anchors {
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(AnchorDirty);
+				e.try_insert(AnchoredSkillDirty);
 			});
 		}
 	}
@@ -18,7 +18,6 @@ impl Anchor {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::anchor::AnchorDirty;
 	use testing::{IsChanged, SingleThreadedApp};
 
 	fn setup() -> App {
@@ -26,7 +25,11 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			(Anchor::mark_dirty, IsChanged::<AnchorDirty>::detect).chain(),
+			(
+				AnchoredSkill::mark_dirty,
+				IsChanged::<AnchoredSkillDirty>::detect,
+			)
+				.chain(),
 		);
 
 		app
@@ -37,15 +40,15 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::Center))
-			.remove::<AnchorDirty>()
+			.spawn(AnchoredSkill::to(PersistentEntity::default()).on(SkillMount::Center))
+			.remove::<AnchoredSkillDirty>()
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&AnchorDirty),
-			app.world().entity(entity).get::<AnchorDirty>(),
+			Some(&AnchoredSkillDirty),
+			app.world().entity(entity).get::<AnchoredSkillDirty>(),
 		);
 	}
 
@@ -56,7 +59,7 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<AnchorDirty>());
+		assert_eq!(None, app.world().entity(entity).get::<AnchoredSkillDirty>());
 	}
 
 	#[test]
@@ -64,8 +67,8 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::Center))
-			.remove::<AnchorDirty>()
+			.spawn(AnchoredSkill::to(PersistentEntity::default()).on(SkillMount::Center))
+			.remove::<AnchoredSkillDirty>()
 			.id();
 
 		app.update();
@@ -73,7 +76,9 @@ mod tests {
 
 		assert_eq!(
 			Some(&IsChanged::FALSE),
-			app.world().entity(entity).get::<IsChanged<AnchorDirty>>(),
+			app.world()
+				.entity(entity)
+				.get::<IsChanged<AnchoredSkillDirty>>(),
 		);
 	}
 
@@ -82,17 +87,19 @@ mod tests {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
-			.spawn(Anchor::attach_to(PersistentEntity::default()).on(SkillMount::Center))
-			.remove::<AnchorDirty>()
+			.spawn(AnchoredSkill::to(PersistentEntity::default()).on(SkillMount::Center))
+			.remove::<AnchoredSkillDirty>()
 			.id();
 
 		app.update();
-		app.world_mut().entity_mut(entity).remove::<AnchorDirty>();
+		app.world_mut()
+			.entity_mut(entity)
+			.remove::<AnchoredSkillDirty>();
 		app.update();
 
 		assert_eq!(
-			Some(&AnchorDirty),
-			app.world().entity(entity).get::<AnchorDirty>(),
+			Some(&AnchoredSkillDirty),
+			app.world().entity(entity).get::<AnchoredSkillDirty>(),
 		);
 	}
 }
