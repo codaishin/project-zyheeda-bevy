@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use common::prelude::*;
 
 #[derive(Resource, Debug)]
-pub struct PrefabRegister<T>(pub(crate) fn(ZyheedaEntityCommands, T::TTranslation, T))
+pub struct PrefabRegister<T>(pub(crate) fn(ZyheedaEntityCommands, T::TTransform, T))
 where
 	T: PrefabType;
 
@@ -10,9 +10,9 @@ impl<T> PrefabRegister<T>
 where
 	T: PrefabType,
 {
-	fn noop(_: ZyheedaEntityCommands, _: T::TTranslation, _: T) {}
+	fn noop(_: ZyheedaEntityCommands, _: T::TTransform, _: T) {}
 
-	pub(crate) fn apply(&self, entity: ZyheedaEntityCommands, translation: T::TTranslation, t: T) {
+	pub(crate) fn apply(&self, entity: ZyheedaEntityCommands, translation: T::TTransform, t: T) {
 		(self.0)(entity, translation, t)
 	}
 }

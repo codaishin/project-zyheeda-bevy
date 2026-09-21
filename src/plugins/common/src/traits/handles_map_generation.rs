@@ -97,9 +97,9 @@ impl GroundPosition {
 	pub const ONE: Self = Self(Vec3::ONE);
 }
 
-impl From<Vec3> for GroundPosition {
-	fn from(ground_position: Vec3) -> Self {
-		Self(ground_position)
+impl From<GlobalTransform> for GroundPosition {
+	fn from(transform: GlobalTransform) -> Self {
+		Self(transform.translation())
 	}
 }
 
@@ -121,11 +121,11 @@ pub trait SetPrefab<T>
 where
 	T: PrefabType,
 {
-	fn set_prefab(&mut self, prefab: fn(ZyheedaEntityCommands, T::TTranslation, T));
+	fn set_prefab(&mut self, prefab: fn(ZyheedaEntityCommands, T::TTransform, T));
 }
 
 pub trait PrefabType {
-	type TTranslation: From<Vec3>;
+	type TTransform: From<GlobalTransform>;
 }
 
 pub struct MapPrefabs<T>(PhantomData<T>);
@@ -153,7 +153,7 @@ impl ViewField for AgentType {
 }
 
 impl PrefabType for AgentType {
-	type TTranslation = GroundPosition;
+	type TTransform = GroundPosition;
 }
 
 #[serde_model]
@@ -168,5 +168,5 @@ impl ViewField for InteractiveType {
 }
 
 impl PrefabType for InteractiveType {
-	type TTranslation = Vec3;
+	type TTransform = GlobalTransform;
 }

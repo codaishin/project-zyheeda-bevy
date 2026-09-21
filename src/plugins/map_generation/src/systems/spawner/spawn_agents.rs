@@ -13,7 +13,7 @@ use common::prelude::*;
 
 impl<T> Spawner<T>
 where
-	T: PrefabType<TTranslation: From<Vec3>> + Copy + ThreadSafe,
+	T: PrefabType<TTransform: From<GlobalTransform>> + Copy + ThreadSafe,
 {
 	pub(crate) fn execute(
 		mut commands: ZyheedaCommands,
@@ -33,7 +33,7 @@ where
 
 			agent_prefabs.apply(
 				ZyheedaEntityCommands::from(spawned),
-				T::TTranslation::from(transform.translation()),
+				T::TTransform::from(*transform),
 				*agent,
 			);
 
