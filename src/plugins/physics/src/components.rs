@@ -1,5 +1,6 @@
 pub(crate) mod affected;
-pub(crate) mod anchor;
+pub(crate) mod anchored_colliders;
+pub(crate) mod anchored_skill;
 pub(crate) mod async_collider;
 pub(crate) mod blockable;
 pub(crate) mod blocker_types;

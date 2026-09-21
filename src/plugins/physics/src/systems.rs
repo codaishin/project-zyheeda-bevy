@@ -1,3 +1,4 @@
+pub(crate) mod anchored_colliders;
 pub(crate) mod apply_gravity;
 pub(crate) mod apply_pull;
 pub(crate) mod async_collider;

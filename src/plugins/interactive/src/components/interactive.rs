@@ -16,10 +16,10 @@ pub(crate) struct Interactive {
 impl Interactive {
 	fn map_prefab(
 		mut entity: ZyheedaEntityCommands,
-		translation: Vec3,
+		translation: GlobalTransform,
 		interactive_type: InteractiveType,
 	) {
-		entity.try_insert(Transform::from_translation(translation));
+		entity.try_insert(Transform::from(translation));
 
 		match interactive_type {
 			InteractiveType::Door => entity.try_insert(Door),

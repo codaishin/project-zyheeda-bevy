@@ -12,7 +12,7 @@ impl<T> SetPrefab<T> for &mut PrefabRegister<T>
 where
 	T: PrefabType,
 {
-	fn set_prefab(&mut self, prefab: fn(ZyheedaEntityCommands, T::TTranslation, T)) {
+	fn set_prefab(&mut self, prefab: fn(ZyheedaEntityCommands, T::TTransform, T)) {
 		**self = PrefabRegister(prefab);
 	}
 }

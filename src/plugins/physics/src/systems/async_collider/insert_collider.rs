@@ -1,4 +1,7 @@
-use crate::components::async_collider::{AsyncCollider, ColliderType, Source};
+use crate::components::{
+	anchored_colliders::AnchoredColliderTo,
+	async_collider::{AsyncCollider, ColliderType, Source},
+};
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
@@ -6,19 +9,27 @@ use std::fmt::Display;
 
 impl AsyncCollider {
 	pub(crate) fn insert_collider(
-		colliders: Query<(Entity, &mut Self, Option<&Mesh3d>)>,
+		colliders: Query<(Entity, &mut Self, Option<&AnchoredColliderTo>)>,
+		meshes: Query<&Mesh3d>,
 		commands: ZyheedaCommands,
 		server: ResMut<AssetServer>,
-		meshes: Res<Assets<Mesh>>,
+		mesh_assets: Res<Assets<Mesh>>,
 	) -> Result<(), Vec<InsertColliderError>> {
-		Self::insert_collider_via::<AssetServer, Collider>(colliders, commands, server, meshes)
+		Self::insert_collider_via::<AssetServer, Collider>(
+			colliders,
+			meshes,
+			commands,
+			server,
+			mesh_assets,
+		)
 	}
 
 	fn insert_collider_via<TAssetServer, TCollider>(
-		mut colliders: Query<(Entity, &mut Self, Option<&Mesh3d>)>,
+		mut colliders: Query<(Entity, &mut Self, Option<&AnchoredColliderTo>)>,
+		meshes: Query<&Mesh3d>,
 		mut commands: ZyheedaCommands,
 		mut server: ResMut<TAssetServer>,
-		meshes: Res<Assets<Mesh>>,
+		mesh_assets: Res<Assets<Mesh>>,
 	) -> Result<(), Vec<InsertColliderError>>
 	where
 		TAssetServer: Resource<Mutability = Mutable> + LoadAsset,
@@ -26,22 +37,30 @@ impl AsyncCollider {
 	{
 		let mut errors = vec![];
 
-		for (entity, mut async_collider, mesh) in &mut colliders {
-			match (&async_collider.source, mesh) {
-				(Source::Path(path), ..) => {
-					async_collider.source = Source::Handle(server.load_asset(*path));
+		for (entity, mut async_collider, anchor) in &mut colliders {
+			let mesh_entity = match anchor {
+				Some(AnchoredColliderTo(entity)) => *entity,
+				None => entity,
+			};
+			let mesh = meshes.get(mesh_entity);
+
+			match async_collider.source {
+				Source::Path(path) => {
+					async_collider.source = Source::Handle(server.load_asset(path));
 				}
-				(Source::MeshOfEntity, Some(Mesh3d(handle))) => {
+				Source::MeshOfEntity => {
+					let Ok(Mesh3d(handle)) = mesh else {
+						errors.push(InsertColliderError::MeshMissing(entity));
+						commands.try_apply_on(&entity, |mut e| {
+							e.try_remove::<Self>();
+						});
+						continue;
+					};
+
 					async_collider.source = Source::Handle(handle.clone());
 				}
-				(Source::MeshOfEntity, None) => {
-					errors.push(InsertColliderError::MeshMissing(entity));
-					commands.try_apply_on(&entity, |mut e| {
-						e.try_remove::<Self>();
-					});
-				}
-				(Source::Handle(handle), ..) => {
-					let Some(mesh) = meshes.get(handle) else {
+				Source::Handle(ref handle) => {
+					let Some(mesh) = mesh_assets.get(handle) else {
 						continue;
 					};
 
@@ -231,6 +250,27 @@ mod tests {
 			.spawn((
 				AsyncCollider::concave(Source::MeshOfEntity),
 				Mesh3d(handle.clone()),
+			))
+			.id();
+
+		app.update();
+
+		assert_eq!(
+			Some(&AsyncCollider::concave(handle)),
+			app.world().entity(entity).get::<AsyncCollider>(),
+		);
+	}
+
+	#[test]
+	fn set_handle_from_anchored_entity() {
+		let handle = new_handle::<Mesh>();
+		let mut app = setup::<_Collider>(&[], MockAssetServer::default());
+		let anchor = app.world_mut().spawn(Mesh3d(handle.clone())).id();
+		let entity = app
+			.world_mut()
+			.spawn((
+				AsyncCollider::concave(Source::MeshOfEntity),
+				AnchoredColliderTo(anchor),
 			))
 			.id();
 
