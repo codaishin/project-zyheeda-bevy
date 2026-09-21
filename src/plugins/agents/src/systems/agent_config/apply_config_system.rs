@@ -92,7 +92,6 @@ impl ApplyAgentConfig {
 						core: Some(Core {
 							shape: Shape::Parameters(ShapeParameters::Capsule { half_y, radius }),
 							physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
-							..default()
 						}),
 						sub_frames: vec![config.interactive_detection_shape],
 					},
@@ -739,7 +738,6 @@ mod tests {
 								radius: Units::from(0.5),
 							}),
 							physics_type: PhysicsType::Agent(HashSet::from([Blocker::Character])),
-							..default()
 						}),
 						sub_frames: vec![interactive_detection_shape],
 					};

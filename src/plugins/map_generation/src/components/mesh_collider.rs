@@ -30,7 +30,6 @@ where
 				core: Some(Core {
 					shape: Shape::StaticGltfMesh3d,
 					physics_type: PhysicsType::Terrain(HashSet::from([Blocker::Physical])),
-					heuristic: CreationHeuristic::Anchored,
 				}),
 				..default()
 			},

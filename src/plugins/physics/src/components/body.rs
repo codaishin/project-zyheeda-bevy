@@ -77,11 +77,11 @@ impl Prefab<()> for Body {
 
 		let entity = match core {
 			Some(core) => {
-				let entity = match core.heuristic {
-					CreationHeuristic::TransformHierarchy => entity.entity_id(),
-					CreationHeuristic::Anchored => {
+				let entity = match core.shape {
+					Shape::StaticGltfMesh3d => {
 						commands.spawn(WeakAnchoredTo(entity.entity_id())).id()
 					}
+					_ => entity.entity_id(),
 				};
 
 				match core.physics_type {
@@ -149,7 +149,6 @@ mod tests {
 						core: Some(Core {
 							shape,
 							physics_type: PhysicsType::Agent(HashSet::from([])),
-							..default()
 						}),
 						..default()
 					}))
@@ -181,7 +180,6 @@ mod tests {
 								Blocker::Character,
 								Blocker::Force,
 							])),
-							..default()
 						}),
 						..default()
 					}))
@@ -213,7 +211,6 @@ mod tests {
 						core: Some(Core {
 							shape,
 							physics_type: PhysicsType::Terrain(HashSet::new()),
-							..default()
 						}),
 						..default()
 					}))
@@ -236,7 +233,6 @@ mod tests {
 					core: Some(Core {
 						shape,
 						physics_type: PhysicsType::Terrain(HashSet::default()),
-						..default()
 					}),
 					..default()
 				}));
@@ -255,7 +251,6 @@ mod tests {
 					core: Some(Core {
 						shape,
 						physics_type: PhysicsType::Terrain(HashSet::new()),
-						..default()
 					}),
 					..default()
 				}));
@@ -286,7 +281,6 @@ mod tests {
 							Blocker::Force,
 							Blocker::Physical,
 						])),
-						..default()
 					}),
 					..default()
 				}));
@@ -311,7 +305,6 @@ mod tests {
 					core: Some(Core {
 						shape,
 						physics_type: PhysicsType::Terrain(HashSet::new()),
-						..default()
 					}),
 					..default()
 				}));
@@ -326,13 +319,12 @@ mod tests {
 			}
 		}
 
-		mod heuristic {
+		mod anchoring {
+			use super::*;
 			use testing::assert_count;
 
-			use super::*;
-
 			#[test]
-			fn transform_hierarchy() {
+			fn no_anchoring_when_shape_not_derived() {
 				let mut app = setup();
 				let shape = Shape::Parameters(ShapeParameters::Sphere {
 					radius: Units::from(1.),
@@ -344,21 +336,18 @@ mod tests {
 						core: Some(Core {
 							shape,
 							physics_type: PhysicsType::Agent(HashSet::from([])),
-							heuristic: CreationHeuristic::TransformHierarchy,
 						}),
 						..default()
 					}))
 					.id();
 
-				assert!(app.world().entity(entity).contains::<MotionCollider>(),);
+				assert!(app.world().entity(entity).contains::<BlockerTypes>());
 			}
 
 			#[test]
-			fn anchored() {
+			fn anchored_when_shape_derived() {
 				let mut app = setup();
-				let shape = Shape::Parameters(ShapeParameters::Sphere {
-					radius: Units::from(1.),
-				});
+				let shape = Shape::StaticGltfMesh3d;
 
 				let entity = app
 					.world_mut()
@@ -366,7 +355,6 @@ mod tests {
 						core: Some(Core {
 							shape,
 							physics_type: PhysicsType::Agent(HashSet::from([])),
-							heuristic: CreationHeuristic::Anchored,
 						}),
 						..default()
 					}))
@@ -374,9 +362,9 @@ mod tests {
 
 				let mut anchored = app
 					.world_mut()
-					.query_filtered::<&WeakAnchoredTo, With<MotionCollider>>();
+					.query_filtered::<&WeakAnchoredTo, With<BlockerTypes>>();
 				let [WeakAnchoredTo(anchor)] = assert_count!(1, anchored.iter(app.world()));
-				assert_eq!(&entity, anchor,);
+				assert_eq!(&entity, anchor);
 			}
 		}
 	}

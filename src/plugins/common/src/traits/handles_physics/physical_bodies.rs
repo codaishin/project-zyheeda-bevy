@@ -44,22 +44,6 @@ impl From<ShapeParameters> for InteractiveFrame {
 pub struct Core {
 	pub shape: Shape,
 	pub physics_type: PhysicsType,
-	pub heuristic: CreationHeuristic,
-}
-
-/// Defines how to crate related components
-///
-/// Normally [`CreationHeuristic::TransformHierarchy`] should suffice. However, sometimes nested
-/// transforms of imported hierarchies act in an unexpected manner. This is when spawning them via
-/// [`CreationHeuristic::Anchored`] can be used to circumvent this.
-#[serde_model]
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
-pub enum CreationHeuristic {
-	/// Insert on the given entity in the transform hierarchy
-	#[default]
-	TransformHierarchy,
-	/// Insert on a separate entity and anchor it to the given entity
-	Anchored,
 }
 
 /// Shape definition. Used to describe physics colliders.
