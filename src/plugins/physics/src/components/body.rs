@@ -12,6 +12,7 @@ use crate::components::{
 	collision_domains::{Interactive, Physical},
 	impact_able::ImpactAble,
 	motion_controller::MotionCollider,
+	weak_anchor::WeakAnchoredTo,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -74,20 +75,37 @@ impl Prefab<()> for Body {
 	) -> Result<(), Self::TError> {
 		let Self(BodyConfig { core, sub_frames }) = self;
 
-		if let Some(core) = core {
-			match core.physics_type {
-				PhysicsType::Agent(ref blockers) => {
-					entity.try_insert(Self::agent(core.shape, blockers.clone()));
-				}
-				PhysicsType::Terrain(ref blockers) => {
-					entity.try_insert(Self::terrain(core.shape, blockers.clone()));
-				}
-			};
-		}
+		let entity = match core {
+			Some(core) => {
+				let entity = match core.heuristic {
+					CreationHeuristic::TransformHierarchy => entity.entity_id(),
+					CreationHeuristic::Anchored => {
+						commands.spawn(WeakAnchoredTo(entity.entity_id())).id()
+					}
+				};
+
+				match core.physics_type {
+					PhysicsType::Agent(ref blockers) => {
+						commands.try_apply_on(&entity, |mut e| {
+							e.try_insert(Self::agent(core.shape, blockers.clone()));
+						});
+					}
+					PhysicsType::Terrain(ref blockers) => {
+						commands.try_apply_on(&entity, |mut e| {
+							e.try_insert(Self::terrain(core.shape, blockers.clone()));
+						});
+					}
+				};
+
+				entity
+			}
+			None => entity.entity_id(),
+		};
 
 		for sub_frame in sub_frames {
-			entity.with_child((
-				Self::interactive_of(entity.entity_id()),
+			commands.spawn((
+				ChildOf(entity),
+				Self::interactive_of(entity),
 				Transform::from_xyz(0., 0., -*sub_frame.forward_offset),
 				ColliderShape::from(sub_frame.shape),
 			));
@@ -305,6 +323,60 @@ mod tests {
 					}),
 					entity.get::<CollisionGroups>(),
 				);
+			}
+		}
+
+		mod heuristic {
+			use testing::assert_count;
+
+			use super::*;
+
+			#[test]
+			fn transform_hierarchy() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(1.),
+				});
+
+				let entity = app
+					.world_mut()
+					.spawn(Body(BodyConfig {
+						core: Some(Core {
+							shape,
+							physics_type: PhysicsType::Agent(HashSet::from([])),
+							heuristic: CreationHeuristic::TransformHierarchy,
+						}),
+						..default()
+					}))
+					.id();
+
+				assert!(app.world().entity(entity).contains::<MotionCollider>(),);
+			}
+
+			#[test]
+			fn anchored() {
+				let mut app = setup();
+				let shape = Shape::Parameters(ShapeParameters::Sphere {
+					radius: Units::from(1.),
+				});
+
+				let entity = app
+					.world_mut()
+					.spawn(Body(BodyConfig {
+						core: Some(Core {
+							shape,
+							physics_type: PhysicsType::Agent(HashSet::from([])),
+							heuristic: CreationHeuristic::Anchored,
+						}),
+						..default()
+					}))
+					.id();
+
+				let mut anchored = app
+					.world_mut()
+					.query_filtered::<&WeakAnchoredTo, With<MotionCollider>>();
+				let [WeakAnchoredTo(anchor)] = assert_count!(1, anchored.iter(app.world()));
+				assert_eq!(&entity, anchor,);
 			}
 		}
 	}

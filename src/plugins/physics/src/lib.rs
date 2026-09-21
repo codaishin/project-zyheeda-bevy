@@ -37,6 +37,7 @@ use crate::{
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
 		target::SkillTargetInternal,
 		velocity::LinearVelocity,
+		weak_anchor::WeakAnchors,
 		when_traveled::DestroyAfterDistanceTraveled,
 	},
 	events::impact_event::ImpactEvent,
@@ -231,6 +232,13 @@ where
 				Update,
 				Anchor::mark_dirty
 					.in_set(PhysicsSystems::Prep)
+					.run_if(not(TGameState::game_paused())),
+			)
+			// Weak Anchors
+			.add_systems(
+				FixedPreUpdate,
+				WeakAnchors::drag_anchors
+					.in_set(PhysicsSystems::Interpolate)
 					.run_if(not(TGameState::game_paused())),
 			)
 			// Collisions
