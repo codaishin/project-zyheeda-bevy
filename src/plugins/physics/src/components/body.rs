@@ -65,12 +65,12 @@ impl From<BodyConfig> for Body {
 
 impl Prefab<()> for Body {
 	type TError = Unreachable;
-	type TSystemParam = ();
+	type TSystemParam = ZyheedaCommands<'static, 'static>;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		_: StaticSystemParam<Self::TSystemParam>,
+		mut commands: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), Self::TError> {
 		let Self(BodyConfig { core, sub_frames }) = self;
 
@@ -131,6 +131,7 @@ mod tests {
 						core: Some(Core {
 							shape,
 							physics_type: PhysicsType::Agent(HashSet::from([])),
+							..default()
 						}),
 						..default()
 					}))
@@ -162,6 +163,7 @@ mod tests {
 								Blocker::Character,
 								Blocker::Force,
 							])),
+							..default()
 						}),
 						..default()
 					}))
@@ -193,6 +195,7 @@ mod tests {
 						core: Some(Core {
 							shape,
 							physics_type: PhysicsType::Terrain(HashSet::new()),
+							..default()
 						}),
 						..default()
 					}))
@@ -215,6 +218,7 @@ mod tests {
 					core: Some(Core {
 						shape,
 						physics_type: PhysicsType::Terrain(HashSet::default()),
+						..default()
 					}),
 					..default()
 				}));
@@ -233,6 +237,7 @@ mod tests {
 					core: Some(Core {
 						shape,
 						physics_type: PhysicsType::Terrain(HashSet::new()),
+						..default()
 					}),
 					..default()
 				}));
@@ -263,6 +268,7 @@ mod tests {
 							Blocker::Force,
 							Blocker::Physical,
 						])),
+						..default()
 					}),
 					..default()
 				}));
@@ -287,6 +293,7 @@ mod tests {
 					core: Some(Core {
 						shape,
 						physics_type: PhysicsType::Terrain(HashSet::new()),
+						..default()
 					}),
 					..default()
 				}));

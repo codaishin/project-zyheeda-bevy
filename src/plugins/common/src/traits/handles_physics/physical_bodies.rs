@@ -40,29 +40,38 @@ impl From<ShapeParameters> for InteractiveFrame {
 }
 
 #[serde_model]
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Default, Clone)]
 pub struct Core {
 	pub shape: Shape,
 	pub physics_type: PhysicsType,
+	pub heuristic: CreationHeuristic,
 }
 
-impl Default for Core {
-	fn default() -> Self {
-		Self {
-			shape: Shape::StaticGltfMesh3d,
-			physics_type: PhysicsType::Terrain(HashSet::new()),
-		}
-	}
+/// Defines how to crate related components
+///
+/// Normally [`CreationHeuristic::TransformHierarchy`] should suffice. However, sometimes nested
+/// transforms of imported hierarchies act in an unexpected manner. This is when spawning them via
+/// [`CreationHeuristic::Anchored`] can be used to circumvent this.
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
+pub enum CreationHeuristic {
+	/// Insert on the given entity in the transform hierarchy
+	#[default]
+	TransformHierarchy,
+	/// Insert on a separate entity and anchor it to the given entity
+	Anchored,
 }
 
 /// Shape definition. Used to describe physics colliders.
 #[serde_model]
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
 pub enum Shape {
+	/// Use the [`Entity`](bevy::prelude::Entity)'s [`Mesh3d`](bevy::prelude::Mesh3d) for a static
+	/// collider
+	#[default]
+	StaticGltfMesh3d,
 	/// Use the given parameters for a static collider
 	Parameters(ShapeParameters),
-	/// Use the [`Entity`]'s [`Mesh3d`] for a static collider
-	StaticGltfMesh3d,
 }
 
 impl From<ShapeParameters> for Shape {
@@ -116,6 +125,12 @@ impl Default for ShapeParameters {
 pub enum PhysicsType {
 	Agent(HashSet<Blocker>),
 	Terrain(HashSet<Blocker>),
+}
+
+impl Default for PhysicsType {
+	fn default() -> Self {
+		Self::Terrain(HashSet::default())
+	}
 }
 
 #[serde_model]
