@@ -551,8 +551,11 @@ mod tests {
 						Mock_Skill::new_mock(|mock| {
 							mock.expect_behavior()
 								.return_const((SlotKey(0), RunSkillBehavior::default()));
-							mock.expect_updated_states()
-								.return_const(HashSet::<StateMeta<SkillState>>::from([]));
+							mock.expect_updated_states().return_const(HashSet::<
+								StateMeta<SkillState>,
+							>::from(
+								[]
+							));
 						})
 					})),
 				},
