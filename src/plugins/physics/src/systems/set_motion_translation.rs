@@ -32,7 +32,8 @@ impl MotionController {
 					(target - ctrl_transform.translation)
 						.try_normalize()
 						.unwrap_or_default()
-						* **speed * delta.as_secs_f32()
+						* **speed
+						* delta.as_secs_f32()
 				}
 				CharacterMotion::Done => continue,
 			};
