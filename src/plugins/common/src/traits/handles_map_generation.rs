@@ -115,30 +115,6 @@ impl DerefMut for GroundPosition {
 	}
 }
 
-#[serde_model]
-#[derive(Debug, PartialEq, Default, Clone, Copy)]
-pub struct RoofPosition(pub Vec3);
-
-impl From<GlobalTransform> for RoofPosition {
-	fn from(transform: GlobalTransform) -> Self {
-		Self(transform.translation())
-	}
-}
-
-impl Deref for RoofPosition {
-	type Target = Vec3;
-
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
-}
-
-impl DerefMut for RoofPosition {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.0
-	}
-}
-
 pub trait SetPrefab<T>
 where
 	T: PrefabType,
@@ -204,7 +180,7 @@ pub enum LightType {
 }
 
 impl PrefabType for LightType {
-	type TTransform = GroundPosition;
+	type TTransform = GlobalTransform;
 }
 
 pub type LightPrefabs = MapPrefabs<LightType>;

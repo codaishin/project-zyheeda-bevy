@@ -10,6 +10,7 @@ use crate::{
 	components::{
 		camera_labels::{AgentsPass, OutlinePass, WorldLight},
 		effect_material_data::ImpactStrength,
+		light::Light,
 		los::{LoS, LoSCameras},
 		model_render_layers::ModelRenderLayers,
 		only_depth_prepass::OnlyDepthPrepass,
@@ -202,6 +203,13 @@ where
 				(WindowSize::update, OnlyDepthPrepass::update_render_targets).chain(),
 			);
 	}
+
+	fn lights(app: &mut App) {
+		app.add_systems(
+			Startup,
+			Light::configure_prefab::<TMapGeneration::TMapPrefabs>,
+		);
+	}
 }
 
 impl<TDebugCam, TLoading, TSavegame, TPhysics, TMapGeneration> Plugin
@@ -221,6 +229,7 @@ where
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
 		Self::shading(app);
+		Self::lights(app);
 		self.cameras(app);
 	}
 }

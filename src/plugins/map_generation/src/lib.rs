@@ -52,7 +52,7 @@ where
 		InteractiveType::Door,
 	)];
 	const LIGHT_SPAWNERS: &[(GetNormalizedName, LightType)] =
-		&[(|| NormalizedName::from("RoofLight"), LightType::Roof)];
+		&[(|| NormalizedName::from("RoofLightSpawn"), LightType::Roof)];
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
 	const NAV_MESH_PREFIX: &str = "NavMesh";
 
