@@ -22,7 +22,7 @@ use crate::{
 	mesh_grid_graph::MeshGridGraph,
 	observers::identify_by_prefix::IdentifyByPrefix,
 	resources::agents::prefab::PrefabRegister,
-	system_params::set_agent_prefab::SetAgentPrefab,
+	system_params::set_prefab::SetAgentPrefab,
 };
 use bevy::prelude::*;
 use common::prelude::*;
@@ -51,6 +51,8 @@ where
 		|| NormalizedName::from("SlideDoorSpawn"),
 		InteractiveType::Door,
 	)];
+	const LIGHT_SPAWNERS: &[(GetNormalizedName, LightType)] =
+		&[(|| NormalizedName::from("RoofLightSpawn"), LightType::Roof)];
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
 	const NAV_MESH_PREFIX: &str = "NavMesh";
 
@@ -74,6 +76,8 @@ where
 			.in_app(app, Spawner::<AgentType>::is_loaded);
 		TLoading::register_load_tracking::<Spawner<InteractiveType>>(LoadingGame, AssetsProgress)
 			.in_app(app, Spawner::<InteractiveType>::is_loaded);
+		TLoading::register_load_tracking::<Spawner<LightType>>(LoadingGame, AssetsProgress)
+			.in_app(app, Spawner::<LightType>::is_loaded);
 
 		TSavegame::register_savable_component::<AgentsLoaded>(app);
 		TSavegame::register_savable_component::<Map>(app);
@@ -94,6 +98,7 @@ where
 
 		app.init_resource::<PrefabRegister<AgentType>>()
 			.init_resource::<PrefabRegister<InteractiveType>>()
+			.init_resource::<PrefabRegister<LightType>>()
 			.add_prefab_observer::<MeshCollider, TPhysics::TConfigMut>()
 			.add_observer(Map::apply_despawned_map_objects_persistence)
 			.add_observer(NavMesh::identify_by_prefix(Self::NAV_MESH_PREFIX))
@@ -102,6 +107,7 @@ where
 			.add_observer(Spawner::<InteractiveType>::identify(
 				Self::INTERACTIVE_SPAWNERS,
 			))
+			.add_observer(Spawner::<LightType>::identify(Self::LIGHT_SPAWNERS))
 			.add_observer(SpawnerActive::remove_from_disabled_sources)
 			.add_systems(
 				Update,
@@ -111,6 +117,7 @@ where
 					PersistentMapObject::link_with_map.pipe(OnError::log),
 					Spawner::<AgentType>::execute,
 					Spawner::<InteractiveType>::execute,
+					Spawner::<LightType>::execute,
 					GridAgent::link_to_grid::<MeshGridGraph>.run_if(not(TGameState::game_paused())),
 				)
 					.chain()

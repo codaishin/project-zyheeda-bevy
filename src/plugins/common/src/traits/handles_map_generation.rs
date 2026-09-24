@@ -2,7 +2,7 @@ use super::thread_safe::ThreadSafe;
 use crate::{
 	tools::Units,
 	traits::{
-		accessors::get::{TryGetContextMut, View, ViewField},
+		accessors::get::{GetContextMut, View, ViewField},
 		handles_enemies::EnemyType,
 		system_set_definition::SystemSetDefinition,
 	},
@@ -19,11 +19,9 @@ use std::{
 
 pub trait HandlesMapGeneration: SystemSetDefinition {
 	type TMapPrefabs: SystemParam
-		+ for<'c> TryGetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>
-		+ for<'c> TryGetContextMut<
-			MapPrefabs<InteractiveType>,
-			TContext<'c>: SetPrefab<InteractiveType>,
-		>;
+		+ for<'c> GetContextMut<AgentPrefabs, TContext<'c>: SetPrefab<AgentType>>
+		+ for<'c> GetContextMut<InteractivePrefabs, TContext<'c>: SetPrefab<InteractiveType>>
+		+ for<'c> GetContextMut<LightPrefabs, TContext<'c>: SetPrefab<LightType>>;
 
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 
@@ -156,6 +154,8 @@ impl PrefabType for AgentType {
 	type TTransform = GroundPosition;
 }
 
+pub type AgentPrefabs = MapPrefabs<AgentType>;
+
 #[serde_model]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum InteractiveType {
@@ -170,3 +170,17 @@ impl ViewField for InteractiveType {
 impl PrefabType for InteractiveType {
 	type TTransform = GlobalTransform;
 }
+
+pub type InteractivePrefabs = MapPrefabs<InteractiveType>;
+
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum LightType {
+	Roof,
+}
+
+impl PrefabType for LightType {
+	type TTransform = GlobalTransform;
+}
+
+pub type LightPrefabs = MapPrefabs<LightType>;

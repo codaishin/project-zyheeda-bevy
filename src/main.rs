@@ -69,10 +69,11 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&loading,
 		&savegame,
 		&physics,
+		&map_generation,
 	);
 
 	#[cfg(not(feature = "debug-utils"))]
-	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics);
+	let graphics = GraphicsPlugin::from_plugins(&loading, &savegame, &physics, &map_generation);
 
 	let loadout =
 		LoadoutPlugin::from_plugins(&game_states, &savegame, &physics, &loading, &movement);

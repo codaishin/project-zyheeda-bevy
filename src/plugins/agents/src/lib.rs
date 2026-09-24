@@ -133,10 +133,7 @@ where
 		);
 		app.init_asset::<AgentMeta>();
 
-		app.add_systems(
-			Startup,
-			Agent::configure_map_prefab::<TMaps::TMapPrefabs>.pipe(OnError::log),
-		);
+		app.add_systems(Startup, Agent::configure_map_prefab::<TMaps::TMapPrefabs>);
 		app.add_systems(
 			Update,
 			(

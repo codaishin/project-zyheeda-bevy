@@ -60,7 +60,7 @@ where
 			.add_observer(Door::animate_close::<TAnimations::TAnimationsMut>)
 			.add_systems(
 				Startup,
-				Interactive::configure_map_prefab::<TMaps::TMapPrefabs>.pipe(OnError::log),
+				Interactive::configure_map_prefab::<TMaps::TMapPrefabs>,
 			)
 			.add_systems(
 				Update,
