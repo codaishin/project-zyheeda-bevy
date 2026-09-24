@@ -63,7 +63,8 @@ pub struct GraphicsPlugin<TDebugCam, TDependencies> {
 }
 
 #[cfg(not(feature = "debug-utils"))]
-impl<TLoading, TSavegame, TPhysics> GraphicsPlugin<NoDebugCam, (TLoading, TSavegame, TPhysics)>
+impl<TLoading, TSavegame, TPhysics, TMapGeneration>
+	GraphicsPlugin<NoDebugCam, (TLoading, TSavegame, TPhysics, TMapGeneration)>
 where
 	TLoading: ThreadSafe + HandlesLoadTracking,
 	TSavegame: ThreadSafe + HandlesSaving,
@@ -73,8 +74,9 @@ where
 		+ HandlesAllPhysicalEffects
 		+ HandlesSkillPhysics
 		+ HandlesImpacts,
+	TMapGeneration: ThreadSafe + HandlesMapGeneration,
 {
-	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
+	pub fn from_plugins(_: &TLoading, _: &TSavegame, _: &TPhysics, _: &TMapGeneration) -> Self {
 		Self {
 			debug_cam: || NoDebugCam,
 			_p: PhantomData,
@@ -82,8 +84,8 @@ where
 	}
 }
 
-impl<TDebugCam, TLoading, TSavegame, TPhysics>
-	GraphicsPlugin<TDebugCam, (TLoading, TSavegame, TPhysics)>
+impl<TDebugCam, TLoading, TSavegame, TPhysics, TMapGeneration>
+	GraphicsPlugin<TDebugCam, (TLoading, TSavegame, TPhysics, TMapGeneration)>
 where
 	TDebugCam: Component,
 	TLoading: ThreadSafe + HandlesLoadTracking,
@@ -94,11 +96,18 @@ where
 		+ HandlesAllPhysicalEffects
 		+ HandlesSkillPhysics
 		+ HandlesImpacts,
+	TMapGeneration: ThreadSafe + HandlesMapGeneration,
 {
 	const IMPACT_DECAY: DecayPerSecond = DecayPerSecond(new_f32!(ImpactStrength(3.)));
 
 	#[cfg(feature = "debug-utils")]
-	pub fn new(debug_cam: fn() -> TDebugCam, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
+	pub fn new(
+		debug_cam: fn() -> TDebugCam,
+		_: &TLoading,
+		_: &TSavegame,
+		_: &TPhysics,
+		_: &TMapGeneration,
+	) -> Self {
 		Self {
 			debug_cam,
 			_p: PhantomData,
@@ -195,8 +204,8 @@ where
 	}
 }
 
-impl<TDebugCam, TLoading, TSavegame, TPhysics> Plugin
-	for GraphicsPlugin<TDebugCam, (TLoading, TSavegame, TPhysics)>
+impl<TDebugCam, TLoading, TSavegame, TPhysics, TMapGeneration> Plugin
+	for GraphicsPlugin<TDebugCam, (TLoading, TSavegame, TPhysics, TMapGeneration)>
 where
 	TDebugCam: Component,
 	TLoading: ThreadSafe + HandlesLoadTracking,
@@ -207,6 +216,7 @@ where
 		+ HandlesAllPhysicalEffects
 		+ HandlesSkillPhysics
 		+ HandlesImpacts,
+	TMapGeneration: ThreadSafe + HandlesMapGeneration,
 {
 	fn build(&self, app: &mut App) {
 		Self::track_render_pipeline_ready(app);
