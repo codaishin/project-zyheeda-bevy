@@ -6,6 +6,7 @@ use common::prelude::*;
 pub struct SetAgentPrefab<'w> {
 	agent_prefabs: ResMut<'w, PrefabRegister<AgentType>>,
 	interactive_prefabs: ResMut<'w, PrefabRegister<InteractiveType>>,
+	light_prefabs: ResMut<'w, PrefabRegister<LightType>>,
 }
 
 impl<T> SetPrefab<T> for &mut PrefabRegister<T>
@@ -36,5 +37,16 @@ impl TryGetContextMut<MapPrefabs<InteractiveType>> for SetAgentPrefab<'static> {
 		_: MapPrefabs<InteractiveType>,
 	) -> Option<Self::TContext<'ctx>> {
 		Some(param.interactive_prefabs.as_mut())
+	}
+}
+
+impl TryGetContextMut<MapPrefabs<LightType>> for SetAgentPrefab<'static> {
+	type TContext<'ctx> = &'ctx mut PrefabRegister<LightType>;
+
+	fn try_get_context_mut<'ctx>(
+		param: &'ctx mut SetAgentPrefab,
+		_: MapPrefabs<LightType>,
+	) -> Option<Self::TContext<'ctx>> {
+		Some(param.light_prefabs.as_mut())
 	}
 }

@@ -19,11 +19,9 @@ use std::{
 
 pub trait HandlesMapGeneration: SystemSetDefinition {
 	type TMapPrefabs: SystemParam
-		+ for<'c> TryGetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>
-		+ for<'c> TryGetContextMut<
-			MapPrefabs<InteractiveType>,
-			TContext<'c>: SetPrefab<InteractiveType>,
-		>;
+		+ for<'c> TryGetContextMut<AgentPrefabs, TContext<'c>: SetPrefab<AgentType>>
+		+ for<'c> TryGetContextMut<InteractivePrefabs, TContext<'c>: SetPrefab<InteractiveType>>
+		+ for<'c> TryGetContextMut<LightPrefabs, TContext<'c>: SetPrefab<LightType>>;
 
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 
@@ -117,6 +115,30 @@ impl DerefMut for GroundPosition {
 	}
 }
 
+#[serde_model]
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
+pub struct RoofPosition(pub Vec3);
+
+impl From<GlobalTransform> for RoofPosition {
+	fn from(transform: GlobalTransform) -> Self {
+		Self(transform.translation())
+	}
+}
+
+impl Deref for RoofPosition {
+	type Target = Vec3;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl DerefMut for RoofPosition {
+	fn deref_mut(&mut self) -> &mut Self::Target {
+		&mut self.0
+	}
+}
+
 pub trait SetPrefab<T>
 where
 	T: PrefabType,
@@ -156,6 +178,8 @@ impl PrefabType for AgentType {
 	type TTransform = GroundPosition;
 }
 
+type AgentPrefabs = MapPrefabs<AgentType>;
+
 #[serde_model]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum InteractiveType {
@@ -170,3 +194,17 @@ impl ViewField for InteractiveType {
 impl PrefabType for InteractiveType {
 	type TTransform = GlobalTransform;
 }
+
+type InteractivePrefabs = MapPrefabs<InteractiveType>;
+
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum LightType {
+	Roof,
+}
+
+impl PrefabType for LightType {
+	type TTransform = GroundPosition;
+}
+
+type LightPrefabs = MapPrefabs<LightType>;
