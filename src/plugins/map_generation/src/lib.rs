@@ -22,7 +22,7 @@ use crate::{
 	mesh_grid_graph::MeshGridGraph,
 	observers::identify_by_prefix::IdentifyByPrefix,
 	resources::agents::prefab::PrefabRegister,
-	system_params::set_agent_prefab::SetAgentPrefab,
+	system_params::set_prefab::SetAgentPrefab,
 };
 use bevy::prelude::*;
 use common::prelude::*;

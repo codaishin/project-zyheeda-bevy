@@ -1,9 +1,7 @@
+use crate::components::{container::Container, door::Door};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::prelude::*;
 use macros::{SavableComponent, serde_model};
-use std::fmt::Display;
-
-use crate::components::{container::Container, door::Door};
 
 #[serde_model]
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
@@ -27,48 +25,13 @@ impl Interactive {
 		};
 	}
 
-	pub(crate) fn configure_map_prefab<TNewMapAgent>(
-		mut new_agent: StaticSystemParam<TNewMapAgent>,
-	) -> Result<(), NoPrefabContext>
-	where
-		TNewMapAgent: for<'c> TryGetContextMut<
-				MapPrefabs<InteractiveType>,
-				TContext<'c>: SetPrefab<InteractiveType>,
-			>,
+	pub(crate) fn configure_map_prefab<TMapGeneration>(
+		mut new_agent: StaticSystemParam<TMapGeneration>,
+	) where
+		TMapGeneration:
+			for<'c> GetContextMut<InteractivePrefabs, TContext<'c>: SetPrefab<InteractiveType>>,
 	{
-		let Some(mut ctx) = TNewMapAgent::try_get_context_mut(&mut new_agent, MapPrefabs::KEY)
-		else {
-			return Err(NoPrefabContext);
-		};
-
-		ctx.set_prefab(Self::map_prefab);
-
-		Ok(())
-	}
-}
-
-#[derive(Debug, PartialEq)]
-pub struct NoPrefabContext;
-
-impl Display for NoPrefabContext {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(
-			f,
-			"Cannot set interactive prefab due to missing prefab context in map plugin"
-		)
-	}
-}
-
-impl ErrorData for NoPrefabContext {
-	fn level(&self) -> Level {
-		Level::Error
-	}
-
-	fn label() -> impl std::fmt::Display {
-		"No Prefab Context"
-	}
-
-	fn into_details(self) -> impl std::fmt::Display {
-		self
+		TMapGeneration::get_context_mut(&mut new_agent, MapPrefabs::KEY)
+			.set_prefab(Self::map_prefab);
 	}
 }

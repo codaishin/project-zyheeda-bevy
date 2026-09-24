@@ -1,1 +1,1 @@
-pub(crate) mod set_agent_prefab;
+pub(crate) mod set_prefab;

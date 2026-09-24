@@ -2,7 +2,7 @@ use super::thread_safe::ThreadSafe;
 use crate::{
 	tools::Units,
 	traits::{
-		accessors::get::{TryGetContextMut, View, ViewField},
+		accessors::get::{GetContextMut, View, ViewField},
 		handles_enemies::EnemyType,
 		system_set_definition::SystemSetDefinition,
 	},
@@ -19,9 +19,9 @@ use std::{
 
 pub trait HandlesMapGeneration: SystemSetDefinition {
 	type TMapPrefabs: SystemParam
-		+ for<'c> TryGetContextMut<AgentPrefabs, TContext<'c>: SetPrefab<AgentType>>
-		+ for<'c> TryGetContextMut<InteractivePrefabs, TContext<'c>: SetPrefab<InteractiveType>>
-		+ for<'c> TryGetContextMut<LightPrefabs, TContext<'c>: SetPrefab<LightType>>;
+		+ for<'c> GetContextMut<AgentPrefabs, TContext<'c>: SetPrefab<AgentType>>
+		+ for<'c> GetContextMut<InteractivePrefabs, TContext<'c>: SetPrefab<InteractiveType>>
+		+ for<'c> GetContextMut<LightPrefabs, TContext<'c>: SetPrefab<LightType>>;
 
 	type TGraph: Graph + for<'a> From<&'a Self::TMap> + ThreadSafe;
 
@@ -178,7 +178,7 @@ impl PrefabType for AgentType {
 	type TTransform = GroundPosition;
 }
 
-type AgentPrefabs = MapPrefabs<AgentType>;
+pub type AgentPrefabs = MapPrefabs<AgentType>;
 
 #[serde_model]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -195,7 +195,7 @@ impl PrefabType for InteractiveType {
 	type TTransform = GlobalTransform;
 }
 
-type InteractivePrefabs = MapPrefabs<InteractiveType>;
+pub type InteractivePrefabs = MapPrefabs<InteractiveType>;
 
 #[serde_model]
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -207,4 +207,4 @@ impl PrefabType for LightType {
 	type TTransform = GroundPosition;
 }
 
-type LightPrefabs = MapPrefabs<LightType>;
+pub type LightPrefabs = MapPrefabs<LightType>;

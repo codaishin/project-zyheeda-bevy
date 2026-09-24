@@ -29,21 +29,13 @@ impl Agent {
 		));
 	}
 
-	pub(crate) fn configure_map_prefab<TNewMapAgent>(
-		mut new_agent: StaticSystemParam<TNewMapAgent>,
-	) -> Result<(), NoPrefabContext>
-	where
-		TNewMapAgent:
-			for<'c> TryGetContextMut<MapPrefabs<AgentType>, TContext<'c>: SetPrefab<AgentType>>,
+	pub(crate) fn configure_map_prefab<TMapGeneration>(
+		mut new_agent: StaticSystemParam<TMapGeneration>,
+	) where
+		TMapGeneration: for<'c> GetContextMut<AgentPrefabs, TContext<'c>: SetPrefab<AgentType>>,
 	{
-		let Some(mut ctx) = TNewMapAgent::try_get_context_mut(&mut new_agent, MapPrefabs::KEY)
-		else {
-			return Err(NoPrefabContext);
-		};
-
-		ctx.set_prefab(Self::map_prefab);
-
-		Ok(())
+		TMapGeneration::get_context_mut(&mut new_agent, MapPrefabs::KEY)
+			.set_prefab(Self::map_prefab);
 	}
 }
 
@@ -113,32 +105,6 @@ impl AnimationsMarker for ApplyAgentAnimations {
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct AgentTransformDirty;
-
-#[derive(Debug, PartialEq)]
-pub struct NoPrefabContext;
-
-impl Display for NoPrefabContext {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(
-			f,
-			"Cannot set agent prefab due to missing prefab context in map plugin"
-		)
-	}
-}
-
-impl ErrorData for NoPrefabContext {
-	fn level(&self) -> Level {
-		Level::Error
-	}
-
-	fn label() -> impl std::fmt::Display {
-		"No Prefab Context"
-	}
-
-	fn into_details(self) -> impl std::fmt::Display {
-		self
-	}
-}
 
 #[derive(Debug, PartialEq)]
 pub struct RoleAlreadyConfigured {

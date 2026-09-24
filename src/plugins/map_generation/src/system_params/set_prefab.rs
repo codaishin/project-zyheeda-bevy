@@ -1,5 +1,8 @@
 use crate::resources::agents::prefab::PrefabRegister;
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+	ecs::system::{SystemParam, SystemParamItem},
+	prelude::*,
+};
 use common::prelude::*;
 
 #[derive(SystemParam, Debug)]
@@ -18,35 +21,35 @@ where
 	}
 }
 
-impl TryGetContextMut<MapPrefabs<AgentType>> for SetAgentPrefab<'static> {
+impl GetContextMut<MapPrefabs<AgentType>> for SetAgentPrefab<'static> {
 	type TContext<'ctx> = &'ctx mut PrefabRegister<AgentType>;
 
-	fn try_get_context_mut<'ctx>(
-		param: &'ctx mut SetAgentPrefab,
+	fn get_context_mut<'ctx>(
+		param: &'ctx mut SystemParamItem<Self>,
 		_: MapPrefabs<AgentType>,
-	) -> Option<Self::TContext<'ctx>> {
-		Some(param.agent_prefabs.as_mut())
+	) -> Self::TContext<'ctx> {
+		param.agent_prefabs.as_mut()
 	}
 }
 
-impl TryGetContextMut<MapPrefabs<InteractiveType>> for SetAgentPrefab<'static> {
+impl GetContextMut<MapPrefabs<InteractiveType>> for SetAgentPrefab<'static> {
 	type TContext<'ctx> = &'ctx mut PrefabRegister<InteractiveType>;
 
-	fn try_get_context_mut<'ctx>(
-		param: &'ctx mut SetAgentPrefab,
+	fn get_context_mut<'ctx>(
+		param: &'ctx mut SystemParamItem<Self>,
 		_: MapPrefabs<InteractiveType>,
-	) -> Option<Self::TContext<'ctx>> {
-		Some(param.interactive_prefabs.as_mut())
+	) -> Self::TContext<'ctx> {
+		param.interactive_prefabs.as_mut()
 	}
 }
 
-impl TryGetContextMut<MapPrefabs<LightType>> for SetAgentPrefab<'static> {
+impl GetContextMut<MapPrefabs<LightType>> for SetAgentPrefab<'static> {
 	type TContext<'ctx> = &'ctx mut PrefabRegister<LightType>;
 
-	fn try_get_context_mut<'ctx>(
-		param: &'ctx mut SetAgentPrefab,
+	fn get_context_mut<'ctx>(
+		param: &'ctx mut SystemParamItem<Self>,
 		_: MapPrefabs<LightType>,
-	) -> Option<Self::TContext<'ctx>> {
-		Some(param.light_prefabs.as_mut())
+	) -> Self::TContext<'ctx> {
+		param.light_prefabs.as_mut()
 	}
 }
