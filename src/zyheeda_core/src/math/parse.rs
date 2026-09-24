@@ -1,7 +1,9 @@
+use std::fmt::Display;
+
 #[macro_export]
 macro_rules! u8_array_from_hex {
-	($hex:expr, $n:expr) => {{
-		const A: [u8; $n] = match $crate::math::parse::u8_array_try_from_hex($hex) {
+	($hex:expr) => {{
+		const A: [u8; $hex.len() / 2] = match $crate::math::parse::u8_array_try_from_hex($hex) {
 			Ok(v) => v,
 			Err($crate::math::parse::U8FromHexError::InvalidCharacter) => {
 				panic!("Invalid character. Allowed: [0-9], [A-F], [a-f]")
@@ -17,7 +19,6 @@ macro_rules! u8_array_from_hex {
 		A
 	}};
 }
-use std::fmt::Display;
 
 pub use u8_array_from_hex;
 
@@ -160,7 +161,7 @@ mod tests {
 				u8::from_str_radix("ff", 16).unwrap(),
 				u8::from_str_radix("12", 16).unwrap()
 			],
-			u8_array_from_hex!("5cff12", 3)
+			u8_array_from_hex!("5cff12")
 		);
 	}
 }
