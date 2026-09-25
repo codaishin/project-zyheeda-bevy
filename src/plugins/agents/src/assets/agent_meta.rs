@@ -99,4 +99,6 @@ impl PartialEq for AgentModel {
 pub(crate) struct HeightLevels {
 	pub(crate) aim: f32,
 	pub(crate) center: f32,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub(crate) view: Option<f32>,
 }

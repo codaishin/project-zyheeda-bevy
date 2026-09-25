@@ -5,10 +5,9 @@ use crate::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::{prelude::*, systems::register_animations::AnimationsMarker};
 use macros::{SavableComponent, asset_path, serde_model};
-use std::{fmt::Display, ops::DerefMut};
 
 #[serde_model]
-#[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
+#[derive(Component, SavableComponent, Debug, PartialEq, Clone, Copy)]
 #[component(immutable)]
 #[savable_component(id = "agent")]
 #[require(AgentConfig, ApplyAgentModel, Transform)]
@@ -45,50 +44,29 @@ impl View<AgentType> for Agent {
 	}
 }
 
-impl<TGraphics> Prefab<TGraphics> for Agent
-where
-	TGraphics: for<'c> TryGetContextMut<HasNoRole, TContext<'c>: SetRole>,
-{
-	type TError = RoleAlreadyConfigured;
-	type TSystemParam = (Res<'static, AssetServer>, TGraphics);
+impl Prefab<()> for Agent {
+	type TError = Unreachable;
+	type TSystemParam = Res<'static, AssetServer>;
 
 	fn insert_prefab_components(
 		&self,
 		entity: &mut impl PrefabEntityCommands,
-		mut assets: StaticSystemParam<(Res<AssetServer>, TGraphics)>,
+		assets: StaticSystemParam<Res<AssetServer>>,
 	) -> Result<(), Self::TError> {
-		let (assets, graphics) = assets.deref_mut();
-
-		let new_role = match self.agent_type {
+		let path = match self.agent_type {
 			AgentType::Player => {
-				entity.try_insert((
-					Player,
-					AgentConfig {
-						config_handle: assets.load(asset_path!("agents/player/meta.agent")),
-					},
-				));
-				Role::Player {
-					view_offset: Units::ZERO,
-				}
+				entity.try_insert(Player);
+				asset_path!("agents/player/meta.agent")
 			}
 			AgentType::Enemy(EnemyType::VoidSphere) => {
-				entity.try_insert((
-					VoidSphere,
-					AgentConfig {
-						config_handle: assets.load(asset_path!("agents/void_sphere/meta.agent")),
-					},
-				));
-				Role::Enemy
+				entity.try_insert(VoidSphere);
+				asset_path!("agents/void_sphere/meta.agent")
 			}
 		};
 
-		let entity = entity.entity_id();
-		let no_role = HasNoRole { entity };
-		let Some(mut ctx) = TGraphics::try_get_context_mut(graphics, no_role) else {
-			return Err(RoleAlreadyConfigured { entity, new_role });
-		};
-
-		ctx.set_role(new_role);
+		entity.try_insert(AgentConfig {
+			config_handle: assets.load(path),
+		});
 
 		Ok(())
 	}
@@ -107,33 +85,3 @@ impl AnimationsMarker for ApplyAgentAnimations {
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct AgentTransformDirty;
-
-#[derive(Debug, PartialEq)]
-pub struct RoleAlreadyConfigured {
-	entity: Entity,
-	new_role: Role,
-}
-
-impl Display for RoleAlreadyConfigured {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(
-			f,
-			"{}: Had already a role configured while trying to assign {:?}",
-			self.entity, self.new_role
-		)
-	}
-}
-
-impl ErrorData for RoleAlreadyConfigured {
-	fn level(&self) -> Level {
-		Level::Warning
-	}
-
-	fn label() -> impl std::fmt::Display {
-		"Role Already Configured"
-	}
-
-	fn into_details(self) -> impl std::fmt::Display {
-		self
-	}
-}
