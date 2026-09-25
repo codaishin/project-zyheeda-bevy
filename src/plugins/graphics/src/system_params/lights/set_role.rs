@@ -7,7 +7,7 @@ use common::prelude::*;
 impl SetRole for RolesContextMut<'_> {
 	fn set_role(&mut self, role: Role) {
 		match role {
-			Role::Player => self.entity.try_insert(Player),
+			Role::Player { .. } => self.entity.try_insert(Player),
 			Role::Enemy => self.entity.try_insert(Enemy),
 		};
 	}
@@ -37,8 +37,11 @@ mod tests {
 
 		app.world_mut()
 			.run_system_once(move |mut l: RolesParamMut| {
-				RolesParamMut::try_get_context_mut(&mut l, HasNoRole { entity })
-					.map(|mut c| c.set_role(Role::Player))
+				RolesParamMut::try_get_context_mut(&mut l, HasNoRole { entity }).map(|mut c| {
+					c.set_role(Role::Player {
+						view_offset: Units::ZERO,
+					})
+				})
 			})?;
 
 		assert_eq!(Some(&Player), app.world().entity(entity).get::<Player>(),);

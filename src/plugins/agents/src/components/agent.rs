@@ -67,7 +67,9 @@ where
 						config_handle: assets.load(asset_path!("agents/player/meta.agent")),
 					},
 				));
-				Role::Player
+				Role::Player {
+					view_offset: Units::ZERO,
+				}
 			}
 			AgentType::Enemy(EnemyType::VoidSphere) => {
 				entity.try_insert((

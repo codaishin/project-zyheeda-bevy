@@ -48,7 +48,8 @@
 			},
 			"height_levels": {
 				"center": 0.8,
-				"aim": 1
+				"aim": 1,
+				"view": 1.2
 			},
 			"self_skill_scale": [
 				1.7,
