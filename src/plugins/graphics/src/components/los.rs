@@ -26,13 +26,16 @@ use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Default)]
 #[relationship_target(relationship = LoSCameraOf, linked_spawn)]
-#[require(Transform)]
+#[require(Transform, LoSCamerasHeight)]
 pub(crate) struct LoSCameras(EntityHashSet);
 
 #[derive(Component, Debug, PartialEq)]
 #[relationship(relationship_target = LoSCameras)]
 #[require(Transform)]
 pub(crate) struct LoSCameraOf(pub(crate) Entity);
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct LoSCamerasHeight(pub(crate) Units);
 
 /// Basis for LoS cubemap assuming the following layout
 ///

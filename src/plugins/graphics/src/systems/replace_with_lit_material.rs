@@ -1,5 +1,5 @@
 use crate::{
-	components::roles::Player,
+	components::{los::LoSCamerasHeight, roles::Player},
 	materials::lit_material::{LitMaterial, StandardLitMaterial},
 	resources::{los_image::LoSImageCubemap, standard_materials::StandardMaterials},
 };
@@ -10,7 +10,7 @@ impl StandardMaterials {
 	pub(crate) fn replace_with_lit_material(
 		mut materials: ResMut<Self>,
 		los: Res<LoSImageCubemap>,
-		players: Query<&Transform, With<Player>>,
+		players: Query<(&Transform, &LoSCamerasHeight), With<Player>>,
 		standard_materials: Res<Assets<StandardMaterial>>,
 		mut lit_materials: ResMut<Assets<StandardLitMaterial>>,
 		mut commands: ZyheedaCommands,
@@ -20,10 +20,14 @@ impl StandardMaterials {
 				return true;
 			};
 
-			let player_position = players.single().map_or(Vec3::ZERO, |t| t.translation);
+			let (translation, offset) = players
+				.single()
+				.map_or((Vec3::ZERO, 0.), |(t, LoSCamerasHeight(h))| {
+					(t.translation, **h)
+				});
 			let lit_material = lit_materials.add(StandardLitMaterial {
 				base,
-				extension: LitMaterial::from_player_position(player_position)
+				extension: LitMaterial::from_light_position(translation + Vec3::Y * offset)
 					.with_los_cubemap(los.handle.clone())
 					.with_lit_type(*lit_type),
 			});
@@ -44,7 +48,7 @@ impl StandardMaterials {
 mod tests {
 	use super::*;
 	use crate::{
-		components::roles::Player,
+		components::{los::LoSCamerasHeight, roles::Player},
 		materials::lit_material::{LitType, StandardLitMaterial},
 	};
 	use std::collections::{HashMap, HashSet};
@@ -122,7 +126,7 @@ mod tests {
 	}
 
 	#[test]
-	fn replace_with_player_position() {
+	fn replace_with_light_position() {
 		let material = new_handle();
 		let los = new_handle();
 		let mut app = setup(
@@ -145,7 +149,46 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			Some(&LitMaterial::from_player_position(Vec3::new(1., 2., 3.)).with_los_cubemap(los)),
+			Some(&LitMaterial::from_light_position(Vec3::new(1., 2., 3.)).with_los_cubemap(los)),
+			app.world()
+				.entity(entity)
+				.get::<MeshMaterial3d<StandardLitMaterial>>()
+				.and_then(|MeshMaterial3d(handle)| app
+					.world()
+					.resource::<Assets<StandardLitMaterial>>()
+					.get(handle))
+				.map(|m| &m.extension),
+		);
+	}
+
+	#[test]
+	fn replace_with_light_position_offset() {
+		let material = new_handle();
+		let los = new_handle();
+		let mut app = setup(
+			los.clone(),
+			[(
+				&material,
+				StandardMaterial {
+					base_color: Color::LinearRgba(LinearRgba::new(4., 3., 2., 1.)),
+					..default()
+				},
+			)],
+		);
+		let entity = app.world_mut().spawn(MeshMaterial3d(material.clone())).id();
+		app.world_mut().spawn((
+			Player,
+			LoSCamerasHeight(Units::from(10.)),
+			Transform::from_xyz(1., 2., 3.),
+		));
+		app.insert_resource(StandardMaterials {
+			entities: HashMap::from([(material.id(), (HashSet::from([entity]), LitType::Terrain))]),
+		});
+
+		app.update();
+
+		assert_eq!(
+			Some(&LitMaterial::from_light_position(Vec3::new(1., 12., 3.)).with_los_cubemap(los)),
 			app.world()
 				.entity(entity)
 				.get::<MeshMaterial3d<StandardLitMaterial>>()

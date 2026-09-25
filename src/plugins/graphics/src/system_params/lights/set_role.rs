@@ -1,5 +1,8 @@
 use crate::{
-	components::roles::{Enemy, Player},
+	components::{
+		los::LoSCamerasHeight,
+		roles::{Enemy, Player},
+	},
 	system_params::lights::RolesContextMut,
 };
 use common::prelude::*;
@@ -7,7 +10,9 @@ use common::prelude::*;
 impl SetRole for RolesContextMut<'_> {
 	fn set_role(&mut self, role: Role) {
 		match role {
-			Role::Player { .. } => self.entity.try_insert(Player),
+			Role::Player { view_offset } => self
+				.entity
+				.try_insert((Player, LoSCamerasHeight(view_offset))),
 			Role::Enemy => self.entity.try_insert(Enemy),
 		};
 	}
@@ -17,7 +22,10 @@ impl SetRole for RolesContextMut<'_> {
 mod tests {
 	use super::*;
 	use crate::{
-		components::roles::{Enemy, Player},
+		components::{
+			los::LoSCamerasHeight,
+			roles::{Enemy, Player},
+		},
 		system_params::lights::RolesParamMut,
 	};
 	use bevy::{
@@ -39,12 +47,18 @@ mod tests {
 			.run_system_once(move |mut l: RolesParamMut| {
 				RolesParamMut::try_get_context_mut(&mut l, HasNoRole { entity }).map(|mut c| {
 					c.set_role(Role::Player {
-						view_offset: Units::ZERO,
+						view_offset: Units::from(11.),
 					})
 				})
 			})?;
 
-		assert_eq!(Some(&Player), app.world().entity(entity).get::<Player>(),);
+		assert_eq!(
+			(Some(&Player), Some(&LoSCamerasHeight(Units::from(11.)))),
+			(
+				app.world().entity(entity).get::<Player>(),
+				app.world().entity(entity).get::<LoSCamerasHeight>(),
+			)
+		);
 		Ok(())
 	}
 
