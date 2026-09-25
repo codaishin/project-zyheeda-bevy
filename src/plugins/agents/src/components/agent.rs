@@ -11,7 +11,7 @@ use std::{fmt::Display, ops::DerefMut};
 #[derive(Component, SavableComponent, Debug, PartialEq, Clone)]
 #[component(immutable)]
 #[savable_component(id = "agent")]
-#[require(AgentConfig, ApplyAgentConfig, ApplyAgentModel, Transform)]
+#[require(AgentConfig, ApplyAgentModel, Transform)]
 pub struct Agent {
 	pub(crate) agent_type: AgentType,
 }
@@ -94,9 +94,6 @@ where
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct ApplyAgentModel;
-
-#[derive(Component, Debug, PartialEq, Default)]
-pub(crate) struct ApplyAgentConfig;
 
 #[derive(Component, Debug, PartialEq, Default)]
 pub(crate) struct ApplyAgentAnimations;

@@ -1,4 +1,6 @@
 use super::*;
+use crate::assets::agent_meta::Loadout;
+use std::{collections::HashSet, iter::Enumerate, slice::Iter};
 
 impl<TContext> ApplyMetaToContext<TContext> for NotLoadedOut
 where
@@ -6,6 +8,45 @@ where
 {
 	fn apply_meta_to_context(ctx: &mut TContext, meta: &AgentMeta) {
 		ctx.insert_default_loadout(&meta.loadout);
+	}
+}
+
+pub struct LoadoutIterator<'a> {
+	inventory: Enumerate<Iter<'a, Option<ItemName>>>,
+	slots: Iter<'a, (SlotKey, Option<ItemName>)>,
+}
+
+impl LoadoutIterator<'_> {
+	fn next_inventory_item(&mut self) -> Option<(LoadoutKey, Option<ItemName>)> {
+		self.inventory
+			.next()
+			.map(|(key, item)| (LoadoutKey::from(InventoryKey(key)), item.clone()))
+	}
+
+	fn next_slot_item(&mut self) -> Option<(LoadoutKey, Option<ItemName>)> {
+		self.slots
+			.next()
+			.map(|(key, item)| (LoadoutKey::from(*key), item.clone()))
+	}
+}
+
+impl Iterator for LoadoutIterator<'_> {
+	type Item = (LoadoutKey, Option<ItemName>);
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.next_inventory_item().or_else(|| self.next_slot_item())
+	}
+}
+
+impl<'a> IntoIterator for &'a Loadout {
+	type Item = (LoadoutKey, Option<ItemName>);
+	type IntoIter = LoadoutIterator<'a>;
+
+	fn into_iter(self) -> LoadoutIterator<'a> {
+		LoadoutIterator {
+			inventory: self.inventory.iter().enumerate(),
+			slots: self.slots.iter(),
+		}
 	}
 }
 

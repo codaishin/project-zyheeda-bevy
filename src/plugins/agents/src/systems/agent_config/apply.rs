@@ -3,7 +3,6 @@ mod apply_meta_to_context;
 use crate::{assets::agent_meta::AgentMeta, components::agent_config::AgentConfig};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::prelude::*;
-use std::collections::HashSet;
 
 impl AgentConfig {
 	pub(crate) fn apply<TParam, TKey>(

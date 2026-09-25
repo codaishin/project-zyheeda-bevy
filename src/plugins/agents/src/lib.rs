@@ -6,7 +6,7 @@ mod systems;
 use crate::{
 	assets::agent_meta::{AgentMeta, dto::AgentConfigDto},
 	components::{
-		agent::{Agent, ApplyAgentAnimations, ApplyAgentConfig},
+		agent::{Agent, ApplyAgentAnimations},
 		agent_config::AgentConfig,
 		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
@@ -137,12 +137,6 @@ where
 		app.add_systems(
 			Update,
 			(
-				ApplyAgentConfig::system::<
-					TLoadout::TLoadoutPrep,
-					TPhysics::TAgentMut,
-					TMovement::TMovementConfig,
-					TPhysics::TConfigMut,
-				>,
 				AgentConfig::apply::<TLoadout::TLoadoutPrep, NotLoadedOut>,
 				AgentConfig::apply::<TLoadout::TLoadoutPrep, NoBonesRegistered>,
 				AgentConfig::apply::<TPhysics::TAgentMut, NotInitializedAgent>,
