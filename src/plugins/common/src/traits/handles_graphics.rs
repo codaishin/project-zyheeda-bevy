@@ -1,4 +1,7 @@
-use crate::traits::accessors::get::{GetContext, GetContextMut, TryGetContext, TryGetContextMut};
+use crate::{
+	tools::Units,
+	traits::accessors::get::{GetContext, GetContextMut, TryGetContext, TryGetContextMut},
+};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use macros::EntityKey;
 use std::ops::{Deref, DerefMut};
@@ -101,6 +104,6 @@ pub trait SetRole {
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Role {
-	Player,
+	Player { view_offset: Units },
 	Enemy,
 }

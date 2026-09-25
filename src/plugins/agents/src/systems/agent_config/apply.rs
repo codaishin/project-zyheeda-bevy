@@ -1,19 +1,22 @@
 mod apply_meta_to_context;
 
-use crate::{assets::agent_meta::AgentMeta, components::agent_config::AgentConfig};
+use crate::{
+	assets::agent_meta::AgentMeta,
+	components::{agent::Agent, agent_config::AgentConfig},
+};
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use common::prelude::*;
 
 impl AgentConfig {
 	pub(crate) fn apply<TParam, TKey>(
 		mut param: StaticSystemParam<TParam>,
-		incomplete: Query<(Entity, &Self)>,
+		incomplete: Query<(Entity, &Agent, &Self)>,
 		metas: Res<Assets<AgentMeta>>,
 	) where
 		TParam: TryGetContextMut<TKey>,
 		TKey: ThreadSafe + From<Entity> + for<'c> ApplyMetaToContext<TParam::TContext<'c>>,
 	{
-		for (entity, Self { config_handle }) in incomplete {
+		for (entity, agent, Self { config_handle }) in incomplete {
 			let Some(meta) = metas.get(config_handle) else {
 				continue;
 			};
@@ -23,13 +26,13 @@ impl AgentConfig {
 				continue;
 			};
 
-			TKey::apply_meta_to_context(&mut ctx, meta);
+			TKey::apply_meta_to_context(&mut ctx, meta, agent);
 		}
 	}
 }
 
 pub(crate) trait ApplyMetaToContext<TContext> {
-	fn apply_meta_to_context(ctx: &mut TContext, meta: &AgentMeta);
+	fn apply_meta_to_context(ctx: &mut TContext, meta: &AgentMeta, agent: &Agent);
 }
 
 #[cfg(test)]
@@ -46,11 +49,11 @@ mod tests {
 	type _Param = Query<'static, 'static, &'static mut _Context>;
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Context(Option<AgentMeta>);
+	struct _Context(Option<(AgentMeta, Agent)>);
 
 	impl<'c> ApplyMetaToContext<Mut<'c, _Context>> for _EntityContext {
-		fn apply_meta_to_context(ctx: &mut Mut<'c, _Context>, meta: &AgentMeta) {
-			**ctx = _Context(Some(meta.clone()));
+		fn apply_meta_to_context(ctx: &mut Mut<'c, _Context>, meta: &AgentMeta, agent: &Agent) {
+			**ctx = _Context(Some((meta.clone(), *agent)));
 		}
 	}
 
@@ -81,13 +84,24 @@ mod tests {
 		let mut app = setup([(&config_handle, meta.clone())]);
 		let entity = app
 			.world_mut()
-			.spawn((_Context(None), AgentConfig { config_handle }))
+			.spawn((
+				_Context(None),
+				Agent {
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere),
+				},
+				AgentConfig { config_handle },
+			))
 			.id();
 
 		app.update();
 
 		assert_eq!(
-			Some(&_Context(Some(meta))),
+			Some(&_Context(Some((
+				meta,
+				Agent {
+					agent_type: AgentType::Enemy(EnemyType::VoidSphere)
+				}
+			)))),
 			app.world().entity(entity).get::<_Context>(),
 		);
 	}

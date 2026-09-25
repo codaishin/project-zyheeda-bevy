@@ -145,6 +145,7 @@ where
 				AgentConfig::apply::<TPhysics::TConfigMut, NoDefaultAttributes>,
 				AgentConfig::apply::<TPhysics::TConfigMut, NoBodyConfigured>,
 				AgentConfig::apply::<TMovement::TMovementConfig, NotConfiguredMovement>,
+				AgentConfig::apply::<TGraphics::TRolesMut, HasNoRole>,
 				ApplyAgentAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 					.pipe(OnError::log),
 			)
@@ -161,7 +162,7 @@ where
 		TSaveGame::register_savable_component::<EnemyAttackPhase>(app);
 
 		// # Prefabs
-		app.add_prefab_observer::<Agent, TGraphics::TRolesMut>();
+		app.add_prefab_observer::<Agent, ()>();
 		app.add_prefab_observer::<VoidSphere, ()>();
 
 		// # Behaviors

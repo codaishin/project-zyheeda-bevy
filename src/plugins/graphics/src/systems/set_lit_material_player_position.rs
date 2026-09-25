@@ -1,20 +1,23 @@
 use crate::{
-	components::roles::Player,
+	components::{los::LoSCamerasHeight, roles::Player},
 	materials::lit_material::{LitMaterial, StandardLitMaterial},
 };
 use bevy::prelude::*;
 
+type MovedPlayer = (With<Player>, Changed<GlobalTransform>);
+
 impl LitMaterial {
-	pub(crate) fn set_player_position(
+	pub(crate) fn set_light_position(
 		mut materials: ResMut<Assets<StandardLitMaterial>>,
-		players: Query<&GlobalTransform, (With<Player>, Changed<GlobalTransform>)>,
+		players: Query<(&GlobalTransform, &LoSCamerasHeight), MovedPlayer>,
 	) {
-		let Ok(transform) = players.single() else {
+		let Ok((transform, LoSCamerasHeight(height_offset))) = players.single() else {
 			return;
 		};
 
 		for (_, materials) in materials.iter_mut() {
-			materials.extension.player_position = transform.translation();
+			materials.extension.light_position =
+				transform.translation() + Vec3::Y * **height_offset;
 		}
 	}
 }
@@ -23,6 +26,7 @@ impl LitMaterial {
 mod tests {
 	use super::*;
 	use crate::{components::roles::Player, materials::lit_material::StandardLitMaterial};
+	use common::prelude::*;
 	use testing::SingleThreadedApp;
 
 	fn setup<const N: usize>(materials: [StandardLitMaterial; N]) -> App {
@@ -34,7 +38,7 @@ mod tests {
 		}
 
 		app.insert_resource(assets);
-		app.add_systems(Update, LitMaterial::set_player_position);
+		app.add_systems(Update, LitMaterial::set_light_position);
 
 		app
 	}
@@ -52,7 +56,28 @@ mod tests {
 			app.world()
 				.resource::<Assets<StandardLitMaterial>>()
 				.iter()
-				.map(|(_, m)| m.extension.player_position)
+				.map(|(_, m)| m.extension.light_position)
+				.collect::<Vec<_>>()
+		);
+	}
+
+	#[test]
+	fn set_position_with_offset() {
+		let mut app = setup([StandardLitMaterial::default()]);
+		app.world_mut().spawn((
+			Player,
+			LoSCamerasHeight(Units::from(10.)),
+			GlobalTransform::from_xyz(1., 2., 3.),
+		));
+
+		app.update();
+
+		assert_eq!(
+			vec![Vec3::new(1., 12., 3.)],
+			app.world()
+				.resource::<Assets<StandardLitMaterial>>()
+				.iter()
+				.map(|(_, m)| m.extension.light_position)
 				.collect::<Vec<_>>()
 		);
 	}
@@ -69,7 +94,7 @@ mod tests {
 			app.world()
 				.resource::<Assets<StandardLitMaterial>>()
 				.iter()
-				.map(|(_, m)| m.extension.player_position)
+				.map(|(_, m)| m.extension.light_position)
 				.collect::<Vec<_>>()
 		);
 	}
@@ -86,7 +111,7 @@ mod tests {
 			.resource_mut::<Assets<StandardLitMaterial>>()
 			.iter_mut()
 		{
-			m.extension.player_position = Vec3::ZERO;
+			m.extension.light_position = Vec3::ZERO;
 		}
 		app.update();
 
@@ -95,7 +120,7 @@ mod tests {
 			app.world()
 				.resource::<Assets<StandardLitMaterial>>()
 				.iter()
-				.map(|(_, m)| m.extension.player_position)
+				.map(|(_, m)| m.extension.light_position)
 				.collect::<Vec<_>>()
 		);
 	}
@@ -119,7 +144,7 @@ mod tests {
 			app.world()
 				.resource::<Assets<StandardLitMaterial>>()
 				.iter()
-				.map(|(_, m)| m.extension.player_position)
+				.map(|(_, m)| m.extension.light_position)
 				.collect::<Vec<_>>()
 		);
 	}

@@ -15,7 +15,7 @@ pub(crate) type StandardLitMaterial = ExtendedMaterial<StandardMaterial, LitMate
 #[bind_group_data(LitType)]
 pub(crate) struct LitMaterial {
 	#[uniform(100)]
-	pub(crate) player_position: Vec3,
+	pub(crate) light_position: Vec3,
 	#[uniform(101)]
 	range: f32,
 	#[uniform(102)]
@@ -31,9 +31,9 @@ impl LitMaterial {
 	pub(crate) const RANGE: Units = Units::from_u8(15);
 	pub(crate) const MIN_LIGHT: f32 = 0.01;
 
-	pub(crate) fn from_player_position(player_position: Vec3) -> Self {
+	pub(crate) fn from_light_position(light_position: Vec3) -> Self {
 		Self {
-			player_position,
+			light_position,
 			..default()
 		}
 	}
@@ -52,7 +52,7 @@ impl LitMaterial {
 impl Default for LitMaterial {
 	fn default() -> Self {
 		Self {
-			player_position: Vec3::ZERO,
+			light_position: Vec3::ZERO,
 			range: *Self::RANGE,
 			min_light: Self::MIN_LIGHT,
 			los: Handle::default(),

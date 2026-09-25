@@ -76,6 +76,7 @@ impl VoidSphere {
 			height_levels: HeightLevels {
 				aim: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
 				center: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
+				..default()
 			},
 			self_skill_scale: Scale::ONE,
 			speed: MovementSpeed::Fixed(UnitsPerSecond::from_u8(1)),

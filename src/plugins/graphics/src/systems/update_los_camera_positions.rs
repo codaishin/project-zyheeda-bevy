@@ -1,19 +1,21 @@
-use crate::components::los::LoSCameras;
+use crate::components::los::{LoSCameras, LoSCamerasHeight};
 use bevy::prelude::*;
+
+type TransformOrHeightChanged = Or<(Changed<GlobalTransform>, Changed<LoSCamerasHeight>)>;
 
 impl LoSCameras {
 	pub(crate) fn update_positions(
-		cameras: Query<(&GlobalTransform, &Self), Changed<GlobalTransform>>,
+		cameras: Query<(&GlobalTransform, &Self, &LoSCamerasHeight), TransformOrHeightChanged>,
 		mut cameras_of: Query<&mut GlobalTransform, Without<Self>>,
 	) {
-		for (src, cameras) in cameras {
+		for (src, cameras, LoSCamerasHeight(height_offset)) in cameras {
 			for camera in cameras.iter() {
 				let Ok(mut dst) = cameras_of.get_mut(camera) else {
 					continue;
 				};
 
 				let transform = Transform {
-					translation: src.translation(),
+					translation: src.translation() + Vec3::Y * **height_offset,
 					rotation: dst.rotation(),
 					..default()
 				};
@@ -28,6 +30,7 @@ impl LoSCameras {
 mod tests {
 	use super::*;
 	use crate::components::los::LoSCameraOf;
+	use common::prelude::*;
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
@@ -54,6 +57,31 @@ mod tests {
 
 		assert_eq!(
 			[Some(&GlobalTransform::from_xyz(1., 2., 3.)); 2],
+			app.world()
+				.entity(children)
+				.map(|e| e.get::<GlobalTransform>())
+		);
+	}
+
+	#[test]
+	fn set_position_with_offset() {
+		let mut app = setup();
+		let parent = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from_xyz(1., 2., 3.),
+				LoSCamerasHeight(Units::from(10.)),
+			))
+			.id();
+		let children = [
+			app.world_mut().spawn(LoSCameraOf(parent)).id(),
+			app.world_mut().spawn(LoSCameraOf(parent)).id(),
+		];
+
+		app.update();
+
+		assert_eq!(
+			[Some(&GlobalTransform::from_xyz(1., 12., 3.)); 2],
 			app.world()
 				.entity(children)
 				.map(|e| e.get::<GlobalTransform>())
@@ -141,6 +169,37 @@ mod tests {
 		app.world_mut()
 			.entity_mut(parent)
 			.get_mut::<GlobalTransform>()
+			.as_deref_mut();
+		app.update();
+
+		assert_eq!(
+			[Some(&GlobalTransform::from_xyz(1., 2., 3.)); 2],
+			app.world()
+				.entity(children)
+				.map(|e| e.get::<GlobalTransform>())
+		);
+	}
+
+	#[test]
+	fn act_again_if_los_cameras_height_changed() {
+		let mut app = setup();
+		let parent = app
+			.world_mut()
+			.spawn(GlobalTransform::from_xyz(1., 2., 3.))
+			.id();
+		let children = [
+			app.world_mut().spawn(LoSCameraOf(parent)).id(),
+			app.world_mut().spawn(LoSCameraOf(parent)).id(),
+		];
+
+		app.update();
+		_ = app.world_mut().entity_mut(children).map(|mut e| {
+			e.get_mut::<GlobalTransform>()
+				.map(|mut t| *t = GlobalTransform::default())
+		});
+		app.world_mut()
+			.entity_mut(parent)
+			.get_mut::<LoSCamerasHeight>()
 			.as_deref_mut();
 		app.update();
 

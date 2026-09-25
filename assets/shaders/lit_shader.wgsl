@@ -15,7 +15,7 @@
 }
 #endif
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> player_position: vec3<f32>;
+@group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> light_position: vec3<f32>;
 @group(#{MATERIAL_BIND_GROUP}) @binding(101) var<uniform> range: f32;
 @group(#{MATERIAL_BIND_GROUP}) @binding(102) var<uniform> min_light: f32;
 @group(#{MATERIAL_BIND_GROUP}) @binding(103) var los_texture: texture_cube<f32>;
@@ -82,7 +82,7 @@ fn fragment(
 }
 
 fn compute_light(in: VertexOutput) -> f32 {
-    var direction = in.world_position.xyz - player_position;
+    var direction = in.world_position.xyz - light_position;
     let vertex_distance = length(direction);
 
     if vertex_distance == 0 {
