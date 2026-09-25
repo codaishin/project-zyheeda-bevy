@@ -150,9 +150,11 @@ where
 				AgentConfig::apply::<TPhysics::TConfigMut, NoBodyConfigured>,
 				AgentConfig::apply::<TMovement::TMovementConfig, NotConfiguredMovement>,
 				AgentConfig::apply_clearance,
+				AgentConfig::apply_model,
 				ApplyAgentAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 					.pipe(OnError::log),
 			)
+				.chain()
 				.after_plugin(TInput::SYSTEMS)
 				.after_plugin(TMovement::SYSTEMS)
 				.after_plugin(TInteractive::SYSTEMS)
