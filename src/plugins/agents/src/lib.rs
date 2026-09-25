@@ -149,6 +149,7 @@ where
 				AgentConfig::apply::<TPhysics::TConfigMut, NoDefaultAttributes>,
 				AgentConfig::apply::<TPhysics::TConfigMut, NoBodyConfigured>,
 				AgentConfig::apply::<TMovement::TMovementConfig, NotConfiguredMovement>,
+				AgentConfig::apply_clearance,
 				ApplyAgentAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 					.pipe(OnError::log),
 			)
