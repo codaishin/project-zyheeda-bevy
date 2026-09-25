@@ -143,6 +143,12 @@ where
 					TMovement::TMovementConfig,
 					TPhysics::TConfigMut,
 				>,
+				AgentConfig::apply::<TLoadout::TLoadoutPrep, NotLoadedOut>,
+				AgentConfig::apply::<TLoadout::TLoadoutPrep, NoBonesRegistered>,
+				AgentConfig::apply::<TPhysics::TAgentMut, NotInitializedAgent>,
+				AgentConfig::apply::<TPhysics::TConfigMut, NoDefaultAttributes>,
+				AgentConfig::apply::<TPhysics::TConfigMut, NoBodyConfigured>,
+				AgentConfig::apply::<TMovement::TMovementConfig, NotConfiguredMovement>,
 				ApplyAgentAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 					.pipe(OnError::log),
 			)
