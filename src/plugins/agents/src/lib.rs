@@ -6,7 +6,7 @@ mod systems;
 use crate::{
 	assets::agent_meta::{AgentMeta, dto::AgentConfigDto},
 	components::{
-		agent::{Agent, ApplyAgentAnimations, ApplyAgentConfig},
+		agent::{Agent, ApplyAgentAnimations},
 		agent_config::AgentConfig,
 		animate_idle::AnimateIdle,
 		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
@@ -137,15 +137,18 @@ where
 		app.add_systems(
 			Update,
 			(
-				ApplyAgentConfig::system::<
-					TLoadout::TLoadoutPrep,
-					TPhysics::TAgentMut,
-					TMovement::TMovementConfig,
-					TPhysics::TConfigMut,
-				>,
+				AgentConfig::apply_clearance, // FIXME: Must be first or physics will ignore it, move into physics
+				AgentConfig::apply_model,
+				AgentConfig::apply::<TLoadout::TLoadoutPrep, NotLoadedOut>,
+				AgentConfig::apply::<TLoadout::TLoadoutPrep, NoBonesRegistered>,
+				AgentConfig::apply::<TPhysics::TAgentMut, NotInitializedAgent>,
+				AgentConfig::apply::<TPhysics::TConfigMut, NoDefaultAttributes>,
+				AgentConfig::apply::<TPhysics::TConfigMut, NoBodyConfigured>,
+				AgentConfig::apply::<TMovement::TMovementConfig, NotConfiguredMovement>,
 				ApplyAgentAnimations::register_animations_system::<TAnimations::TAnimationsMut>
 					.pipe(OnError::log),
 			)
+				.chain()
 				.after_plugin(TInput::SYSTEMS)
 				.after_plugin(TMovement::SYSTEMS)
 				.after_plugin(TInteractive::SYSTEMS)
