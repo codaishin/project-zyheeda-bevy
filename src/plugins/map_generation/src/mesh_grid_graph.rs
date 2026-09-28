@@ -148,11 +148,7 @@ impl TryFromTriangles for MeshGridGraph {
 						continue;
 					}
 
-					if !edge.spans_obtuse_angle_to(a) {
-						continue;
-					}
-
-					if !edge.spans_obtuse_angle_to(b) {
+					if !edge.triangle_widest_on(a) && !edge.triangle_widest_on(b) {
 						continue;
 					}
 
@@ -515,6 +511,7 @@ mod test {
 		///
 		/// Do not connect:
 		/// - a-f
+		/// - d-e
 		///
 		/// Expected result
 		/// ```
@@ -523,7 +520,7 @@ mod test {
 		///  d — c — f
 		/// ```
 		#[test]
-		fn do_not_connect_nodes_on_acute_angles() {
+		fn connect_nodes_across_common_edges_that_span_widest_angle_in_original_triangle() {
 			let a = vec_not_nan!(0., 0., 0.);
 			let b = vec_not_nan!(1., 0., 0.);
 			let c = vec_not_nan!(1., 0., 1.);
@@ -553,19 +550,27 @@ mod test {
 			);
 		}
 
+		/// Triangles
 		/// ```
-		///  a — b
-		///  | \ |
-		///  d — c
+		///     b
+		///   / |\
+		/// a   | \
+		///   \ |  \
+		///     c — d
+		/// ```
+		///
+		/// Connect:
+		/// - a-d
 		/// ```
 		#[test]
-		fn set_nodes_of_two_connected_triangles_within_minimal_error() {
-			let a = vec_not_nan!(0., 0., 0.);
-			let b = vec_not_nan!(1., 0., -1e-6);
-			let c = vec_not_nan!(1., 0., 1.);
-			let d = vec_not_nan!(0., 0., 1.);
+		fn connect_nodes_across_common_edges_where_only_one_spans_widest_angle_in_original_triangle()
+		 {
+			let a = vec_not_nan!(0., 0., 1.);
+			let b = vec_not_nan!(1., 0., 0.);
+			let c = vec_not_nan!(1., 0., 2.);
+			let d = vec_not_nan!(2., 0., 2.);
 
-			let graph = MeshGridGraph::try_from_triangles([[a, b, c], [a, c, d]].into_iter());
+			let graph = MeshGridGraph::try_from_triangles([[a, b, c], [b, c, d]].into_iter());
 
 			assert_eq!(
 				Ok(MeshGridGraph {
