@@ -4,8 +4,6 @@ use super::*;
 pub(super) struct Edge((NodeId, VecNotNan<3>), (NodeId, VecNotNan<3>));
 
 impl Edge {
-	const TEST_TOLERANCE: f32 = 1e-6;
-
 	pub(super) fn uniform(a: (NodeId, VecNotNan<3>), b: (NodeId, VecNotNan<3>)) -> Self {
 		match a.0.cmp(&b.0) {
 			Ordering::Less => Self(a, b),
@@ -35,15 +33,22 @@ impl Edge {
 		dot_wedge < f32::min(dot_ab0, dot_ab1)
 	}
 
-	pub(super) fn spans_obtuse_angle_to(&self, v: Vec3) -> bool {
-		let Ok(to_edge0) = Dir3::try_from(Vec3::from(self.0.1) - v) else {
+	pub(super) fn triangle_widest_on(&self, c: Vec3) -> bool {
+		let Ok(ca) = Dir3::try_from(Vec3::from(self.0.1) - c) else {
 			return false;
 		};
-		let Ok(to_edge1) = Dir3::try_from(Vec3::from(self.1.1) - v) else {
+		let Ok(cb) = Dir3::try_from(Vec3::from(self.1.1) - c) else {
+			return false;
+		};
+		let Ok(ab) = Dir3::try_from(Vec3::from(self.1.1) - Vec3::from(self.0.1)) else {
 			return false;
 		};
 
-		to_edge0.dot(*to_edge1) <= Self::TEST_TOLERANCE
+		let dot_a = ab.dot(-*ca);
+		let dot_b = (-ab).dot(-*cb);
+		let dot_c = ca.dot(*cb);
+
+		dot_c < dot_a && dot_c < dot_b
 	}
 }
 
