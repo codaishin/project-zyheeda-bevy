@@ -6,3 +6,6 @@ pub(crate) mod nav_mesh;
 pub(crate) mod spawned_from;
 pub(crate) mod spawner;
 pub(crate) mod spawner_active;
+
+#[cfg(debug_assertions)]
+pub(crate) mod nav_mesh_debug_agent;
