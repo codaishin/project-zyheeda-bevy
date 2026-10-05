@@ -11,7 +11,6 @@ use crate::{
 };
 use bevy::{math::InvalidDirectionError, prelude::*};
 use common::prelude::*;
-use core::f32;
 use std::{
 	cmp::Ordering,
 	collections::{BinaryHeap, HashMap, HashSet, VecDeque},
