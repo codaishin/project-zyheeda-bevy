@@ -1,6 +1,5 @@
 use crate::{
 	components::{
-		agent_source::AgentSource,
 		map::{MapObjectSource, objects::MapObjectOf},
 		map_agents::GridAgent,
 		spawned_from::SpawnedFrom,
@@ -15,7 +14,7 @@ use common::prelude::*;
 impl<T> Spawner<T>
 where
 	T: PrefabType<TTransform: From<GlobalTransform>> + Copy + ThreadSafe,
-	Self: SpawnedExtra<TSource = T>,
+	Self: SpawnExtra,
 {
 	pub(crate) fn execute(
 		mut commands: ZyheedaCommands,
@@ -31,7 +30,7 @@ where
 				GridAgent,
 				MapObjectOf(*map),
 				SpawnedFrom(MapObjectSource(name.clone())),
-				Self::spawned_extra(*source),
+				<Self as SpawnExtra>::TExtra::default(),
 			));
 
 			prefab_register.apply(
@@ -47,34 +46,23 @@ where
 	}
 }
 
-pub(crate) trait SpawnedExtra {
-	type TBundle: Bundle;
-	type TSource;
-
-	fn spawned_extra(source: Self::TSource) -> Self::TBundle;
+pub(crate) trait SpawnExtra {
+	type TExtra: Bundle + Default;
 }
 
-impl SpawnedExtra for Spawner<AgentType> {
-	type TBundle = AgentSource;
-	type TSource = AgentType;
-
-	fn spawned_extra(source: Self::TSource) -> Self::TBundle {
-		AgentSource(source)
-	}
+impl SpawnExtra for Spawner<AgentType> {
+	#[cfg(debug_assertions)]
+	type TExtra = crate::components::nav_mesh_debug_agent::NavMeshDebugAgent;
+	#[cfg(not(debug_assertions))]
+	type TExtra = ();
 }
 
-impl SpawnedExtra for Spawner<InteractiveType> {
-	type TBundle = ();
-	type TSource = InteractiveType;
-
-	fn spawned_extra(_: Self::TSource) -> Self::TBundle {}
+impl SpawnExtra for Spawner<InteractiveType> {
+	type TExtra = ();
 }
 
-impl SpawnedExtra for Spawner<LightType> {
-	type TBundle = ();
-	type TSource = LightType;
-
-	fn spawned_extra(_: Self::TSource) -> Self::TBundle {}
+impl SpawnExtra for Spawner<LightType> {
+	type TExtra = ();
 }
 
 #[cfg(test)]
@@ -90,16 +78,11 @@ mod tests {
 		type TTransform = GlobalTransform;
 	}
 
-	#[derive(Component, Debug, PartialEq)]
-	struct _Extra(_T);
+	#[derive(Component, Debug, PartialEq, Default)]
+	struct _Extra;
 
-	impl SpawnedExtra for Spawner<_T> {
-		type TBundle = _Extra;
-		type TSource = _T;
-
-		fn spawned_extra(source: Self::TSource) -> Self::TBundle {
-			_Extra(source)
-		}
+	impl SpawnExtra for Spawner<_T> {
+		type TExtra = _Extra;
 	}
 
 	#[derive(Component, Debug, PartialEq)]
@@ -277,6 +260,6 @@ mod tests {
 
 		let mut agents = app.world_mut().query_filtered::<&_Extra, With<_Spawned>>();
 		let agents = assert_count!(1, agents.iter(app.world()));
-		assert_eq!([&_Extra(_T)], agents);
+		assert_eq!([&_Extra], agents);
 	}
 }
