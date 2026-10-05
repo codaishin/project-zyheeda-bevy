@@ -78,7 +78,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf(agent),
+					MotionControllerOf::entity(agent),
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
 				))
@@ -106,7 +106,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf(agent),
+					MotionControllerOf::entity(agent),
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
 				))
@@ -137,7 +137,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf(agent),
+					MotionControllerOf::entity(agent),
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
 				))
@@ -172,7 +172,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf(agent),
+					MotionControllerOf::entity(agent),
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
 				))
@@ -200,7 +200,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf(agent),
+					MotionControllerOf::entity(agent),
 					Transform::default(),
 					KinematicCharacterController::default(),
 				))
@@ -231,7 +231,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf(agent),
+					MotionControllerOf::entity(agent),
 					Transform::default(),
 					KinematicCharacterController::default(),
 				))
@@ -268,7 +268,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf(agent),
+					MotionControllerOf::entity(agent),
 					Transform::default(),
 					KinematicCharacterController::default(),
 				))
@@ -299,7 +299,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf(agent),
+					MotionControllerOf::entity(agent),
 					Transform::default(),
 					KinematicCharacterController::default(),
 				))

@@ -2,6 +2,8 @@ use crate::components::motion_controller::{MotionCollider, MotionControllerOf, O
 use bevy::prelude::*;
 use common::prelude::*;
 
+const MOTION_CONTROLLER_OFFSET: Units = Units::from_f32(0.01);
+
 impl MotionControllerOf {
 	pub(crate) fn spawn(
 		on_add: On<Add, MotionCollider>,
@@ -13,7 +15,7 @@ impl MotionControllerOf {
 			.map_or(Vec3::ZERO, |t| t.translation);
 
 		commands.spawn((
-			MotionControllerOf(on_add.entity),
+			MotionControllerOf::entity(on_add.entity).with_offset(MOTION_CONTROLLER_OFFSET),
 			OldTranslation(translation),
 		));
 	}
@@ -48,7 +50,10 @@ mod tests {
 
 		let mut controllers = app.world_mut().query::<&MotionControllerOf>();
 		let [controller] = assert_count!(1, controllers.iter(app.world()));
-		assert_eq!(&MotionControllerOf(agent), controller);
+		assert_eq!(
+			&MotionControllerOf::entity(agent).with_offset(MOTION_CONTROLLER_OFFSET),
+			controller
+		);
 	}
 
 	#[test]

@@ -40,7 +40,25 @@ impl MotionController {
 #[derive(Component, Debug, PartialEq)]
 #[relationship(relationship_target = MotionController)]
 #[require(OldTranslation)]
-pub(crate) struct MotionControllerOf(pub(crate) Entity);
+pub(crate) struct MotionControllerOf {
+	#[relationship]
+	entity: Entity,
+	offset: Units,
+}
+
+impl MotionControllerOf {
+	pub(crate) const fn entity(entity: Entity) -> Self {
+		Self {
+			entity,
+			offset: Units::ZERO,
+		}
+	}
+
+	pub(crate) const fn with_offset(mut self, offset: Units) -> Self {
+		self.offset = offset;
+		self
+	}
+}
 
 impl Prefab<()> for MotionControllerOf {
 	type TError = MotionControlParametersMissing;
@@ -51,8 +69,8 @@ impl Prefab<()> for MotionControllerOf {
 		entity: &mut impl PrefabEntityCommands,
 		parameters: StaticSystemParam<Self::TSystemParam>,
 	) -> Result<(), MotionControlParametersMissing> {
-		let Ok((parameters, transform)) = parameters.get(self.0) else {
-			return Err(MotionControlParametersMissing(self.0));
+		let Ok((parameters, transform)) = parameters.get(self.entity) else {
+			return Err(MotionControlParametersMissing(self.entity));
 		};
 
 		entity.try_insert((
@@ -60,7 +78,7 @@ impl Prefab<()> for MotionControllerOf {
 			Physical::Contact,
 			RigidBody::KinematicPositionBased,
 			ColliderShape::from(parameters.shape),
-			ColliderOf(self.0),
+			ColliderOf(self.entity),
 			CollidingEntities::default(),
 			ActiveEvents::COLLISION_EVENTS,
 			ActiveCollisionTypes::all(),
@@ -69,6 +87,8 @@ impl Prefab<()> for MotionControllerOf {
 					memberships: AGENTS_GROUP,
 					filters: SKILLS_GROUP | TERRAIN_GROUP,
 				}),
+				offset: CharacterLength::Absolute(*self.offset),
+				snap_to_ground: Some(CharacterLength::Absolute(*self.offset)),
 				..default()
 			},
 			CollisionGroups {
@@ -131,7 +151,7 @@ mod tests {
 			.spawn((Transform::from_xyz(1., 2., 3.), MotionCollider { shape }))
 			.id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
 
 		assert_eq!(
 			Some(&Transform::from_xyz(1., 2., 3.)),
@@ -147,7 +167,7 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
 
 		assert_eq!(Some(&ColliderOf(agent)), entity.get::<ColliderOf>());
 	}
@@ -160,7 +180,7 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
 
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
@@ -176,7 +196,7 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
 
 		assert_eq!(Some(&Physical::Contact), entity.get::<Physical>());
 	}
@@ -189,7 +209,7 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
 
 		assert_eq!(
 			(
@@ -210,6 +230,29 @@ mod tests {
 	}
 
 	#[test]
+	fn insert_controller_offset() {
+		let mut app = setup();
+		let shape = Shape::Parameters(ShapeParameters::Sphere {
+			radius: Units::from(42.),
+		});
+		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
+
+		let entity = app
+			.world_mut()
+			.spawn(MotionControllerOf::entity(agent).with_offset(Units::from(0.5)));
+
+		assert_eq!(
+			Some((
+				CharacterLength::Absolute(0.5),
+				Some(CharacterLength::Absolute(0.5))
+			)),
+			entity
+				.get::<KinematicCharacterController>()
+				.map(|c| (c.offset, c.snap_to_ground))
+		);
+	}
+
+	#[test]
 	fn insert_collision_groups() {
 		let mut app = setup();
 		let shape = Shape::Parameters(ShapeParameters::Sphere {
@@ -217,7 +260,7 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf(agent));
+		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
 
 		assert_eq!(
 			Some(&CollisionGroups {
