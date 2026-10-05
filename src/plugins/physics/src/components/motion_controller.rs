@@ -58,6 +58,10 @@ impl MotionControllerOf {
 		self.offset = offset;
 		self
 	}
+
+	pub(crate) fn get_offset(&self) -> Units {
+		self.offset
+	}
 }
 
 impl Prefab<()> for MotionControllerOf {
