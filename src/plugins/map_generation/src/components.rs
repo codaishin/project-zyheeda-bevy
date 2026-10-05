@@ -1,3 +1,4 @@
+pub(crate) mod agent_source;
 pub(crate) mod grid;
 pub(crate) mod map;
 pub(crate) mod map_agents;
