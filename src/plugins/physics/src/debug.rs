@@ -1,7 +1,7 @@
+use crate::{components::self_skill_scale::SelfSkillScale, messages::RayEvent};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
-
-use crate::messages::RayEvent;
+use common::prelude::*;
 
 pub(crate) struct Debug;
 
@@ -23,11 +23,36 @@ impl Debug {
 			info!("Received ray cast message: {ray_cast_message:?}");
 		}
 	}
+
+	fn control_collider_debug(
+		mut commands: ZyheedaCommands,
+		colliders: Query<(Entity, &GlobalTransform, Option<&ColliderDebug>), With<Collider>>,
+		agents: Query<&GlobalTransform, With<SelfSkillScale>>,
+	) {
+		for (entity, collider_transform, current_debug) in colliders {
+			let collider_translation = collider_transform.translation();
+			let debug = agents.iter().any(|agent_transform| {
+				(agent_transform.translation() - collider_translation).length() < 10.
+			});
+			let debug = match debug {
+				true => ColliderDebug::AlwaysRender,
+				false => ColliderDebug::NeverRender,
+			};
+
+			if current_debug == Some(&debug) {
+				continue;
+			};
+
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(debug);
+			});
+		}
+	}
 }
 
 impl Plugin for Debug {
 	fn build(&self, app: &mut App) {
 		app.add_plugins(RapierDebugRenderPlugin::default())
-			.add_systems(Update, Self::display_events);
+			.add_systems(Update, (Self::display_events, Self::control_collider_debug));
 	}
 }
