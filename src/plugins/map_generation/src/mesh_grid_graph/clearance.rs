@@ -1,5 +1,4 @@
 use super::*;
-use core::f32;
 use std::ops::Add;
 
 #[derive(Debug, PartialEq, Clone, Copy)]

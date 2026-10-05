@@ -98,7 +98,6 @@ mod tests {
 	use super::*;
 	use bevy::math::Vec3;
 	use bevy_rapier3d::parry::shape::FeatureId;
-	use core::f32;
 	use testing::{assert_no_panic, fake_entity};
 
 	struct _Ray;
