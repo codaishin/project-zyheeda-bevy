@@ -37,7 +37,7 @@ fn main() -> ZyheedaAppExit {
 	ZyheedaAppExit::from(app.run())
 }
 
-const TARGET_PHYSICS_FPS: PhysicsFPS = physics_fps!(60);
+const TARGET_PHYSICS_FPS: PhysicsFPS = physics_fps!(120);
 const TARGET_DISPLAY_FPS: DisplayFPS = display_fps!(60);
 
 fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
