@@ -1,5 +1,4 @@
 mod iter_interactions;
-mod iter_just_stopped;
 
 use crate::{
 	components::collision_domains::Interactive,
@@ -31,37 +30,12 @@ impl GetContext<InteractionsOngoing> for InteractiveParam<'static> {
 	}
 }
 
-impl GetContext<InteractionsJustStopped> for InteractiveParam<'static> {
-	type TContext<'ctx> = JustStoppedInteractionsContext;
-
-	fn get_context<'ctx>(
-		param: &'ctx SystemParamItem<Self>,
-		InteractionsJustStopped { entity }: InteractionsJustStopped,
-	) -> Self::TContext<'ctx> {
-		JustStoppedInteractionsContext {
-			changed: param.root_interactions.changed(&entity),
-			just_stopped: param.root_interactions.just_stopped(&entity),
-		}
-	}
-}
-
 pub struct InteractiveContext<'ctx> {
 	changed: bool,
 	interactions: &'ctx HashSet<Entity>,
 }
 
 impl ContextChanged for InteractiveContext<'_> {
-	fn context_changed(&self) -> bool {
-		self.changed
-	}
-}
-
-pub struct JustStoppedInteractionsContext {
-	changed: bool,
-	just_stopped: HashSet<Entity>,
-}
-
-impl ContextChanged for JustStoppedInteractionsContext {
 	fn context_changed(&self) -> bool {
 		self.changed
 	}
