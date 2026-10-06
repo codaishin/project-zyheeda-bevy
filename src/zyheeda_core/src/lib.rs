@@ -1,4 +1,5 @@
 pub mod collections;
+pub mod conf;
 pub mod conversion;
 pub mod errors;
 pub mod macros;

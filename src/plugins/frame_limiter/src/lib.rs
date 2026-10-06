@@ -6,6 +6,7 @@ use std::{
 	thread,
 	time::{Duration, Instant},
 };
+use zyheeda_core::prelude::*;
 
 /// A plugin inspired by the `bevy_framepace` plugin:
 /// <https://github.com/aevyrie/bevy_framepace>.
@@ -15,26 +16,13 @@ use std::{
 /// `target_fps`. Its primary purpose is to mitigate unexpected FPS
 /// drops that can occur on certain systems (e.g., Linux with X11
 /// and Nvidia GPUs) during mouse movement or clicks.
-///
-/// The frame rate can only be limited within the range of 1 to 60 FPS
-/// due to the render schedule (which we hook into) running at 60 FPS.
 pub struct FrameLimiterPlugin {
-	pub target_fps: u32,
+	pub target_fps: DisplayFPS,
 }
 
 impl Plugin for FrameLimiterPlugin {
 	fn build(&self, app: &mut App) {
-		let time_per_frame = match self.target_fps {
-			0 => {
-				error!("Target FPS was set to 0, using 1 FPS instead");
-				Duration::from_secs(1)
-			}
-			target_fps if target_fps > 60 => {
-				error!("Target FPS was set to >60, using 60 FPS instead");
-				Duration::from_secs(1) / 60
-			}
-			target_fps => Duration::from_secs(1) / target_fps,
-		};
+		let time_per_frame = Duration::from_secs(1) / (*self.target_fps).into();
 
 		app.sub_app_mut(RenderApp)
 			.insert_resource(Sleep(time_per_frame))

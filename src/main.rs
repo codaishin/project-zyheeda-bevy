@@ -22,6 +22,7 @@ use std::{
 	process::{ExitCode, Termination},
 };
 use ui::UIPlugin;
+use zyheeda_core::prelude::*;
 
 fn main() -> ZyheedaAppExit {
 	let app = &mut App::new();
@@ -36,7 +37,8 @@ fn main() -> ZyheedaAppExit {
 	ZyheedaAppExit::from(app.run())
 }
 
-const TARGET_FPS: u32 = 60;
+const TARGET_PHYSICS_FPS: PhysicsFPS = physics_fps!(60);
+const TARGET_DISPLAY_FPS: DisplayFPS = display_fps!(60);
 
 fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let Some(home) = home_dir() else {
@@ -50,7 +52,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let localization = LocalizationPlugin::from_plugin(&loading);
 	let savegame = SavegamePlugin::from_plugin(&game_states).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
-	let physics = PhysicsPlugin::new(TARGET_FPS, &game_states, &savegame, &animations);
+	let physics = PhysicsPlugin::new(TARGET_PHYSICS_FPS, &game_states, &savegame, &animations);
 	let map_generation =
 		MapGenerationPlugin::from_plugins(&game_states, &loading, &savegame, &physics);
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
@@ -112,7 +114,7 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 		&graphics,
 	);
 	let frame_limiter = FrameLimiterPlugin {
-		target_fps: TARGET_FPS,
+		target_fps: TARGET_DISPLAY_FPS,
 	};
 	let common = CommonPlugin::with_asset_loading(true);
 

@@ -66,9 +66,10 @@ use components::effects::{gravity::GravityEffect, health_damage::HealthDamageEff
 use std::{marker::PhantomData, time::Duration};
 use systems::interactions::apply_fragile_blocks::apply_fragile_blocks;
 use traits::act_on::ActOn;
+use zyheeda_core::conf::fps::PhysicsFPS;
 
 pub struct PhysicsPlugin<TDependencies> {
-	target_fps: u32,
+	target_fps: PhysicsFPS,
 	_p: PhantomData<TDependencies>,
 }
 
@@ -99,12 +100,13 @@ impl<TDependencies> PhysicsPlugin<TDependencies> {
 			.after(RapierTransformPropagateSet)
 			.before(RapierBevyComponentApply)
 			.in_set(PhysicsSet::SyncBackend);
-		let set_rapier_time_step = set_rapier_time_step(Duration::from_secs(1) / self.target_fps);
+		let set_rapier_time_step =
+			set_rapier_time_step(Duration::from_secs(1) / (*self.target_fps).into());
 
 		app.add_plugins(rapier);
 		app.add_systems(rapier_schedule, apply_beam_blocks);
 		app.add_systems(Startup, set_rapier_time_step);
-		app.insert_resource(Time::<Fixed>::from_hz(self.target_fps as f64));
+		app.insert_resource(Time::<Fixed>::from_hz(*self.target_fps as f64));
 		app.register_required_components::<RigidBody, ColliderRoot>();
 		app.add_observer(LinearVelocity::apply);
 	}
@@ -116,7 +118,7 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
-	pub fn new(target_fps: u32, _: &TGameState, _: &TSaveGame, _: &TAnimations) -> Self {
+	pub fn new(target_fps: PhysicsFPS, _: &TGameState, _: &TSaveGame, _: &TAnimations) -> Self {
 		Self {
 			target_fps,
 			_p: PhantomData,
