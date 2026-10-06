@@ -66,7 +66,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				KinematicCharacterControllerOutput::default(),
 				KinematicCharacterController::default(),
 			))
@@ -91,7 +91,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				KinematicCharacterControllerOutput::default(),
 				KinematicCharacterController::default(),
 			))
@@ -122,7 +122,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				KinematicCharacterControllerOutput::default(),
 				KinematicCharacterController {
 					translation: Some(Vec3::new(1., 2., 3.)),
@@ -150,7 +150,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				KinematicCharacterControllerOutput::default(),
 				KinematicCharacterController {
 					translation: Some(Vec3::new(1., 2., 3.)),
@@ -187,7 +187,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				KinematicCharacterControllerOutput {
 					grounded: true,
 					..default()

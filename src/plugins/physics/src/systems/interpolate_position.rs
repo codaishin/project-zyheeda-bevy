@@ -56,7 +56,7 @@ mod tests {
 		let mut app = setup(OverstepFraction(1.));
 		let entity = app.world_mut().spawn(Transform::default()).id();
 		app.world_mut().spawn((
-			MotionControllerOf(entity),
+			MotionControllerOf::entity(entity),
 			OldTranslation(Vec3::new(1., 2., 3.)),
 			Transform::from_xyz(1., 2., 5.),
 		));
@@ -74,7 +74,7 @@ mod tests {
 		let mut app = setup(OverstepFraction(0.));
 		let entity = app.world_mut().spawn(Transform::default()).id();
 		app.world_mut().spawn((
-			MotionControllerOf(entity),
+			MotionControllerOf::entity(entity),
 			OldTranslation(Vec3::new(1., 2., 3.)),
 			Transform::from_xyz(1., 2., 5.),
 		));
@@ -92,7 +92,7 @@ mod tests {
 		let mut app = setup(OverstepFraction(0.5));
 		let entity = app.world_mut().spawn(Transform::default()).id();
 		app.world_mut().spawn((
-			MotionControllerOf(entity),
+			MotionControllerOf::entity(entity),
 			OldTranslation(Vec3::new(1., 2., 3.)),
 			Transform::from_xyz(1., 2., 5.),
 		));
@@ -112,7 +112,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(entity),
+				MotionControllerOf::entity(entity),
 				OldTranslation(Vec3::new(1., 2., 3.)),
 				Transform::from_xyz(1., 2., 5.),
 			))

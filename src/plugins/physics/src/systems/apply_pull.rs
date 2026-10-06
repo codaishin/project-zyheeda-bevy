@@ -184,7 +184,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(1., 2., 3.),
 				KinematicCharacterController::default(),
 			))
@@ -221,7 +221,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -268,7 +268,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -322,7 +322,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -371,7 +371,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController {
 					filter_groups: Some(CollisionGroups {
@@ -409,7 +409,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -461,7 +461,7 @@ mod tests {
 			))
 			.id();
 		app.world_mut().spawn((
-			MotionControllerOf(agent),
+			MotionControllerOf::entity(agent),
 			Transform::from_xyz(1., 0., 0.),
 			KinematicCharacterController::default(),
 		));
@@ -484,7 +484,7 @@ mod tests {
 			.spawn((Transform::default(), Immobilized, _GravityTarget::from([])))
 			.id();
 		app.world_mut().spawn((
-			MotionControllerOf(agent),
+			MotionControllerOf::entity(agent),
 			Transform::from_xyz(1., 0., 0.),
 			KinematicCharacterController::default(),
 		));
@@ -506,7 +506,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController {
 					filter_groups: Some(CollisionGroups {
@@ -557,7 +557,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(3., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -600,7 +600,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(3., 1., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -643,7 +643,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf(agent),
+				MotionControllerOf::entity(agent),
 				Transform::from_xyz(3., 0., 0.),
 				KinematicCharacterController::default(),
 			))

@@ -94,7 +94,7 @@ mod tests {
 			.spawn(ApplyMotion::from(CharacterMotion::Done))
 			.id();
 		app.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::default()));
+			.spawn((MotionControllerOf::entity(agent), Transform::default()));
 
 		app.update();
 
@@ -126,7 +126,10 @@ mod tests {
 			.id();
 		let ctrl = app
 			.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.spawn((
+				MotionControllerOf::entity(agent),
+				Transform::from_xyz(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
@@ -166,7 +169,10 @@ mod tests {
 			.id();
 		let ctrl = app
 			.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.spawn((
+				MotionControllerOf::entity(agent),
+				Transform::from_xyz(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
@@ -209,7 +215,10 @@ mod tests {
 			.id();
 		let ctrl = app
 			.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.spawn((
+				MotionControllerOf::entity(agent),
+				Transform::from_xyz(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
@@ -253,7 +262,10 @@ mod tests {
 			.id();
 		let ctrl = app
 			.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.spawn((
+				MotionControllerOf::entity(agent),
+				Transform::from_xyz(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
@@ -297,7 +309,10 @@ mod tests {
 			.id();
 		let ctrl = app
 			.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.spawn((
+				MotionControllerOf::entity(agent),
+				Transform::from_xyz(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
@@ -334,7 +349,10 @@ mod tests {
 			.id();
 		let ctrl = app
 			.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::from_xyz(1., 2., 3.)))
+			.spawn((
+				MotionControllerOf::entity(agent),
+				Transform::from_xyz(1., 2., 3.),
+			))
 			.id();
 
 		app.update();
@@ -369,7 +387,7 @@ mod tests {
 			}))
 			.id();
 		app.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::default()));
+			.spawn((MotionControllerOf::entity(agent), Transform::default()));
 
 		app.update();
 		app.update();
@@ -391,7 +409,7 @@ mod tests {
 			}))
 			.id();
 		app.world_mut()
-			.spawn((MotionControllerOf(agent), Transform::default()));
+			.spawn((MotionControllerOf::entity(agent), Transform::default()));
 
 		app.update();
 		app.world_mut().entity_mut(agent).insert(IsInMotion);
