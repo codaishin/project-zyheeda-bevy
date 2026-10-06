@@ -1,6 +1,6 @@
 use crate::{
 	components::collider::ColliderOf,
-	resources::root_collisions::RootCollisions,
+	resources::root_collisions::RootCollisionsParam,
 	traits::send_collision_interaction::PushInteractingColliders,
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
@@ -10,7 +10,7 @@ pub(crate) struct UpdateRootCollisions<'w, 's, T>
 where
 	T: Component,
 {
-	interactions: ResMut<'w, RootCollisions<T>>,
+	interactions: RootCollisionsParam<'w, 's, T>,
 	markers: Query<'w, 's, Option<&'static ColliderOf>, With<T>>,
 }
 
@@ -46,18 +46,19 @@ where
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::resources::root_collisions::RootCollisions;
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use std::collections::HashSet;
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
 	#[derive(Component, Debug, PartialEq)]
-	struct _Marker;
+	struct _T;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.init_resource::<RootCollisions<_Marker>>();
+		app.init_resource::<RootCollisions<_T>>();
 
 		app
 	}
@@ -65,23 +66,23 @@ mod tests {
 	#[test]
 	fn add_event_pair() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let a = app.world_mut().spawn(_Marker).id();
-		let b = app.world_mut().spawn(_Marker).id();
+		let a = app.world_mut().spawn(_T).id();
+		let b = app.world_mut().spawn(_T).id();
 
 		app.world_mut()
-			.run_system_once(move |mut sender: UpdateRootCollisions<_Marker>| {
+			.run_system_once(move |mut sender: UpdateRootCollisions<_T>| {
 				sender.push_interacting_colliders(a, b);
 			})?;
 
 		assert_eq!(
-			&RootCollisions::from([(a, HashSet::from([b]))]),
-			app.world().resource::<RootCollisions<_Marker>>()
+			&RootCollisions::from_buffer([(a, HashSet::from([b]))]),
+			app.world().resource::<RootCollisions<_T>>()
 		);
 		Ok(())
 	}
 
-	#[test_case((), _Marker; "on first")]
-	#[test_case(_Marker, (); "on second")]
+	#[test_case((), _T; "on first")]
+	#[test_case(_T, (); "on second")]
 	#[test_case((), (); "on both")]
 	fn do_not_add_pair_if_marker_missing(
 		bundle_a: impl Bundle,
@@ -92,13 +93,13 @@ mod tests {
 		let b = app.world_mut().spawn(bundle_b).id();
 
 		app.world_mut()
-			.run_system_once(move |mut sender: UpdateRootCollisions<_Marker>| {
+			.run_system_once(move |mut sender: UpdateRootCollisions<_T>| {
 				sender.push_interacting_colliders(a, b);
 			})?;
 
 		assert_eq!(
-			&RootCollisions::from([]),
-			app.world().resource::<RootCollisions<_Marker>>()
+			&RootCollisions::from_buffer([]),
+			app.world().resource::<RootCollisions<_T>>()
 		);
 		Ok(())
 	}
@@ -111,18 +112,18 @@ mod tests {
 			app.world_mut().spawn_empty().id(),
 		];
 		let colliders = [
-			app.world_mut().spawn((ColliderOf(roots[0]), _Marker)).id(),
-			app.world_mut().spawn((ColliderOf(roots[1]), _Marker)).id(),
+			app.world_mut().spawn((ColliderOf(roots[0]), _T)).id(),
+			app.world_mut().spawn((ColliderOf(roots[1]), _T)).id(),
 		];
 
 		app.world_mut()
-			.run_system_once(move |mut sender: UpdateRootCollisions<_Marker>| {
+			.run_system_once(move |mut sender: UpdateRootCollisions<_T>| {
 				sender.push_interacting_colliders(colliders[0], colliders[1]);
 			})?;
 
 		assert_eq!(
-			&RootCollisions::from([(roots[0], HashSet::from([roots[1]]))]),
-			app.world().resource::<RootCollisions<_Marker>>()
+			&RootCollisions::from_buffer([(roots[0], HashSet::from([roots[1]]))]),
+			app.world().resource::<RootCollisions<_T>>()
 		);
 		Ok(())
 	}
@@ -130,20 +131,20 @@ mod tests {
 	#[test]
 	fn do_not_override_existing_entries() -> Result<(), RunSystemError> {
 		let mut app = setup();
-		let a = app.world_mut().spawn(_Marker).id();
-		let b = app.world_mut().spawn(_Marker).id();
-		let c = app.world_mut().spawn(_Marker).id();
+		let a = app.world_mut().spawn(_T).id();
+		let b = app.world_mut().spawn(_T).id();
+		let c = app.world_mut().spawn(_T).id();
 
 		app.world_mut()
-			.insert_resource(RootCollisions::<_Marker>::from([(a, HashSet::from([b]))]));
+			.insert_resource(RootCollisions::<_T>::from_buffer([(a, HashSet::from([b]))]));
 		app.world_mut()
-			.run_system_once(move |mut sender: UpdateRootCollisions<_Marker>| {
+			.run_system_once(move |mut sender: UpdateRootCollisions<_T>| {
 				sender.push_interacting_colliders(a, c);
 			})?;
 
 		assert_eq!(
-			&RootCollisions::from([(a, HashSet::from([b, c]))]),
-			app.world().resource::<RootCollisions<_Marker>>()
+			&RootCollisions::from_buffer([(a, HashSet::from([b, c]))]),
+			app.world().resource::<RootCollisions<_T>>()
 		);
 		Ok(())
 	}

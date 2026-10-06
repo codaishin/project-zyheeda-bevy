@@ -43,7 +43,10 @@ use crate::{
 	events::impact_event::ImpactEvent,
 	messages::RayEvent,
 	observers::{skill_prefab::SkillPrefab, update_blockers::UpdateBlockersObserver},
-	resources::{root_collisions::RootCollisions, world_camera::WorldCamera},
+	resources::{
+		root_collisions::{RootCollisions, RootCollisionsParam},
+		world_camera::WorldCamera,
+	},
 	system_params::{
 		config::ConfigParamMut,
 		interactive::InteractiveParam,
@@ -263,20 +266,20 @@ where
 				(
 					// Collect physical collections
 					(
-						RootCollisions::<Physical>::clear,
 						FixedPostUpdate::delta
 							.pipe(CastRays::to_prevent_tunneling)
 							.pipe(CastRays::execute)
 							.pipe(OnError::log),
 						UpdateRootCollisions::<Physical>::prevent_tunneling,
 						UpdateRootCollisions::<Physical>::push_ongoing_collisions,
-						RootCollisions::<Physical>::emit_projectile_impacts,
+						RootCollisionsParam::<Physical>::rotate,
+						RootCollisionsParam::<Physical>::emit_projectile_impacts,
 					)
 						.chain(),
 					// Collect interactive collisions
 					(
-						RootCollisions::<Interactive>::clear,
 						UpdateRootCollisions::<Interactive>::push_ongoing_collisions,
+						RootCollisionsParam::<Interactive>::rotate,
 					)
 						.chain(),
 				)
@@ -343,7 +346,7 @@ impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependenci
 }
 
 impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies> {
-	type TInteractions = InteractiveParam<'static>;
+	type TInteractions = InteractiveParam<'static, 'static>;
 }
 
 impl<TDependencies> HandlesImpacts for PhysicsPlugin<TDependencies> {

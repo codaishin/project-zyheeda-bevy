@@ -66,7 +66,7 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
-		app.insert_resource(RootCollisions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from_ongoing([(
 			blocker,
 			HashSet::from([fragile]),
 		)]));
@@ -90,7 +90,7 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Physical]))
 			.id();
-		app.insert_resource(RootCollisions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from_ongoing([(
 			blocker,
 			HashSet::from([fragile]),
 		)]));
@@ -113,7 +113,7 @@ mod tests {
 			.world_mut()
 			.spawn(BlockerTypes::from([Blocker::Force]))
 			.id();
-		app.insert_resource(RootCollisions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from_ongoing([(
 			blocker,
 			HashSet::from([fragile]),
 		)]));
