@@ -6,6 +6,7 @@ pub use crate::{
 		ring_buffer::RingBuffer,
 		sorted::Sorted,
 	},
+	conf::fps::*,
 	conversion::is_not::IsNot,
 	errors::*,
 	macros::{all::*, any::*, hash_map::hash_map, none::*, write_iter::*},

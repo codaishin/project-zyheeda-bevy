@@ -2960,6 +2960,7 @@ version = "0.1.0"
 dependencies = [
  "bevy",
  "common",
+ "zyheeda_core",
 ]
 
 [[package]]
