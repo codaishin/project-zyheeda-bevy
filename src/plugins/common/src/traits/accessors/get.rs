@@ -37,12 +37,34 @@ pub trait ContextChanged {
 	fn context_changed(&self) -> bool;
 }
 
+/// Get a specific context.
+///
+/// Intended to communicate components/resources across plugin boundaries for consumers running
+/// within the variable update lifecycle:
+///
+/// - [`First`]
+/// - [`PreUpdate`]
+/// - [`Update`]
+/// - [`PostUpdate`]
+/// - [`Last`]
 pub trait GetContext<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>: ContextChanged;
 
 	fn get_context<'ctx>(param: &'ctx SystemParamItem<Self>, key: TKey) -> Self::TContext<'ctx>;
 }
 
+/// Try to get a specific context. Used when lookup misses are benign expected scenarios.
+///
+/// Used when lookup misses are benign and expected scenarios.
+///
+/// Intended to communicate components/resources across plugin boundaries for consumers running
+/// within the variable update lifecycle:
+///
+/// - [`First`]
+/// - [`PreUpdate`]
+/// - [`Update`]
+/// - [`PostUpdate`]
+/// - [`Last`]
 pub trait TryGetContext<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>: ContextChanged;
 
@@ -60,6 +82,16 @@ pub trait GetMut<TKey> {
 	fn get_mut(&mut self, key: &TKey) -> Option<Self::TValue<'_>>;
 }
 
+/// Get a specific mutable context.
+///
+/// Intended to communicate components/resources across plugin boundaries for consumers running
+/// within the variable update lifecycle:
+///
+/// - [`First`]
+/// - [`PreUpdate`]
+/// - [`Update`]
+/// - [`PostUpdate`]
+/// - [`Last`]
 pub trait GetContextMut<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>;
 
@@ -69,6 +101,18 @@ pub trait GetContextMut<TKey>: SystemParam + ThreadSafe {
 	) -> Self::TContext<'ctx>;
 }
 
+/// Try to get a specific mutable context.
+///
+/// Used when lookup misses are benign and expected scenarios.
+///
+/// Intended to communicate components/resources across plugin boundaries for consumers running
+/// within the variable update lifecycle:
+///
+/// - [`First`]
+/// - [`PreUpdate`]
+/// - [`Update`]
+/// - [`PostUpdate`]
+/// - [`Last`]
 pub trait TryGetContextMut<TKey>: SystemParam + ThreadSafe {
 	type TContext<'ctx>;
 
