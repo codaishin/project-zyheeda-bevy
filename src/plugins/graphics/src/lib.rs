@@ -15,7 +15,7 @@ use crate::{
 		model_render_layers::ModelRenderLayers,
 		only_depth_prepass::OnlyDepthPrepass,
 		post_process_camera::PostProcessCamera,
-		roles::Player,
+		roles::{Enemy, Player},
 	},
 	materials::{
 		effect_material::EffectMaterial,
@@ -180,6 +180,7 @@ where
 			.copy_depth_texture::<AgentsPass>()
 			.copy_depth_texture::<OutlinePass>()
 			.add_prefab_observer::<Player, ()>()
+			.add_prefab_observer::<Enemy, ()>()
 			.add_prefab_observer::<WorldLight, ()>()
 			.add_prefab_observer::<LoS, ()>()
 			.add_systems(
