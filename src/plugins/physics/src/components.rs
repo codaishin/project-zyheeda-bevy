@@ -15,6 +15,7 @@ pub(crate) mod effects;
 pub(crate) mod ground_target;
 pub(crate) mod immobilized;
 pub(crate) mod impact_able;
+pub(crate) mod interactions_changed;
 pub(crate) mod lifetime;
 pub(crate) mod model;
 pub(crate) mod motion_controller;

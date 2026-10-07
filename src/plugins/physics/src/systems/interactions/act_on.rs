@@ -117,7 +117,7 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(RootCollisions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from_ongoing([(
 			entity,
 			HashSet::from([target]),
 		)]));
@@ -144,7 +144,7 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::default())
 			.id();
-		app.insert_resource(RootCollisions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from_ongoing([(
 			entity,
 			HashSet::from([target]),
 		)]));
@@ -175,7 +175,7 @@ mod tests {
 			.world_mut()
 			.spawn(OngoingEffects::<_Actor, _Target>::from([*TARGET]))
 			.id();
-		app.insert_resource(RootCollisions::<Physical>::from([(
+		app.insert_resource(RootCollisions::<Physical>::from_ongoing([(
 			entity,
 			HashSet::from([target]),
 		)]));
@@ -217,7 +217,7 @@ mod tests {
 				))
 				.id();
 			app.world_mut().spawn(not_interacting);
-			app.insert_resource(RootCollisions::<Physical>::from([(
+			app.insert_resource(RootCollisions::<Physical>::from_ongoing([(
 				entity,
 				HashSet::from(interacting_entities),
 			)]));
@@ -283,7 +283,7 @@ mod tests {
 					}),
 				))
 				.id();
-			app.insert_resource(RootCollisions::<Physical>::from([(
+			app.insert_resource(RootCollisions::<Physical>::from_ongoing([(
 				entity,
 				HashSet::from(interacting_entities),
 			)]));

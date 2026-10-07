@@ -1,15 +1,15 @@
 use crate::{
 	components::{collision_domains::Physical, impact_able::ImpactAble, projectile::Projectile},
 	events::impact_event::ImpactEvent,
-	resources::root_collisions::RootCollisions,
+	resources::root_collisions::{RootCollisions, RootCollisionsParam},
 };
 use bevy::prelude::*;
 use common::prelude::*;
 
-impl RootCollisions<Physical> {
+impl RootCollisionsParam<'static, 'static, Physical> {
 	pub(crate) fn emit_projectile_impacts(
 		mut commands: ZyheedaCommands,
-		root_collisions: Res<Self>,
+		root_collisions: Res<RootCollisions<Physical>>,
 		can_be_impacted: Query<(), With<ImpactAble>>,
 		projectiles: Query<(Entity, &GlobalTransform, &Projectile)>,
 	) {
@@ -37,6 +37,8 @@ impl RootCollisions<Physical> {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use crate::resources::root_collisions::RootCollisionsParam;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use common::{tools::Units, vec_not_nan};
 	use testing::SingleThreadedApp;
 
@@ -53,13 +55,20 @@ mod tests {
 		app.init_resource::<_Record>();
 		app.init_resource::<RootCollisions<Physical>>();
 		app.add_observer(record_impacts);
-		app.add_systems(Update, RootCollisions::<Physical>::emit_projectile_impacts);
+		app.add_systems(
+			Update,
+			(
+				RootCollisionsParam::<Physical>::rotate,
+				RootCollisionsParam::<Physical>::emit_projectile_impacts,
+			)
+				.chain(),
+		);
 
 		app
 	}
 
 	#[test]
-	fn set_impact_with_projectile_leading_edge() {
+	fn set_impact_with_projectile_leading_edge() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let impacted = app.world_mut().spawn(ImpactAble).id();
 		let projectile = app
@@ -72,8 +81,9 @@ mod tests {
 			))
 			.id();
 		app.world_mut()
-			.resource_mut::<RootCollisions<Physical>>()
-			.update(projectile, [impacted]);
+			.run_system_once(move |mut p: RootCollisionsParam<Physical>| {
+				p.update(projectile, [impacted]);
+			})?;
 
 		app.update();
 
@@ -84,10 +94,12 @@ mod tests {
 			}]),
 			app.world().resource::<_Record>(),
 		);
+
+		Ok(())
 	}
 
 	#[test]
-	fn ignore_non_impact_able() {
+	fn ignore_non_impact_able() -> Result<(), RunSystemError> {
 		let mut app = setup();
 		let impacted = app.world_mut().spawn_empty().id();
 		let projectile = app
@@ -100,11 +112,14 @@ mod tests {
 			))
 			.id();
 		app.world_mut()
-			.resource_mut::<RootCollisions<Physical>>()
-			.update(projectile, [impacted]);
+			.run_system_once(move |mut p: RootCollisionsParam<Physical>| {
+				p.update(projectile, [impacted]);
+			})?;
 
 		app.update();
 
 		assert_eq!(&_Record(vec![]), app.world().resource::<_Record>(),);
+
+		Ok(())
 	}
 }

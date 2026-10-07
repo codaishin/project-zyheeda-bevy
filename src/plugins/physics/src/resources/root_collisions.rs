@@ -1,4 +1,9 @@
-use bevy::prelude::*;
+use crate::components::interactions_changed::InteractionsChanged;
+use bevy::{ecs::system::SystemParam, prelude::*};
+use common::{
+	traits::{accessors::get::TryApplyOn, thread_safe::ThreadSafe},
+	zyheeda_commands::ZyheedaCommands,
+};
 use std::{
 	collections::{HashMap, HashSet, hash_map::Iter},
 	marker::PhantomData,
@@ -10,39 +15,84 @@ static EMPTY: LazyLock<HashSet<Entity>> = LazyLock::new(HashSet::default);
 #[derive(Resource, Debug, PartialEq)]
 pub(crate) struct RootCollisions<T> {
 	ongoing: HashMap<Entity, HashSet<Entity>>,
-	old: HashMap<Entity, HashSet<Entity>>,
+	buffer: HashMap<Entity, HashSet<Entity>>,
 	_p: PhantomData<T>,
 }
 
 impl<T> RootCollisions<T> {
-	pub(crate) fn update<TCollisions>(&mut self, entity: Entity, collisions: TCollisions)
+	#[cfg(test)]
+	pub(crate) fn from_ongoing<TFrom>(ongoing: TFrom) -> Self
 	where
-		TCollisions: IntoIterator<Item = Entity>,
+		TFrom: Into<HashMap<Entity, HashSet<Entity>>>,
 	{
-		let ongoing = self.ongoing.entry(entity).or_default();
+		let ongoing = ongoing.into();
 
-		ongoing.extend(collisions);
+		Self {
+			ongoing,
+			..default()
+		}
 	}
 
-	pub(crate) fn rotate(&mut self) {
-		std::mem::swap(&mut self.ongoing, &mut self.old);
+	#[cfg(test)]
+	pub(crate) fn from_buffer<TFrom>(buffer: TFrom) -> Self
+	where
+		TFrom: Into<HashMap<Entity, HashSet<Entity>>>,
+	{
+		let buffer = buffer.into();
 
-		self.ongoing.clear();
+		Self {
+			buffer,
+			..default()
+		}
 	}
 
 	pub(crate) fn ongoing(&self, entity: &Entity) -> &'_ HashSet<Entity> {
 		self.ongoing.get(entity).unwrap_or(&*EMPTY)
 	}
 
-	pub(crate) fn just_stopped(&self, entity: &Entity) -> HashSet<Entity> {
-		let ongoing = self.ongoing.get(entity).unwrap_or(&*EMPTY);
-		let old = self.old.get(entity).unwrap_or(&*EMPTY);
-
-		HashSet::from_iter(old.iter().filter(|old| !ongoing.contains(old)).copied())
+	#[cfg(test)]
+	pub(crate) fn buffer(&self, entity: &Entity) -> &'_ HashSet<Entity> {
+		self.buffer.get(entity).unwrap_or(&*EMPTY)
 	}
 
-	pub(crate) fn changed(&self, entity: &Entity) -> bool {
-		self.old.get(entity) != self.ongoing.get(entity)
+	fn update_buffer<TCollisions>(
+		&mut self,
+		entity: Entity,
+		collisions: TCollisions,
+	) -> NewCollisions
+	where
+		TCollisions: IntoIterator<Item = Entity>,
+	{
+		let ongoing = self.ongoing.get(&entity).unwrap_or(&*EMPTY);
+		let buffer = self.buffer.entry(entity).or_default();
+		let mut added_collisions = false;
+
+		for collision in collisions {
+			if !ongoing.contains(&collision) {
+				added_collisions = true;
+			}
+			buffer.insert(collision);
+		}
+
+		NewCollisions(added_collisions)
+	}
+
+	fn rotate(&mut self) -> RemovedCollisions {
+		let mut removed_collisions = HashSet::from([]);
+		for (entity, ongoing) in &self.ongoing {
+			let buffer = self.buffer.get(entity).unwrap_or(&*EMPTY);
+			if buffer == ongoing {
+				continue;
+			}
+
+			removed_collisions.insert(*entity);
+		}
+
+		std::mem::swap(&mut self.ongoing, &mut self.buffer);
+
+		self.buffer.clear();
+
+		RemovedCollisions(removed_collisions.into_iter())
 	}
 }
 
@@ -50,22 +100,8 @@ impl<T> Default for RootCollisions<T> {
 	fn default() -> Self {
 		Self {
 			ongoing: HashMap::default(),
-			old: HashMap::default(),
+			buffer: HashMap::default(),
 			_p: PhantomData,
-		}
-	}
-}
-
-impl<T, TFrom> From<TFrom> for RootCollisions<T>
-where
-	TFrom: Into<HashMap<Entity, HashSet<Entity>>>,
-{
-	fn from(ongoing: TFrom) -> Self {
-		let ongoing = ongoing.into();
-
-		Self {
-			ongoing,
-			..default()
 		}
 	}
 }
@@ -79,140 +115,261 @@ impl<'a, T> IntoIterator for &'a RootCollisions<T> {
 	}
 }
 
+#[derive(SystemParam)]
+pub(crate) struct RootCollisionsParam<'w, 's, T>
+where
+	T: ThreadSafe,
+{
+	root_collisions: ResMut<'w, RootCollisions<T>>,
+	commands: ZyheedaCommands<'w, 's>,
+}
+
+impl<'w, 's, T> RootCollisionsParam<'w, 's, T>
+where
+	T: ThreadSafe,
+{
+	pub(crate) fn update<TCollisions>(&mut self, entity: Entity, collisions: TCollisions)
+	where
+		TCollisions: IntoIterator<Item = Entity>,
+	{
+		if self.root_collisions.update_buffer(entity, collisions) == NewCollisions(true) {
+			self.commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(InteractionsChanged);
+			});
+		}
+	}
+
+	pub(crate) fn rotate(mut p: RootCollisionsParam<T>) {
+		for removed_collisions in p.root_collisions.rotate() {
+			p.commands.try_apply_on(&removed_collisions, |mut e| {
+				e.try_insert(InteractionsChanged);
+			});
+		}
+	}
+}
+
+#[derive(PartialEq)]
+struct NewCollisions(bool);
+
+struct RemovedCollisions(std::collections::hash_set::IntoIter<Entity>);
+
+impl Iterator for RemovedCollisions {
+	type Item = Entity;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.0.next()
+	}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use testing::fake_entity;
+	use crate::components::interactions_changed::InteractionsChanged;
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
+	use testing::{SingleThreadedApp, fake_entity};
 
-	#[test]
-	fn add_interactions() {
-		let mut interactions = RootCollisions::<()>::default();
+	fn setup(root_collisions: RootCollisions<()>) -> App {
+		let mut app = App::new().single_threaded(Update);
 
-		interactions.update(fake_entity!(1), [fake_entity!(2)]);
+		app.insert_resource(root_collisions);
 
-		assert_eq!(
-			(&HashSet::from([fake_entity!(2)]), true),
-			(
-				interactions.ongoing(&fake_entity!(1)),
-				interactions.changed(&fake_entity!(1))
-			)
-		);
+		app
 	}
 
 	#[test]
-	fn clear() {
-		let mut interactions = RootCollisions::<()>::default();
+	fn add_interactions_to_new() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
 
-		interactions.update(fake_entity!(1), [fake_entity!(2)]);
-		interactions.rotate();
+		app.world_mut()
+			.run_system_once(move |mut p: RootCollisionsParam<()>| {
+				p.update(entity, [fake_entity!(2)]);
+			})?;
 
 		assert_eq!(
-			(&HashSet::from([]), true, false),
+			(&HashSet::from([fake_entity!(2)]), &HashSet::from([])),
 			(
-				interactions.ongoing(&fake_entity!(1)),
-				interactions.changed(&fake_entity!(1)),
-				interactions.changed(&fake_entity!(3)),
+				app.world().resource::<RootCollisions<()>>().buffer(&entity),
+				app.world()
+					.resource::<RootCollisions<()>>()
+					.ongoing(&entity),
 			)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn after_rotate_unchanged() {
-		let mut interactions = RootCollisions::<()>::default();
+	fn add_interactions_when_already_present() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut()
+			.insert_resource(RootCollisions::<()>::from_ongoing([(
+				entity,
+				HashSet::from([fake_entity!(2)]),
+			)]));
 
-		interactions.update(fake_entity!(1), [fake_entity!(2)]);
-		interactions.rotate();
-		interactions.update(fake_entity!(1), [fake_entity!(2)]);
+		app.world_mut()
+			.run_system_once(move |mut p: RootCollisionsParam<()>| {
+				p.update(entity, [fake_entity!(2)]);
+			})?;
 
 		assert_eq!(
-			(&HashSet::from([fake_entity!(2)]), false),
 			(
-				interactions.ongoing(&fake_entity!(1)),
-				interactions.changed(&fake_entity!(1))
+				&HashSet::from([fake_entity!(2)]),
+				&HashSet::from([fake_entity!(2)]),
+			),
+			(
+				app.world().resource::<RootCollisions<()>>().buffer(&entity),
+				app.world()
+					.resource::<RootCollisions<()>>()
+					.ongoing(&entity),
 			)
 		);
+		Ok(())
 	}
 
 	#[test]
-	fn after_rotate_changed() {
-		let mut interactions = RootCollisions::<()>::default();
+	fn mark_new_as_changed() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
 
-		interactions.update(fake_entity!(1), [fake_entity!(2)]);
-		interactions.rotate();
-		interactions.update(fake_entity!(1), [fake_entity!(3)]);
+		app.world_mut()
+			.run_system_once(move |mut p: RootCollisionsParam<()>| {
+				p.update(entity, [fake_entity!(2)]);
+			})?;
 
-		assert_eq!(
-			(&HashSet::from([fake_entity!(3)]), true),
-			(
-				interactions.ongoing(&fake_entity!(1)),
-				interactions.changed(&fake_entity!(1))
-			)
-		);
+		assert!(app.world().entity(entity).contains::<InteractionsChanged>());
+		Ok(())
 	}
 
 	#[test]
-	fn after_rotate_changed_if_entities_of_old_missing() {
-		let mut interactions = RootCollisions::<()>::default();
+	fn mark_new_as_changed_among_several_unchanged() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut().insert_resource(RootCollisions::<()> {
+			ongoing: HashMap::from([(entity, HashSet::from([fake_entity!(1), fake_entity!(3)]))]),
+			..default()
+		});
 
-		interactions.update(fake_entity!(1), [fake_entity!(2), fake_entity!(3)]);
-		interactions.rotate();
-		interactions.update(fake_entity!(1), [fake_entity!(2)]);
+		app.world_mut()
+			.run_system_once(move |mut p: RootCollisionsParam<()>| {
+				p.update(entity, [fake_entity!(2), fake_entity!(1)]);
+			})?;
 
-		assert_eq!(
-			(&HashSet::from([fake_entity!(2)]), true),
-			(
-				interactions.ongoing(&fake_entity!(1)),
-				interactions.changed(&fake_entity!(1))
-			)
-		);
+		assert!(app.world().entity(entity).contains::<InteractionsChanged>());
+		Ok(())
 	}
 
 	#[test]
-	fn after_rotate_unchanged_if_entities_old_and_ongoing_match() {
-		let mut interactions = RootCollisions::<()>::default();
+	fn do_not_mark_non_new_as_changed() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut().insert_resource(RootCollisions::<()> {
+			ongoing: HashMap::from([(entity, HashSet::from([fake_entity!(2)]))]),
+			..default()
+		});
 
-		interactions.update(fake_entity!(1), [fake_entity!(2), fake_entity!(3)]);
-		interactions.rotate();
-		interactions.update(fake_entity!(1), [fake_entity!(2)]);
-		interactions.update(fake_entity!(1), [fake_entity!(3)]);
+		app.world_mut()
+			.run_system_once(move |mut p: RootCollisionsParam<()>| {
+				p.update(entity, [fake_entity!(2)]);
+			})?;
 
-		assert_eq!(
-			(&HashSet::from([fake_entity!(2), fake_entity!(3)]), false),
-			(
-				interactions.ongoing(&fake_entity!(1)),
-				interactions.changed(&fake_entity!(1))
-			)
-		);
+		assert!(!app.world().entity(entity).contains::<InteractionsChanged>());
+		Ok(())
 	}
 
 	#[test]
-	fn iterate_just_stopped() {
-		let mut interactions = RootCollisions::<()>::default();
+	fn mark_non_new_as_changed_when_interacting_with_new() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut()
+			.insert_resource(RootCollisions::<()>::from_ongoing([(
+				entity,
+				HashSet::from([fake_entity!(2)]),
+			)]));
 
-		interactions.update(
-			fake_entity!(1),
-			[
-				fake_entity!(2),
-				fake_entity!(3),
-				fake_entity!(4),
-				fake_entity!(5),
-				fake_entity!(6),
-			],
-		);
-		interactions.rotate();
-		interactions.update(
-			fake_entity!(1),
-			[
-				fake_entity!(2),
-				fake_entity!(3),
-				fake_entity!(5),
-				fake_entity!(6),
-			],
-		);
+		app.world_mut()
+			.run_system_once(move |mut p: RootCollisionsParam<()>| {
+				p.update(entity, [fake_entity!(3)]);
+			})?;
+
+		assert!(app.world().entity(entity).contains::<InteractionsChanged>());
+		Ok(())
+	}
+
+	#[test]
+	fn rotate() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut().insert_resource(RootCollisions::<()> {
+			buffer: HashMap::from([(entity, HashSet::from([fake_entity!(2)]))]),
+			ongoing: HashMap::from([(entity, HashSet::from([fake_entity!(1)]))]),
+			..default()
+		});
+
+		app.world_mut()
+			.run_system_once(RootCollisionsParam::<()>::rotate)?;
 
 		assert_eq!(
-			HashSet::from([fake_entity!(4)]),
-			interactions.just_stopped(&fake_entity!(1)),
+			(&HashSet::from([]), &HashSet::from([fake_entity!(2)])),
+			(
+				app.world().resource::<RootCollisions<()>>().buffer(&entity),
+				app.world()
+					.resource::<RootCollisions<()>>()
+					.ongoing(&entity),
+			)
 		);
+		Ok(())
+	}
+
+	#[test]
+	fn mark_changed_on_rotate() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut().insert_resource(RootCollisions::<()> {
+			buffer: HashMap::from([(entity, HashSet::from([fake_entity!(2)]))]),
+			ongoing: HashMap::from([(entity, HashSet::from([fake_entity!(1)]))]),
+			..default()
+		});
+
+		app.world_mut()
+			.run_system_once(RootCollisionsParam::<()>::rotate)?;
+
+		assert!(app.world().entity(entity).contains::<InteractionsChanged>());
+		Ok(())
+	}
+
+	#[test]
+	fn do_not_mark_changed_when_interactions_match() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut().insert_resource(RootCollisions::<()> {
+			buffer: HashMap::from([(entity, HashSet::from([fake_entity!(1)]))]),
+			ongoing: HashMap::from([(entity, HashSet::from([fake_entity!(1)]))]),
+			..default()
+		});
+
+		app.world_mut()
+			.run_system_once(RootCollisionsParam::<()>::rotate)?;
+
+		assert!(!app.world().entity(entity).contains::<InteractionsChanged>());
+		Ok(())
+	}
+
+	#[test]
+	fn mark_changed_when_interactions_removed() -> Result<(), RunSystemError> {
+		let mut app = setup(RootCollisions::<()>::default());
+		let entity = app.world_mut().spawn_empty().id();
+		app.world_mut()
+			.insert_resource(RootCollisions::<()>::from_ongoing([(
+				entity,
+				HashSet::from([fake_entity!(1)]),
+			)]));
+
+		app.world_mut()
+			.run_system_once(RootCollisionsParam::<()>::rotate)?;
+
+		assert!(app.world().entity(entity).contains::<InteractionsChanged>());
+		Ok(())
 	}
 }

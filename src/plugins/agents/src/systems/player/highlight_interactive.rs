@@ -1,8 +1,5 @@
 use crate::components::player::Player;
-use bevy::{
-	ecs::system::{StaticSystemParam, SystemParam},
-	prelude::*,
-};
+use bevy::{ecs::system::StaticSystemParam, platform::collections::HashSet, prelude::*};
 use common::prelude::*;
 
 impl Player {
@@ -10,11 +7,10 @@ impl Player {
 		players: Query<Entity, With<Player>>,
 		physics: StaticSystemParam<TPhysics>,
 		mut graphics: StaticSystemParam<TGraphics>,
+		mut interacting: Local<HashSet<Entity>>,
 	) where
-		TPhysics: SystemParam
-			+ for<'c> GetContext<InteractionsOngoing, TContext<'c>: IterInteractions>
-			+ for<'c> GetContext<InteractionsJustStopped, TContext<'c>: IterInteractions>,
-		TGraphics: SystemParam + for<'c> TryGetContextMut<Visual, TContext<'c>: SetHighlight>,
+		TPhysics: for<'c> GetContext<InteractionsOngoing, TContext<'c>: IterInteractions>,
+		TGraphics: for<'c> TryGetContextMut<Visual, TContext<'c>: SetHighlight>,
 	{
 		let Ok(player) = players.single() else {
 			return;
@@ -23,29 +19,31 @@ impl Player {
 		let ongoing = InteractionsOngoing { entity: player };
 		let ongoing = TPhysics::get_context(&physics, ongoing);
 
-		if ongoing.context_changed() {
-			for entity in ongoing.iter_interactions() {
-				let key = Visual { entity };
-				let Some(mut ctx) = TGraphics::try_get_context_mut(&mut graphics, key) else {
-					continue;
-				};
-
-				ctx.set_highlight(Highlight::Interacting);
-			}
+		if !ongoing.context_changed() {
+			return;
 		}
 
-		let stopped = InteractionsJustStopped { entity: player };
-		let stopped = TPhysics::get_context(&physics, stopped);
+		let ongoing = ongoing.iter_interactions().collect::<HashSet<_>>();
 
-		if stopped.context_changed() {
-			for entity in stopped.iter_interactions() {
-				let key = Visual { entity };
-				let Some(mut ctx) = TGraphics::try_get_context_mut(&mut graphics, key) else {
-					continue;
-				};
-
-				ctx.set_highlight(Highlight::None);
+		interacting.retain(|entity| {
+			if ongoing.contains(entity) {
+				return true;
 			}
+
+			let key = Visual { entity: *entity };
+			if let Some(mut ctx) = TGraphics::try_get_context_mut(&mut graphics, key) {
+				ctx.set_highlight(Highlight::None);
+			};
+
+			false
+		});
+
+		for entity in ongoing {
+			let key = Visual { entity };
+			if let Some(mut ctx) = TGraphics::try_get_context_mut(&mut graphics, key) {
+				ctx.set_highlight(Highlight::Interacting);
+				interacting.insert(entity);
+			};
 		}
 	}
 }
@@ -82,29 +80,10 @@ mod tests {
 		}
 	}
 
-	impl GetContext<InteractionsJustStopped> for _InteractionsParam<'static> {
-		type TContext<'ctx> = _InteractiveCtx;
-
-		fn get_context<'ctx>(
-			param: &'ctx SystemParamItem<Self>,
-			InteractionsJustStopped { entity }: InteractionsJustStopped,
-		) -> Self::TContext<'ctx> {
-			match param.interactions.0.get(&entity).cloned() {
-				Some(entry) => _InteractiveCtx {
-					interactions: entry.stopped,
-					changed: entry.stopped_changed,
-				},
-				None => panic!("NOT CONTEXT SET UP FOR {entity}"),
-			}
-		}
-	}
-
 	#[derive(Clone, Default)]
 	struct _InteractiveEntry {
 		ongoing: Vec<Entity>,
 		ongoing_changed: bool,
-		stopped: Vec<Entity>,
-		stopped_changed: bool,
 	}
 
 	#[derive(Clone)]
@@ -170,7 +149,6 @@ mod tests {
 				_InteractiveEntry {
 					ongoing: vec![interactive],
 					ongoing_changed: true,
-					..default()
 				},
 			)])));
 
@@ -192,7 +170,6 @@ mod tests {
 				_InteractiveEntry {
 					ongoing: vec![interactive],
 					ongoing_changed: true,
-					..default()
 				},
 			)])));
 
@@ -202,7 +179,6 @@ mod tests {
 				_InteractiveEntry {
 					ongoing: vec![interactive],
 					ongoing_changed: false,
-					..default()
 				},
 			)])));
 			app.world_mut()
@@ -226,7 +202,6 @@ mod tests {
 				_InteractiveEntry {
 					ongoing: vec![interactive],
 					ongoing_changed: true,
-					..default()
 				},
 			)])));
 
@@ -236,7 +211,6 @@ mod tests {
 				_InteractiveEntry {
 					ongoing: vec![interactive],
 					ongoing_changed: true,
-					..default()
 				},
 			)])));
 			app.world_mut()
@@ -265,12 +239,19 @@ mod tests {
 			app.insert_resource(_Interactions(HashMap::from([(
 				player,
 				_InteractiveEntry {
-					stopped: vec![interactive],
-					stopped_changed: true,
-					..default()
+					ongoing: vec![interactive],
+					ongoing_changed: true,
 				},
 			)])));
 
+			app.update();
+			app.insert_resource(_Interactions(HashMap::from([(
+				player,
+				_InteractiveEntry {
+					ongoing: vec![],
+					ongoing_changed: true,
+				},
+			)])));
 			app.update();
 
 			assert_eq!(
@@ -280,7 +261,7 @@ mod tests {
 		}
 
 		#[test]
-		fn act_only_once() {
+		fn do_nothing_if_not_changed() {
 			let mut app = setup();
 			let interactive = app
 				.world_mut()
@@ -290,9 +271,8 @@ mod tests {
 			app.insert_resource(_Interactions(HashMap::from([(
 				player,
 				_InteractiveEntry {
-					stopped: vec![interactive],
-					stopped_changed: true,
-					..default()
+					ongoing: vec![interactive],
+					ongoing_changed: true,
 				},
 			)])));
 
@@ -300,55 +280,14 @@ mod tests {
 			app.insert_resource(_Interactions(HashMap::from([(
 				player,
 				_InteractiveEntry {
-					stopped: vec![interactive],
-					stopped_changed: false,
-					..default()
+					ongoing: vec![],
+					ongoing_changed: false,
 				},
 			)])));
-			app.world_mut()
-				.entity_mut(interactive)
-				.insert(_Highlight(Highlight::Interacting));
 			app.update();
 
 			assert_eq!(
 				Some(&_Highlight(Highlight::Interacting)),
-				app.world().entity(interactive).get::<_Highlight>(),
-			);
-		}
-
-		#[test]
-		fn act_again_if_interactions_changed() {
-			let mut app = setup();
-			let interactive = app
-				.world_mut()
-				.spawn(_Highlight(Highlight::Interacting))
-				.id();
-			let player = app.world_mut().spawn(Player).id();
-			app.insert_resource(_Interactions(HashMap::from([(
-				player,
-				_InteractiveEntry {
-					stopped: vec![interactive],
-					stopped_changed: true,
-					..default()
-				},
-			)])));
-
-			app.update();
-			app.insert_resource(_Interactions(HashMap::from([(
-				player,
-				_InteractiveEntry {
-					stopped: vec![interactive],
-					stopped_changed: true,
-					..default()
-				},
-			)])));
-			app.world_mut()
-				.entity_mut(interactive)
-				.insert(_Highlight(Highlight::Interacting));
-			app.update();
-
-			assert_eq!(
-				Some(&_Highlight(Highlight::None)),
 				app.world().entity(interactive).get::<_Highlight>(),
 			);
 		}

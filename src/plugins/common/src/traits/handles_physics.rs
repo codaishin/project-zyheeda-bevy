@@ -121,9 +121,7 @@ impl TranslationOffsets {
 }
 
 pub trait HandlesInteractiveDetection {
-	type TInteractions: SystemParam
-		+ for<'c> GetContext<InteractionsOngoing, TContext<'c>: IterInteractions>
-		+ for<'c> GetContext<InteractionsJustStopped, TContext<'c>: IterInteractions>;
+	type TInteractions: for<'c> GetContext<InteractionsOngoing, TContext<'c>: IterInteractions>;
 }
 
 pub trait IterInteractions {
@@ -150,11 +148,6 @@ where
 
 #[derive(EntityKey)]
 pub struct InteractionsOngoing {
-	pub entity: Entity,
-}
-
-#[derive(EntityKey)]
-pub struct InteractionsJustStopped {
 	pub entity: Entity,
 }
 

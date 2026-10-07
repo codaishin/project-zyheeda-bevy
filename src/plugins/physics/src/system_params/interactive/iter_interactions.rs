@@ -19,7 +19,7 @@ mod tests {
 	use super::*;
 	use crate::{
 		components::{collider::ColliderOf, collision_domains::Interactive},
-		resources::root_collisions::RootCollisions,
+		resources::root_collisions::{RootCollisions, RootCollisionsParam},
 		system_params::{
 			interactive::InteractiveParam,
 			update_root_collisions::UpdateRootCollisions,
@@ -39,8 +39,8 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				RootCollisions::<Interactive>::clear,
 				UpdateRootCollisions::<Interactive>::push_ongoing_collisions,
+				RootCollisionsParam::<Interactive>::rotate,
 			)
 				.chain(),
 		);

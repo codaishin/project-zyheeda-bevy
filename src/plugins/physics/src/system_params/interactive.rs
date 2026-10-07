@@ -1,8 +1,7 @@
 mod iter_interactions;
-mod iter_just_stopped;
 
 use crate::{
-	components::collision_domains::Interactive,
+	components::{collision_domains::Interactive, interactions_changed::InteractionsChanged},
 	resources::root_collisions::RootCollisions,
 };
 use bevy::{
@@ -13,11 +12,12 @@ use common::prelude::*;
 use std::collections::HashSet;
 
 #[derive(SystemParam, Debug)]
-pub struct InteractiveParam<'w> {
+pub struct InteractiveParam<'w, 's> {
 	root_interactions: Res<'w, RootCollisions<Interactive>>,
+	markers: Query<'w, 's, Ref<'static, InteractionsChanged>>,
 }
 
-impl GetContext<InteractionsOngoing> for InteractiveParam<'static> {
+impl GetContext<InteractionsOngoing> for InteractiveParam<'static, 'static> {
 	type TContext<'ctx> = InteractiveContext<'ctx>;
 
 	fn get_context<'ctx>(
@@ -25,44 +25,19 @@ impl GetContext<InteractionsOngoing> for InteractiveParam<'static> {
 		InteractionsOngoing { entity }: InteractionsOngoing,
 	) -> Self::TContext<'ctx> {
 		InteractiveContext {
-			changed: param.root_interactions.changed(&entity),
+			marker: param.markers.get(entity).ok(),
 			interactions: param.root_interactions.ongoing(&entity),
 		}
 	}
 }
 
-impl GetContext<InteractionsJustStopped> for InteractiveParam<'static> {
-	type TContext<'ctx> = JustStoppedInteractionsContext;
-
-	fn get_context<'ctx>(
-		param: &'ctx SystemParamItem<Self>,
-		InteractionsJustStopped { entity }: InteractionsJustStopped,
-	) -> Self::TContext<'ctx> {
-		JustStoppedInteractionsContext {
-			changed: param.root_interactions.changed(&entity),
-			just_stopped: param.root_interactions.just_stopped(&entity),
-		}
-	}
-}
-
 pub struct InteractiveContext<'ctx> {
-	changed: bool,
+	marker: Option<Ref<'ctx, InteractionsChanged>>,
 	interactions: &'ctx HashSet<Entity>,
 }
 
 impl ContextChanged for InteractiveContext<'_> {
 	fn context_changed(&self) -> bool {
-		self.changed
-	}
-}
-
-pub struct JustStoppedInteractionsContext {
-	changed: bool,
-	just_stopped: HashSet<Entity>,
-}
-
-impl ContextChanged for JustStoppedInteractionsContext {
-	fn context_changed(&self) -> bool {
-		self.changed
+		self.marker.map(|m| m.is_changed()).unwrap_or_default()
 	}
 }
