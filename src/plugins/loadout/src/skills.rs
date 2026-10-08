@@ -30,10 +30,7 @@ pub struct Skill {
 
 impl Display for Skill {
 	fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-		match &*self.token {
-			"" => write!(f, "Skill(<no token>)"),
-			name => write!(f, "Skill({name})"),
-		}
+		write!(f, "Skill({})", self.token)
 	}
 }
 

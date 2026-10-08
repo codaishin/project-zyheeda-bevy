@@ -120,9 +120,7 @@ mod tests {
 
 	impl Localize for _Localization {
 		fn localize(&self, token: &Token) -> LocalizationResult {
-			let token = &**token;
-
-			LocalizationResult::Ok(Localized::from(format!("Token: {token}")))
+			LocalizationResult::Ok(Localized::from(format!("Localized({token})")))
 		}
 	}
 
@@ -199,9 +197,12 @@ mod tests {
 	#[derive(Component, Debug, PartialEq)]
 	struct _ItemContent(Localized);
 
-	impl From<&str> for _ItemContent {
-		fn from(value: &str) -> Self {
-			Self(Localized::from(value))
+	impl<T> From<T> for _ItemContent
+	where
+		T: Into<Localized>,
+	{
+		fn from(value: T) -> Self {
+			Self(value.into())
 		}
 	}
 
@@ -411,7 +412,10 @@ mod tests {
 		let item_content = last_child_of!(app, item_node);
 
 		assert_eq!(
-			Some(&_ItemContent::from("Token: Content")),
+			Some(&_ItemContent::from(format!(
+				"Localized({})",
+				Token::from("Content")
+			))),
 			item_content.get::<_ItemContent>(),
 		);
 	}

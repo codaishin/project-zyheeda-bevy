@@ -9,11 +9,11 @@ impl Icon {
 	}
 }
 
-fn load_icon_image<TAssetServer>(mut server: ResMut<TAssetServer>, mut icons: Query<&mut Icon>)
+fn load_icon_image<TAssetServer>(mut server: ResMut<TAssetServer>, icons: Query<&mut Icon>)
 where
 	TAssetServer: LoadAsset + GetAssetLoadState + Resource<Mutability = Mutable>,
 {
-	for mut icon in &mut icons {
+	for mut icon in icons {
 		match icon.as_ref() {
 			Icon::ImagePath(path) => {
 				let path = path.clone();
