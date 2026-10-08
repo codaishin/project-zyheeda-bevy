@@ -4,8 +4,10 @@ use serde::Deserialize;
 use std::collections::HashSet;
 use zyheeda_core::prelude::*;
 
+use crate::traits::handles_localization::{Token, TokenItem};
+
 #[serde_model(no_default_deserialize)]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub struct UserInputCombination<const N: usize>(#[serde(with = "array_as_vec")] [ComboInput; N]);
 
 impl UserInputCombination<2> {
@@ -45,6 +47,20 @@ impl<'de, const N: usize> Deserialize<'de> for UserInputCombination<N> {
 
 		Self::try_from(combos)
 			.map_err(|_| serde::de::Error::custom("Encountered duplicate combo input keys"))
+	}
+}
+
+impl<const N: usize> From<UserInputCombination<N>> for Token {
+	fn from(UserInputCombination(combination): UserInputCombination<N>) -> Self {
+		let items = combination
+			.into_iter()
+			.map(|input| match input {
+				ComboInput::KeyCode(key_code) => TokenItem::from(key_code),
+				ComboInput::MouseButton(mouse_button) => TokenItem::from(mouse_button),
+			})
+			.intersperse_with(|| TokenItem::Raw(String::from(" , ")));
+
+		Token::from_iter(items)
 	}
 }
 
@@ -94,5 +110,25 @@ mod tests {
 	#[test_case(UserInputCombination::ROTATE_DEBUG_COLLIDERS; "rotate debug colliders")]
 	fn const_not_repeating<const N: usize>(UserInputCombination(inputs): UserInputCombination<N>) {
 		assert!(UserInputCombination::try_from(inputs).is_ok());
+	}
+
+	#[test]
+	fn token() -> Result<(), InputRepeated> {
+		let combo = UserInputCombination::try_from([
+			ComboInput::KeyCode(KeyCode::KeyA),
+			ComboInput::MouseButton(MouseButton::Right),
+		])?;
+
+		let token = Token::from(combo);
+
+		assert_eq!(
+			Token::from_iter([
+				TokenItem::from(KeyCode::KeyA),
+				TokenItem::Raw(String::from(" + ")),
+				TokenItem::from(MouseButton::Right),
+			]),
+			token
+		);
+		Ok(())
 	}
 }

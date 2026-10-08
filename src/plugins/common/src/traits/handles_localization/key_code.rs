@@ -1,10 +1,10 @@
-use super::Token;
+use crate::traits::handles_localization::TokenItem;
 use bevy::prelude::*;
 
-impl From<KeyCode> for Token {
+impl From<KeyCode> for TokenItem<String> {
 	fn from(value: KeyCode) -> Self {
 		let key = format!("{value:?}");
-		Token::from(format!("key-code-{}", camel_case_to_kebab(&key)))
+		TokenItem::Key(format!("key-code-{}", camel_case_to_kebab(&key)))
 	}
 }
 
@@ -44,6 +44,9 @@ mod tests {
 	#[test_case(KeyCode::Digit3, "key-code-digit-3"; "digit 3")]
 	#[test_case(KeyCode::F12, "key-code-f-12"; "F12")]
 	fn tokenize(key: KeyCode, token: &str) {
-		assert_eq!(Token::from(key), Token::from(token));
+		assert_eq!(
+			TokenItem::from(key),
+			TokenItem::<String>::Key(String::from(token))
+		);
 	}
 }
