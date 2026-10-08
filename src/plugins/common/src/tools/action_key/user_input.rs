@@ -5,18 +5,11 @@ use bevy::prelude::*;
 use macros::serde_model;
 use zyheeda_core::prelude::*;
 
-#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct UserInputSystem;
-
 #[serde_model]
 #[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum UserInput {
 	KeyCode(KeyCode),
 	MouseButton(MouseButton),
-}
-
-impl UserInput {
-	pub const SYSTEM: UserInputSystem = UserInputSystem;
 }
 
 impl From<UserInput> for Token {
