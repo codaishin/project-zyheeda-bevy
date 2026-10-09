@@ -70,10 +70,10 @@ mod tests {
 
 	impl Localize for _Localization {
 		fn localize(&self, token: &Token) -> LocalizationResult {
-			match &**token {
-				"A" => LocalizationResult::Ok(Localized::from("Token A")),
-				"B" => LocalizationResult::Ok(Localized::from("Token B")),
-				"C" => LocalizationResult::Ok(Localized::from("Token C")),
+			match token.items().next() {
+				Some(TokenItem::Key("A")) => LocalizationResult::Ok(Localized::from("Token A")),
+				Some(TokenItem::Key("B")) => LocalizationResult::Ok(Localized::from("Token B")),
+				Some(TokenItem::Key("C")) => LocalizationResult::Ok(Localized::from("Token C")),
 				_ => LocalizationResult::Error(token.failed()),
 			}
 		}

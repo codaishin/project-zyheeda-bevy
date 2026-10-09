@@ -79,7 +79,9 @@ mod tests {
 		let label = app.world_mut().spawn(UILabel(Token::from("my token")));
 
 		assert_eq!(
-			Some(&UILabel(Localized::from("my token"))),
+			Some(&UILabel(Localized::from(
+				Token::from("my token").to_string()
+			))),
 			label.get::<UILabel>(),
 		);
 	}

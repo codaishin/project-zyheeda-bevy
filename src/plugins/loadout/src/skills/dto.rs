@@ -17,7 +17,7 @@ use uuid::Uuid;
 #[derive(TypePath, Debug, PartialEq)]
 pub(crate) struct SkillDto {
 	id: Uuid,
-	token: String,
+	tokens: Vec<TokenItem<String>>,
 	cast_time: DurationInSeconds,
 	animation: Option<SkillAnimation>,
 	behavior: RunSkillBehaviorDto,
@@ -40,7 +40,7 @@ impl TryLoadFrom<SkillDto> for Skill {
 	) -> Result<Self, Self::TInstantiationError> {
 		Ok(Self {
 			id: SkillId(skill_data.id),
-			token: Token::from(skill_data.token),
+			token: Token::from_iter(skill_data.tokens),
 			cast_time: Duration::from(skill_data.cast_time),
 			animation: skill_data.animation,
 			behavior: RunSkillBehavior::from(skill_data.behavior),
@@ -57,7 +57,11 @@ impl From<Skill> for SkillDto {
 	fn from(skill: Skill) -> Self {
 		Self {
 			id: skill.id.0,
-			token: (*skill.token).to_owned(),
+			tokens: skill
+				.token
+				.into_iter()
+				.map(TokenItem::<String>::from_item)
+				.collect::<Vec<_>>(),
 			cast_time: DurationInSeconds::from(skill.cast_time),
 			animation: skill.animation,
 			behavior: RunSkillBehaviorDto::from(skill.behavior),

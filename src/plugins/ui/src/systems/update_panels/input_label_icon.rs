@@ -19,14 +19,20 @@ impl InputLabel {
 			let key_map = key_map.deref();
 
 			for (entity, label) in &labels {
-				commands.try_apply_on(&entity, |mut e| {
-					let key = key_map.get_input(label.key);
-					let token = Token::from(key);
-					let image_name = &*token;
-					let path = root.join(format!("{image_name}.png"));
-
-					e.try_insert((UILabel(token), Icon::ImagePath(path)));
+				let key = key_map.get_input(label.key);
+				let token = Token::from(key);
+				let keys = token.items().filter_map(|item| match item {
+					TokenItem::Key(key) => Some(key),
+					TokenItem::Raw(..) => None,
 				});
+
+				for key in keys {
+					commands.spawn((
+						ChildOf(entity),
+						UILabel(Token::from(key)),
+						Icon::ImagePath(root.join(format!("{key}.png"))),
+					));
+				}
 			}
 		}
 	}
@@ -42,7 +48,7 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::path::PathBuf;
-	use testing::{NestedMocks, SingleThreadedApp};
+	use testing::{NestedMocks, SingleThreadedApp, assert_children_count};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Input {
@@ -85,12 +91,16 @@ mod tests {
 
 		app.update();
 
-		let token = &*Token::from(UserInput::from(KeyCode::ArrowUp));
+		let token = Token::from(UserInput::from(KeyCode::ArrowUp));
+		let Some(TokenItem::Key(item)) = token.items().next() else {
+			panic!("FAULTY ASSUMPTION")
+		};
+		let [child] = assert_children_count!(1, app, id);
 		assert_eq!(
 			Some(&Icon::ImagePath(
-				PathBuf::from("icon/root/path").join(format!("{token}.png"))
+				PathBuf::from("icon/root/path").join(format!("{item}.png"))
 			)),
-			app.world().entity(id).get::<Icon>(),
+			child.get::<Icon>(),
 		);
 	}
 
@@ -109,9 +119,10 @@ mod tests {
 
 		app.update();
 
+		let [child] = assert_children_count!(1, app, id);
 		assert_eq!(
 			Some(&UILabel(Token::from(UserInput::from(KeyCode::ArrowUp)))),
-			app.world().entity(id).get::<UILabel<Token>>(),
+			child.get::<UILabel<Token>>(),
 		);
 	}
 
@@ -129,9 +140,11 @@ mod tests {
 			.id();
 
 		app.update();
-		app.world_mut().entity_mut(id).remove::<Icon>();
+		let [child] = assert_children_count!(1, app, id);
+		let child = child.id();
+		app.world_mut().entity_mut(child).remove::<Icon>();
 		app.update();
 
-		assert_eq!(None, app.world().entity(id).get::<Icon>())
+		assert_eq!(None, app.world().entity(child).get::<Icon>())
 	}
 }

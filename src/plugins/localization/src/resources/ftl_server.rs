@@ -16,7 +16,7 @@ use common::{
 	prelude::*,
 };
 use fluent::{FluentError, FluentResource, concurrent::FluentBundle};
-use std::fmt::Display;
+use std::{borrow::Cow, fmt::Display};
 use unic_langid::LanguageIdentifier;
 
 #[derive(Resource)]
@@ -66,17 +66,21 @@ where
 	logger: StaticSystemParam<'w, 's, TLogger>,
 }
 
-impl<'w, 's, TLogger> Localize for FtlServerParam<'w, 's, TLogger>
+impl<'w, 's, TLogger> FtlServerParam<'w, 's, TLogger>
 where
 	TLogger: for<'w2, 's2> SystemParam<Item<'w2, 's2>: Log> + ThreadSafe,
 {
-	fn localize(&self, token: &Token) -> LocalizationResult {
-		let (current, locales) = match self.server.current.as_ref() {
-			Some(current) => (current, vec![current, &self.server.fallback]),
-			None => (&self.server.fallback, vec![&self.server.fallback]),
+	fn localize_item<'a>(
+		&self,
+		token: TokenItem<&'a str>,
+		current: &'a Locale,
+		locales: &[&'a Locale],
+	) -> ItemResult<'a> {
+		let str = match token {
+			TokenItem::Key(token) => token,
+			TokenItem::Raw(raw) => return ItemResult::Ok(Cow::Borrowed(raw)),
 		};
-		let str = &**token;
-		let localize = |locale: &&Locale| {
+		let localize_with = |locale: &'a Locale| {
 			if locale.ln != current.ln {
 				self.logger.log(FtlError::FallbackAttempt {
 					token: current.ln_token(str),
@@ -111,14 +115,45 @@ where
 				});
 			}
 
-			Some(Localized::from(localized))
+			Some(localized)
 		};
 
-		match locales.iter().find_map(localize) {
-			Some(localized) => LocalizationResult::from(localized),
-			None => LocalizationResult::from(token.failed()),
+		match locales.iter().find_map(|locale| localize_with(locale)) {
+			Some(localized) => ItemResult::Ok(localized),
+			None => ItemResult::Err,
 		}
 	}
+}
+
+impl<'w, 's, TLogger> Localize for FtlServerParam<'w, 's, TLogger>
+where
+	TLogger: for<'w2, 's2> SystemParam<Item<'w2, 's2>: Log> + ThreadSafe,
+{
+	fn localize(&self, token: &Token) -> LocalizationResult {
+		let mut localized = String::new();
+		let (current, locales) = match self.server.current {
+			Some(ref current) => (current, vec![current, &self.server.fallback]),
+			None => (&self.server.fallback, vec![&self.server.fallback]),
+		};
+
+		for item in token {
+			match self.localize_item(item, current, &locales) {
+				ItemResult::Ok(str) => {
+					localized += &*str;
+				}
+				ItemResult::Err => {
+					return LocalizationResult::from(token.failed());
+				}
+			}
+		}
+
+		LocalizationResult::Ok(Localized::from(localized))
+	}
+}
+
+enum ItemResult<'a> {
+	Ok(Cow<'a, str>),
+	Err,
 }
 
 #[derive(SystemParam)]
@@ -1072,6 +1107,50 @@ mod tests {
 			.run_system_once(|f: FtlServerParam<_LoggerParam>| f.localize(&Token::from("a")))?;
 
 		assert_eq!(LocalizationResult::Ok(Localized::from("{$a}")), result);
+		Ok(())
+	}
+
+	#[test]
+	fn localize_multiple_items() -> Result<(), RunSystemError> {
+		let mut bundle = FluentBundle::new_concurrent(vec![langid!("en")]);
+		let res = match FluentResource::try_new(String::from("a = A!\nb = B!")) {
+			Ok(res) => res,
+			Err((res, ..)) => res,
+		};
+		_ = bundle.add_resource(res);
+		let mut app = setup(
+			FtlServer {
+				fallback: Locale {
+					ln: langid!("jp"),
+					file: None,
+					folder: None,
+					bundle: None,
+				},
+				current: Some(Locale {
+					ln: langid!("en"),
+					file: None,
+					folder: None,
+					bundle: Some(bundle),
+				}),
+				update_file: false,
+				update_folder: false,
+			},
+			_Logger::new().with_mock(|mock| {
+				mock.expect_log::<FtlError>().never();
+			}),
+		);
+
+		let result = app
+			.world_mut()
+			.run_system_once(|f: FtlServerParam<_LoggerParam>| {
+				f.localize(&Token::from([
+					TokenItem::Key("a"),
+					TokenItem::Raw(", "),
+					TokenItem::Key("b"),
+				]))
+			})?;
+
+		assert_eq!(LocalizationResult::Ok(Localized::from("A!, B!")), result);
 		Ok(())
 	}
 }
