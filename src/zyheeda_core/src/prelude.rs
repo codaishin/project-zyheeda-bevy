@@ -9,6 +9,7 @@ pub use crate::{
 	conf::fps::*,
 	conversion::is_not::IsNot,
 	errors::*,
+	iteration::intersperse::*,
 	macros::{all::*, any::*, hash_map::hash_map, none::*, write_iter::*},
 	math::{
 		f32_not_nan::{
