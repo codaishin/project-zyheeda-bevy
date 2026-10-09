@@ -2,6 +2,7 @@ pub mod collections;
 pub mod conf;
 pub mod conversion;
 pub mod errors;
+pub mod iteration;
 pub mod macros;
 pub mod math;
 pub mod prelude;
