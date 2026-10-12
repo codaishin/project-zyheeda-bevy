@@ -1,6 +1,12 @@
 pub mod combination;
 
-use crate::traits::{accessors::get::ViewField, handles_localization::Token};
+use crate::{
+	tools::action_key::user_input::combination::UserInputCombination,
+	traits::{
+		accessors::get::ViewField,
+		handles_localization::{Token, TokenItem},
+	},
+};
 use bevy::prelude::*;
 use macros::serde_model;
 use zyheeda_core::prelude::*;
@@ -10,13 +16,15 @@ use zyheeda_core::prelude::*;
 pub enum UserInput {
 	KeyCode(KeyCode),
 	MouseButton(MouseButton),
+	Combined(UserInputCombination<2>),
 }
 
 impl From<UserInput> for Token {
 	fn from(value: UserInput) -> Self {
 		match value {
-			UserInput::KeyCode(key_code) => Self::from(key_code),
-			UserInput::MouseButton(mouse_button) => Self::from(mouse_button),
+			UserInput::KeyCode(key) => Token::from_iter([TokenItem::from(key)]),
+			UserInput::MouseButton(button) => Token::from_iter([TokenItem::from(button)]),
+			UserInput::Combined(combination) => Token::from(combination),
 		}
 	}
 }

@@ -30,7 +30,10 @@ pub use crate::{
 			save_key::SaveKey,
 			slot::{HandSlot, SlotKey},
 			targeting::TerrainTargeting,
-			user_input::UserInput,
+			user_input::{
+				UserInput,
+				combination::{ComboInput, InputRepeated, UserInputCombination},
+			},
 		},
 		attribute::AttributeOnSpawn,
 		bone_name::BoneName,
