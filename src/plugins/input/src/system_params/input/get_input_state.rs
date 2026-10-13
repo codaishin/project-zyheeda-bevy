@@ -59,8 +59,8 @@ where
 
 	fn get_combination_state(&self, combination: UserInputCombination<2>) -> InputState {
 		let combination = combination.as_array().map(|c| match c {
-			ComboInput::KeyCode(k) => get_bevy_input_state(&self.keys, k),
-			ComboInput::MouseButton(m) => get_bevy_input_state(&self.mouse, m),
+			RawInput::KeyCode(k) => get_bevy_input_state(&self.keys, k),
+			RawInput::MouseButton(m) => get_bevy_input_state(&self.mouse, m),
 		});
 
 		match combination {
@@ -78,7 +78,7 @@ where
 
 	fn get_single_state<T>(&self, keys: &Res<'w, ButtonInput<T>>, key: T) -> InputState
 	where
-		T: Copy + Eq + Hash + ThreadSafe + Into<ComboInput>,
+		T: Copy + Eq + Hash + ThreadSafe + Into<RawInput>,
 		TKeyMap: SystemParam<Item<'w, 's>: GetInput> + 'static,
 	{
 		use InputState::*;
@@ -402,26 +402,26 @@ mod tests {
 			($app:expr, $c:expr) => {{
 				for (c, s) in $c {
 					match c {
-						ComboInput::KeyCode(k) => set_input_state!($app, k, s),
-						ComboInput::MouseButton(m) => set_input_state!($app, m, s),
+						RawInput::KeyCode(k) => set_input_state!($app, k, s),
+						RawInput::MouseButton(m) => set_input_state!($app, m, s),
 					}
 				}
 			}};
 		}
 
 		#[test_case([
-			ComboInput::KeyCode(KeyCode::KeyA),
-			ComboInput::KeyCode(KeyCode::KeyB),
+			RawInput::KeyCode(KeyCode::KeyA),
+			RawInput::KeyCode(KeyCode::KeyB),
 		]; "key code")]
 		#[test_case([
-			ComboInput::MouseButton(MouseButton::Left),
-			ComboInput::MouseButton(MouseButton::Right),
+			RawInput::MouseButton(MouseButton::Left),
+			RawInput::MouseButton(MouseButton::Right),
 		]; "mouse buttons")]
 		#[test_case([
-			ComboInput::KeyCode(KeyCode::KeyA),
-			ComboInput::MouseButton(MouseButton::Right),
+			RawInput::KeyCode(KeyCode::KeyA),
+			RawInput::MouseButton(MouseButton::Right),
 		]; "combined")]
-		fn get_pressed(combo: [ComboInput; 2]) -> Result<(), _Error> {
+		fn get_pressed(combo: [RawInput; 2]) -> Result<(), _Error> {
 			let action_combo = UserInput::Combined(UserInputCombination::try_from(combo)?);
 			let mut app = setup(_Map::new().with_mock(|mock| {
 				mock.expect_get_input::<ActionKey>()
@@ -438,18 +438,18 @@ mod tests {
 		}
 
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::just_pressed()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::just_pressed()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::just_pressed()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::just_pressed()),
 		]; "all just pressed")]
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::pressed()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::just_pressed()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::pressed()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::just_pressed()),
 		]; "last just pressed")]
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::just_pressed()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::pressed()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::just_pressed()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::pressed()),
 		]; "first just pressed")]
-		fn get_just_pressed(combo: [(ComboInput, InputState); 2]) -> Result<(), _Error> {
+		fn get_just_pressed(combo: [(RawInput, InputState); 2]) -> Result<(), _Error> {
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(combo.map(|(i, ..)| i))?);
 			let mut app = setup(_Map::new().with_mock(|mock| {
@@ -467,26 +467,26 @@ mod tests {
 		}
 
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::released()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::released()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::released()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::released()),
 		]; "all released")]
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::released()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::just_released()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::released()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::just_released()),
 		]; "released and just released")]
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::just_released()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::released()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::just_released()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::released()),
 		]; "just released and released")]
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::just_pressed()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::just_released()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::just_pressed()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::just_released()),
 		]; "just pressed and just released")]
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::just_released()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::just_pressed()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::just_released()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::just_pressed()),
 		]; "just released and just pressed")]
-		fn get_released(combo: [(ComboInput, InputState); 2]) -> Result<(), _Error> {
+		fn get_released(combo: [(RawInput, InputState); 2]) -> Result<(), _Error> {
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(combo.map(|(i, ..)| i))?);
 			let mut app = setup(_Map::new().with_mock(|mock| {
@@ -504,18 +504,18 @@ mod tests {
 		}
 
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::just_released()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::just_released()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::just_released()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::just_released()),
 		]; "all just released")]
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::pressed()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::just_released()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::pressed()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::just_released()),
 		]; "pressed and just released")]
 		#[test_case([
-			(ComboInput::KeyCode(KeyCode::KeyA), InputState::just_released()),
-			(ComboInput::KeyCode(KeyCode::KeyB), InputState::pressed()),
+			(RawInput::KeyCode(KeyCode::KeyA), InputState::just_released()),
+			(RawInput::KeyCode(KeyCode::KeyB), InputState::pressed()),
 		]; "just released and pressed")]
-		fn get_just_release(combo: [(ComboInput, InputState); 2]) -> Result<(), _Error> {
+		fn get_just_release(combo: [(RawInput, InputState); 2]) -> Result<(), _Error> {
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(combo.map(|(i, ..)| i))?);
 			let mut app = setup(_Map::new().with_mock(|mock| {
@@ -539,7 +539,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(keys.map(T::into))?);
@@ -571,7 +571,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(keys.map(T::into))?);
@@ -603,7 +603,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(keys.map(T::into))?);
@@ -635,7 +635,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let [key, comb_a, comb_b] = keys;
 			let action_combo = UserInput::Combined(UserInputCombination::try_from(
@@ -670,7 +670,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(keys.map(T::into))?);
@@ -702,7 +702,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(keys.map(T::into))?);
@@ -734,7 +734,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(keys.map(T::into))?);
@@ -766,7 +766,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let action_combo =
 				UserInput::Combined(UserInputCombination::try_from(keys.map(T::into))?);
@@ -799,7 +799,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let combo_a = UserInput::Combined(UserInputCombination::try_from(a.map(T::into))?);
 			let combo_b = UserInput::Combined(UserInputCombination::try_from(b.map(T::into))?);
@@ -836,7 +836,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let combo_a = UserInput::Combined(UserInputCombination::try_from(a.map(T::into))?);
 			let combo_b = UserInput::Combined(UserInputCombination::try_from(b.map(T::into))?);
@@ -873,7 +873,7 @@ mod tests {
 			rest: T,
 		) -> Result<(), _Error>
 		where
-			T: Into<UserInput> + Into<ComboInput> + Copy + Eq + Hash + ThreadSafe,
+			T: Into<UserInput> + Into<RawInput> + Copy + Eq + Hash + ThreadSafe,
 		{
 			let combo_a = UserInput::Combined(UserInputCombination::try_from(a.map(T::into))?);
 			let combo_b = UserInput::Combined(UserInputCombination::try_from(b.map(T::into))?);
