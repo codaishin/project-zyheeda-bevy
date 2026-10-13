@@ -29,11 +29,12 @@ impl GetInput for KeyMap {
 }
 
 impl UpdateKey for KeyMap {
-	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
+	fn update_key<TAction, TInput>(&mut self, action: TAction, input: TInput)
 	where
 		TAction: Copy + Into<ActionKey>,
+		TInput: Into<UserInput>,
 	{
-		self.0.update_key(action, input);
+		self.0.update_key(action, input.into());
 	}
 }
 

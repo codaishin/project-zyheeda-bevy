@@ -9,6 +9,7 @@ use crate::{
 	},
 };
 use bevy::{ecs::system::SystemParam, prelude::*};
+use macros::serde_model;
 use std::hash::Hash;
 
 pub trait HandlesActionKeyButton {
@@ -42,9 +43,10 @@ pub trait HandlesInputMut {
 }
 
 pub trait UpdateKey {
-	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
+	fn update_key<TAction, TInput>(&mut self, action: TAction, input: TInput)
 	where
-		TAction: Copy + Into<ActionKey> + 'static;
+		TAction: Copy + Into<ActionKey> + 'static,
+		TInput: Into<UserInput> + 'static;
 }
 
 pub trait InvalidUserInput {
@@ -70,7 +72,7 @@ pub trait GetAllInputs {
 /// Use to avoid conflicts when accessing [`ButtonInput`] in systems is not possible,
 /// due to it being already used by the implementing type.
 pub trait GetRawUserInput {
-	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput>;
+	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = RawInput>;
 }
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
@@ -78,6 +80,34 @@ pub enum RawInputState {
 	JustPressed,
 	Held,
 	JustReleased,
+}
+
+#[serde_model]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum RawInput {
+	KeyCode(KeyCode),
+	MouseButton(MouseButton),
+}
+
+impl From<KeyCode> for RawInput {
+	fn from(value: KeyCode) -> Self {
+		Self::KeyCode(value)
+	}
+}
+
+impl From<MouseButton> for RawInput {
+	fn from(value: MouseButton) -> Self {
+		Self::MouseButton(value)
+	}
+}
+
+impl From<RawInput> for UserInput {
+	fn from(value: RawInput) -> Self {
+		match value {
+			RawInput::KeyCode(k) => UserInput::KeyCode(k),
+			RawInput::MouseButton(m) => UserInput::MouseButton(m),
+		}
+	}
 }
 
 pub trait GetInputState {

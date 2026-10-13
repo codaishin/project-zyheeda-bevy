@@ -32,7 +32,7 @@ pub use crate::{
 			targeting::TerrainTargeting,
 			user_input::{
 				UserInput,
-				combination::{ComboInput, InputRepeated, UserInputCombination},
+				combination::{InputRepeatedError, UserInputCombination},
 			},
 		},
 		attribute::AttributeOnSpawn,
