@@ -1,27 +1,30 @@
-use crate::traits::{accessors::get::ViewField, handles_localization::Token};
+pub mod combination;
+
+use crate::{
+	tools::action_key::user_input::combination::UserInputCombination,
+	traits::{
+		accessors::get::ViewField,
+		handles_localization::{Token, TokenItem},
+	},
+};
 use bevy::prelude::*;
 use macros::serde_model;
 use zyheeda_core::prelude::*;
-
-#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-pub struct UserInputSystem;
 
 #[serde_model]
 #[derive(TypePath, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum UserInput {
 	KeyCode(KeyCode),
 	MouseButton(MouseButton),
-}
-
-impl UserInput {
-	pub const SYSTEM: UserInputSystem = UserInputSystem;
+	Combined(UserInputCombination<2>),
 }
 
 impl From<UserInput> for Token {
 	fn from(value: UserInput) -> Self {
 		match value {
-			UserInput::KeyCode(key_code) => Self::from(key_code),
-			UserInput::MouseButton(mouse_button) => Self::from(mouse_button),
+			UserInput::KeyCode(key) => Token::from_iter([TokenItem::from(key)]),
+			UserInput::MouseButton(button) => Token::from_iter([TokenItem::from(button)]),
+			UserInput::Combined(combination) => Token::from(combination),
 		}
 	}
 }
