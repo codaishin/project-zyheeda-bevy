@@ -45,20 +45,22 @@ mod tests {
 	#[derive(Resource, Default)]
 	struct _Input {
 		updated: Vec<(&'static str, UserInput)>,
-		raw_input: HashMap<RawInputState, Vec<UserInput>>,
+		raw_input: HashMap<RawInputState, Vec<RawInput>>,
 	}
 
 	impl UpdateKey for _Input {
-		fn update_key<TAction>(&mut self, _: TAction, user_input: UserInput)
+		fn update_key<TAction, TInput>(&mut self, _: TAction, user_input: TInput)
 		where
 			TAction: Copy + Into<ActionKey> + 'static,
+			TInput: Into<UserInput>,
 		{
-			self.updated.push((type_name::<TAction>(), user_input));
+			self.updated
+				.push((type_name::<TAction>(), user_input.into()));
 		}
 	}
 
 	impl GetRawUserInput for _Input {
-		fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput> {
+		fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = RawInput> {
 			self.raw_input
 				.get(&state)
 				.cloned()
@@ -84,7 +86,7 @@ mod tests {
 		let mut app = setup(_Input {
 			raw_input: HashMap::from([(
 				RawInputState::JustPressed,
-				vec![UserInput::KeyCode(KeyCode::KeyB)],
+				vec![RawInput::KeyCode(KeyCode::KeyB)],
 			)]),
 			..default()
 		});

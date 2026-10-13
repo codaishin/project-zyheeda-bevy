@@ -6,7 +6,7 @@ impl<'w, 's, TKeyMap> GetRawUserInput for Input<'w, 's, TKeyMap>
 where
 	TKeyMap: SystemParam + 'static,
 {
-	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput> {
+	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = RawInput> {
 		let just_pressed = || Iter {
 			keys: Some(self.keys.get_just_pressed().copied()),
 			mouse: Some(self.mouse.get_just_pressed().copied()),
@@ -43,25 +43,25 @@ where
 		mouse: None,
 	};
 
-	fn next_key(&mut self) -> Option<UserInput> {
+	fn next_key(&mut self) -> Option<RawInput> {
 		self.keys
 			.as_mut()
 			.and_then(Iterator::next)
-			.map(UserInput::KeyCode)
+			.map(RawInput::KeyCode)
 	}
 
-	fn next_mouse(&mut self) -> Option<UserInput> {
+	fn next_mouse(&mut self) -> Option<RawInput> {
 		self.mouse
 			.as_mut()
 			.and_then(Iterator::next)
-			.map(UserInput::MouseButton)
+			.map(RawInput::MouseButton)
 	}
 }
 
 impl<TKeys: Iterator<Item = KeyCode>, TMouse: Iterator<Item = MouseButton>> Iterator
 	for Iter<TKeys, TMouse>
 {
-	type Item = UserInput;
+	type Item = RawInput;
 
 	fn next(&mut self) -> Option<Self::Item> {
 		self.next_key().or_else(|| self.next_mouse())
@@ -108,10 +108,10 @@ mod tests {
 
 		assert_eq_unordered!(
 			vec![
-				UserInput::from(KeyCode::KeyA),
-				UserInput::from(KeyCode::KeyB),
-				UserInput::from(MouseButton::Left),
-				UserInput::from(MouseButton::Right),
+				RawInput::from(KeyCode::KeyA),
+				RawInput::from(KeyCode::KeyB),
+				RawInput::from(MouseButton::Left),
+				RawInput::from(MouseButton::Right),
 			],
 			input
 		);
@@ -134,8 +134,8 @@ mod tests {
 
 		assert_eq_unordered!(
 			vec![
-				UserInput::from(KeyCode::KeyB),
-				UserInput::from(MouseButton::Right),
+				RawInput::from(KeyCode::KeyB),
+				RawInput::from(MouseButton::Right),
 			],
 			input
 		);
@@ -158,8 +158,8 @@ mod tests {
 
 		assert_eq_unordered!(
 			vec![
-				UserInput::from(KeyCode::KeyB),
-				UserInput::from(MouseButton::Right),
+				RawInput::from(KeyCode::KeyB),
+				RawInput::from(MouseButton::Right),
 			],
 			input
 		);

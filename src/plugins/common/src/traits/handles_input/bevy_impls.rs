@@ -1,7 +1,7 @@
 //! Implementations for common bevy system parameters to forward traits
 //! from the inner to the outer type.
 
-use super::{GetInput, GetInputState, GetRawUserInput, RawInputState, UpdateKey};
+use super::{GetInput, GetInputState, GetRawUserInput, RawInput, RawInputState, UpdateKey};
 use crate::{
 	tools::action_key::{ActionKey, user_input::UserInput},
 	traits::{
@@ -58,7 +58,7 @@ impl<T> GetRawUserInput for Res<'_, T>
 where
 	T: GetRawUserInput + Resource,
 {
-	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput> {
+	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = RawInput> {
 		self.deref().get_raw_user_input(state)
 	}
 }
@@ -67,7 +67,7 @@ impl<T> GetRawUserInput for ResMut<'_, T>
 where
 	T: GetRawUserInput + Resource<Mutability = Mutable>,
 {
-	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = UserInput> {
+	fn get_raw_user_input(&self, state: RawInputState) -> impl Iterator<Item = RawInput> {
 		self.deref().get_raw_user_input(state)
 	}
 }
@@ -124,9 +124,10 @@ impl<T> UpdateKey for ResMut<'_, T>
 where
 	T: UpdateKey + Resource<Mutability = Mutable>,
 {
-	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
+	fn update_key<TAction, TInput>(&mut self, action: TAction, input: TInput)
 	where
 		TAction: Copy + Into<ActionKey> + 'static,
+		TInput: Into<UserInput> + 'static,
 	{
 		self.deref_mut().update_key(action, input)
 	}

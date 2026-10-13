@@ -6,11 +6,12 @@ impl<'w, 's, TKeyMap> UpdateKey for Input<'w, 's, ResMut<'static, TKeyMap>>
 where
 	TKeyMap: Resource<Mutability = Mutable> + UpdateKey,
 {
-	fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
+	fn update_key<TAction, TInput>(&mut self, action: TAction, input: TInput)
 	where
 		TAction: Copy + Into<ActionKey> + 'static,
+		TInput: Into<UserInput>,
 	{
-		self.key_map.update_key(action, input);
+		self.key_map.update_key(action, input.into());
 	}
 }
 
@@ -30,9 +31,10 @@ mod tests {
 
 	#[automock]
 	impl UpdateKey for _Map {
-		fn update_key<TAction>(&mut self, action: TAction, input: UserInput)
+		fn update_key<TAction, TInput>(&mut self, action: TAction, input: TInput)
 		where
 			TAction: Copy + Into<ActionKey> + 'static,
+			TInput: Into<UserInput> + 'static,
 		{
 			self.mock.update_key(action, input);
 		}
