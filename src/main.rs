@@ -193,9 +193,6 @@ pub mod debug_utils {
 		diagnostic::FrameTimeDiagnosticsPlugin,
 	};
 	use bevy_inspector_egui::{bevy_egui, bevy_egui::EguiPlugin, quick::WorldInspectorPlugin};
-	use std::ops::Not;
-
-	const FORWARD_GIZMO_COLOR: Color = Color::srgb(0., 0., 1.);
 
 	pub fn prepare_debug(app: &mut App) {
 		app.add_plugins((
@@ -206,57 +203,11 @@ pub mod debug_utils {
 			commands.spawn(DiagnosticsOverlay::fps());
 		});
 
-		app.insert_resource(ShowGizmos::No)
-			.insert_resource(bevy_egui::EguiGlobalSettings {
-				auto_create_primary_context: false,
-				..Default::default()
-			})
-			.add_plugins(EguiPlugin::default())
-			.add_plugins(WorldInspectorPlugin::new())
-			.add_systems(Update, toggle_gizmos)
-			.add_systems(
-				Update,
-				forward_gizmo(&["skill_spawn", "Player"], &FORWARD_GIZMO_COLOR),
-			);
-	}
-
-	#[derive(Resource, PartialEq, Clone, Copy)]
-	enum ShowGizmos {
-		Yes,
-		No,
-	}
-
-	impl Not for ShowGizmos {
-		type Output = ShowGizmos;
-
-		fn not(self) -> Self::Output {
-			match self {
-				ShowGizmos::Yes => ShowGizmos::No,
-				ShowGizmos::No => ShowGizmos::Yes,
-			}
-		}
-	}
-
-	fn toggle_gizmos(mut show_gizmos: ResMut<ShowGizmos>, keys: Res<ButtonInput<KeyCode>>) {
-		if keys.just_pressed(KeyCode::F11) {
-			*show_gizmos = !*show_gizmos;
-		}
-	}
-
-	fn forward_gizmo<const N: usize>(
-		targets: &'static [&str; N],
-		color: &'static Color,
-	) -> impl Fn(Gizmos, Query<(&Name, &GlobalTransform)>, Res<ShowGizmos>) {
-		|mut gizmos, agents, show_gizmos| {
-			if *show_gizmos == ShowGizmos::No {
-				return;
-			}
-
-			for (name, transform) in &agents {
-				if targets.contains(&name.as_str()) {
-					gizmos.ray(transform.translation(), transform.forward() * 10., *color);
-				}
-			}
-		}
+		app.insert_resource(bevy_egui::EguiGlobalSettings {
+			auto_create_primary_context: false,
+			..Default::default()
+		})
+		.add_plugins(EguiPlugin::default())
+		.add_plugins(WorldInspectorPlugin::new());
 	}
 }
