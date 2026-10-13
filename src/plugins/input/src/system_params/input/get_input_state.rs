@@ -57,8 +57,8 @@ where
 		input_state.as_ref().copied()
 	}
 
-	fn get_combination_state(&self, combination: UserInputCombination<2>) -> InputState {
-		let combination = combination.as_array().map(|c| match c {
+	fn get_combination_state(&self, combination: impl Into<[RawInput; 2]>) -> InputState {
+		let combination = combination.into().map(|c| match c {
 			RawInput::KeyCode(k) => get_bevy_input_state(&self.keys, k),
 			RawInput::MouseButton(m) => get_bevy_input_state(&self.mouse, m),
 		});
@@ -364,7 +364,7 @@ mod tests {
 		#[allow(unused)]
 		enum _Error {
 			System(RunSystemError),
-			Combo(InputRepeated),
+			Combo(InputRepeatedError),
 		}
 
 		impl From<RunSystemError> for _Error {
@@ -373,8 +373,8 @@ mod tests {
 			}
 		}
 
-		impl From<InputRepeated> for _Error {
-			fn from(value: InputRepeated) -> Self {
+		impl From<InputRepeatedError> for _Error {
+			fn from(value: InputRepeatedError) -> Self {
 				Self::Combo(value)
 			}
 		}

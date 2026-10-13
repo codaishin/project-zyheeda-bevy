@@ -22,25 +22,48 @@ impl UserInputCombination<2> {
 		RawInput::KeyCode(KeyCode::ShiftLeft),
 		RawInput::KeyCode(KeyCode::F11),
 	]);
+}
+
+impl<const N: usize> UserInputCombination<N> {
+	pub fn try_from_iter<TInput>(input: TInput) -> Result<Self, BuildError<N>>
+	where
+		TInput: IntoIterator<Item = RawInput>,
+	{
+		let mut len = 0;
+		let mut dst = [RawInput::KeyCode(KeyCode::Abort); N];
+
+		for src in input {
+			if let Some(dst) = dst.get_mut(len) {
+				*dst = src;
+			}
+
+			len += 1;
+		}
+
+		if len != dst.len() {
+			return Err(BuildError::CountMismatch(CountMismatchError {
+				expected: N,
+				got: len,
+			}));
+		}
+
+		Self::try_from(dst).map_err(BuildError::Repetition)
+	}
 
 	pub fn iter(&self) -> std::slice::Iter<'_, RawInput> {
 		self.into_iter()
 	}
-
-	pub fn as_array(self) -> [RawInput; 2] {
-		self.0
-	}
 }
 
 impl<const N: usize> TryFrom<[RawInput; N]> for UserInputCombination<N> {
-	type Error = InputRepeated;
+	type Error = InputRepeatedError;
 
 	fn try_from(input: [RawInput; N]) -> Result<Self, Self::Error> {
 		let mut seen = HashSet::from([]);
 
 		for input in input.iter().copied() {
 			if !seen.insert(input) {
-				return Err(InputRepeated(input));
+				return Err(InputRepeatedError(input));
 			}
 		}
 
@@ -91,8 +114,26 @@ impl<const N: usize> Deref for UserInputCombination<N> {
 	}
 }
 
+impl<const N: usize> From<UserInputCombination<N>> for [RawInput; N] {
+	fn from(UserInputCombination(comb): UserInputCombination<N>) -> Self {
+		comb
+	}
+}
+
 #[derive(Debug, PartialEq)]
-pub struct InputRepeated(RawInput);
+pub struct InputRepeatedError(RawInput);
+
+#[derive(Debug, PartialEq)]
+pub struct CountMismatchError {
+	pub expected: usize,
+	pub got: usize,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum BuildError<const N: usize> {
+	CountMismatch(CountMismatchError),
+	Repetition(InputRepeatedError),
+}
 
 #[cfg(test)]
 mod tests {
@@ -100,7 +141,7 @@ mod tests {
 	use test_case::test_case;
 
 	#[test]
-	fn map_values() -> Result<(), InputRepeated> {
+	fn map_values() -> Result<(), InputRepeatedError> {
 		let UserInputCombination(c) = UserInputCombination::try_from([
 			RawInput::KeyCode(KeyCode::KeyA),
 			RawInput::MouseButton(MouseButton::Right),
@@ -123,7 +164,7 @@ mod tests {
 			RawInput::KeyCode(KeyCode::KeyA),
 		]);
 
-		assert_eq!(Err(InputRepeated(RawInput::KeyCode(KeyCode::KeyA))), c);
+		assert_eq!(Err(InputRepeatedError(RawInput::KeyCode(KeyCode::KeyA))), c);
 	}
 
 	#[test_case(UserInputCombination::ROTATE_DEBUG_NAV_MESH; "rotate debug nav mesh")]
@@ -133,7 +174,7 @@ mod tests {
 	}
 
 	#[test]
-	fn token() -> Result<(), InputRepeated> {
+	fn token() -> Result<(), InputRepeatedError> {
 		let combo = UserInputCombination::try_from([
 			RawInput::KeyCode(KeyCode::KeyA),
 			RawInput::MouseButton(MouseButton::Right),
@@ -150,5 +191,74 @@ mod tests {
 			token
 		);
 		Ok(())
+	}
+
+	#[test]
+	fn from_iter() {
+		let src = [
+			RawInput::KeyCode(KeyCode::KeyA),
+			RawInput::KeyCode(KeyCode::KeyB),
+		];
+
+		let comb = UserInputCombination::try_from_iter(src);
+
+		assert_eq!(
+			Ok(UserInputCombination([
+				RawInput::KeyCode(KeyCode::KeyA),
+				RawInput::KeyCode(KeyCode::KeyB)
+			])),
+			comb
+		);
+	}
+
+	#[test]
+	fn from_iter_repeating_error() {
+		let src = [
+			RawInput::KeyCode(KeyCode::KeyA),
+			RawInput::KeyCode(KeyCode::KeyA),
+		];
+
+		let comb = UserInputCombination::<2>::try_from_iter(src);
+
+		assert_eq!(
+			Err(BuildError::Repetition(InputRepeatedError(
+				RawInput::KeyCode(KeyCode::KeyA)
+			))),
+			comb
+		);
+	}
+
+	#[test]
+	fn from_iter_too_short() {
+		let src = [RawInput::KeyCode(KeyCode::KeyA)];
+
+		let comb = UserInputCombination::<2>::try_from_iter(src);
+
+		assert_eq!(
+			Err(BuildError::CountMismatch(CountMismatchError {
+				expected: 2,
+				got: 1,
+			})),
+			comb
+		);
+	}
+
+	#[test]
+	fn from_iter_too_long() {
+		let src = [
+			RawInput::KeyCode(KeyCode::KeyA),
+			RawInput::KeyCode(KeyCode::KeyB),
+			RawInput::KeyCode(KeyCode::KeyC),
+		];
+
+		let comb = UserInputCombination::<2>::try_from_iter(src);
+
+		assert_eq!(
+			Err(BuildError::CountMismatch(CountMismatchError {
+				expected: 2,
+				got: 3,
+			})),
+			comb
+		);
 	}
 }
