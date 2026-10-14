@@ -14,10 +14,10 @@ impl IconStack {
 	pub(crate) fn format_items(
 		mut commands: ZyheedaCommands,
 		stack_items: Query<(Entity, &mut Node, &IconStackItem), Added<IconStackItem>>,
-		stacks: Query<(&Self, &TextFont)>,
+		stacks: Query<(&Self, &TextFont, &TextLayout)>,
 	) {
 		for (entity, mut node, IconStackItem { of, index }) in stack_items {
-			let Ok((stack, text_font)) = stacks.get(*of) else {
+			let Ok((stack, text_font, layout)) = stacks.get(*of) else {
 				continue;
 			};
 
@@ -27,7 +27,7 @@ impl IconStack {
 
 			text_font.font_size = text_font.font_size * (dimensions as f32 / 100.0);
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(text_font);
+				e.try_insert((text_font, *layout));
 			});
 			node.width = percent(dimensions);
 			node.height = percent(dimensions);
@@ -120,6 +120,27 @@ mod tests {
 					..default()
 				}),
 				app.world().entity(item).get::<Node>(),
+			);
+		}
+
+		#[test]
+		fn copy_text_layout() {
+			let mut app = setup();
+			let stack = app
+				.world_mut()
+				.spawn(TextLayout::justify(Justify::Right))
+				.id();
+			let item = app.world_mut().spawn(IconStackItem::of(stack)).id();
+
+			app.update();
+
+			let TextLayout { justify, linebreak } = TextLayout::justify(Justify::Right);
+			assert_eq!(
+				Some((justify, linebreak)),
+				app.world()
+					.entity(item)
+					.get::<TextLayout>()
+					.map(|TextLayout { justify, linebreak }| (*justify, *linebreak)),
 			);
 		}
 

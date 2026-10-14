@@ -22,7 +22,7 @@ impl Icon {
 
 #[derive(Component, Debug, PartialEq, Clone, Default)]
 #[relationship_target(relationship = IconStackItem)]
-#[require(Node, TextFont)]
+#[require(Node, TextFont, TextLayout)]
 pub(crate) struct IconStack(EntityHashSet);
 
 #[derive(Component, Debug, PartialEq, Clone)]
