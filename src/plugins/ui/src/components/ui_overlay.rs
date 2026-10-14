@@ -1,5 +1,8 @@
 use super::{Quickbar, input_label::InputLabel, quickbar_panel::QuickbarPanel};
-use crate::traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent};
+use crate::{
+	components::with_node::WithNode,
+	traits::{LoadUi, colors::PanelColors, insert_ui_content::InsertUiContent},
+};
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::prelude::*;
 
@@ -88,15 +91,10 @@ fn add_slot(quickbar: &mut RelatedSpawnerCommands<ChildOf>, key: HandSlot) {
 				BorderColor::from(PanelColors::DEFAULT.filled.text),
 				BackgroundColor::from(PanelColors::DEFAULT.filled.background),
 				children![(
-					Node {
-						width: Val::Px(slot_desc_size - 2. * slot_desc_border),
-						height: Val::Px(slot_desc_size - 2. * slot_desc_border),
-						..default()
-					},
-					TextLayout {
-						justify: Justify::Center,
-						..default()
-					},
+					WithNode::modify_or_insert(move |Node { width, height, .. }| {
+						*width = Val::Px(slot_desc_size - 2. * slot_desc_border);
+						*height = Val::Px(slot_desc_size - 2. * slot_desc_border);
+					}),
 					TextFont {
 						font_size: slot_desc_text_size,
 						..default()

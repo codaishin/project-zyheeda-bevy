@@ -1,4 +1,8 @@
-use crate::components::{icon::Icon, input_label::InputLabel, label::UILabel};
+use crate::components::{
+	icon::{Icon, IconStackItem},
+	input_label::InputLabel,
+	label::UILabel,
+};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
@@ -26,9 +30,9 @@ impl InputLabel {
 					TokenItem::Raw(..) => None,
 				});
 
-				for key in keys {
+				for (index, key) in keys.enumerate() {
 					commands.spawn((
-						ChildOf(entity),
+						IconStackItem::of(entity).with_index(index),
 						UILabel(Token::from(key)),
 						Icon::ImagePath(root.join(format!("{key}.png"))),
 					));
@@ -43,7 +47,6 @@ type Labels<'w, 's, 'a> = Query<'w, 's, (Entity, &'a InputLabel), Added<InputLab
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::icon::Icon;
 	use bevy::app::{App, Update};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
@@ -95,13 +98,82 @@ mod tests {
 		let Some(TokenItem::Key(item)) = token.items().next() else {
 			panic!("FAULTY ASSUMPTION")
 		};
-		let [child] = assert_related_count!(ChildOf, 1, app, id);
+		let [child] = assert_related_count!(IconStackItem, 1, app, id);
 		assert_eq!(
 			Some(&Icon::ImagePath(
 				PathBuf::from("icon/root/path").join(format!("{item}.png"))
 			)),
 			child.get::<Icon>(),
 		);
+	}
+
+	#[test]
+	fn add_combination_icons() -> Result<(), InputRepeatedError> {
+		let input = UserInput::Combined(UserInputCombination::try_from([
+			RawInput::KeyCode(KeyCode::KeyA),
+			RawInput::KeyCode(KeyCode::KeyB),
+		])?);
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_input()
+				.times(1)
+				.with(eq(HandSlot::Left))
+				.return_const(input);
+		}));
+		let id = app
+			.world_mut()
+			.spawn(InputLabel {
+				key: HandSlot::Left,
+			})
+			.id();
+
+		app.update();
+
+		let token = Token::from(input);
+		let token_items = token.iter().collect::<Vec<_>>();
+		let items = match token_items[..] {
+			[TokenItem::Key(a), TokenItem::Raw(..), TokenItem::Key(b)] => [a, b],
+			_ => panic!("FAULTY ASSUMPTION"),
+		};
+		let children = assert_related_count!(IconStackItem, 2, app, id);
+		assert_eq!(
+			items.map(|item| Some(Icon::ImagePath(
+				PathBuf::from("icon/root/path").join(format!("{item}.png"))
+			))),
+			children.map(|c| c.get::<Icon>().cloned())
+		);
+		Ok(())
+	}
+
+	#[test]
+	fn add_combination_icons_index() -> Result<(), InputRepeatedError> {
+		let input = UserInput::Combined(UserInputCombination::try_from([
+			RawInput::KeyCode(KeyCode::KeyA),
+			RawInput::KeyCode(KeyCode::KeyB),
+		])?);
+		let mut app = setup(_Input::new().with_mock(|mock| {
+			mock.expect_get_input()
+				.times(1)
+				.with(eq(HandSlot::Left))
+				.return_const(input);
+		}));
+		let id = app
+			.world_mut()
+			.spawn(InputLabel {
+				key: HandSlot::Left,
+			})
+			.id();
+
+		app.update();
+
+		let children = assert_related_count!(IconStackItem, 2, app, id);
+		assert_eq!(
+			[
+				Some(&IconStackItem { of: id, index: 0 }),
+				Some(&IconStackItem { of: id, index: 1 })
+			],
+			children.map(|c| c.get::<IconStackItem>())
+		);
+		Ok(())
 	}
 
 	#[test]
@@ -119,7 +191,7 @@ mod tests {
 
 		app.update();
 
-		let [child] = assert_related_count!(ChildOf, 1, app, id);
+		let [child] = assert_related_count!(IconStackItem, 1, app, id);
 		assert_eq!(
 			Some(&UILabel(Token::from(UserInput::from(KeyCode::ArrowUp)))),
 			child.get::<UILabel<Token>>(),
@@ -140,7 +212,7 @@ mod tests {
 			.id();
 
 		app.update();
-		let [child] = assert_related_count!(ChildOf, 1, app, id);
+		let [child] = assert_related_count!(IconStackItem, 1, app, id);
 		let child = child.id();
 		app.world_mut().entity_mut(child).remove::<Icon>();
 		app.update();

@@ -25,10 +25,12 @@ use crate::{
 			Vertical,
 		},
 		dispatch_text_color::DispatchTextColor,
+		icon::{IconStack, IconStackItem},
 		key_select_dropdown_command::KeySelectDropdownCommand,
 		label::UILabel,
 		pause_menu::PauseMenu,
 		ui_disabled::UIDisabled,
+		with_node::WithNode,
 	},
 	systems::{
 		combos::update_combos_view::UpdateComboOverview,
@@ -349,6 +351,7 @@ where
 
 	fn general_systems(&self, app: &mut App) {
 		app.register_derived_component::<MenuBackground, Node>()
+			.add_prefab_observer::<IconStackItem, ()>()
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
 			.add_tooltip::<TLocalization::TLocalizationServer, Token>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
@@ -361,6 +364,8 @@ where
 					UIDisabled::apply,
 					(
 						InputLabel::icon::<TInput::TInput>(asset_path!("generic/icons")),
+						IconStack::format_root,
+						IconStack::format_items,
 						Icon::load_image,
 						Icon::insert_image,
 						UILabel::icon_tooltip,
@@ -370,7 +375,7 @@ where
 				)
 					.run_if(TLoading::is_loaded(LoadingEssentialAssets)),
 			)
-			.add_systems(Last, ButtonInteraction::system);
+			.add_systems(Last, (WithNode::system, ButtonInteraction::system).chain());
 	}
 }
 
