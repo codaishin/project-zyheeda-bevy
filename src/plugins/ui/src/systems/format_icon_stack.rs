@@ -1,5 +1,6 @@
 use crate::components::icon::{IconStack, IconStackItem};
 use bevy::prelude::*;
+use common::prelude::*;
 
 impl IconStack {
 	const OVERLAP_PERCENT: usize = 30;
@@ -11,17 +12,23 @@ impl IconStack {
 	}
 
 	pub(crate) fn format_items(
-		stack_items: Query<(&mut Node, &IconStackItem), Added<IconStackItem>>,
-		stacks: Query<&Self>,
+		mut commands: ZyheedaCommands,
+		stack_items: Query<(Entity, &mut Node, &IconStackItem), Added<IconStackItem>>,
+		stacks: Query<(&Self, &TextFont)>,
 	) {
-		for (mut node, IconStackItem { of, index }) in stack_items {
-			let Ok(stack) = stacks.get(*of) else {
+		for (entity, mut node, IconStackItem { of, index }) in stack_items {
+			let Ok((stack, text_font)) = stacks.get(*of) else {
 				continue;
 			};
 
+			let mut text_font = text_font.clone();
 			let count = stack.len();
 			let dimensions = (100 + count.saturating_sub(1) * Self::OVERLAP_PERCENT) / count;
 
+			text_font.font_size = text_font.font_size * (dimensions as f32 / 100.0);
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(text_font);
+			});
 			node.width = percent(dimensions);
 			node.height = percent(dimensions);
 
@@ -158,6 +165,42 @@ mod tests {
 		}
 
 		#[test]
+		fn two_items_font() {
+			let mut app = setup();
+			let stack = app
+				.world_mut()
+				.spawn(TextFont {
+					font_size: FontSize::Px(10.),
+					..default()
+				})
+				.id();
+			let items = [
+				app.world_mut()
+					.spawn(IconStackItem::of(stack).with_index(0))
+					.id(),
+				app.world_mut()
+					.spawn(IconStackItem::of(stack).with_index(1))
+					.id(),
+			];
+
+			app.update();
+
+			assert_eq!(
+				[
+					Some(&TextFont {
+						font_size: FontSize::Px(10.) * 0.65,
+						..default()
+					}),
+					Some(&TextFont {
+						font_size: FontSize::Px(10.) * 0.65,
+						..default()
+					}),
+				],
+				app.world().entity(items).map(|e| e.get::<TextFont>())
+			);
+		}
+
+		#[test]
 		fn three_items() {
 			let mut app = setup();
 			let stack = app.world_mut().spawn_empty().id();
@@ -208,6 +251,49 @@ mod tests {
 					}),
 				],
 				app.world().entity(items).map(|e| e.get::<Node>()),
+			);
+		}
+
+		#[test]
+		fn three_items_font() {
+			let mut app = setup();
+			let stack = app
+				.world_mut()
+				.spawn(TextFont {
+					font_size: FontSize::Px(10.),
+					..default()
+				})
+				.id();
+			let items = [
+				app.world_mut()
+					.spawn(IconStackItem::of(stack).with_index(0))
+					.id(),
+				app.world_mut()
+					.spawn(IconStackItem::of(stack).with_index(1))
+					.id(),
+				app.world_mut()
+					.spawn(IconStackItem::of(stack).with_index(2))
+					.id(),
+			];
+
+			app.update();
+
+			assert_eq!(
+				[
+					Some(&TextFont {
+						font_size: FontSize::Px(10.) * 0.53,
+						..default()
+					}),
+					Some(&TextFont {
+						font_size: FontSize::Px(10.) * 0.53,
+						..default()
+					}),
+					Some(&TextFont {
+						font_size: FontSize::Px(10.) * 0.53,
+						..default()
+					}),
+				],
+				app.world().entity(items).map(|e| e.get::<TextFont>()),
 			);
 		}
 
