@@ -33,7 +33,7 @@ impl GridAgent {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use testing::{IsChanged, SingleThreadedApp};
+	use testing::{IsChanged, SingleThreadedApp, assert_related_count};
 
 	struct _Graph;
 
@@ -65,23 +65,23 @@ mod tests {
 
 		app.update();
 
-		assert_eq!(
-			Some(&GridAgentOf(grid)),
-			app.world().entity(entity).get::<GridAgentOf>(),
-		);
+		let [agent] = assert_related_count!(GridAgentOf, 1, app, grid);
+		assert_eq!(entity, agent.id());
 	}
 
 	#[test]
 	fn do_not_work_on_non_grid_agents() {
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
-		app.world_mut()
-			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)));
-		let entity = app.world_mut().spawn(MapObjectOf(map)).id();
+		let grid = app
+			.world_mut()
+			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)))
+			.id();
+		app.world_mut().spawn(MapObjectOf(map));
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<GridAgentOf>());
+		assert_related_count!(GridAgentOf, 0, app, grid);
 	}
 
 	#[test]
@@ -90,29 +90,34 @@ mod tests {
 
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
-		app.world_mut()
-			.spawn((MapObjectOf(map), Grid::<_OtherGraph>::from(_OtherGraph)));
-		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
+		let grid = app
+			.world_mut()
+			.spawn((MapObjectOf(map), Grid::<_OtherGraph>::from(_OtherGraph)))
+			.id();
+		app.world_mut().spawn((MapObjectOf(map), GridAgent));
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<GridAgentOf>());
+		assert_related_count!(GridAgentOf, 0, app, grid);
 	}
 
 	#[test]
 	fn act_only_once() {
 		let mut app = setup();
 		let map = app.world_mut().spawn_empty().id();
-		app.world_mut()
-			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)));
-		let entity = app.world_mut().spawn((MapObjectOf(map), GridAgent)).id();
+		let grid = app
+			.world_mut()
+			.spawn((MapObjectOf(map), Grid::<_Graph>::from(_Graph)))
+			.id();
+		app.world_mut().spawn((MapObjectOf(map), GridAgent));
 
 		app.update();
 		app.update();
 
+		let [agent] = assert_related_count!(GridAgentOf, 1, app, grid);
 		assert_eq!(
 			Some(&IsChanged::FALSE),
-			app.world().entity(entity).get::<IsChanged<GridAgentOf>>(),
+			agent.get::<IsChanged<GridAgentOf>>(),
 		);
 	}
 }
