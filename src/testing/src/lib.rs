@@ -117,18 +117,18 @@ macro_rules! assert_eq_approx {
 }
 
 #[macro_export]
-macro_rules! assert_children_count {
-	($count:literal, $app:expr, $parent:expr $(,)?) => {
-		assert_children_count!($count, $app, $parent, |entity| Some(entity))
+macro_rules! assert_related_count {
+	($relation:ty, $count:literal, $app:expr, $parent:expr $(,)?) => {
+		$crate::assert_related_count!($relation, $count, $app, $parent, |entity| Some(entity))
 	};
-	($count:literal, $app:expr, $parent:expr, $filter_map:expr $(,)?) => {{
+	($relation:ty, $count:literal, $app:expr, $parent:expr, $filter_map:expr $(,)?) => {{
 		let mut query = $app.world_mut().query::<bevy::prelude::EntityRef>();
 		let children = query
 			.iter($app.world())
 			.filter(|entity| {
 				entity
-					.get::<bevy::prelude::ChildOf>()
-					.map(|p| p.parent() == $parent)
+					.get::<$relation>()
+					.map(|p| bevy::ecs::relationship::Relationship::get(p) == $parent)
 					.unwrap_or(false)
 			})
 			.filter_map($filter_map);

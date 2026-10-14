@@ -48,7 +48,7 @@ mod tests {
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use std::path::PathBuf;
-	use testing::{NestedMocks, SingleThreadedApp, assert_children_count};
+	use testing::{NestedMocks, SingleThreadedApp, assert_related_count};
 
 	#[derive(Resource, NestedMocks)]
 	struct _Input {
@@ -95,7 +95,7 @@ mod tests {
 		let Some(TokenItem::Key(item)) = token.items().next() else {
 			panic!("FAULTY ASSUMPTION")
 		};
-		let [child] = assert_children_count!(1, app, id);
+		let [child] = assert_related_count!(ChildOf, 1, app, id);
 		assert_eq!(
 			Some(&Icon::ImagePath(
 				PathBuf::from("icon/root/path").join(format!("{item}.png"))
@@ -119,7 +119,7 @@ mod tests {
 
 		app.update();
 
-		let [child] = assert_children_count!(1, app, id);
+		let [child] = assert_related_count!(ChildOf, 1, app, id);
 		assert_eq!(
 			Some(&UILabel(Token::from(UserInput::from(KeyCode::ArrowUp)))),
 			child.get::<UILabel<Token>>(),
@@ -140,7 +140,7 @@ mod tests {
 			.id();
 
 		app.update();
-		let [child] = assert_children_count!(1, app, id);
+		let [child] = assert_related_count!(ChildOf, 1, app, id);
 		let child = child.id();
 		app.world_mut().entity_mut(child).remove::<Icon>();
 		app.update();

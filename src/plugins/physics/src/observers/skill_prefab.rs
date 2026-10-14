@@ -212,7 +212,7 @@ mod tests {
 		collections::HashSet,
 		sync::{LazyLock, OnceLock},
 	};
-	use testing::{SingleThreadedApp, assert_children_count};
+	use testing::{SingleThreadedApp, assert_related_count};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Motion;
@@ -333,7 +333,7 @@ mod tests {
 
 	macro_rules! assert_projection_count {
 		($count:literal, $app:expr, $skill:expr) => {
-			assert_children_count!($count, $app, $skill, |e| {
+			assert_related_count!(ChildOf, $count, $app, $skill, |e| {
 				if e.contains::<SkillProjectionRoot>() {
 					Some(e.id())
 				} else {
@@ -552,7 +552,7 @@ mod tests {
 				})
 				.id();
 
-			let [model, ..] = assert_children_count!(3, app, skill);
+			let [model, ..] = assert_related_count!(ChildOf, 3, app, skill);
 			assert_eq!(
 				(
 					Some(&PhysicsModel::Model(Model::scene("asset/path"))),
@@ -586,7 +586,7 @@ mod tests {
 				})
 				.id();
 
-			let [_, collider, _] = assert_children_count!(3, app, skill);
+			let [_, collider, _] = assert_related_count!(ChildOf, 3, app, skill);
 			assert_eq!(
 				(
 					Some(&Physical::Contact),
@@ -616,7 +616,7 @@ mod tests {
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
-			let [_, collider, _] = assert_children_count!(3, app, skill);
+			let [_, collider, _] = assert_related_count!(ChildOf, 3, app, skill);
 			assert_eq!(Some(&Sensor), collider.get::<Sensor>());
 		}
 
@@ -626,7 +626,7 @@ mod tests {
 
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
-			let [model, collider, ..] = assert_children_count!(3, app, skill);
+			let [model, collider, ..] = assert_related_count!(ChildOf, 3, app, skill);
 			assert_eq!(
 				(
 					Some(&SkillTransformOf(skill)),
@@ -747,7 +747,7 @@ mod tests {
 				.id();
 
 			let [projection] = assert_projection_count!(1, app, skill);
-			let [model, ..] = assert_children_count!(2, app, projection);
+			let [model, ..] = assert_related_count!(ChildOf, 2, app, projection);
 			assert_eq!(
 				(
 					Some(&PhysicsModel::Model(Model::scene("asset/path"))),
@@ -781,7 +781,7 @@ mod tests {
 				.id();
 
 			let [projection] = assert_projection_count!(1, app, skill);
-			let [.., collider] = assert_children_count!(2, app, projection);
+			let [.., collider] = assert_related_count!(ChildOf, 2, app, projection);
 			assert_eq!(
 				(
 					Some(&Physical::Projection),
@@ -812,7 +812,7 @@ mod tests {
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
 			let [projection] = assert_projection_count!(1, app, skill);
-			let [.., collider] = assert_children_count!(2, app, projection);
+			let [.., collider] = assert_related_count!(ChildOf, 2, app, projection);
 			assert_eq!(Some(&Sensor), collider.get::<Sensor>());
 		}
 
@@ -823,7 +823,7 @@ mod tests {
 			let skill = app.world_mut().spawn(_Skill::default()).id();
 
 			let [projection] = assert_projection_count!(1, app, skill);
-			let [model, collider] = assert_children_count!(2, app, projection);
+			let [model, collider] = assert_related_count!(ChildOf, 2, app, projection);
 			assert_eq!(
 				(
 					Some(&SkillTransformOf(skill)),
@@ -852,7 +852,7 @@ mod tests {
 				})
 				.id();
 
-			let [.., projection] = assert_children_count!(3, app, skill);
+			let [.., projection] = assert_related_count!(ChildOf, 3, app, skill);
 			assert_eq!(
 				Some(&Effects(vec![SkillEffect::Force(Force)])),
 				projection.get::<Effects>(),

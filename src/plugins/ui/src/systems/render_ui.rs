@@ -33,7 +33,7 @@ mod tests {
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
-	use testing::{NestedMocks, SingleThreadedApp, assert_children_count};
+	use testing::{NestedMocks, SingleThreadedApp, assert_related_count};
 
 	#[derive(Component)]
 	struct _Component;
@@ -86,7 +86,7 @@ mod tests {
 
 		app.update();
 
-		let [child] = assert_children_count!(1, app, entity);
+		let [child] = assert_related_count!(ChildOf, 1, app, entity);
 		assert_eq!(
 			Some(&String::from("a localized")),
 			child.get::<Text>().map(|Text(s)| s)
