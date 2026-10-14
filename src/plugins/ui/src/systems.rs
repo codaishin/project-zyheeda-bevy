@@ -24,3 +24,4 @@ pub(crate) mod trigger_on_release;
 pub(crate) mod ui_label;
 pub(crate) mod update_children;
 pub(crate) mod update_panels;
+pub(crate) mod with_node;

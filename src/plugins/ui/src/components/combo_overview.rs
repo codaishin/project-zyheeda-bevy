@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use super::{
 	DeleteSkill,
 	SkillSelectDropdownCommand,
@@ -10,7 +8,7 @@ use super::{
 };
 use crate::{
 	Tooltip,
-	components::{icon::Icon, label::UILabel},
+	components::{icon::Icon, label::UILabel, with_node::WithNode},
 	tools::Dimensions,
 	traits::{
 		LoadUi,
@@ -23,6 +21,7 @@ use crate::{
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::prelude::*;
 use macros::asset_path;
+use std::fmt::Debug;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(
@@ -63,7 +62,7 @@ where
 }
 
 impl ComboOverview<()> {
-	pub const BUTTON_FONT_SIZE: FontSize = FontSize::Px(15.);
+	pub const BUTTON_FONT_SIZE: FontSize = FontSize::Px(22.);
 	pub const SKILL_ICON_MARGIN: Pixel = Pixel(15.);
 	pub const MODIFY_BUTTON_OFFSET: Pixel = Pixel(-12.0);
 	pub const SYMBOL_WIDTH: Pixel = Pixel(5.);
@@ -73,13 +72,13 @@ impl ComboOverview<()> {
 		border: Pixel(0.0),
 	};
 	pub const KEY_BUTTON_DIMENSIONS: Dimensions = Dimensions {
-		width: Pixel(25.0),
-		height: Pixel(25.0),
+		width: Pixel(30.0),
+		height: Pixel(30.0),
 		border: Pixel(2.0),
 	};
 	pub const MODIFY_BUTTON_DIMENSIONS: Dimensions = Dimensions {
-		width: Pixel(25.0),
-		height: Pixel(25.0),
+		width: Pixel(30.0),
+		height: Pixel(30.0),
 		border: Pixel(2.0),
 	};
 
@@ -249,21 +248,16 @@ impl ComboOverview<()> {
 		)
 	}
 
-	pub(crate) fn skill_key_text(key: HandSlot) -> (Node, TextLayout, InputLabel) {
+	pub(crate) fn skill_key_text(key: HandSlot) -> (WithNode, InputLabel) {
 		(
-			Node {
-				width: Val::from(
+			WithNode::modify_or_insert(|Node { width, height, .. }| {
+				*width = Val::from(
 					Self::KEY_BUTTON_DIMENSIONS.width - Self::KEY_BUTTON_DIMENSIONS.border,
-				),
-				height: Val::from(
+				);
+				*height = Val::from(
 					Self::KEY_BUTTON_DIMENSIONS.height - Self::KEY_BUTTON_DIMENSIONS.border,
-				),
-				..default()
-			},
-			TextLayout {
-				justify: Justify::Center,
-				..default()
-			},
+				);
+			}),
 			InputLabel { key },
 		)
 	}

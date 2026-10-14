@@ -30,6 +30,7 @@ use crate::{
 		label::UILabel,
 		pause_menu::PauseMenu,
 		ui_disabled::UIDisabled,
+		with_node::WithNode,
 	},
 	systems::{
 		combos::update_combos_view::UpdateComboOverview,
@@ -374,7 +375,7 @@ where
 				)
 					.run_if(TLoading::is_loaded(LoadingEssentialAssets)),
 			)
-			.add_systems(Last, ButtonInteraction::system);
+			.add_systems(Last, (WithNode::system, ButtonInteraction::system).chain());
 	}
 }
 

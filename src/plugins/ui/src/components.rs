@@ -21,6 +21,7 @@ pub(crate) mod start_menu_button;
 pub(crate) mod tooltip;
 pub(crate) mod ui_disabled;
 pub(crate) mod ui_overlay;
+pub(crate) mod with_node;
 
 use bevy::prelude::*;
 use combo_skill_button::Horizontal;
