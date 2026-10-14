@@ -25,7 +25,7 @@ use crate::{
 			Vertical,
 		},
 		dispatch_text_color::DispatchTextColor,
-		icon::IconStackItem,
+		icon::{IconStack, IconStackItem},
 		key_select_dropdown_command::KeySelectDropdownCommand,
 		label::UILabel,
 		pause_menu::PauseMenu,
@@ -363,6 +363,8 @@ where
 					UIDisabled::apply,
 					(
 						InputLabel::icon::<TInput::TInput>(asset_path!("generic/icons")),
+						IconStack::format_root,
+						IconStack::format_items,
 						Icon::load_image,
 						Icon::insert_image,
 						UILabel::icon_tooltip,
