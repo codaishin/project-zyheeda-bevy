@@ -206,7 +206,7 @@ mod test {
 	}
 
 	mod entity {
-		use testing::assert_children_count;
+		use testing::assert_related_count;
 
 		use super::*;
 
@@ -368,7 +368,7 @@ mod test {
 					entity_cmds.with_child(_Component("child"));
 				})?;
 
-			let [child] = assert_children_count!(1, app, entity);
+			let [child] = assert_related_count!(ChildOf, 1, app, entity);
 			assert_eq!(Some(&_Component("child")), child.get::<_Component>());
 			Ok(())
 		}
@@ -388,7 +388,7 @@ mod test {
 					});
 				})?;
 
-			let [child] = assert_children_count!(1, app, entity);
+			let [child] = assert_related_count!(ChildOf, 1, app, entity);
 			assert_eq!(Some(&_Component("child")), child.get::<_Component>());
 			Ok(())
 		}

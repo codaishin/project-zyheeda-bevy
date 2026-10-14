@@ -31,7 +31,7 @@ mod tests {
 	#![allow(clippy::unwrap_used)]
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use testing::{SingleThreadedApp, assert_children_count};
+	use testing::{SingleThreadedApp, assert_related_count};
 
 	#[derive(Component, Debug, PartialEq)]
 	struct _Child(Localized);
@@ -94,7 +94,7 @@ mod tests {
 
 		app.update();
 
-		let children = assert_children_count!(3, app, entity, |e| e.get::<_Child>());
+		let children = assert_related_count!(ChildOf, 3, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
 			[
 				&_Child::from("Token A"),
@@ -119,7 +119,7 @@ mod tests {
 
 		app.update();
 
-		let children = assert_children_count!(3, app, entity, |e| e.get::<_Child>());
+		let children = assert_related_count!(ChildOf, 3, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
 			[
 				&_Child::from("Token A"),
@@ -147,7 +147,7 @@ mod tests {
 
 		app.update();
 
-		let children = assert_children_count!(3, app, entity, |e| e.get::<_Child>());
+		let children = assert_related_count!(ChildOf, 3, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
 			[
 				&_Child::from("Token A"),
@@ -169,7 +169,7 @@ mod tests {
 			.with_child(_Child::from("Do not remove"));
 		app.update();
 
-		let children = assert_children_count!(4, app, entity, |e| e.get::<_Child>());
+		let children = assert_related_count!(ChildOf, 4, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
 			[
 				&_Child::from("Token A"),
@@ -192,7 +192,7 @@ mod tests {
 		parent.with_child(_Child::from("Do remove"));
 		app.update();
 
-		let children = assert_children_count!(3, app, entity, |e| e.get::<_Child>());
+		let children = assert_related_count!(ChildOf, 3, app, entity, |e| e.get::<_Child>());
 		assert_eq!(
 			[
 				&_Child::from("Token A"),

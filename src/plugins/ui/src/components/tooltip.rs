@@ -167,7 +167,7 @@ mod tests {
 	#![allow(clippy::expect_used)]
 	use super::*;
 	use bevy::ecs::relationship::RelatedSpawnerCommands;
-	use testing::{SingleThreadedApp, assert_children_count, assert_count, fake_entity};
+	use testing::{SingleThreadedApp, assert_count, assert_related_count, fake_entity};
 
 	impl TooltipUiConfig for () {}
 
@@ -478,7 +478,7 @@ mod tests {
 			.world_mut()
 			.query_filtered::<Entity, With<TooltipContent<_T>>>();
 		let [container] = assert_count!(1, containers.iter(app.world()));
-		let [content] = assert_children_count!(1, app, container);
+		let [content] = assert_related_count!(ChildOf, 1, app, container);
 		assert_eq!(
 			Some(&_Child::from(format!(
 				"Localized({})",

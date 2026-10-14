@@ -372,7 +372,7 @@ mod tests {
 	mod sub_frames {
 		use super::*;
 		use crate::components::collider::ColliderOf;
-		use testing::assert_children_count;
+		use testing::assert_related_count;
 
 		#[test]
 		fn insert_collider() {
@@ -389,7 +389,7 @@ mod tests {
 				}))
 				.id();
 
-			let [child] = assert_children_count!(1, app, entity);
+			let [child] = assert_related_count!(ChildOf, 1, app, entity);
 			assert_eq!(
 				Some(&ColliderShape::from(shape)),
 				child.get::<ColliderShape>(),
@@ -413,7 +413,7 @@ mod tests {
 				}))
 				.id();
 
-			let [child] = assert_children_count!(1, app, entity);
+			let [child] = assert_related_count!(ChildOf, 1, app, entity);
 			assert_eq!(
 				Some(&Transform::from_xyz(0., 0., -11.)),
 				child.get::<Transform>(),
@@ -435,7 +435,7 @@ mod tests {
 				}))
 				.id();
 
-			let [child] = assert_children_count!(1, app, entity);
+			let [child] = assert_related_count!(ChildOf, 1, app, entity);
 			assert_eq!(
 				(
 					None,
@@ -469,7 +469,7 @@ mod tests {
 				}))
 				.id();
 
-			let [child] = assert_children_count!(1, app, entity);
+			let [child] = assert_related_count!(ChildOf, 1, app, entity);
 			assert_eq!(Some(&Interactive), child.get::<Interactive>());
 		}
 
@@ -487,7 +487,7 @@ mod tests {
 				}))
 				.id();
 
-			let [child] = assert_children_count!(1, app, entity);
+			let [child] = assert_related_count!(ChildOf, 1, app, entity);
 			assert_eq!(Some(&ColliderOf(entity)), child.get::<ColliderOf>(),);
 		}
 
@@ -505,7 +505,7 @@ mod tests {
 				}))
 				.id();
 
-			let [child] = assert_children_count!(1, app, entity);
+			let [child] = assert_related_count!(ChildOf, 1, app, entity);
 			assert_eq!(
 				Some(&CollisionGroups {
 					memberships: INTERACTIVE_GROUP,
@@ -530,7 +530,7 @@ mod tests {
 				}))
 				.id();
 
-			let [child] = assert_children_count!(1, app, entity);
+			let [child] = assert_related_count!(ChildOf, 1, app, entity);
 			assert_eq!(Some(&Sensor), child.get::<Sensor>());
 		}
 	}
