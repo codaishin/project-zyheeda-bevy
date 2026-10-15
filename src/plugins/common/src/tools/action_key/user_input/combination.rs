@@ -25,12 +25,12 @@ impl UserInputCombination<2> {
 }
 
 impl<const N: usize> UserInputCombination<N> {
-	pub fn try_from_iter<TInput>(input: TInput) -> Result<Self, BuildError<N>>
+	pub fn try_from_iter<TInput>(input: TInput) -> Result<Self, BuildError>
 	where
 		TInput: IntoIterator<Item = RawInput>,
 	{
 		let mut len = 0;
-		let mut dst = [RawInput::KeyCode(KeyCode::Abort); N];
+		let mut dst = [const { RawInput::KeyCode(KeyCode::Abort) }; N];
 
 		for src in input {
 			if let Some(dst) = dst.get_mut(len) {
@@ -48,6 +48,23 @@ impl<const N: usize> UserInputCombination<N> {
 		}
 
 		Self::try_from(dst).map_err(BuildError::Repetition)
+	}
+
+	pub fn try_from_set<TSet>(set: TSet) -> Result<Self, TSet>
+	where
+		TSet: IsSet<Item = RawInput>,
+	{
+		if set.len() != N {
+			return Err(set);
+		}
+
+		let mut set = set.into_iter();
+		let raw = std::array::from_fn(|_| unsafe {
+			// SAFETY: We already checked size and each value in the set is unique
+			set.next().unwrap_unchecked()
+		});
+
+		Ok(Self(raw))
 	}
 
 	pub fn iter(&self) -> std::slice::Iter<'_, RawInput> {
@@ -130,7 +147,7 @@ pub struct CountMismatchError {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum BuildError<const N: usize> {
+pub enum BuildError {
 	CountMismatch(CountMismatchError),
 	Repetition(InputRepeatedError),
 }
@@ -258,6 +275,56 @@ mod tests {
 				expected: 2,
 				got: 3,
 			})),
+			comb
+		);
+	}
+
+	#[test]
+	fn from_set() {
+		let src = OrderedSet::from([
+			RawInput::KeyCode(KeyCode::KeyA),
+			RawInput::KeyCode(KeyCode::KeyB),
+		]);
+
+		let comb = UserInputCombination::<2>::try_from_set(src);
+
+		assert_eq!(
+			Ok(UserInputCombination([
+				RawInput::KeyCode(KeyCode::KeyA),
+				RawInput::KeyCode(KeyCode::KeyB)
+			])),
+			comb
+		);
+	}
+
+	#[test]
+	fn from_set_to_large_error() {
+		let src = OrderedSet::from([
+			RawInput::KeyCode(KeyCode::KeyA),
+			RawInput::KeyCode(KeyCode::KeyB),
+			RawInput::KeyCode(KeyCode::KeyC),
+		]);
+
+		let comb = UserInputCombination::<2>::try_from_set(src);
+
+		assert_eq!(
+			Err(OrderedSet::from([
+				RawInput::KeyCode(KeyCode::KeyA),
+				RawInput::KeyCode(KeyCode::KeyB),
+				RawInput::KeyCode(KeyCode::KeyC),
+			])),
+			comb
+		);
+	}
+
+	#[test]
+	fn from_set_to_small_error() {
+		let src = OrderedSet::from([RawInput::KeyCode(KeyCode::KeyA)]);
+
+		let comb = UserInputCombination::<2>::try_from_set(src);
+
+		assert_eq!(
+			Err(OrderedSet::from([RawInput::KeyCode(KeyCode::KeyA)])),
 			comb
 		);
 	}
