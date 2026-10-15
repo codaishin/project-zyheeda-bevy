@@ -1,5 +1,6 @@
 mod keys;
 
+use crate::collections::{is_empty::IsEmpty, len::Len, sealed::SealedCollection};
 use macros::serde_model;
 use serde::{Deserialize, Serialize, de::Error};
 use std::{
@@ -416,6 +417,10 @@ where
 		self.values.is_empty()
 	}
 
+	pub fn len(&self) -> usize {
+		self.values.len()
+	}
+
 	pub fn contains(&self, v: &T) -> bool {
 		self.values.contains(v)
 	}
@@ -481,6 +486,26 @@ where
 		self.values.into_iter()
 	}
 }
+
+impl<T> IsEmpty for OrderedSet<T>
+where
+	T: PartialEq,
+{
+	fn is_empty(&self) -> bool {
+		self.is_empty()
+	}
+}
+
+impl<T> Len for OrderedSet<T>
+where
+	T: PartialEq,
+{
+	fn len(&self) -> usize {
+		self.len()
+	}
+}
+
+impl<T> SealedCollection for OrderedSet<T> where T: PartialEq {}
 
 pub type UniqueIter<'a, T> = std::collections::vec_deque::Iter<'a, T>;
 pub type UniqueIntoIter<T> = std::collections::vec_deque::IntoIter<T>;

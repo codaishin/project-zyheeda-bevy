@@ -1,7 +1,9 @@
 pub use crate::{
 	collections::{
 		is_empty::IsEmpty,
+		is_set::IsSet,
 		iterate::Iterate,
+		len::Len,
 		ordered::{Entry, OrderedHashMap, OrderedSet, UniqueIter},
 		ring_buffer::RingBuffer,
 		sorted::Sorted,
