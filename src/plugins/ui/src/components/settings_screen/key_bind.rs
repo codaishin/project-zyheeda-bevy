@@ -2,16 +2,19 @@ pub(crate) mod action;
 pub(crate) mod input;
 pub(crate) mod rebinding;
 
-use crate::traits::{
-	colors::PanelColors,
-	insert_ui_content::InsertUiContent,
-	ui_traits::{GetBackgroundColor, GetNode},
+use crate::{
+	components::button_state::UiButtonState,
+	traits::{
+		colors::PanelColors,
+		insert_ui_content::InsertUiContent,
+		ui_traits::{GetBackgroundColor, GetNode},
+	},
 };
 use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq, Clone, Copy)]
-#[require(Node = Self::node(), BackgroundColor = Self::background_color())]
+#[require(Node = Self::node(), BackgroundColor = Self::background_color(), UiButtonState)]
 pub(crate) struct KeyBind<T>(pub(crate) T)
 where
 	Self: GetBackgroundColor + GetNode;

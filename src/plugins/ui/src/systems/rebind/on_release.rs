@@ -1,4 +1,4 @@
-use crate::{Input, KeyBind, Rebinding};
+use crate::{Input, KeyBind, Rebinding, components::button_state::UiButtonState};
 use bevy::prelude::*;
 use common::prelude::*;
 
@@ -6,12 +6,12 @@ impl<TAction> KeyBind<Input<TAction>>
 where
 	TAction: Copy + ThreadSafe,
 {
-	pub(crate) fn rebind_on_click(
+	pub(crate) fn rebind_on_release(
 		mut commands: ZyheedaCommands,
-		key_binds: Query<(Entity, &Self, &Interaction, Option<&Children>)>,
+		key_binds: Query<KeyBinds<TAction>>,
 	) {
-		for (entity, KeyBind(input), interaction, children) in &key_binds {
-			if interaction != &Interaction::Pressed {
+		for (entity, KeyBind(input), UiButtonState(state), children) in &key_binds {
+			if !matches!(state, InputState::Released { just_now: true }) {
 				continue;
 			}
 
@@ -31,10 +31,18 @@ where
 	}
 }
 
+type KeyBinds<'a, TAction> = (
+	Entity,
+	&'a KeyBind<Input<TAction>>,
+	&'a UiButtonState,
+	Option<&'a Children>,
+);
+
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::Rebinding;
+	use test_case::test_case;
 	use testing::{SingleThreadedApp, assert_count};
 
 	#[derive(Debug, PartialEq, Clone, Copy)]
@@ -54,13 +62,13 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, KeyBind::<Input<_Action>>::rebind_on_click);
+		app.add_systems(Update, KeyBind::<Input<_Action>>::rebind_on_release);
 
 		app
 	}
 
 	#[test]
-	fn insert_rebind() {
+	fn insert_rebind_on_release_to() {
 		let mut app = setup();
 		let parent = app.world_mut().spawn_empty().id();
 		let entity = app
@@ -70,7 +78,7 @@ mod tests {
 					action: _Action,
 					input: UserInput::MouseButton(MouseButton::Left),
 				}),
-				Interaction::Pressed,
+				UiButtonState(InputState::just_released()),
 			))
 			.insert(ChildOf(parent))
 			.id();
@@ -98,7 +106,7 @@ mod tests {
 					action: _Action,
 					input: UserInput::MouseButton(MouseButton::Left),
 				}),
-				Interaction::Pressed,
+				UiButtonState(InputState::just_released()),
 			))
 			.id();
 
@@ -119,7 +127,7 @@ mod tests {
 					action: _Action,
 					input: UserInput::MouseButton(MouseButton::Left),
 				}),
-				Interaction::Pressed,
+				UiButtonState(InputState::just_released()),
 			))
 			.with_children(_Child::spawn_nested_once);
 
@@ -129,44 +137,35 @@ mod tests {
 		assert_count!(0, children.iter(app.world()));
 	}
 
-	#[test]
-	fn do_nothing_if_not_pressed() {
+	#[test_case(UiButtonState(InputState::pressed()); "pressed")]
+	#[test_case(UiButtonState(InputState::just_pressed()); "just pressed")]
+	#[test_case(UiButtonState(InputState::released()); "released")]
+	fn do_nothing_if(state: UiButtonState) {
 		let mut app = setup();
-		let entities = [
-			app.world_mut()
-				.spawn((
-					KeyBind(Input {
-						action: _Action,
-						input: UserInput::MouseButton(MouseButton::Left),
-					}),
-					Interaction::None,
-				))
-				.with_children(_Child::spawn_nested_once)
-				.id(),
-			app.world_mut()
-				.spawn((
-					KeyBind(Input {
-						action: _Action,
-						input: UserInput::MouseButton(MouseButton::Left),
-					}),
-					Interaction::Hovered,
-				))
-				.with_children(_Child::spawn_nested_once)
-				.id(),
-		];
+		let entity = app
+			.world_mut()
+			.spawn((
+				KeyBind(Input {
+					action: _Action,
+					input: UserInput::MouseButton(MouseButton::Left),
+				}),
+				state,
+			))
+			.with_children(_Child::spawn_nested_once)
+			.id();
 
 		app.update();
 
 		let mut children = app.world_mut().query_filtered::<(), With<_Child>>();
 		assert_eq!(
-			([true, true], [false, false], 4),
+			(true, false, 2),
 			(
 				app.world()
-					.entity(entities)
-					.map(|e| e.contains::<KeyBind<Input<_Action>>>()),
+					.entity(entity)
+					.contains::<KeyBind<Input<_Action>>>(),
 				app.world()
-					.entity(entities)
-					.map(|e| e.contains::<KeyBind<Rebinding<_Action>>>()),
+					.entity(entity)
+					.contains::<KeyBind<Rebinding<_Action>>>(),
 				children.iter(app.world()).count()
 			)
 		);

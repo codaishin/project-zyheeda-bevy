@@ -17,6 +17,7 @@ use crate::{
 	components::{
 		DeleteSkill,
 		SkillSelectDropdownCommand,
+		button_state::UiButtonState,
 		combo_skill_button::{
 			ComboSkillButton,
 			DropdownItem,
@@ -341,7 +342,7 @@ where
 					SettingsScreen::set_key_bindings_from::<TInput::TInput>,
 					KeyBindAction::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
-					KeyBindInput::rebind_on_click,
+					KeyBindInput::rebind_on_release.after(TrackInteractions),
 					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
 					KeyRebindInput::rebind_apply::<TInput::TInputMut>,
 				)
@@ -355,6 +356,7 @@ where
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
 			.add_tooltip::<TLocalization::TLocalizationServer, Token>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
+			.add_systems(Update, UiButtonState::track.in_set(TrackInteractions))
 			.add_systems(
 				Update,
 				(
@@ -418,3 +420,6 @@ where
 		debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
 	}
 }
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct TrackInteractions;
