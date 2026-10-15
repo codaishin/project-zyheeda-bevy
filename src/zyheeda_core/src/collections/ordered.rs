@@ -397,8 +397,15 @@ where
 	/// Inserts a value.
 	///
 	/// Will cause this value to be last in the insertion order, even if it was already contained.
-	pub fn insert(&mut self, value: T) {
-		self.values.push_back_unique(value);
+	///
+	/// Returns:
+	/// - `true` when value newly inserted
+	/// - `false` when value was already contained
+	pub fn insert(&mut self, value: T) -> bool {
+		match self.values.push_back_unique(value) {
+			keys::PushBackResult::New => true,
+			keys::PushBackResult::MovedBack => false,
+		}
 	}
 
 	pub fn remove(&mut self, value: &T) {
@@ -981,6 +988,24 @@ mod tests {
 			let set = OrderedSet::from([1, 2, 3]);
 
 			assert_eq!(vec![1, 2, 3], set.into_iter().collect::<Vec<_>>());
+		}
+
+		#[test]
+		fn insert_true() {
+			let mut set = OrderedSet::from([1, 2, 3]);
+
+			let is_new = set.insert(4);
+
+			assert!(is_new);
+		}
+
+		#[test]
+		fn insert_false() {
+			let mut set = OrderedSet::from([1, 2, 3]);
+
+			let is_new = set.insert(2);
+
+			assert!(!is_new);
 		}
 	}
 }
