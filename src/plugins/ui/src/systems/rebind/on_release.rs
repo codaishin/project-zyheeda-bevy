@@ -1,4 +1,4 @@
-use crate::{Input, KeyBind, Rebinding};
+use crate::{Input, KeyBind, Rebinding, components::button_state::UiButtonState};
 use bevy::prelude::*;
 use common::prelude::*;
 
@@ -8,19 +8,17 @@ where
 {
 	pub(crate) fn rebind_on_release(
 		mut commands: ZyheedaCommands,
-		key_binds: Query<KeyBinds<TAction>, Changed<Interaction>>,
+		key_binds: Query<KeyBinds<TAction>>,
 	) {
-		for (entity, KeyBind(input), current, last, children) in &key_binds {
-			let Some(mut entity) = commands.get_mut(&entity) else {
-				continue;
-			};
-
-			if !Self::just_released(&mut entity, last, current) {
+		for (entity, KeyBind(input), UiButtonState(state), children) in &key_binds {
+			if !matches!(state, InputState::Released { just_now: true }) {
 				continue;
 			}
 
-			entity.try_insert(KeyBind(Rebinding(*input)));
-			entity.try_remove::<Self>();
+			commands.try_apply_on(&entity, |mut e| {
+				e.try_insert(KeyBind(Rebinding(*input)));
+				e.try_remove::<Self>();
+			});
 
 			let Some(children) = children else {
 				continue;
@@ -31,34 +29,14 @@ where
 			}
 		}
 	}
-
-	fn just_released(
-		entity: &mut ZyheedaEntityCommands,
-		last: Option<&LastInteraction>,
-		current: &Interaction,
-	) -> bool {
-		entity.try_insert(LastInteraction(*current));
-
-		matches!(
-			(last, current),
-			(
-				Some(LastInteraction(Interaction::Pressed)),
-				Interaction::None | Interaction::Hovered,
-			)
-		)
-	}
 }
 
 type KeyBinds<'a, TAction> = (
 	Entity,
 	&'a KeyBind<Input<TAction>>,
-	&'a Interaction,
-	Option<&'a LastInteraction>,
+	&'a UiButtonState,
 	Option<&'a Children>,
 );
-
-#[derive(Component)]
-pub(crate) struct LastInteraction(Interaction);
 
 #[cfg(test)]
 mod tests {
@@ -89,9 +67,8 @@ mod tests {
 		app
 	}
 
-	#[test_case(Interaction::Hovered; "hovered")]
-	#[test_case(Interaction::None; "no interaction")]
-	fn insert_rebind_on_release_to(released: Interaction) {
+	#[test]
+	fn insert_rebind_on_release_to() {
 		let mut app = setup();
 		let parent = app.world_mut().spawn_empty().id();
 		let entity = app
@@ -101,13 +78,11 @@ mod tests {
 					action: _Action,
 					input: UserInput::MouseButton(MouseButton::Left),
 				}),
-				Interaction::Pressed,
+				UiButtonState(InputState::just_released()),
 			))
 			.insert(ChildOf(parent))
 			.id();
 
-		app.update();
-		app.world_mut().entity_mut(entity).insert(released);
 		app.update();
 
 		assert_eq!(
@@ -121,9 +96,8 @@ mod tests {
 		);
 	}
 
-	#[test_case(Interaction::Hovered; "hovered")]
-	#[test_case(Interaction::None; "none")]
-	fn remove_input(released: Interaction) {
+	#[test]
+	fn remove_input() {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
@@ -132,12 +106,10 @@ mod tests {
 					action: _Action,
 					input: UserInput::MouseButton(MouseButton::Left),
 				}),
-				Interaction::Pressed,
+				UiButtonState(InputState::just_released()),
 			))
 			.id();
 
-		app.update();
-		app.world_mut().entity_mut(entity).insert(released);
 		app.update();
 
 		assert_eq!(
@@ -146,34 +118,29 @@ mod tests {
 		);
 	}
 
-	#[test_case(Interaction::Hovered; "hovered")]
-	#[test_case(Interaction::None; "none")]
-	fn remove_all_input_children(released: Interaction) {
+	#[test]
+	fn remove_all_input_children() {
 		let mut app = setup();
-		let entity = app
-			.world_mut()
+		app.world_mut()
 			.spawn((
 				KeyBind(Input {
 					action: _Action,
 					input: UserInput::MouseButton(MouseButton::Left),
 				}),
-				Interaction::Pressed,
+				UiButtonState(InputState::just_released()),
 			))
-			.with_children(_Child::spawn_nested_once)
-			.id();
+			.with_children(_Child::spawn_nested_once);
 
-		app.update();
-		app.world_mut().entity_mut(entity).insert(released);
 		app.update();
 
 		let mut children = app.world_mut().query_filtered::<(), With<_Child>>();
 		assert_count!(0, children.iter(app.world()));
 	}
 
-	#[test_case(Interaction::Hovered; "hovered")]
-	#[test_case(Interaction::Pressed; "pressed")]
-	#[test_case(Interaction::None; "no interaction")]
-	fn do_nothing_if_just(state: Interaction) {
+	#[test_case(UiButtonState(InputState::pressed()); "pressed")]
+	#[test_case(UiButtonState(InputState::just_pressed()); "just pressed")]
+	#[test_case(UiButtonState(InputState::released()); "released")]
+	fn do_nothing_if(state: UiButtonState) {
 		let mut app = setup();
 		let entity = app
 			.world_mut()
