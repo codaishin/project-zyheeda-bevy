@@ -29,19 +29,27 @@ where
 		self.0.is_empty()
 	}
 
-	pub(super) fn push_back_unique(&mut self, key: TKey) {
-		self.remove(&key);
+	pub(super) fn push_back_unique(&mut self, key: TKey) -> PushBackResult {
+		let result = if self.remove(&key) {
+			PushBackResult::MovedBack
+		} else {
+			PushBackResult::New
+		};
+
 		self.0.push_back(key);
+
+		result
 	}
 
-	pub(super) fn remove(&mut self, key: &TKey) {
+	pub(super) fn remove(&mut self, key: &TKey) -> bool {
 		// It is enough to find the first hit, because we run this before each insertion.
 		// There is always just one matching item contained.
 		let Some(i) = self.0.iter().position(|k| k == key) else {
-			return;
+			return false;
 		};
 
 		self.0.remove(i);
+		true
 	}
 
 	pub(super) fn clear(&mut self) {
@@ -102,6 +110,11 @@ where
 
 		Ok(Self(keys))
 	}
+}
+
+pub(super) enum PushBackResult {
+	New,
+	MovedBack,
 }
 
 #[cfg(test)]

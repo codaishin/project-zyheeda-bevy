@@ -43,7 +43,7 @@ impl GameStatesPlugin {
 			return;
 		};
 
-		previous.insert(exited)
+		previous.insert(exited);
 	}
 
 	fn apply_transition_from<T>(
