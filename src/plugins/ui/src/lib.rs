@@ -341,7 +341,7 @@ where
 					SettingsScreen::set_key_bindings_from::<TInput::TInput>,
 					KeyBindAction::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
-					KeyBindInput::rebind_on_click,
+					KeyBindInput::rebind_on_release,
 					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
 					KeyRebindInput::rebind_apply::<TInput::TInputMut>,
 				)
