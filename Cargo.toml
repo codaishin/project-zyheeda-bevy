@@ -39,6 +39,7 @@ opt-level = 3
 
 [features]
 debug-utils = [
+	"common/debug-utils",
 	"graphics/debug-utils",
 	"physics/debug-utils",
 	"bevy/debug",

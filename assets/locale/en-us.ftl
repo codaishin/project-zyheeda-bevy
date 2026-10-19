@@ -53,6 +53,8 @@ menu-inventory = Inventory
 menu-combos = Combos
 menu-settings = Settings
 
+debug-key-rotate-colliders = Rotate Collider Debug Gizmos
+
 paused = Pause
 
 save-quick-save = Quick Save
@@ -110,6 +112,7 @@ key-code-escape = Escape
 key-code-numpad-subtract = Numpad -
 key-code-space = Space
 key-code-shift-left = Left Shift
+key-code-control-left = Left Ctrl
 
 mouse-button-left = Left Mouse Button
 mouse-button-right = Right Mouse Button

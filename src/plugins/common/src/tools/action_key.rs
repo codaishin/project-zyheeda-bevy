@@ -7,6 +7,9 @@ pub mod slot;
 pub mod targeting;
 pub mod user_input;
 
+#[cfg(feature = "debug-utils")]
+pub mod debug;
+
 use crate::{
 	tools::{
 		action_key::{
@@ -30,6 +33,9 @@ use movement::MovementKey;
 use slot::HandSlot;
 use user_input::UserInput;
 
+#[cfg(feature = "debug-utils")]
+use debug::DebugKey;
+
 #[serde_model]
 #[derive(TypePath, Clone, Copy, Eq, Hash, PartialEq, Debug, EnumConversions)]
 pub enum ActionKey {
@@ -40,6 +46,8 @@ pub enum ActionKey {
 	Menu(MenuKey),
 	Camera(CameraKey),
 	Save(SaveKey),
+	#[cfg(feature = "debug-utils")]
+	Debug(DebugKey),
 }
 
 impl Default for ActionKey {
@@ -58,6 +66,8 @@ impl From<ActionKey> for UserInput {
 			ActionKey::Menu(key) => Self::from(key),
 			ActionKey::Camera(key) => Self::from(key),
 			ActionKey::Save(key) => Self::from(key),
+			#[cfg(feature = "debug-utils")]
+			ActionKey::Debug(key) => Self::from(key),
 		}
 	}
 }
@@ -72,6 +82,8 @@ impl From<ActionKey> for Token {
 			ActionKey::Menu(key) => Self::from(key),
 			ActionKey::Camera(key) => Self::from(key),
 			ActionKey::Save(key) => Self::from(key),
+			#[cfg(feature = "debug-utils")]
+			ActionKey::Debug(key) => Self::from(key),
 		}
 	}
 }
@@ -91,7 +103,12 @@ impl IterFinite for ActionKey {
 			Miscellaneous(key) => next(Miscellaneous, key).or(first(Menu)),
 			Menu(key) => next(Menu, key).or(first(Camera)),
 			Camera(key) => next(Camera, key).or(first(Save)),
+			#[cfg(not(feature = "debug-utils"))]
 			Save(key) => next(Save, key).or(None),
+			#[cfg(feature = "debug-utils")]
+			Save(key) => next(Save, key).or(first(Debug)),
+			#[cfg(feature = "debug-utils")]
+			Debug(key) => next(Debug, key).or(None),
 		}
 	}
 }
@@ -106,6 +123,8 @@ impl InvalidUserInput for ActionKey {
 			ActionKey::Menu(key) => key.invalid_input(),
 			ActionKey::Camera(key) => key.invalid_input(),
 			ActionKey::Save(key) => key.invalid_input(),
+			#[cfg(feature = "debug-utils")]
+			ActionKey::Debug(key) => key.invalid_input(),
 		}
 	}
 }
@@ -119,32 +138,39 @@ mod tests {
 
 	#[test]
 	fn iter_all_keys() {
-		assert_eq!(
-			std::iter::empty()
-				.chain(MovementKey::iterator().map(ActionKey::from))
-				.chain(HandSlot::iterator().map(ActionKey::from))
-				.chain(TerrainTargeting::iterator().map(ActionKey::from))
-				.chain(Miscellaneous::iterator().map(ActionKey::from))
-				.chain(MenuKey::iterator().map(ActionKey::from))
-				.chain(CameraKey::iterator().map(ActionKey::from))
-				.chain(SaveKey::iterator().map(ActionKey::from))
-				.collect::<Vec<_>>(),
-			ActionKey::iterator().take(100).collect::<Vec<_>>()
-		);
+		let keys = &mut std::iter::empty()
+			.chain(MovementKey::iterator().map(ActionKey::from))
+			.chain(HandSlot::iterator().map(ActionKey::from))
+			.chain(TerrainTargeting::iterator().map(ActionKey::from))
+			.chain(Miscellaneous::iterator().map(ActionKey::from))
+			.chain(MenuKey::iterator().map(ActionKey::from))
+			.chain(CameraKey::iterator().map(ActionKey::from))
+			.chain(SaveKey::iterator().map(ActionKey::from))
+			.collect::<Vec<_>>();
+
+		#[cfg(feature = "debug-utils")]
+		keys.extend(DebugKey::iterator().map(ActionKey::from));
+
+		assert_eq!(*keys, ActionKey::iterator().take(100).collect::<Vec<_>>());
 	}
 
 	#[test]
 	fn map_keys_to_user_input() {
+		let keys = &mut std::iter::empty()
+			.chain(MovementKey::iterator().map(UserInput::from))
+			.chain(HandSlot::iterator().map(UserInput::from))
+			.chain(TerrainTargeting::iterator().map(UserInput::from))
+			.chain(Miscellaneous::iterator().map(UserInput::from))
+			.chain(MenuKey::iterator().map(UserInput::from))
+			.chain(CameraKey::iterator().map(UserInput::from))
+			.chain(SaveKey::iterator().map(UserInput::from))
+			.collect::<Vec<_>>();
+
+		#[cfg(feature = "debug-utils")]
+		keys.extend(DebugKey::iterator().map(UserInput::from));
+
 		assert_eq_unordered!(
-			std::iter::empty()
-				.chain(MovementKey::iterator().map(UserInput::from))
-				.chain(HandSlot::iterator().map(UserInput::from))
-				.chain(TerrainTargeting::iterator().map(UserInput::from))
-				.chain(Miscellaneous::iterator().map(UserInput::from))
-				.chain(MenuKey::iterator().map(UserInput::from))
-				.chain(CameraKey::iterator().map(UserInput::from))
-				.chain(SaveKey::iterator().map(UserInput::from))
-				.collect::<Vec<_>>(),
+			*keys,
 			ActionKey::iterator()
 				.map(UserInput::from)
 				.collect::<Vec<_>>(),
@@ -160,16 +186,21 @@ mod tests {
 			(key.into(), key.invalid_input().to_vec())
 		}
 
+		let keys = &mut std::iter::empty()
+			.chain(MovementKey::iterator().map(pair_with_invalid_input))
+			.chain(HandSlot::iterator().map(pair_with_invalid_input))
+			.chain(TerrainTargeting::iterator().map(pair_with_invalid_input))
+			.chain(Miscellaneous::iterator().map(pair_with_invalid_input))
+			.chain(MenuKey::iterator().map(pair_with_invalid_input))
+			.chain(CameraKey::iterator().map(pair_with_invalid_input))
+			.chain(SaveKey::iterator().map(pair_with_invalid_input))
+			.collect::<HashMap<_, _>>();
+
+		#[cfg(feature = "debug-utils")]
+		keys.extend(DebugKey::iterator().map(pair_with_invalid_input));
+
 		assert_eq!(
-			std::iter::empty()
-				.chain(MovementKey::iterator().map(pair_with_invalid_input))
-				.chain(HandSlot::iterator().map(pair_with_invalid_input))
-				.chain(TerrainTargeting::iterator().map(pair_with_invalid_input))
-				.chain(Miscellaneous::iterator().map(pair_with_invalid_input))
-				.chain(MenuKey::iterator().map(pair_with_invalid_input))
-				.chain(CameraKey::iterator().map(pair_with_invalid_input))
-				.chain(SaveKey::iterator().map(pair_with_invalid_input))
-				.collect::<HashMap<_, _>>(),
+			*keys,
 			ActionKey::iterator()
 				.map(pair_with_invalid_input)
 				.collect::<HashMap<_, _>>(),
