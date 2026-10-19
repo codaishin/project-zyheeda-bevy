@@ -39,9 +39,12 @@ opt-level = 3
 
 [features]
 debug-utils = [
+	# internal
 	"common/debug-utils",
 	"graphics/debug-utils",
 	"physics/debug-utils",
+	"ui/debug-utils",
+	# external
 	"bevy/debug",
 	"bevy/bevy_dev_tools",
 	"dep:bevy-inspector-egui",

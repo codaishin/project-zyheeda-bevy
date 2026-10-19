@@ -32,6 +32,7 @@ key-bindings-menus = Menus
 key-bindings-camera = Camera
 key-bindings-savegame = Save Game
 key-bindings-targeting = Targeting
+key-bindings-debug = Debug
 
 slot-key-hand-left = Left Hand
 slot-key-hand-right = Right Hand
@@ -53,7 +54,7 @@ menu-inventory = Inventory
 menu-combos = Combos
 menu-settings = Settings
 
-debug-key-rotate-colliders = Rotate Collider Debug Gizmos
+debug-key-rotate-colliders = Rotate Colliders
 
 paused = Pause
 
