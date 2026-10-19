@@ -11,7 +11,7 @@ mod traits;
 #[cfg(test)]
 mod tests;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "debug-utils")]
 mod debug;
 
 use crate::{
@@ -137,7 +137,7 @@ where
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
 	fn build(&self, app: &mut App) {
-		#[cfg(debug_assertions)]
+		#[cfg(feature = "debug-utils")]
 		app.add_plugins(crate::debug::Debug);
 
 		TSaveGame::register_savable_component::<ApplyMotion>(app);
