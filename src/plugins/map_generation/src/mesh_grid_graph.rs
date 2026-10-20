@@ -2,7 +2,7 @@ mod clearance;
 mod edge;
 mod line;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "debug-utils")]
 pub(crate) mod debug;
 
 use crate::{

@@ -36,17 +36,13 @@ where
 			return;
 		};
 
-		for (key, state) in input.get_all_input_states::<DebugKey>() {
-			if key != DebugKey::RotateColliderDebug {
-				continue;
-			}
+		let state = input.get_input_state(DebugKey::RotateColliderDebug);
 
-			if state != InputState::just_pressed() {
-				continue;
-			}
-
-			gizmos.rotate();
+		if state != InputState::just_pressed() {
+			return;
 		}
+
+		gizmos.rotate();
 	}
 
 	fn control_collider_debug(
@@ -58,7 +54,7 @@ where
 		for (entity, collider_transform, current_debug) in colliders {
 			let debug = match *gizmos {
 				ColliderGizmos::None => ColliderDebug::NeverRender,
-				ColliderGizmos::AroundPlayer => {
+				ColliderGizmos::AroundAgents => {
 					let collider_translation = collider_transform.translation();
 					let debug = agents.iter().any(|agent_transform| {
 						(agent_transform.translation() - collider_translation).length() < 10.
@@ -105,15 +101,15 @@ where
 enum ColliderGizmos {
 	#[default]
 	None,
-	AroundPlayer,
+	AroundAgents,
 	All,
 }
 
 impl ColliderGizmos {
 	fn rotate(&mut self) {
 		*self = match self {
-			Self::None => Self::AroundPlayer,
-			Self::AroundPlayer => Self::All,
+			Self::None => Self::AroundAgents,
+			Self::AroundAgents => Self::All,
 			Self::All => Self::None,
 		}
 	}

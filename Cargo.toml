@@ -42,6 +42,7 @@ debug-utils = [
 	# internal
 	"common/debug-utils",
 	"graphics/debug-utils",
+	"map_generation/debug-utils",
 	"physics/debug-utils",
 	"ui/debug-utils",
 	# external

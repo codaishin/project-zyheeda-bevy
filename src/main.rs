@@ -53,19 +53,24 @@ fn prepare_game(app: &mut App) -> Result<(), ZyheedaAppError> {
 	let savegame = SavegamePlugin::from_plugin(&game_states).with_game_directory(game_dir);
 	let animations = AnimationsPlugin::from_plugin(&savegame);
 
-	#[cfg(not(feature = "debug-utils"))]
-	let physics = PhysicsPlugin::new(TARGET_PHYSICS_FPS, &game_states, &savegame, &animations);
-	#[cfg(feature = "debug-utils")]
 	let physics = PhysicsPlugin::new(
 		TARGET_PHYSICS_FPS,
 		&game_states,
 		&savegame,
 		&animations,
+		#[cfg(feature = "debug-utils")]
 		&input,
 	);
 
-	let map_generation =
-		MapGenerationPlugin::from_plugins(&game_states, &loading, &savegame, &physics);
+	let map_generation = MapGenerationPlugin::from_plugins(
+		&game_states,
+		&loading,
+		&savegame,
+		&physics,
+		#[cfg(feature = "debug-utils")]
+		&input,
+	);
+
 	let path_finding = PathFindingPlugin::from_plugin(&map_generation);
 	let movement = MovementPlugin::from_plugins(
 		&game_states,

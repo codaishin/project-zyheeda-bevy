@@ -13,12 +13,16 @@ use macros::serde_model;
 #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
 pub enum DebugKey {
 	RotateColliderDebug,
+	RotateNavMeshDebug,
 }
 
 impl From<DebugKey> for UserInput {
 	fn from(value: DebugKey) -> Self {
 		match value {
 			DebugKey::RotateColliderDebug => {
+				UserInput::Combined(UserInputCombination::ROTATE_DEBUG_COLLIDERS)
+			}
+			DebugKey::RotateNavMeshDebug => {
 				UserInput::Combined(UserInputCombination::ROTATE_DEBUG_NAV_MESH)
 			}
 		}
@@ -29,6 +33,7 @@ impl From<DebugKey> for Token {
 	fn from(value: DebugKey) -> Self {
 		match value {
 			DebugKey::RotateColliderDebug => Token::from("debug-key-rotate-colliders"),
+			DebugKey::RotateNavMeshDebug => Token::from("debug-key-rotate-nav-mesh"),
 		}
 	}
 }
@@ -40,7 +45,8 @@ impl IterFinite for DebugKey {
 
 	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
-			DebugKey::RotateColliderDebug => None,
+			DebugKey::RotateColliderDebug => Some(DebugKey::RotateNavMeshDebug),
+			DebugKey::RotateNavMeshDebug => None,
 		}
 	}
 }
@@ -58,7 +64,7 @@ mod tests {
 	#[test]
 	fn iter_all_keys() {
 		assert_eq!(
-			vec![DebugKey::RotateColliderDebug],
+			vec![DebugKey::RotateColliderDebug, DebugKey::RotateNavMeshDebug],
 			DebugKey::iterator().take(100).collect::<Vec<_>>()
 		);
 	}

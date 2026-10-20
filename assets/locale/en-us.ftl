@@ -55,6 +55,7 @@ menu-combos = Combos
 menu-settings = Settings
 
 debug-key-rotate-colliders = Rotate Colliders
+debug-key-rotate-nav-mesh = Rotate Nav Mesh
 
 paused = Pause
 
