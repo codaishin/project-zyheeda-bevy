@@ -13,12 +13,12 @@ use zyheeda_core::prelude::*;
 pub struct UserInputCombination<const N: usize>(#[serde(with = "array_as_vec")] [RawInput; N]);
 
 impl UserInputCombination<2> {
-	pub const ROTATE_DEBUG_NAV_MESH: Self = Self([
+	pub const ROTATE_DEBUG_COLLIDERS: Self = Self([
 		RawInput::KeyCode(KeyCode::ControlLeft),
 		RawInput::KeyCode(KeyCode::F10),
 	]);
 
-	pub const ROTATE_DEBUG_COLLIDERS: Self = Self([
+	pub const ROTATE_DEBUG_NAV_MESH: Self = Self([
 		RawInput::KeyCode(KeyCode::ControlLeft),
 		RawInput::KeyCode(KeyCode::F11),
 	]);
