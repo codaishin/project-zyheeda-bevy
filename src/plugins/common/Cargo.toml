@@ -24,3 +24,6 @@ test-case.workspace = true
 # internal
 common.workspace = true
 testing.workspace = true
+
+[features]
+debug-utils = ["common/debug-utils"]

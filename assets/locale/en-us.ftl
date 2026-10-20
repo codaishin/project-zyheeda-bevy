@@ -32,6 +32,7 @@ key-bindings-menus = Menus
 key-bindings-camera = Camera
 key-bindings-savegame = Save Game
 key-bindings-targeting = Targeting
+key-bindings-debug = Debug
 
 slot-key-hand-left = Left Hand
 slot-key-hand-right = Right Hand
@@ -52,6 +53,8 @@ camera-key-rotate = Camera Rotation
 menu-inventory = Inventory
 menu-combos = Combos
 menu-settings = Settings
+
+debug-key-rotate-colliders = Rotate Colliders
 
 paused = Pause
 
@@ -110,6 +113,7 @@ key-code-escape = Escape
 key-code-numpad-subtract = Numpad -
 key-code-space = Space
 key-code-shift-left = Left Shift
+key-code-control-left = Left Ctrl
 
 mouse-button-left = Left Mouse Button
 mouse-button-right = Right Mouse Button

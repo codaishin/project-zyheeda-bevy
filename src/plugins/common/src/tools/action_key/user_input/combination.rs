@@ -14,12 +14,12 @@ pub struct UserInputCombination<const N: usize>(#[serde(with = "array_as_vec")] 
 
 impl UserInputCombination<2> {
 	pub const ROTATE_DEBUG_NAV_MESH: Self = Self([
-		RawInput::KeyCode(KeyCode::ShiftLeft),
+		RawInput::KeyCode(KeyCode::ControlLeft),
 		RawInput::KeyCode(KeyCode::F10),
 	]);
 
 	pub const ROTATE_DEBUG_COLLIDERS: Self = Self([
-		RawInput::KeyCode(KeyCode::ShiftLeft),
+		RawInput::KeyCode(KeyCode::ControlLeft),
 		RawInput::KeyCode(KeyCode::F11),
 	]);
 }

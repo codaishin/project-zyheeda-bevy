@@ -11,7 +11,7 @@ mod traits;
 #[cfg(test)]
 mod tests;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "debug-utils")]
 mod debug;
 
 use crate::{
@@ -73,6 +73,8 @@ use zyheeda_core::conf::fps::PhysicsFPS;
 
 pub struct PhysicsPlugin<TDependencies> {
 	target_fps: PhysicsFPS,
+	#[cfg(feature = "debug-utils")]
+	add_debug_plugin: Box<dyn Fn(&mut App) + Sync + Send + 'static>,
 	_p: PhantomData<TDependencies>,
 }
 
@@ -121,9 +123,30 @@ where
 	TSaveGame: ThreadSafe + HandlesSaving,
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
+	#[cfg(not(feature = "debug-utils"))]
 	pub fn new(target_fps: PhysicsFPS, _: &TGameState, _: &TSaveGame, _: &TAnimations) -> Self {
 		Self {
 			target_fps,
+			_p: PhantomData,
+		}
+	}
+
+	#[cfg(feature = "debug-utils")]
+	pub fn new<TInput>(
+		target_fps: PhysicsFPS,
+		_: &TGameState,
+		_: &TSaveGame,
+		_: &TAnimations,
+		_: &TInput,
+	) -> Self
+	where
+		TInput: ThreadSafe + HandlesInput + SystemSetDefinition,
+	{
+		Self {
+			target_fps,
+			add_debug_plugin: Box::new(move |app| {
+				app.add_plugins(crate::debug::Debug(PhantomData::<TInput>));
+			}),
 			_p: PhantomData,
 		}
 	}
@@ -137,8 +160,8 @@ where
 	TAnimations: ThreadSafe + HandlesAnimations,
 {
 	fn build(&self, app: &mut App) {
-		#[cfg(debug_assertions)]
-		app.add_plugins(crate::debug::Debug);
+		#[cfg(feature = "debug-utils")]
+		(self.add_debug_plugin)(app);
 
 		TSaveGame::register_savable_component::<ApplyMotion>(app);
 		TSaveGame::register_savable_component::<Skill>(app);

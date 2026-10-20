@@ -176,6 +176,8 @@ impl InsertUiContent for SettingsScreen {
 					localize,
 					"key-bindings-savegame",
 				);
+				#[cfg(feature = "debug-utils")]
+				self.add_section(parent, DebugKey::iterator(), localize, "key-bindings-debug");
 			});
 	}
 }
