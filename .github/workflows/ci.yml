@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           lfs: true
       - name: Rust Toolchain Nightly
-        uses: actions-rust-lang/setup-rust-toolchain@v1
+        uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
         with:
           toolchain: nightly
           components: rustfmt
@@ -29,7 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         lfs: true
     - name: Install libraries
@@ -37,7 +37,7 @@ jobs:
         sudo apt update
         sudo apt install -y librust-alsa-sys-dev libudev-dev libwayland-dev
     - name: Rust Toolchain Clippy
-      uses: actions-rust-lang/setup-rust-toolchain@v1
+      uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
       with:
         components: clippy
     - name: Clippy
@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         lfs: true
     - name: Install libraries
@@ -55,7 +55,7 @@ jobs:
         sudo apt update
         sudo apt install -y librust-alsa-sys-dev libudev-dev libwayland-dev
     - name: Rust Toolchain Default
-      uses: actions-rust-lang/setup-rust-toolchain@v1
+      uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
     - name: Build Tests
       run: cargo test --workspace --no-run
     - name: Run Tests
@@ -65,7 +65,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v7
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
         lfs: true
     - name: Install libraries
@@ -73,7 +73,7 @@ jobs:
         sudo apt update
         sudo apt install -y librust-alsa-sys-dev libudev-dev libwayland-dev
     - name: Rust Toolchain Default
-      uses: actions-rust-lang/setup-rust-toolchain@v1
+      uses: actions-rust-lang/setup-rust-toolchain@ecabd13d1c56bd1345c230e542e9144811ad706f # v2.0.0
     - name: Build Tests
       run: cargo test --workspace --no-run --features debug-utils
     - name: Run Tests
