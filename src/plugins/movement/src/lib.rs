@@ -2,7 +2,7 @@ mod components;
 mod system_param;
 mod systems;
 
-#[cfg(debug_assertions)]
+#[cfg(feature = "debug-utils")]
 mod debug;
 
 use crate::{
@@ -89,8 +89,8 @@ where
 		TSaveGame::register_savable_component::<Movement>(app);
 		TSaveGame::register_savable_component::<SpeedIndex>(app);
 
-		#[cfg(debug_assertions)]
-		debug::draw::<TPhysics::TCharacterMotion>(app);
+		#[cfg(feature = "debug-utils")]
+		debug::draw::<TPhysics::TCharacterMotion, TInput>(app);
 
 		app.init_resource::<JustRemovedMovements>().add_systems(
 			Update,

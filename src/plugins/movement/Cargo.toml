@@ -20,3 +20,6 @@ mockall.workspace = true
 testing.workspace = true
 test-case.workspace = true
 serde_json.workspace = true
+
+[features]
+debug-utils = ["common/debug-utils"]

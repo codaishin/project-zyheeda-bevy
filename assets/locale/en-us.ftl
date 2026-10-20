@@ -56,6 +56,7 @@ menu-settings = Settings
 
 debug-key-rotate-colliders = Rotate Colliders
 debug-key-rotate-nav-mesh = Rotate Nav Mesh
+debug-key-toggle-movement-path = Toggle Movement Path
 
 paused = Pause
 
