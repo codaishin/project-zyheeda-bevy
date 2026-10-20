@@ -26,4 +26,4 @@ common.workspace = true
 testing.workspace = true
 
 [features]
-debug-utils = []
+debug-utils = ["common/debug-utils"]
