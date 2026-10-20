@@ -90,7 +90,7 @@ where
 		TSaveGame::register_savable_component::<SpeedIndex>(app);
 
 		#[cfg(feature = "debug-utils")]
-		debug::draw::<TPhysics::TCharacterMotion>(app);
+		debug::draw::<TPhysics::TCharacterMotion, TInput>(app);
 
 		app.init_resource::<JustRemovedMovements>().add_systems(
 			Update,
