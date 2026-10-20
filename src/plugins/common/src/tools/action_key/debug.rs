@@ -14,6 +14,7 @@ use macros::serde_model;
 pub enum DebugKey {
 	RotateColliderDebug,
 	RotateNavMeshDebug,
+	ToggleMovementPath,
 }
 
 impl From<DebugKey> for UserInput {
@@ -25,6 +26,9 @@ impl From<DebugKey> for UserInput {
 			DebugKey::RotateNavMeshDebug => {
 				UserInput::Combined(UserInputCombination::ROTATE_DEBUG_NAV_MESH)
 			}
+			DebugKey::ToggleMovementPath => {
+				UserInput::Combined(UserInputCombination::TOGGLE_DEBUG_MOVEMENT_PATH)
+			}
 		}
 	}
 }
@@ -34,6 +38,7 @@ impl From<DebugKey> for Token {
 		match value {
 			DebugKey::RotateColliderDebug => Token::from("debug-key-rotate-colliders"),
 			DebugKey::RotateNavMeshDebug => Token::from("debug-key-rotate-nav-mesh"),
+			DebugKey::ToggleMovementPath => Token::from("debug-key-toggle-movement-path"),
 		}
 	}
 }
@@ -46,7 +51,8 @@ impl IterFinite for DebugKey {
 	fn next(current: &FiniteIter<Self>) -> Option<Self> {
 		match current.0? {
 			DebugKey::RotateColliderDebug => Some(DebugKey::RotateNavMeshDebug),
-			DebugKey::RotateNavMeshDebug => None,
+			DebugKey::RotateNavMeshDebug => Some(DebugKey::ToggleMovementPath),
+			DebugKey::ToggleMovementPath => None,
 		}
 	}
 }
@@ -64,7 +70,11 @@ mod tests {
 	#[test]
 	fn iter_all_keys() {
 		assert_eq!(
-			vec![DebugKey::RotateColliderDebug, DebugKey::RotateNavMeshDebug],
+			vec![
+				DebugKey::RotateColliderDebug,
+				DebugKey::RotateNavMeshDebug,
+				DebugKey::ToggleMovementPath,
+			],
 			DebugKey::iterator().take(100).collect::<Vec<_>>()
 		);
 	}

@@ -22,6 +22,11 @@ impl UserInputCombination<2> {
 		RawInput::KeyCode(KeyCode::ControlLeft),
 		RawInput::KeyCode(KeyCode::F11),
 	]);
+
+	pub const TOGGLE_DEBUG_MOVEMENT_PATH: Self = Self([
+		RawInput::KeyCode(KeyCode::ControlLeft),
+		RawInput::KeyCode(KeyCode::F12),
+	]);
 }
 
 impl<const N: usize> UserInputCombination<N> {
