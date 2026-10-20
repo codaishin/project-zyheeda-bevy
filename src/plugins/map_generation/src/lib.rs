@@ -30,7 +30,11 @@ use components::grid::Grid;
 use std::marker::PhantomData;
 use zyheeda_core::strings::normalized_name::NormalizedName;
 
-pub struct MapGenerationPlugin<TDependencies>(PhantomData<TDependencies>);
+pub struct MapGenerationPlugin<TDependencies> {
+	#[cfg(feature = "debug-utils")]
+	add_debug: Box<dyn Fn(&mut App) + Sync + Send + 'static>,
+	_p: PhantomData<TDependencies>,
+}
 
 impl<TGameState, TLoading, TSavegame, TPhysics>
 	MapGenerationPlugin<(TGameState, TLoading, TSavegame, TPhysics)>
@@ -56,8 +60,26 @@ where
 	const MESH_COLLIDER_PREFIX: &str = "Collider";
 	const NAV_MESH_PREFIX: &str = "NavMesh";
 
+	#[cfg(not(feature = "debug-utils"))]
 	pub fn from_plugins(_: &TGameState, _: &TLoading, _: &TSavegame, _: &TPhysics) -> Self {
-		Self(PhantomData)
+		Self { _p: PhantomData }
+	}
+
+	#[cfg(feature = "debug-utils")]
+	pub fn from_plugins<TInput>(
+		_: &TGameState,
+		_: &TLoading,
+		_: &TSavegame,
+		_: &TPhysics,
+		_: &TInput,
+	) -> Self
+	where
+		TInput: ThreadSafe + HandlesInput + SystemSetDefinition,
+	{
+		Self {
+			add_debug: Box::new(crate::mesh_grid_graph::debug::draw::<TInput>),
+			_p: PhantomData,
+		}
 	}
 }
 
@@ -87,8 +109,8 @@ where
 
 		TSavegame::on_before_save(app, Map::apply_map_objects_persistence);
 
-		#[cfg(debug_assertions)]
-		crate::mesh_grid_graph::debug::draw(app);
+		#[cfg(feature = "debug-utils")]
+		(self.add_debug)(app);
 
 		TGameState::add_game_state_systems(
 			app,
