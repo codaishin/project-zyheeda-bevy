@@ -4,6 +4,7 @@ use crate::{
 		ongoing_effects::OngoingEffects,
 		persistent_root::PersistentRoot,
 	},
+	observers::skill_prefab::GetCaster,
 	resources::root_collisions::RootCollisions,
 	traits::act_on::ActOn,
 };
@@ -21,18 +22,27 @@ type Components<'a, TActor, TTarget> = (
 impl<T> ActOnSystem for T where T: Component<Mutability = Mutable> + Sized {}
 
 pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
-	fn act_on<TTarget>(
+	fn act_on<TGetCaster, TTarget>(
 		In(delta): In<Duration>,
 		commands: ZyheedaCommands,
 		ongoing_interactions: Res<RootCollisions<Physical>>,
+		caster_lookups: Query<&TGetCaster>,
 		mut actors: Query<Components<Self, TTarget>>,
 		mut targets: Query<(&PersistentEntity, &mut TTarget)>,
 	) where
 		Self: ActOn<TTarget>,
+		TGetCaster: Component + GetCaster,
 		TTarget: Component<Mutability = Mutable>,
 	{
-		for (entity, PersistentRoot(root), mut actor, mut ongoing_effects) in &mut actors {
+		for (entity, persistent_root, mut actor, mut ongoing_effects) in &mut actors {
 			let interaction_targets = ongoing_interactions.ongoing(&entity);
+			let Some(root) = commands.get(persistent_root) else {
+				continue;
+			};
+			let Ok(caster_lookup) = caster_lookups.get(root) else {
+				continue;
+			};
+			let persistent_caster = &caster_lookup.get_caster();
 
 			ongoing_effects.entities.retain(|persistent_target| {
 				match commands.get(persistent_target) {
@@ -46,9 +56,13 @@ pub(crate) trait ActOnSystem: Component<Mutability = Mutable> + Sized {
 					continue;
 				};
 
+				if persistent_target_entity == persistent_caster {
+					continue;
+				}
+
 				match ongoing_effects.entities.insert(*persistent_target_entity) {
-					true => actor.on_begin_interaction(*root, &mut target),
-					false => actor.on_repeated_interaction(*root, &mut target, delta),
+					true => actor.on_begin_interaction(**persistent_root, &mut target),
+					false => actor.on_repeated_interaction(**persistent_root, &mut target, delta),
 				}
 			}
 		}
@@ -65,10 +79,7 @@ mod tests {
 	use std::{collections::HashSet, sync::LazyLock};
 	use testing::{NestedMocks, SingleThreadedApp};
 
-	static ACTOR: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
-
 	#[derive(Component, NestedMocks)]
-	#[require(PersistentRoot(*ACTOR))]
 	pub struct _Actor {
 		mock: Mock_Actor,
 	}
@@ -99,6 +110,17 @@ mod tests {
 		}
 	}
 
+	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
+
+	#[derive(Component)]
+	struct _GetCaster;
+
+	impl GetCaster for _GetCaster {
+		fn get_caster(&self) -> PersistentEntity {
+			*CASTER
+		}
+	}
+
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
@@ -112,6 +134,8 @@ mod tests {
 	#[test]
 	fn begin_interaction() -> Result<(), RunSystemError> {
 		let mut app = setup();
+		let actor = PersistentEntity::default();
+		app.world_mut().spawn((actor, _GetCaster));
 		let target = app.world_mut().spawn(_Target).id();
 		let entity = app
 			.world_mut()
@@ -122,23 +146,57 @@ mod tests {
 			HashSet::from([target]),
 		)]));
 
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(_Actor::new().with_mock(|mock| {
+		app.world_mut().entity_mut(entity).insert((
+			PersistentRoot(actor),
+			_Actor::new().with_mock(|mock| {
 				mock.expect_on_begin_interaction()
 					.times(1)
-					.with(eq(*ACTOR), eq(_Target))
+					.with(eq(actor), eq(_Target))
 					.return_const(());
 				mock.expect_on_repeated_interaction().never();
-			}));
+			}),
+		));
 
-		app.world_mut()
-			.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))
+		app.world_mut().run_system_once_with(
+			_Actor::act_on::<_GetCaster, _Target>,
+			Duration::from_millis(42),
+		)
+	}
+
+	#[test]
+	fn ignore_interaction_with_caster() -> Result<(), RunSystemError> {
+		let mut app = setup();
+		let actor = PersistentEntity::default();
+		app.world_mut().spawn((actor, _GetCaster));
+		let target = app.world_mut().spawn((*CASTER, _Target)).id();
+		let entity = app
+			.world_mut()
+			.spawn(OngoingEffects::<_Actor, _Target>::default())
+			.id();
+		app.insert_resource(RootCollisions::<Physical>::from_ongoing([(
+			entity,
+			HashSet::from([target]),
+		)]));
+
+		app.world_mut().entity_mut(entity).insert((
+			PersistentRoot(actor),
+			_Actor::new().with_mock(|mock| {
+				mock.expect_on_begin_interaction().never().return_const(());
+				mock.expect_on_repeated_interaction().never();
+			}),
+		));
+
+		app.world_mut().run_system_once_with(
+			_Actor::act_on::<_GetCaster, _Target>,
+			Duration::from_millis(42),
+		)
 	}
 
 	#[test]
 	fn track_interacting_entity() -> Result<(), RunSystemError> {
 		let mut app = setup();
+		let actor = PersistentEntity::default();
+		app.world_mut().spawn((actor, _GetCaster));
 		let target = app.world_mut().spawn(_Target).id();
 		let entity = app
 			.world_mut()
@@ -148,15 +206,18 @@ mod tests {
 			entity,
 			HashSet::from([target]),
 		)]));
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(_Actor::new().with_mock(|mock| {
+		app.world_mut().entity_mut(entity).insert((
+			PersistentRoot(actor),
+			_Actor::new().with_mock(|mock| {
 				mock.expect_on_begin_interaction().return_const(());
 				mock.expect_on_repeated_interaction().return_const(());
-			}));
+			}),
+		));
 
-		app.world_mut()
-			.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
+		app.world_mut().run_system_once_with(
+			_Actor::act_on::<_GetCaster, _Target>,
+			Duration::from_millis(42),
+		)?;
 
 		assert_eq!(
 			Some(&OngoingEffects::<_Actor, _Target>::from([*TARGET])),
@@ -170,6 +231,8 @@ mod tests {
 	#[test]
 	fn repeat_interaction() -> Result<(), RunSystemError> {
 		let mut app = setup();
+		let actor = PersistentEntity::default();
+		app.world_mut().spawn((actor, _GetCaster));
 		let target = app.world_mut().spawn(_Target).id();
 		let entity = app
 			.world_mut()
@@ -179,18 +242,21 @@ mod tests {
 			entity,
 			HashSet::from([target]),
 		)]));
-		app.world_mut()
-			.entity_mut(entity)
-			.insert(_Actor::new().with_mock(|mock| {
+		app.world_mut().entity_mut(entity).insert((
+			PersistentRoot(actor),
+			_Actor::new().with_mock(|mock| {
 				mock.expect_on_begin_interaction().never();
 				mock.expect_on_repeated_interaction()
 					.times(1)
-					.with(eq(*ACTOR), eq(_Target), eq(Duration::from_millis(42)))
+					.with(eq(actor), eq(_Target), eq(Duration::from_millis(42)))
 					.return_const(());
-			}));
+			}),
+		));
 
-		app.world_mut()
-			.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))
+		app.world_mut().run_system_once_with(
+			_Actor::act_on::<_GetCaster, _Target>,
+			Duration::from_millis(42),
+		)
 	}
 
 	mod ongoing_effects {
@@ -199,6 +265,8 @@ mod tests {
 		#[test]
 		fn remove_entities_not_contained_in_ongoing_interactions() -> Result<(), RunSystemError> {
 			let mut app = setup();
+			let actor = PersistentEntity::default();
+			app.world_mut().spawn((actor, _GetCaster));
 			let not_interacting = PersistentEntity::default();
 			let interacting = [PersistentEntity::default(), PersistentEntity::default()];
 			let interacting_entities = interacting.map(|e| app.world_mut().spawn(e).id());
@@ -210,6 +278,7 @@ mod tests {
 						interacting[1],
 						not_interacting,
 					]),
+					PersistentRoot(actor),
 					_Actor::new().with_mock(|mock| {
 						mock.expect_on_begin_interaction().return_const(());
 						mock.expect_on_repeated_interaction().return_const(());
@@ -222,8 +291,10 @@ mod tests {
 				HashSet::from(interacting_entities),
 			)]));
 
-			app.world_mut()
-				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
+			app.world_mut().run_system_once_with(
+				_Actor::act_on::<_GetCaster, _Target>,
+				Duration::from_millis(42),
+			)?;
 
 			assert_eq!(
 				Some(&OngoingEffects::<_Actor, _Target>::from(interacting)),
@@ -238,11 +309,14 @@ mod tests {
 		fn remove_entities_not_contained_when_ongoing_interactions_has_actor_entry()
 		-> Result<(), RunSystemError> {
 			let mut app = setup();
+			let actor = PersistentEntity::default();
+			app.world_mut().spawn((actor, _GetCaster));
 			let not_interacting = PersistentEntity::default();
 			let entity = app
 				.world_mut()
 				.spawn((
 					OngoingEffects::<_Actor, _Target>::from([not_interacting]),
+					PersistentRoot(actor),
 					_Actor::new().with_mock(|mock| {
 						mock.expect_on_begin_interaction().return_const(());
 						mock.expect_on_repeated_interaction().return_const(());
@@ -251,8 +325,10 @@ mod tests {
 				.id();
 			app.world_mut().spawn(not_interacting);
 
-			app.world_mut()
-				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
+			app.world_mut().run_system_once_with(
+				_Actor::act_on::<_GetCaster, _Target>,
+				Duration::from_millis(42),
+			)?;
 
 			assert_eq!(
 				Some(&OngoingEffects::<_Actor, _Target>::from([])),
@@ -266,6 +342,8 @@ mod tests {
 		#[test]
 		fn remove_entities_that_does_not_exist() -> Result<(), RunSystemError> {
 			let mut app = setup();
+			let actor = PersistentEntity::default();
+			app.world_mut().spawn((actor, _GetCaster));
 			let not_interacting = PersistentEntity::default();
 			let interacting = [PersistentEntity::default(), PersistentEntity::default()];
 			let interacting_entities = interacting.map(|e| app.world_mut().spawn(e).id());
@@ -277,6 +355,7 @@ mod tests {
 						interacting[1],
 						not_interacting,
 					]),
+					PersistentRoot(actor),
 					_Actor::new().with_mock(|mock| {
 						mock.expect_on_begin_interaction().return_const(());
 						mock.expect_on_repeated_interaction().return_const(());
@@ -288,8 +367,10 @@ mod tests {
 				HashSet::from(interacting_entities),
 			)]));
 
-			app.world_mut()
-				.run_system_once_with(_Actor::act_on::<_Target>, Duration::from_millis(42))?;
+			app.world_mut().run_system_once_with(
+				_Actor::act_on::<_GetCaster, _Target>,
+				Duration::from_millis(42),
+			)?;
 
 			assert_eq!(
 				Some(&OngoingEffects::<_Actor, _Target>::from(interacting)),
