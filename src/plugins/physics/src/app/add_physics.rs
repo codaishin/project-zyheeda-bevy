@@ -1,6 +1,7 @@
 use crate::{
 	PhysicsSystems,
 	components::ongoing_effects::OngoingEffects,
+	observers::skill_prefab::GetCaster,
 	systems::interactions::act_on::ActOnSystem,
 	traits::act_on::ActOn,
 };
@@ -8,18 +9,20 @@ use bevy::{ecs::component::Mutable, prelude::*};
 use common::prelude::*;
 
 pub(crate) trait AddPhysics {
-	fn add_physics<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
+	fn add_physics<TGetCaster, TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
-		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
+		TGetCaster: Component + GetCaster,
+		TActor: Component<Mutability = Mutable> + SavableComponent + ActOn<TTarget>,
 		TTarget: Component<Mutability = Mutable> + SavableComponent,
 		OngoingEffects<TActor, TTarget>: Component<Mutability = Mutable> + SavableComponent,
 		TSaveGame: HandlesSaving;
 }
 
 impl AddPhysics for App {
-	fn add_physics<TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
+	fn add_physics<TGetCaster, TActor, TTarget, TSaveGame>(&mut self) -> &mut Self
 	where
-		TActor: ActOn<TTarget> + Component<Mutability = Mutable> + SavableComponent,
+		TGetCaster: Component + GetCaster,
+		TActor: Component<Mutability = Mutable> + SavableComponent + ActOn<TTarget>,
 		TTarget: Component<Mutability = Mutable> + SavableComponent,
 		OngoingEffects<TActor, TTarget>: Component<Mutability = Mutable> + SavableComponent,
 		TSaveGame: HandlesSaving,
@@ -32,7 +35,7 @@ impl AddPhysics for App {
 		self.add_systems(
 			FixedPostUpdate,
 			FixedPostUpdate::delta
-				.pipe(TActor::act_on::<TTarget>)
+				.pipe(TActor::act_on::<TGetCaster, TTarget>)
 				.in_set(PhysicsSystems::Resolve),
 		)
 	}

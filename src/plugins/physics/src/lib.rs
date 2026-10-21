@@ -227,14 +227,14 @@ where
 			// All effects
 			.add_observer(Effects::insert)
 			// Deal health damage
-			.add_physics::<HealthDamageEffect, Life, TSaveGame>()
+			.add_physics::<Skill, HealthDamageEffect, Life, TSaveGame>()
 			.add_observer(HealthDamageEffect::update_blockers_observer)
 			.add_systems(
 				FixedPreUpdate,
 				(Life::insert_from::<DefaultAttributes>, Life::despawn_dead).chain(),
 			)
 			// Apply gravity effect
-			.add_physics::<GravityEffect, GravityAffected, TSaveGame>()
+			.add_physics::<Skill, GravityEffect, GravityAffected, TSaveGame>()
 			.add_observer(GravityEffect::update_blockers_observer)
 			.add_systems(
 				FixedPreUpdate,
@@ -245,7 +245,7 @@ where
 					.chain(),
 			)
 			// Apply force effect
-			.add_physics::<ForceEffect, ForceAffected, TSaveGame>()
+			.add_physics::<Skill, ForceEffect, ForceAffected, TSaveGame>()
 			.add_observer(ForceEffect::update_blockers_observer)
 			.add_systems(
 				FixedPreUpdate,
