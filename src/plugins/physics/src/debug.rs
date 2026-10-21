@@ -83,17 +83,20 @@ where
 	TInput: ThreadSafe + HandlesInput + SystemSetDefinition,
 {
 	fn build(&self, app: &mut App) {
-		app.add_plugins(RapierDebugRenderPlugin::default())
-			.init_resource::<ColliderGizmos>()
-			.add_systems(
-				Update,
-				(
-					Self::display_events,
-					(Self::set_collider_gizmos, Self::control_collider_debug)
-						.chain()
-						.after_plugin(TInput::SYSTEMS),
-				),
-			);
+		app.add_plugins(RapierDebugRenderPlugin {
+			mode: DebugRenderMode::COLLIDER_SHAPES,
+			..default()
+		})
+		.init_resource::<ColliderGizmos>()
+		.add_systems(
+			Update,
+			(
+				Self::display_events,
+				(Self::set_collider_gizmos, Self::control_collider_debug)
+					.chain()
+					.after_plugin(TInput::SYSTEMS),
+			),
+		);
 	}
 }
 
