@@ -63,7 +63,7 @@ where
 			(
 				CameraArm::init_for::<TPlayers::TPlayer>,
 				CameraArm::move_arms::<TInput::TInput>,
-				CameraArm::apply_direction::<TGraphics::TCameraMut>.after_plugin(TPhysics::SYSTEMS),
+				CameraArm::apply_direction::<TGraphics::TCameraMut>,
 			)
 				.chain()
 				.after_plugin(TGameStates::SYSTEMS)
