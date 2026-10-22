@@ -1,14 +1,14 @@
 use crate::components::{
 	character_motion::{ApplyMotion, IsInMotion},
 	immobilized::Immobilized,
-	motion_controller::{MotionController, MotionControllerOf, OldTranslation},
+	motion_controller::{MotionControlled, MotionControllerOf, OldTranslation},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
 use std::time::Duration;
 
-impl MotionController {
+impl MotionControlled {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn set_translation(
 		delta: In<Duration>,
@@ -56,7 +56,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			(move || delta).pipe(MotionController::set_translation),
+			(move || delta).pipe(MotionControlled::set_translation),
 		);
 
 		app

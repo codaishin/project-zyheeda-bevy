@@ -2,7 +2,7 @@ use crate::components::{
 	affected::gravity_affected::GravityPull,
 	collider::AGENTS_GROUP,
 	immobilized::Immobilized,
-	motion_controller::{MotionController, OldTranslation},
+	motion_controller::{MotionControlled, OldTranslation},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -23,9 +23,9 @@ pub(crate) trait ApplyPull:
 				&Transform,
 				&mut OldTranslation,
 			),
-			Without<MotionController>,
+			Without<MotionControlled>,
 		>,
-		controlled: Query<(Entity, &mut Self, &MotionController)>,
+		controlled: Query<(Entity, &mut Self, &MotionControlled)>,
 		transforms: Query<&GlobalTransform>,
 	) {
 		let delta_secs = delta.as_secs_f32();

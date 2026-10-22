@@ -1,22 +1,18 @@
-use crate::components::motion_controller::{MotionController, OldTranslation};
+use crate::components::motion_controller::{MotionControlled, OldTranslation};
 use bevy::prelude::*;
 
-impl MotionController {
+impl MotionControlled {
 	pub(crate) fn interpolate_position(
 		In(OverstepFraction(overstep)): In<OverstepFraction>,
 		controlled: Query<(&mut Transform, &Self)>,
 		controllers: Query<(&Transform, &OldTranslation), Without<Self>>,
 	) {
-		for (mut controlled, controller) in controlled {
-			let Ok((current, OldTranslation(old))) = controllers.get(controller.id()) else {
+		for (mut transform, controlled) in controlled {
+			let Ok((controller, OldTranslation(old))) = controllers.get(controlled.id()) else {
 				continue;
 			};
 
-			if controlled.translation == *old {
-				continue;
-			}
-
-			controlled.translation = old.lerp(current.translation, overstep);
+			transform.translation = old.lerp(controller.translation, overstep);
 		}
 	}
 }
@@ -42,7 +38,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				(move || overstep).pipe(MotionController::interpolate_position),
+				(move || overstep).pipe(MotionControlled::interpolate_position),
 				IsChanged::<Transform>::detect,
 			)
 				.chain(),

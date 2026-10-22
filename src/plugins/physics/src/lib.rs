@@ -32,7 +32,7 @@ use crate::{
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		model::PhysicsModel,
-		motion_controller::{MotionController, MotionControllerOf},
+		motion_controller::{MotionControlled, MotionControllerOf},
 		self_skill_scale::SelfSkillScale,
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
@@ -189,19 +189,19 @@ where
 			.add_systems(
 				FixedPreUpdate,
 				(
-					FixedPreUpdate::delta.pipe(MotionController::set_translation),
-					FixedPreUpdate::delta.pipe(MotionController::apply_gravity),
+					FixedPreUpdate::delta.pipe(MotionControlled::set_translation),
+					FixedPreUpdate::delta.pipe(MotionControlled::apply_gravity),
 				)
 					.chain(),
 			)
 			.add_systems(
 				FixedPostUpdate,
-				FixedPostUpdate::delta.pipe(MotionController::set_done),
+				FixedPostUpdate::delta.pipe(MotionControlled::set_done),
 			)
 			.add_systems(
 				Update,
 				OverstepFraction::fixed
-					.pipe(MotionController::interpolate_position)
+					.pipe(MotionControlled::interpolate_position)
 					.in_set(PhysicsSystems::Interpolate),
 			)
 			// Animations

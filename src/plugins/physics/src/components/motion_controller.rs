@@ -29,16 +29,16 @@ pub(crate) struct OldTranslation(pub(crate) Vec3);
 
 #[derive(Component, Debug, PartialEq)]
 #[relationship_target(relationship = MotionControllerOf, linked_spawn)]
-pub(crate) struct MotionController(Entity);
+pub(crate) struct MotionControlled(Entity);
 
-impl MotionController {
+impl MotionControlled {
 	pub(crate) fn id(&self) -> Entity {
 		self.0
 	}
 }
 
 #[derive(Component, Debug, PartialEq)]
-#[relationship(relationship_target = MotionController)]
+#[relationship(relationship_target = MotionControlled)]
 #[require(OldTranslation)]
 pub(crate) struct MotionControllerOf {
 	#[relationship]
