@@ -34,21 +34,9 @@ static SKILL_MOUNT: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn"
 static SKILL_MOUNT_NEUTRAL: LazyBoneName = LazyLock::new(|| BoneName::from("skill_spawn_neutral"));
 
 impl VoidSphere {
-	const SLOT_KEY: SlotKey = SlotKey(0);
-
-	const COLLIDER_GROUND_OFFSET: f32 = 0.6;
-	const INNER_MODEL_OFFSET: f32 = 0.2;
-	const INNER_RADIUS: f32 = 0.3;
-	const OUTER_RADIUS: f32 = 0.4;
-	const TORUS_RADIUS: f32 = 0.35;
-	const TORUS_RING_RADIUS: f32 = Self::OUTER_RADIUS - Self::TORUS_RADIUS;
-	const INTERACTIVE_DETECTION_DISTANCE: f32 = 0.1;
-
-	const SLOT_OFFSET: Vec3 = Vec3::new(0., 0., -(Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS));
-
 	fn attack_config() -> EnemyAttackConfig {
 		EnemyAttackConfig {
-			key: Self::SLOT_KEY,
+			key: VoidSphereModel::SLOT_KEY,
 			hold: Duration::from_secs(1),
 			cooldown: Duration::from_secs(2),
 		}
@@ -59,23 +47,27 @@ impl VoidSphere {
 			loadout,
 			attributes,
 			model: AgentModel::Procedural(|e| {
-				e.try_insert(Self);
+				e.try_insert(VoidSphereModel);
 			}),
 			interactive_detection_shape: InteractiveFrame {
 				forward_offset: Units::ZERO,
 				shape: ShapeParameters::Cylinder {
-					half_y: Units::from(Self::COLLIDER_GROUND_OFFSET),
-					radius: Units::from(Self::OUTER_RADIUS + Self::INTERACTIVE_DETECTION_DISTANCE),
+					half_y: Units::from(VoidSphereModel::COLLIDER_GROUND_OFFSET),
+					radius: Units::from(
+						VoidSphereModel::OUTER_RADIUS
+							+ VoidSphereModel::INTERACTIVE_DETECTION_DISTANCE,
+					),
 				},
 			},
-			bones: Self::bones(),
+			bones: VoidSphereModel::bones(),
 			required_clearance: RequiredClearance {
-				vertical: Units::from(Self::COLLIDER_GROUND_OFFSET),
-				horizontal: Units::from(Self::OUTER_RADIUS),
+				vertical: Units::from(VoidSphereModel::COLLIDER_GROUND_OFFSET),
+				horizontal: Units::from(VoidSphereModel::OUTER_RADIUS),
 			},
 			height_levels: HeightLevels {
-				aim: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
-				center: Self::COLLIDER_GROUND_OFFSET + Self::INNER_MODEL_OFFSET,
+				aim: VoidSphereModel::COLLIDER_GROUND_OFFSET + VoidSphereModel::INNER_MODEL_OFFSET,
+				center: VoidSphereModel::COLLIDER_GROUND_OFFSET
+					+ VoidSphereModel::INNER_MODEL_OFFSET,
 				..default()
 			},
 			self_skill_scale: Scale::ONE,
@@ -92,21 +84,6 @@ impl VoidSphere {
 			min_target_distance: Some(Units::from(3.)),
 		}
 	}
-
-	fn bones() -> Bones {
-		Bones {
-			skill_mounts: HashMap::from([
-				(SKILL_MOUNT_NEUTRAL.clone(), SkillMountBone::NeutralSlot),
-				(
-					SKILL_MOUNT.clone(),
-					SkillMountBone::Slot(VoidSphere::SLOT_KEY),
-				),
-			]),
-			hand_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),
-			forearm_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),
-			essence_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), VoidSphere::SLOT_KEY)]),
-		}
-	}
 }
 
 impl From<VoidSphere> for AgentType {
@@ -115,7 +92,37 @@ impl From<VoidSphere> for AgentType {
 	}
 }
 
-impl Prefab<()> for VoidSphere {
+#[derive(Component, Debug, PartialEq)]
+#[component(immutable)]
+pub(crate) struct VoidSphereModel;
+
+impl VoidSphereModel {
+	const SLOT_KEY: SlotKey = SlotKey(0);
+
+	const COLLIDER_GROUND_OFFSET: f32 = 0.6;
+	const INNER_MODEL_OFFSET: f32 = 0.2;
+	const INNER_RADIUS: f32 = 0.3;
+	const OUTER_RADIUS: f32 = 0.4;
+	const TORUS_RADIUS: f32 = 0.35;
+	const TORUS_RING_RADIUS: f32 = Self::OUTER_RADIUS - Self::TORUS_RADIUS;
+	const INTERACTIVE_DETECTION_DISTANCE: f32 = 0.1;
+
+	const SLOT_OFFSET: Vec3 = Vec3::new(0., 0., -(Self::OUTER_RADIUS + Self::TORUS_RING_RADIUS));
+
+	fn bones() -> Bones {
+		Bones {
+			skill_mounts: HashMap::from([
+				(SKILL_MOUNT_NEUTRAL.clone(), SkillMountBone::NeutralSlot),
+				(SKILL_MOUNT.clone(), SkillMountBone::Slot(Self::SLOT_KEY)),
+			]),
+			hand_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), Self::SLOT_KEY)]),
+			forearm_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), Self::SLOT_KEY)]),
+			essence_slots: HashMap::from([(ALL_PURPOSE_SLOT_BONE.into(), Self::SLOT_KEY)]),
+		}
+	}
+}
+
+impl Prefab<()> for VoidSphereModel {
 	type TError = Unreachable;
 	type TSystemParam = ();
 
@@ -189,7 +196,7 @@ impl VoidSphereCore {
 	fn mesh() -> InsertAsset<Mesh> {
 		InsertAsset::shared::<Self>(|| {
 			Mesh::from(Sphere {
-				radius: VoidSphere::INNER_RADIUS,
+				radius: VoidSphereModel::INNER_RADIUS,
 			})
 		})
 	}
@@ -214,8 +221,8 @@ impl VoidSphereRing {
 	fn mesh() -> InsertAsset<Mesh> {
 		InsertAsset::shared::<Self>(|| {
 			Mesh::from(Torus {
-				major_radius: VoidSphere::TORUS_RADIUS,
-				minor_radius: VoidSphere::TORUS_RING_RADIUS,
+				major_radius: VoidSphereModel::TORUS_RADIUS,
+				minor_radius: VoidSphereModel::TORUS_RING_RADIUS,
 			})
 		})
 	}
