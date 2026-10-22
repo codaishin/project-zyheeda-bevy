@@ -9,7 +9,7 @@ use crate::{
 		agent::{Agent, ApplyAgentAnimations},
 		agent_config::AgentConfig,
 		animate_idle::AnimateIdle,
-		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphere},
+		enemy::{Enemy, attack_phase::EnemyAttackPhase, void_sphere::VoidSphereModel},
 		player::Player,
 	},
 	system_params::agent_param::AgentParam,
@@ -163,7 +163,7 @@ where
 
 		// # Prefabs
 		app.add_prefab_observer::<Agent, ()>();
-		app.add_prefab_observer::<VoidSphere, ()>();
+		app.add_prefab_observer::<VoidSphereModel, ()>();
 
 		// # Behaviors
 		app.add_systems(
