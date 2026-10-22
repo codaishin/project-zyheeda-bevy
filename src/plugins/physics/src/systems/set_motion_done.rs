@@ -1,12 +1,12 @@
 use crate::components::{
 	character_motion::{ApplyMotion, IsInMotion},
-	motion_controller::{MotionController, OldTranslation},
+	motion_controller::{MotionControlled, OldTranslation},
 };
 use bevy::prelude::*;
 use common::prelude::*;
 use std::time::Duration;
 
-impl MotionController {
+impl MotionControlled {
 	pub(crate) fn set_done(
 		In(delta): In<Duration>,
 		mut commands: ZyheedaCommands,
@@ -77,7 +77,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				(move || delta).pipe(MotionController::set_done),
+				(move || delta).pipe(MotionControlled::set_done),
 				IsChanged::<ApplyMotion>::detect,
 			)
 				.chain(),
