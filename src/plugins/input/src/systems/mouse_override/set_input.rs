@@ -1,12 +1,12 @@
 use crate::resources::mouse_override::MouseOverride;
-use bevy::prelude::*;
+use bevy::{prelude::*, ui::Pressed};
 use common::prelude::*;
 use std::ops::Deref;
 
 impl MouseOverride {
 	pub(crate) fn set_input(
 		mouse: Res<ButtonInput<MouseButton>>,
-		interactions: Query<&Interaction>,
+		buttons: Query<(), With<Pressed>>,
 		mut mouse_override: ResMut<Self>,
 	) {
 		Self::reset_released(&mut mouse_override);
@@ -15,15 +15,15 @@ impl MouseOverride {
 			return;
 		};
 
-		if interactions.iter().any(|i| i != &Interaction::None) {
+		if !buttons.is_empty() {
 			return;
 		}
 
-		let input = if mouse.just_released(MOUSE_LEFT) {
+		let input = if mouse.just_released(MouseButton::Left) {
 			InputState::just_released()
-		} else if mouse.just_pressed(MOUSE_LEFT) {
+		} else if mouse.just_pressed(MouseButton::Left) {
 			InputState::just_pressed()
-		} else if mouse.pressed(MOUSE_LEFT) {
+		} else if mouse.pressed(MouseButton::Left) {
 			InputState::pressed()
 		} else {
 			return;
@@ -49,11 +49,10 @@ impl MouseOverride {
 	}
 }
 
-const MOUSE_LEFT: MouseButton = MouseButton::Left;
-
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ui_widgets::Button;
 	use testing::{SingleThreadedApp, set_input};
 
 	fn setup() -> App {
@@ -67,18 +66,17 @@ mod tests {
 
 	mod bevy_input {
 		use super::*;
-		use test_case::test_case;
 
 		#[test]
 		fn set_just_pressed() {
 			let mut app = setup();
-			let panel = app.world_mut().spawn(Interaction::None).id();
+			let panel = app.world_mut().spawn(Button).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
 				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
-			set_input!(app, just_pressed(MOUSE_LEFT));
+			set_input!(app, just_pressed(MouseButton::Left));
 
 			app.update();
 
@@ -95,13 +93,13 @@ mod tests {
 		#[test]
 		fn set_pressed() {
 			let mut app = setup();
-			let panel = app.world_mut().spawn(Interaction::None).id();
+			let panel = app.world_mut().spawn(Button).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
 				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
-			set_input!(app, pressed(MOUSE_LEFT));
+			set_input!(app, pressed(MouseButton::Left));
 
 			app.update();
 
@@ -118,13 +116,13 @@ mod tests {
 		#[test]
 		fn set_just_released() {
 			let mut app = setup();
-			let panel = app.world_mut().spawn(Interaction::None).id();
+			let panel = app.world_mut().spawn(Button).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
 				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
-			set_input!(app, just_released(MOUSE_LEFT));
+			set_input!(app, just_released(MouseButton::Left));
 
 			app.update();
 
@@ -138,17 +136,16 @@ mod tests {
 			);
 		}
 
-		#[test_case(Interaction::Hovered; "hovered")]
-		#[test_case(Interaction::Pressed; "pressed")]
-		fn do_set_when_panel_is(interaction: Interaction) {
+		#[test]
+		fn do_set_when_panel_is_pressed() {
 			let mut app = setup();
-			let panel = app.world_mut().spawn(interaction).id();
+			let panel = app.world_mut().spawn((Button, Pressed)).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
 				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
-			set_input!(app, just_pressed(MOUSE_LEFT));
+			set_input!(app, just_pressed(MouseButton::Left));
 
 			app.update();
 
@@ -162,18 +159,17 @@ mod tests {
 			);
 		}
 
-		#[test_case(Interaction::Hovered; "hovered")]
-		#[test_case(Interaction::Pressed; "pressed")]
-		fn do_set_when_other_is(interaction: Interaction) {
+		#[test]
+		fn do_set_when_other_is_pressed() {
 			let mut app = setup();
-			let panel = app.world_mut().spawn(Interaction::None).id();
-			app.world_mut().spawn(interaction);
+			let panel = app.world_mut().spawn(Button).id();
+			app.world_mut().spawn((Button, Pressed));
 			app.insert_resource(MouseOverride::Active {
 				panel,
 				action: ActionKey::from(HandSlot::Left),
 				input_state: None,
 			});
-			set_input!(app, just_pressed(MOUSE_LEFT));
+			set_input!(app, just_pressed(MouseButton::Left));
 
 			app.update();
 
@@ -194,7 +190,7 @@ mod tests {
 		#[test]
 		fn set_just_released_to_idle() {
 			let mut app = setup();
-			let panel = app.world_mut().spawn(Interaction::None).id();
+			let panel = app.world_mut().spawn(Button).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
 				action: ActionKey::from(HandSlot::Left),
@@ -212,7 +208,7 @@ mod tests {
 		#[test]
 		fn set_released_to_idle() {
 			let mut app = setup();
-			let panel = app.world_mut().spawn(Interaction::None).id();
+			let panel = app.world_mut().spawn(Button).id();
 			app.insert_resource(MouseOverride::Active {
 				panel,
 				action: ActionKey::from(HandSlot::Left),

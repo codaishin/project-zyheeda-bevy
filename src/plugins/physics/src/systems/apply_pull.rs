@@ -377,6 +377,7 @@ mod tests {
 					filter_groups: Some(CollisionGroups {
 						memberships: AGENTS_GROUP,
 						filters: TERRAIN_GROUP,
+						test_mode: InteractionTestMode::Or,
 					}),
 					..default()
 				},
@@ -390,6 +391,7 @@ mod tests {
 			Some(CollisionGroups {
 				memberships: AGENTS_GROUP,
 				filters: TERRAIN_GROUP | AGENTS_GROUP,
+				test_mode: InteractionTestMode::Or,
 			}),
 			app.world()
 				.entity(ctrl)
@@ -512,6 +514,7 @@ mod tests {
 					filter_groups: Some(CollisionGroups {
 						memberships: AGENTS_GROUP,
 						filters: TERRAIN_GROUP | AGENTS_GROUP,
+						test_mode: InteractionTestMode::Or,
 					}),
 					..default()
 				},
@@ -525,6 +528,7 @@ mod tests {
 			Some(CollisionGroups {
 				memberships: AGENTS_GROUP,
 				filters: TERRAIN_GROUP,
+				test_mode: InteractionTestMode::Or,
 			}),
 			app.world()
 				.entity(ctrl)

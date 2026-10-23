@@ -5,7 +5,7 @@ use common::prelude::*;
 
 impl LinearVelocity {
 	pub(crate) fn apply(
-		on_insert: On<Insert, Self>,
+		on_insert: On<Insert<Self>>,
 		mut commands: ZyheedaCommands,
 		velocities: Query<&Self>,
 	) {

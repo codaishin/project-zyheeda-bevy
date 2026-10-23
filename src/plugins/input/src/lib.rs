@@ -46,6 +46,7 @@ where
 
 		app.init_resource::<AssetWriter>()
 			.init_resource::<MouseOverride>()
+			.add_observer(MouseOverride::set_active)
 			.add_systems(
 				Update,
 				(
@@ -53,7 +54,6 @@ where
 						.pipe(OnError::log)
 						.run_if(resource_exists::<KeyMap>),
 					(
-						MouseOverride::set_active,
 						MouseOverride::set_input,
 						MouseOverride::update_action_key_interaction,
 					)

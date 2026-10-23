@@ -112,7 +112,7 @@ mod tests {
 	use std::collections::HashMap;
 	use testing::{SingleThreadedApp, new_handle};
 
-	fn bone_components<const N: usize>(bone_chain: [&str; N]) -> (Name, AnimationTargetId) {
+	fn bone_components<const N: usize>(bone_chain: [&'static str; N]) -> (Name, AnimationTargetId) {
 		let names = bone_chain.map(Name::from);
 
 		match names.as_slice() {

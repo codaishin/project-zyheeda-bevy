@@ -3,7 +3,7 @@ use crate::{
 	components::{combo_overview::ComboSkill, label::UILabel},
 	traits::insert_ui_content::InsertUiContent,
 };
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*, ui_widgets::Button};
 use common::prelude::*;
 use std::{fmt::Debug, marker::PhantomData};
 
@@ -20,7 +20,7 @@ pub(crate) struct Horizontal;
 pub(crate) struct DropdownItem<TLayout>(PhantomData<TLayout>);
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Node)]
+#[require(Node, Button)]
 pub(crate) struct ComboSkillButton<T, TId>
 where
 	T: 'static,

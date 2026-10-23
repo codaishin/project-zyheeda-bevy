@@ -13,24 +13,24 @@ impl AddPrefabObserver for App {
 	{
 		match TPrefab::REAPPLY {
 			Always => {
-				self.add_observer(instantiate::<Insert, TPrefab, TDependencies>.pipe(OnError::log))
+				self.add_observer(instantiate::<Insert<TPrefab>, TDependencies>.pipe(OnError::log))
 			}
 			Never => {
-				self.add_observer(instantiate::<Add, TPrefab, TDependencies>.pipe(OnError::log))
+				self.add_observer(instantiate::<Add<TPrefab>, TDependencies>.pipe(OnError::log))
 			}
 		}
 	}
 }
 
-fn instantiate<TEvent, TPrefab, TDependencies>(
-	trigger: On<TEvent, TPrefab>,
-	components: Query<&TPrefab>,
+fn instantiate<TPattern, TDependencies>(
+	trigger: On<TPattern>,
+	components: Query<&TPattern::Components>,
 	mut commands: Commands,
-	system_param: StaticSystemParam<TPrefab::TSystemParam>,
-) -> Result<(), TPrefab::TError>
+	system_param: StaticSystemParam<<TPattern::Components as Prefab<TDependencies>>::TSystemParam>,
+) -> Result<(), <TPattern::Components as Prefab<TDependencies>>::TError>
 where
-	TEvent: EntityEvent,
-	TPrefab: Prefab<TDependencies> + Component,
+	TPattern: EventPattern<Event: EntityEvent>,
+	TPattern::Components: Prefab<TDependencies> + Component,
 {
 	let entity = trigger.event_target();
 	let Ok(component) = components.get(entity) else {
@@ -50,7 +50,7 @@ mod tests {
 		errors::{ErrorData, Level},
 		traits::prefab::PrefabEntityCommands,
 	};
-	use std::fmt::Display;
+	use std::{fmt::Display, marker::PhantomData};
 	use test_case::test_case;
 	use testing::SingleThreadedApp;
 
@@ -122,21 +122,21 @@ mod tests {
 		commands.insert_resource(_Result(result));
 	}
 
-	fn setup<TEvent>() -> App
+	fn setup<TPattern>() -> App
 	where
-		TEvent: EntityEvent,
+		TPattern: EventPattern<Event: EntityEvent, Components = _Component>,
 	{
 		let mut app = App::new().single_threaded(Update);
 
 		app.init_resource::<_Counter>();
-		app.add_observer(instantiate::<TEvent, _Component, _Dependency>.pipe(save_result));
+		app.add_observer(instantiate::<TPattern, _Dependency>.pipe(save_result));
 
 		app
 	}
 
 	#[test]
 	fn call_prefab_instantiation_method() {
-		let mut app = setup::<Insert>();
+		let mut app = setup::<Insert<_Component>>();
 
 		let entity = app.world_mut().spawn(_Component {
 			prefab: Ok(_Prefab),
@@ -147,7 +147,7 @@ mod tests {
 
 	#[test]
 	fn return_error() {
-		let mut app = setup::<Insert>();
+		let mut app = setup::<Insert<_Component>>();
 
 		let entity = app.world_mut().spawn(_Component {
 			prefab: Err(_Error),
@@ -159,18 +159,21 @@ mod tests {
 		);
 	}
 
-	const FAKE_ENTITY: Entity = match Entity::from_raw_u32(4242) {
-		Some(e) => e,
-		None => panic!("INVALID ENTITY"),
-	};
+	struct _T<T>(PhantomData<T>);
 
-	#[test_case(Add { entity: FAKE_ENTITY }, 1; "on add")]
-	#[test_case(Insert { entity: FAKE_ENTITY }, 2; "on insert")]
-	fn use_trigger_event<TEvent>(_: TEvent, expected_count: usize)
+	impl<T> _T<T> {
+		fn mark() -> Self {
+			Self(PhantomData)
+		}
+	}
+
+	#[test_case(_T::<Add::<_Component>>::mark, 1; "on add")]
+	#[test_case(_T::<Insert::<_Component>>::mark, 2; "on insert")]
+	fn use_trigger_event<TPattern>(_: fn() -> _T<TPattern>, expected_count: usize)
 	where
-		TEvent: EntityEvent,
+		TPattern: EventPattern<Event: EntityEvent, Components = _Component>,
 	{
-		let mut app = setup::<TEvent>();
+		let mut app = setup::<TPattern>();
 
 		app.world_mut()
 			.spawn(_Component {

@@ -13,6 +13,7 @@ use bevy::{
 		schedule::Core3d,
 	},
 	ecs::system::{StaticSystemParam, SystemParamItem},
+	extract::MainEntityHashSet,
 	material::descriptor::BindGroupLayoutDescriptor,
 	mesh::MeshVertexBufferLayoutRef,
 	pbr::{
@@ -46,6 +47,7 @@ use bevy::{
 		camera::{DirtySpecializations, ExtractedCamera, PendingQueues},
 		extract_component::ExtractComponentPlugin,
 		extract_resource::ExtractResourcePlugin,
+		material_bind_groups::FallbackBuffer,
 		mesh::{RenderMesh, allocator::MeshAllocator},
 		render_asset::RenderAssets,
 		render_phase::{
@@ -91,6 +93,7 @@ use bevy::{
 			TextureAspect,
 		},
 		renderer::{RenderContext, RenderDevice, ViewQuery},
+		storage::GpuShaderBuffer,
 		sync_world::MainEntity,
 		texture::GpuImage,
 		view::{
@@ -98,7 +101,7 @@ use bevy::{
 			NoIndirectDrawing,
 			RenderVisibleEntities,
 			RetainedViewEntity,
-			ViewDepthTexture,
+			ViewDepthStencilTexture,
 		},
 	},
 	shader::ShaderDefVal,
@@ -208,6 +211,7 @@ impl DistancePipeline {
 		mut phases: ResMut<ViewBinnedRenderPhases<Distance>>,
 		mut views: Query<(&ExtractedView, &RenderVisibleEntities)>,
 		mut pending: ResMut<Pending>,
+		mut mesh_instances_queued_this_iteration_scratch_space: Local<MainEntityHashSet>,
 	) -> Result<(), Vec<RenderError>> {
 		let mut errors = vec![];
 		let specializer = DistancePipelineSpecializer {
@@ -235,6 +239,7 @@ impl DistancePipeline {
 				view.retained_view_entity,
 				render_visible_mesh_entities,
 				&pending.prev_frame,
+				&mut mesh_instances_queued_this_iteration_scratch_space,
 			);
 
 			for &main_entity in dequeue_entities {
@@ -312,7 +317,7 @@ impl DistancePipeline {
 				&ExtractedCamera,
 				&ExtractedView,
 				&DistanceTexture,
-				&ViewDepthTexture,
+				&ViewDepthStencilTexture,
 				Option<&MainPassResolutionOverride>,
 			),
 			With<LoS>,
@@ -499,7 +504,7 @@ impl SpecializedMeshPipeline for DistancePipelineSpecializer {
 					write_mask: ColorWrites::ALL,
 				})],
 				shader_defs: vec![ShaderDefVal::Int(
-					"MATERIAL_BIND_GROUP".to_owned(),
+					"MATERIAL_BIND_GROUP".into(),
 					MATERIAL_BIND_GROUP_INDEX as i32,
 				)],
 				..default()
@@ -642,6 +647,8 @@ impl DistancePipelineBindGroup {
 		mut commands: ZyheedaCommands,
 		render_device: Res<RenderDevice>,
 		pipeline_cache: Res<PipelineCache>,
+		fallback_buffer: Res<FallbackBuffer>,
+		shader_buffer_assets: Res<RenderAssets<GpuShaderBuffer>>,
 		param: StaticSystemParam<<DistanceMaterial as AsBindGroup>::Param>,
 	) -> Result<(), RenderError> {
 		let descriptor = DistanceMaterial::bind_group_layout_descriptor(&render_device);
@@ -653,6 +660,8 @@ impl DistancePipelineBindGroup {
 				&descriptor,
 				&render_device,
 				&pipeline_cache,
+				&fallback_buffer,
+				&shader_buffer_assets,
 				&mut param.into_inner(),
 			)
 			.map(|PreparedBindGroup { bind_group, .. }| bind_group)

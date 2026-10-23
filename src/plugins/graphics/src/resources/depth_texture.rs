@@ -13,6 +13,7 @@ use bevy::{
 			Extent3d,
 			Origin3d,
 			TexelCopyTextureInfo,
+			Texture,
 			TextureAspect,
 			TextureDimension,
 			TextureFormat,
@@ -20,7 +21,7 @@ use bevy::{
 		},
 		renderer::{RenderContext, ViewQuery},
 		texture::GpuImage,
-		view::ViewDepthTexture,
+		view::ViewDepthStencilTexture,
 	},
 };
 use common::prelude::*;
@@ -32,6 +33,7 @@ use std::{
 };
 
 #[derive(Resource, ExtractResource, Debug, PartialEq, Clone)]
+#[extract_app(RenderApp)]
 pub(crate) struct DepthTexture<TPass>
 where
 	TPass: ThreadSafe,
@@ -108,13 +110,13 @@ struct TextureDimensions(UVec2);
 pub(crate) trait CopyDepthTexture {
 	fn copy_depth_texture<TCamera>(&mut self) -> &mut Self
 	where
-		TCamera: Component + ExtractComponent + Debug + Default + Clone + Eq + Hash;
+		TCamera: Component + ExtractComponent<RenderApp> + Debug + Default + Clone + Eq + Hash;
 }
 
 impl CopyDepthTexture for App {
 	fn copy_depth_texture<TCamera>(&mut self) -> &mut Self
 	where
-		TCamera: Component + ExtractComponent + Debug + Default + Clone + Eq + Hash,
+		TCamera: Component + ExtractComponent<RenderApp> + Debug + Default + Clone + Eq + Hash,
 	{
 		self.add_plugins((
 			ExtractResourcePlugin::<DepthTexture<TCamera>>::default(),
@@ -139,12 +141,12 @@ impl CopyDepthTexture for App {
 }
 
 fn dimensions_ok(
-	src: &ViewDepthTexture,
+	src_texture: &Texture,
 	dst: &GpuImage,
 ) -> Result<(), (TextureDimensions, TextureDimensions)> {
 	let src_extend = TextureDimensions(UVec2 {
-		x: src.texture.width(),
-		y: src.texture.height(),
+		x: src_texture.width(),
+		y: src_texture.height(),
 	});
 	let dst_extend = TextureDimensions(dst.size_2d());
 
@@ -156,7 +158,7 @@ fn dimensions_ok(
 }
 
 fn copy_texture_system<T>(
-	view: ViewQuery<&ViewDepthTexture, With<T>>,
+	view: ViewQuery<&ViewDepthStencilTexture, With<T>>,
 	depth_image: Option<Res<DepthTexture<T>>>,
 	images: Res<RenderAssets<GpuImage>>,
 	mut render_context: RenderContext,
@@ -165,6 +167,7 @@ where
 	T: Component,
 {
 	let src = view.into_inner();
+	let src_texture = src.texture();
 
 	let Some(depth_image) = depth_image else {
 		return Err(CopyDepthTextureError::NoSourceImage);
@@ -173,24 +176,24 @@ where
 		return Err(CopyDepthTextureError::NoDestinationImage);
 	};
 
-	if let Err((src, dst)) = dimensions_ok(src, dst) {
+	if let Err((src, dst)) = dimensions_ok(src_texture, dst) {
 		return Err(CopyDepthTextureError::DimensionMismatch { src, dst });
 	};
 
 	render_context.command_encoder().copy_texture_to_texture(
 		TexelCopyTextureInfo {
-			texture: &src.texture,
+			texture: src_texture,
 			mip_level: 0,
 			origin: Origin3d::default(),
 			aspect: TextureAspect::DepthOnly,
 		},
 		TexelCopyTextureInfo {
-			texture: &dst.texture,
+			texture: src_texture,
 			mip_level: 0,
 			origin: Origin3d::default(),
 			aspect: TextureAspect::DepthOnly,
 		},
-		src.texture.size(),
+		src_texture.size(),
 	);
 
 	Ok(())

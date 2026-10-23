@@ -2,7 +2,7 @@ pub mod read_rapier_context;
 pub mod system_input;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::*;
+use bevy_rapier3d::{prelude::*, rapier::geometry::Collider};
 use common::prelude::*;
 use zyheeda_core::prelude::Sorted;
 
@@ -16,7 +16,7 @@ pub trait GetContinuousSortedRayCaster<TRayData> {
 }
 
 pub trait CastRayContinuously<TRayData> {
-	fn cast_ray_continuously<F: FnMut(Entity, RayIntersection) -> bool>(
+	fn cast_ray_continuously<F: FnMut(Entity, &Collider, RayIntersection) -> bool>(
 		&self,
 		ray: &TRayData,
 		callback: F,
@@ -76,7 +76,7 @@ where
 		let mut results = Sorted::default();
 		let mut invalid_intersections = vec![];
 
-		self.cast_ray_continuously(ray, |entity, intersection| {
+		self.cast_ray_continuously(ray, |entity, _, intersection| {
 			match TimeOfImpact::try_from(intersection.time_of_impact) {
 				Ok(toi) => results.push(RayHit { entity, toi }),
 				Err(_) => invalid_intersections.push(intersection.point),
@@ -97,7 +97,7 @@ where
 mod tests {
 	use super::*;
 	use bevy::math::Vec3;
-	use bevy_rapier3d::parry::shape::FeatureId;
+	use bevy_rapier3d::{parry::shape::FeatureId, rapier::geometry::ColliderBuilder};
 	use testing::{assert_no_panic, fake_entity};
 
 	struct _Ray;
@@ -108,7 +108,12 @@ mod tests {
 			point: Vec3::default(),
 			normal: Vec3::default(),
 			feature: FeatureId::default(),
+			subshape: 0,
 		}
+	}
+
+	fn ball() -> Collider {
+		ColliderBuilder::ball(0.1).build()
 	}
 
 	#[test]
@@ -116,14 +121,14 @@ mod tests {
 		struct _CastRay;
 
 		impl CastRayContinuously<_Ray> for _CastRay {
-			fn cast_ray_continuously<F: FnMut(Entity, RayIntersection) -> bool>(
+			fn cast_ray_continuously<F: FnMut(Entity, &Collider, RayIntersection) -> bool>(
 				&self,
 				_: &_Ray,
 				mut callback: F,
 			) {
-				callback(fake_entity!(1), intersection_toi(f32::INFINITY));
-				callback(fake_entity!(2), intersection_toi(20.));
-				callback(fake_entity!(3), intersection_toi(3.));
+				callback(fake_entity!(1), &ball(), intersection_toi(f32::INFINITY));
+				callback(fake_entity!(2), &ball(), intersection_toi(20.));
+				callback(fake_entity!(3), &ball(), intersection_toi(3.));
 			}
 		}
 
@@ -156,7 +161,7 @@ mod tests {
 		struct _CastRay;
 
 		impl CastRayContinuously<_Ray> for _CastRay {
-			fn cast_ray_continuously<F: FnMut(Entity, RayIntersection) -> bool>(
+			fn cast_ray_continuously<F: FnMut(Entity, &Collider, RayIntersection) -> bool>(
 				&self,
 				_: &_Ray,
 				mut callback: F,
@@ -164,9 +169,9 @@ mod tests {
 				let mut invalid = intersection_toi(f32::NAN);
 				invalid.point = Vec3::new(1., 2., 3.);
 
-				callback(fake_entity!(666), invalid);
-				callback(fake_entity!(2), intersection_toi(20.));
-				callback(fake_entity!(3), intersection_toi(3.));
+				callback(fake_entity!(666), &ball(), invalid);
+				callback(fake_entity!(2), &ball(), intersection_toi(20.));
+				callback(fake_entity!(3), &ball(), intersection_toi(3.));
 			}
 		}
 

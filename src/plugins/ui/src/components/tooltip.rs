@@ -11,12 +11,12 @@ use crate::traits::{
 		UpdateTooltipPosition,
 	},
 };
-use bevy::prelude::*;
+use bevy::{picking::hover::Hovered, prelude::*, ui_widgets::Button};
 use common::prelude::*;
 use std::{marker::PhantomData, time::Duration};
 
 #[derive(Component, Debug, PartialEq, Clone)]
-#[require(Node, Interaction)]
+#[require(Node, Button, Hovered)]
 pub(crate) struct Tooltip<T>(T)
 where
 	T: TooltipUiConfig,

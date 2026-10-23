@@ -4,7 +4,7 @@ use common::prelude::*;
 
 impl LifetimeTiedTo {
 	pub(crate) fn insert_on<T>(
-		on_insert: On<Insert, T>,
+		on_insert: On<Insert<T>>,
 		components: Query<&T>,
 		mut commands: ZyheedaCommands,
 	) where

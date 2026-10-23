@@ -34,7 +34,7 @@ pub(crate) trait SkillPrefab:
 	+ Sized
 {
 	fn prefab(
-		on_insert: On<Insert, Self>,
+		on_insert: On<Insert<Self>>,
 		mut commands: ZyheedaCommands,
 		casters: Query<&SelfSkillScale>,
 		skills: Query<(&Self, &PersistentEntity, Option<&SelfSkillScale>)>,
@@ -62,6 +62,7 @@ pub(crate) trait SkillPrefab:
 		let collision_group = CollisionGroups {
 			memberships: SKILLS_GROUP,
 			filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
+			test_mode: InteractionTestMode::Or,
 		};
 
 		entity.try_insert((
@@ -599,6 +600,7 @@ mod tests {
 					Some(&CollisionGroups {
 						memberships: SKILLS_GROUP,
 						filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
+						test_mode: InteractionTestMode::Or,
 					})
 				),
 				(
@@ -794,6 +796,7 @@ mod tests {
 					Some(&CollisionGroups {
 						memberships: SKILLS_GROUP,
 						filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
+						test_mode: InteractionTestMode::Or,
 					})
 				),
 				(

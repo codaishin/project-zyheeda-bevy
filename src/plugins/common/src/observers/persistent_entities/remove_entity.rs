@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 impl PersistentEntities {
 	pub(crate) fn remove_entity(
-		on_remove: On<Remove, PersistentEntity>,
+		on_remove: On<Remove<PersistentEntity>>,
 		persistent_entities: Option<ResMut<Self>>,
 		entities: Query<&PersistentEntity>,
 	) {

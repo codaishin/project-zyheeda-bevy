@@ -6,7 +6,7 @@ impl<T> UpdateBlockersObserver for T where T: Component + UpdateBlockers {}
 
 pub(crate) trait UpdateBlockersObserver: Component + Sized + UpdateBlockers {
 	fn update_blockers_observer(
-		on_insert: On<Insert, Self>,
+		on_insert: On<Insert<Self>>,
 		mut commands: ZyheedaCommands,
 		mut effects: Query<(&Self, Option<&mut BlockerTypes>)>,
 	) {

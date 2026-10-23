@@ -38,11 +38,11 @@ mod tests {
 			.run_system_once(EffectMaterial::set_default_impacts);
 
 		assert_eq!(
-			Some(&ShaderBuffer::from(Vec::<ImpactEffect>::default()).data),
+			Some([].as_slice()),
 			app.world()
 				.resource::<Assets<ShaderBuffer>>()
 				.get(&*NO_IMPACTS)
-				.map(|s| &s.data)
+				.and_then(|s| s.cast_slice::<ImpactEffect>())
 		);
 		Ok(())
 	}

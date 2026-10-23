@@ -25,6 +25,7 @@ impl UILabel {
 #[cfg(test)]
 mod tests {
 	use super::*;
+	use bevy::ui_widgets::Button;
 	use std::path::PathBuf;
 	use test_case::test_case;
 	use testing::{SingleThreadedApp, new_handle};
@@ -52,13 +53,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(
-				Some(&Tooltip::new(Localized::from("my text"))),
-				Some(&Interaction::None)
-			),
+			(Some(&Tooltip::new(Localized::from("my text"))), true),
 			(
 				app.world().entity(entity).get::<Tooltip<Localized>>(),
-				app.world().entity(entity).get::<Interaction>(),
+				app.world().entity(entity).contains::<Button>(),
 			),
 		);
 	}
@@ -76,10 +74,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(None, None),
+			(None, false),
 			(
 				app.world().entity(entity).get::<Tooltip<Localized>>(),
-				app.world().entity(entity).get::<Interaction>(),
+				app.world().entity(entity).contains::<Button>(),
 			),
 		);
 	}
@@ -99,14 +97,14 @@ mod tests {
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<(Interaction, Tooltip<Localized>)>();
+			.remove::<(Button, Tooltip<Localized>)>();
 		app.update();
 
 		assert_eq!(
-			(None, None),
+			(None, false),
 			(
 				app.world().entity(entity).get::<Tooltip<Localized>>(),
-				app.world().entity(entity).get::<Interaction>(),
+				app.world().entity(entity).contains::<Button>(),
 			),
 		);
 	}
@@ -126,7 +124,7 @@ mod tests {
 		app.update();
 		app.world_mut()
 			.entity_mut(entity)
-			.remove::<(Interaction, Tooltip<Localized>)>();
+			.remove::<(Button, Tooltip<Localized>)>();
 		app.world_mut()
 			.entity_mut(entity)
 			.get_mut::<Icon>()
@@ -134,13 +132,10 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(
-				Some(&Tooltip::new(Localized::from("my text"))),
-				Some(&Interaction::None)
-			),
+			(Some(&Tooltip::new(Localized::from("my text"))), true),
 			(
 				app.world().entity(entity).get::<Tooltip<Localized>>(),
-				app.world().entity(entity).get::<Interaction>(),
+				app.world().entity(entity).contains::<Button>(),
 			),
 		);
 	}

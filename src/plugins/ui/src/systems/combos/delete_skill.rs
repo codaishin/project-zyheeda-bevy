@@ -2,22 +2,29 @@ use crate::components::DeleteSkill;
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
+	ui_widgets::Activate,
 };
 use common::prelude::*;
 
 impl DeleteSkill {
 	pub(crate) fn from_combos<TPlayer, TLoadout, TId>(
+		activated: On<Activate>,
 		commands: ZyheedaCommands,
-		deletes: Query<(&DeleteSkill, &Interaction)>,
+		deletes: Query<&DeleteSkill>,
 		player: StaticSystemParam<TPlayer>,
 		mut param: StaticSystemParam<TLoadout>,
 	) where
 		TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 		TLoadout: for<'c> TryGetContextMut<Combos, TContext<'c>: UpdateCombos<TId>>,
 	{
+		let Ok(delete) = deletes.get(activated.entity) else {
+			return;
+		};
+
 		let Some(player) = player.view() else {
 			return;
 		};
+
 		let Some(entity) = commands.get(&player) else {
 			return;
 		};
@@ -25,20 +32,9 @@ impl DeleteSkill {
 		let Some(mut ctx) = TLoadout::try_get_context_mut(&mut param, Combos { entity }) else {
 			return;
 		};
-		let deletes = deletes
-			.iter()
-			.filter(pressed)
-			.map(|(delete, ..)| (delete.key_path.clone(), None))
-			.collect::<Vec<_>>();
-		if deletes.is_empty() {
-			return;
-		}
-		ctx.update_combos(deletes);
-	}
-}
 
-fn pressed((.., interaction): &(&DeleteSkill, &Interaction)) -> bool {
-	interaction == &&Interaction::Pressed
+		ctx.update_combos(vec![(delete.key_path.clone(), None)]);
+	}
 }
 
 #[cfg(test)]
@@ -68,10 +64,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_plugins(CommonPlugin::with_asset_loading(false));
-		app.add_systems(
-			Update,
-			DeleteSkill::from_combos::<_PlayerParam, Query<&mut _Combos>, _Id>,
-		);
+		app.add_observer(DeleteSkill::from_combos::<_PlayerParam, Query<&mut _Combos>, _Id>);
 
 		app
 	}
@@ -94,37 +87,14 @@ mod tests {
 					.return_const(());
 			}),
 		));
-		app.world_mut().spawn((
-			DeleteSkill {
+		app.world_mut()
+			.spawn(DeleteSkill {
 				key_path: vec![
 					SlotKey::from(HandSlot::Left),
 					SlotKey::from(HandSlot::Right),
 				],
-			},
-			Interaction::Pressed,
-		));
-
-		app.update();
-	}
-
-	#[test]
-	fn do_nothing_if_not_pressed() {
-		let mut app = setup();
-		app.world_mut().spawn((
-			_Player,
-			_Combos::new().with_mock(|mock| {
-				mock.expect_update_combos().never();
-			}),
-		));
-		app.world_mut().spawn((
-			DeleteSkill {
-				key_path: vec![
-					SlotKey::from(HandSlot::Left),
-					SlotKey::from(HandSlot::Right),
-				],
-			},
-			Interaction::None,
-		));
+			})
+			.trigger(|entity| Activate { entity });
 
 		app.update();
 	}
@@ -135,15 +105,14 @@ mod tests {
 		app.world_mut().spawn(_Combos::new().with_mock(|mock| {
 			mock.expect_update_combos().never();
 		}));
-		app.world_mut().spawn((
-			DeleteSkill {
+		app.world_mut()
+			.spawn(DeleteSkill {
 				key_path: vec![
 					SlotKey::from(HandSlot::Left),
 					SlotKey::from(HandSlot::Right),
 				],
-			},
-			Interaction::Pressed,
-		));
+			})
+			.trigger(|entity| Activate { entity });
 
 		app.update();
 	}

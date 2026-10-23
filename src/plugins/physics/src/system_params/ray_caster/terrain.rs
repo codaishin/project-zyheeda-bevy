@@ -86,6 +86,7 @@ mod tests {
 			CollisionGroups {
 				memberships: Group::all() & !TERRAIN_GROUP,
 				filters: RAY_GROUP,
+				test_mode: InteractionTestMode::Or,
 			},
 			Collider::ball(0.5),
 		));
@@ -112,6 +113,7 @@ mod tests {
 			CollisionGroups {
 				memberships: TERRAIN_GROUP,
 				filters: Group::all() & !RAY_GROUP,
+				test_mode: InteractionTestMode::Or,
 			},
 			Collider::ball(0.5),
 		));

@@ -17,7 +17,6 @@ use crate::{
 	components::{
 		DeleteSkill,
 		SkillSelectDropdownCommand,
-		button_state::UiButtonState,
 		combo_skill_button::{
 			ComboSkillButton,
 			DropdownItem,
@@ -42,10 +41,9 @@ use crate::{
 	traits::add_gui::AddLoadGui,
 	visualization::unusable::Unusable,
 };
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::Button};
 use common::{prelude::*, tools::path::Path};
 use components::{
-	button_interaction::ButtonInteraction,
 	combo_overview::ComboOverview,
 	dropdown::Dropdown,
 	icon::Icon,
@@ -78,7 +76,7 @@ use systems::{
 	menus_unchangeable_when_present::MenusUnchangeableWhenPresent,
 	render_ui::RenderUi,
 	set_key_bindings::SetKeyBindings,
-	trigger_on_release::TriggerOnRelease,
+	trigger_game_state::TriggerGameState,
 	update_panels::colors::panel_colors,
 };
 use traits::{LoadUi, add_dropdown::AddDropdown, add_gui::AddGui, add_tooltip::AddTooltip};
@@ -206,12 +204,12 @@ where
 			.add_gui::<StartMenu, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 				start_menu,
 			)
+			.add_observer(StartMenuButton::trigger_game_state::<TGameStates::TGameStatesMut>)
 			.add_systems(
 				Update,
 				(
 					enable_or_disable_quick_load_button,
 					panel_colors::<StartMenuButton>,
-					StartMenuButton::trigger_on_release::<TGameStates::TGameStatesMut>,
 				)
 					.chain()
 					.run_if(TGameStates::in_game_state([start_menu]))
@@ -261,6 +259,15 @@ where
 		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkillID>>();
 		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalItem<TLoadout::TSkillID>>(
 		);
+		app.add_observer(
+			DeleteSkill::from_combos::<TPlayers::TPlayer, TLoadout::TLoadoutMut, TLoadout::TSkillID>,
+		);
+		app.add_observer(
+			VerticalItem::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
+		);
+		app.add_observer(
+			HorizontalItem::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
+		);
 		app.add_systems(
 			Update,
 			(
@@ -278,19 +285,6 @@ where
 				SkillSelectDropdownCommand::<Horizontal>::insert_dropdown::<
 					TPlayers::TPlayer,
 					TLoadout::TLoadout,
-					TLoadout::TSkillID,
-				>,
-				VerticalItem::<TLoadout::TSkillID>::update::<
-					TPlayers::TPlayer,
-					TLoadout::TLoadoutMut,
-				>,
-				HorizontalItem::<TLoadout::TSkillID>::update::<
-					TPlayers::TPlayer,
-					TLoadout::TLoadoutMut,
-				>,
-				DeleteSkill::from_combos::<
-					TPlayers::TPlayer,
-					TLoadout::TLoadoutMut,
 					TLoadout::TSkillID,
 				>,
 				Trigger::<TLoadout::TSkillID>::visualize_invalid::<
@@ -331,18 +325,18 @@ where
 
 		let settings = Gui::Settings;
 
-		app.register_required_components::<KeyBindInput, Interaction>()
+		app.register_required_components::<KeyBindInput, Button>()
 			.register_required_components::<KeyRebindInput, PreventMenuChange>()
 			.add_gui::<SettingsScreen, TLocalization::TLocalizationServer, TGraphics::TCameraMut, TGameStates>(
 				settings,
 			)
+			.add_observer(KeyBindInput::rebind)
 			.add_systems(
 				Update,
 				(
 					SettingsScreen::set_key_bindings_from::<TInput::TInput>,
 					KeyBindAction::render_ui::<TLocalization::TLocalizationServer>,
 					KeyBindInput::render_ui::<TLocalization::TLocalizationServer>,
-					KeyBindInput::rebind_on_release.after(TrackInteractions),
 					KeyRebindInput::render_ui::<TLocalization::TLocalizationServer>,
 					KeyRebindInput::rebind_apply::<TInput::TInputMut>,
 				)
@@ -356,7 +350,6 @@ where
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
 			.add_tooltip::<TLocalization::TLocalizationServer, Token>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
-			.add_systems(Update, UiButtonState::track.in_set(TrackInteractions))
 			.add_systems(
 				Update,
 				(
@@ -377,7 +370,7 @@ where
 				)
 					.run_if(TLoading::is_loaded(LoadingEssentialAssets)),
 			)
-			.add_systems(Last, (WithNode::system, ButtonInteraction::system).chain());
+			.add_systems(Last, WithNode::system);
 	}
 }
 
@@ -420,6 +413,3 @@ where
 		debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
 	}
 }
-
-#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
-struct TrackInteractions;

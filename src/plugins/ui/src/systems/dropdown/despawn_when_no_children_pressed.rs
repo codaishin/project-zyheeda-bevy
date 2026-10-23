@@ -1,22 +1,22 @@
 use crate::components::dropdown::DropdownUI;
-use bevy::prelude::*;
+use bevy::{prelude::*, ui::Pressed};
 use common::prelude::*;
 
 pub(crate) fn dropdown_despawn_when_no_children_pressed<TItem: Sync + Send + 'static>(
 	In(focus): In<Focus>,
 	commands: ZyheedaCommands,
 	dropdowns: Query<(Entity, &DropdownUI<TItem>)>,
-	interactions: Query<&Interaction>,
+	pressed: Query<(), With<Pressed>>,
 ) -> Focus {
 	match focus {
-		Focus::New(new_focus) => despawn_and_unfocus(dropdowns, interactions, commands, new_focus),
+		Focus::New(new_focus) => despawn_and_unfocus(dropdowns, pressed, commands, new_focus),
 		Focus::Unchanged => Focus::Unchanged,
 	}
 }
 
 fn despawn_and_unfocus<TItem: Sync + Send + 'static>(
 	dropdown_uis: Query<(Entity, &DropdownUI<TItem>)>,
-	interactions: Query<&Interaction>,
+	pressed: Query<(), With<Pressed>>,
 	mut commands: ZyheedaCommands,
 	mut new_focus: Vec<Entity>,
 ) -> Focus {
@@ -24,8 +24,7 @@ fn despawn_and_unfocus<TItem: Sync + Send + 'static>(
 		!dropdown_ui
 			.child_dropdowns
 			.iter()
-			.filter_map(|entity| interactions.get(*entity).ok())
-			.any(|interaction| interaction == &Interaction::Pressed)
+			.any(|entity| pressed.contains(*entity))
 	};
 
 	for (entity, dropdown_ui) in dropdown_uis.iter().filter(has_no_pressed_child_dropdown) {
@@ -176,7 +175,7 @@ mod tests {
 		let mut app = setup();
 
 		let source = fake_entity!(42);
-		let child = app.world_mut().spawn(Interaction::Pressed).id();
+		let child = app.world_mut().spawn(Pressed).id();
 		let dropdown = app
 			.world_mut()
 			.spawn(DropdownUI::<_Item>::new(source).with_child_dropdowns([child]))

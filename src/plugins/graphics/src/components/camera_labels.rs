@@ -17,7 +17,7 @@ use bevy::{
 	light::light_consts::lux,
 	post_process::bloom::Bloom,
 	prelude::*,
-	render::extract_component::ExtractComponent,
+	render::{RenderApp, extract_component::ExtractComponent},
 };
 use common::prelude::*;
 use macros::{SavableComponent, serde_model};
@@ -45,6 +45,7 @@ pub struct MovableCamera;
 	DepthPrepass
 )]
 #[cfg_attr(debug_assertions, require(Name::from("World Camera")))]
+#[extract_app(RenderApp)]
 pub(crate) struct WorldPass;
 
 impl From<WorldPass> for Camera {
@@ -86,6 +87,7 @@ impl From<WorldPass> for ModelRenderLayers {
 	Msaa::Off
 )]
 #[cfg_attr(debug_assertions, require(Name::from("Outline Camera")))]
+#[extract_app(RenderApp)]
 pub(crate) struct OutlinePass;
 
 impl From<OutlinePass> for Camera {
@@ -131,6 +133,7 @@ impl From<OutlinePass> for Tonemapping {
 	Hdr
 )]
 #[cfg_attr(debug_assertions, require(Name::from("Agents Camera")))]
+#[extract_app(RenderApp)]
 pub(crate) struct AgentsPass;
 
 impl From<AgentsPass> for Camera {

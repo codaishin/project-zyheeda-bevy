@@ -2,13 +2,14 @@ use crate::components::{Dad, KeyedPanel};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
 	prelude::*,
+	ui::Pressed,
 };
 use common::prelude::*;
 
 pub fn drag_item<TPlayer>(
 	mut commands: ZyheedaCommands,
 	player: StaticSystemParam<TPlayer>,
-	panels: Query<(&Interaction, &KeyedPanel)>,
+	pressed_panels: Query<&KeyedPanel, With<Pressed>>,
 ) where
 	TPlayer: for<'w, 's> SystemParam<Item<'w, 's>: View<PlayerEntity>>,
 {
@@ -18,17 +19,13 @@ pub fn drag_item<TPlayer>(
 	let Some(entity) = commands.get(&player) else {
 		return;
 	};
-	let Some((.., panel)) = panels.iter().find(is_pressed) else {
+	let Some(panel) = pressed_panels.iter().next() else {
 		return;
 	};
 
 	commands.try_apply_on(&entity, |mut e| {
 		e.try_insert(Dad(panel.0));
 	});
-}
-
-fn is_pressed((interaction, _): &(&Interaction, &KeyedPanel)) -> bool {
-	Interaction::Pressed == **interaction
 }
 
 #[cfg(test)]
@@ -55,7 +52,7 @@ mod tests {
 		let mut app = setup();
 		let agent = app.world_mut().spawn(_Player).id();
 		app.world_mut()
-			.spawn((Interaction::Pressed, KeyedPanel::from(SlotKey(42))));
+			.spawn((Pressed, KeyedPanel::from(SlotKey(42))));
 
 		app.update();
 
@@ -70,9 +67,8 @@ mod tests {
 		let mut app = setup();
 		let agent = app.world_mut().spawn(_Player).id();
 		app.world_mut()
-			.spawn((Interaction::Pressed, KeyedPanel::from(SlotKey(42))));
-		app.world_mut()
-			.spawn((Interaction::None, KeyedPanel::from(SlotKey(0))));
+			.spawn((Pressed, KeyedPanel::from(SlotKey(42))));
+		app.world_mut().spawn(KeyedPanel::from(SlotKey(0)));
 
 		app.update();
 
@@ -86,8 +82,7 @@ mod tests {
 	fn no_drag_when_not_pressed() {
 		let mut app = setup();
 		let agent = app.world_mut().spawn(_Player).id();
-		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(42))));
+		app.world_mut().spawn(KeyedPanel::from(SlotKey(42)));
 
 		app.update();
 

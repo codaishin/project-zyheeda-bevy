@@ -135,6 +135,7 @@ impl CastRays {
 				groups: Some(CollisionGroups {
 					memberships: RAY_GROUP,
 					filters: TERRAIN_GROUP | AGENTS_GROUP | SKILLS_GROUP,
+					test_mode: InteractionTestMode::Or,
 				}),
 				..default()
 			},
@@ -357,6 +358,7 @@ mod tests {
 				groups: Some(CollisionGroups {
 					memberships: RAY_GROUP,
 					filters: TERRAIN_GROUP | AGENTS_GROUP | SKILLS_GROUP,
+					test_mode: InteractionTestMode::Or,
 				}),
 				..default()
 			},

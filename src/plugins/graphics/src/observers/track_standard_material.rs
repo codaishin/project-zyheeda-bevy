@@ -4,7 +4,7 @@ use std::collections::{HashSet, hash_map::Entry};
 
 impl StandardMaterials {
 	pub(crate) fn track_inserted(
-		on_add: On<Insert, MeshMaterial3d<StandardMaterial>>,
+		on_add: On<Insert<MeshMaterial3d<StandardMaterial>>>,
 		entities: Query<&MeshMaterial3d<StandardMaterial>>,
 		mut materials: ResMut<Self>,
 	) {
@@ -24,7 +24,7 @@ impl StandardMaterials {
 	}
 
 	pub(crate) fn track_discarded(
-		on_discard: On<Discard, MeshMaterial3d<StandardMaterial>>,
+		on_discard: On<Discard<MeshMaterial3d<StandardMaterial>>>,
 		entities: Query<&MeshMaterial3d<StandardMaterial>>,
 		mut materials: ResMut<Self>,
 	) {

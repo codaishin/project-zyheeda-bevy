@@ -13,6 +13,8 @@ use crate::{
 use bevy::{
 	ecs::{relationship::RelatedSpawnerCommands, system::SystemParam},
 	prelude::*,
+	ui::Pressed,
+	ui_widgets::Button,
 };
 use common::prelude::*;
 use std::marker::PhantomData;
@@ -203,12 +205,9 @@ fn update_button_text(
 
 fn replace_button_text<TLayout: ThreadSafe>(
 	mut buttons: Query<&mut DropdownButton>,
-	options: Query<(&ButtonOption<TLayout>, &Interaction), Changed<Interaction>>,
+	options: Query<&ButtonOption<TLayout>, Added<Pressed>>,
 ) {
-	for (options, interaction) in &options {
-		if interaction != &Interaction::Pressed {
-			continue;
-		}
+	for options in &options {
 		let Ok(mut button) = buttons.get_mut(options.target) else {
 			continue;
 		};

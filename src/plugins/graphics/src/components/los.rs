@@ -10,6 +10,7 @@ use bevy::{
 	image::{ImageSampler, TextureFormatPixelInfo},
 	prelude::*,
 	render::{
+		RenderApp,
 		extract_component::ExtractComponent,
 		render_resource::{
 			Extent3d,
@@ -70,6 +71,7 @@ pub(crate) struct LoSCamerasHeight(pub(crate) Units);
 		..default()
 	})
 )]
+#[extract_app(RenderApp)]
 pub(crate) enum LoS {
 	Right,
 	Left,

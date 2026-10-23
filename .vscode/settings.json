@@ -60,6 +60,7 @@
 		"Bgra",
 		"Blockable",
 		"Bresenham",
+		"bytemuck",
 		"Collidable",
 		"consts",
 		"cooldown",
@@ -120,6 +121,7 @@
 		"wgsl",
 		"withf",
 		"Writeback",
+		"Zeroable",
 		"zyheeda"
 	]
 }

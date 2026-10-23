@@ -20,7 +20,7 @@ impl From<&Name> for BoneName {
 
 impl From<BoneName> for Name {
 	fn from(bone: BoneName) -> Self {
-		Name::from(&*bone)
+		Name::from((*bone).to_owned())
 	}
 }
 

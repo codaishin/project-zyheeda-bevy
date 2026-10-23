@@ -6,7 +6,7 @@ use bevy::{
 	color::{Color, LinearRgba},
 	ecs::system::StaticSystemParam,
 	light::NotShadowCaster,
-	math::{Vec3, primitives::Torus},
+	math::Vec3,
 	pbr::StandardMaterial,
 	prelude::*,
 	transform::components::Transform,
