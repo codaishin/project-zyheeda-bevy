@@ -34,7 +34,7 @@ impl AddPhysics for App {
 		self.register_required_components::<TActor, OngoingEffects<TActor, TTarget>>();
 		self.add_systems(
 			FixedPostUpdate,
-			FixedPostUpdate::delta
+			FixedUpdate::delta
 				.pipe(TActor::act_on::<TGetCaster, TTarget>)
 				.in_set(PhysicsSystems::Resolve),
 		)

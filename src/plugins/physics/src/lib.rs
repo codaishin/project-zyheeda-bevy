@@ -189,14 +189,14 @@ where
 			.add_systems(
 				FixedPreUpdate,
 				(
-					FixedPreUpdate::delta.pipe(MotionControlled::set_translation),
-					FixedPreUpdate::delta.pipe(MotionControlled::apply_gravity),
+					FixedUpdate::delta.pipe(MotionControlled::set_translation),
+					FixedUpdate::delta.pipe(MotionControlled::apply_gravity),
 				)
 					.chain(),
 			)
 			.add_systems(
 				FixedPostUpdate,
-				FixedPostUpdate::delta.pipe(MotionControlled::set_done),
+				FixedUpdate::delta.pipe(MotionControlled::set_done),
 			)
 			.add_systems(
 				Update,
@@ -240,7 +240,7 @@ where
 				FixedPreUpdate,
 				(
 					GravityAffected::insert_from::<DefaultAttributes>,
-					FixedPreUpdate::delta.pipe(GravityAffected::apply_pull),
+					FixedUpdate::delta.pipe(GravityAffected::apply_pull),
 				)
 					.chain(),
 			)
@@ -289,7 +289,7 @@ where
 				(
 					// Collect physical collections
 					(
-						FixedPostUpdate::delta
+						FixedUpdate::delta
 							.pipe(CastRays::to_prevent_tunneling)
 							.pipe(CastRays::execute)
 							.pipe(OnError::log),
