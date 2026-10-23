@@ -4,17 +4,27 @@ use common::prelude::*;
 
 impl CameraArm {
 	pub(crate) fn apply_direction<TCamera>(
+		time: Res<Time>,
 		mut camera: StaticSystemParam<TCamera>,
 		arms: Query<(&Transform, &CameraArm)>,
+		mut previous: Local<Option<Transform>>,
 	) where
 		TCamera: for<'c> GetContextMut<CameraHandle, TContext<'c>: CameraTransformMut>,
 	{
 		let mut camera = TCamera::get_context_mut(&mut camera, CameraHandle);
 
 		for (transform, arm) in arms {
-			*camera.camera_transform_mut() =
+			let target =
 				Transform::from_translation(transform.translation + arm.direction * *arm.distance)
 					.looking_at(transform.translation, Vec3::Y);
+
+			let current = previous.get_or_insert_with(|| target);
+			let alpha = 1.0 - (-20.0 * time.delta_secs()).exp();
+
+			current.translation = current.translation.lerp(target.translation, alpha);
+			current.rotation = current.rotation.slerp(target.rotation, alpha);
+
+			*camera.camera_transform_mut() = *current;
 		}
 	}
 }
