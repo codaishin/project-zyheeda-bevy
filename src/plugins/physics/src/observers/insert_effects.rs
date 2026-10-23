@@ -9,7 +9,7 @@ use common::prelude::*;
 
 impl Effects {
 	pub(crate) fn insert(
-		on_insert: On<Insert, Self>,
+		on_insert: On<Insert<Self>>,
 		mut commands: ZyheedaCommands,
 		effects: Query<&Self>,
 	) {

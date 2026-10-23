@@ -5,7 +5,7 @@ use zyheeda_core::collections::ordered::OrderedSet;
 
 impl Door {
 	pub(crate) fn animate_open<TAnimations>(
-		on_add: On<Add, IsActive>,
+		on_add: On<Add<IsActive>>,
 		doors: Query<(), With<Self>>,
 		mut animations: StaticSystemParam<TAnimations>,
 	) where
@@ -26,7 +26,7 @@ impl Door {
 	}
 
 	pub(crate) fn animate_close<TAnimations>(
-		on_insert: On<Remove, IsActive>,
+		on_insert: On<Remove<IsActive>>,
 		doors: Query<(), With<Self>>,
 		mut animations: StaticSystemParam<TAnimations>,
 	) where

@@ -28,11 +28,8 @@ pub trait PushOngoingCollisions:
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use bevy_rapier3d::{
-		plugin::{PhysicsSet, RapierPhysicsPlugin, TimestepMode},
-		prelude::{CollisionEvent, MassModifiedEvent},
-		rapier::prelude::CollisionEventFlags,
-	};
+	use crate::tests::{AfterTestPhysicsBackend, TestCollisionsPlugin};
+	use bevy_rapier3d::{prelude::*, rapier::geometry::CollisionEventFlags};
 	use macros::NestedMocks;
 	use mockall::{automock, predicate::eq};
 	use testing::{NestedMocks, SingleThreadedApp};
@@ -66,20 +63,13 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		// Needed for rapier
-		app.add_message::<CollisionEvent>();
-		app.add_message::<MassModifiedEvent>();
-		app.init_resource::<TimestepMode>();
-
+		app.add_plugins(TestCollisionsPlugin);
 		app.init_resource::<_OngoingCollisions>();
 		app.add_systems(
 			Update,
-			(
-				RapierPhysicsPlugin::<()>::get_systems(PhysicsSet::Writeback), // updates `InteractingEntities`
-				ResMut::<_OngoingCollisions>::push_ongoing_collisions,
-			)
-				.chain(),
+			ResMut::<_OngoingCollisions>::push_ongoing_collisions.after(AfterTestPhysicsBackend),
 		);
+		app.update(); // init rapier backend
 
 		app
 	}
@@ -94,6 +84,7 @@ mod tests {
 			target,
 			CollisionEventFlags::empty(),
 		));
+		app.update();
 
 		app.world_mut()
 			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
@@ -117,17 +108,16 @@ mod tests {
 			CollisionEventFlags::empty(),
 		));
 
+		app.update(); // process messages
 		app.world_mut()
 			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
 				mock.expect_push_interacting_colliders()
 					.with(eq(actor), eq(target))
-					.times(3)
+					.times(2)
 					.return_const(());
 			}));
-
-		app.update();
-		app.update();
-		app.update();
+		app.update(); // ongoing 1
+		app.update(); // ongoing 2
 	}
 
 	#[test]
@@ -141,6 +131,7 @@ mod tests {
 			CollisionEventFlags::empty(),
 		));
 
+		app.update(); // process messages
 		app.world_mut()
 			.insert_resource(_OngoingCollisions::new().with_mock(move |mock| {
 				mock.expect_push_interacting_colliders()
@@ -148,14 +139,13 @@ mod tests {
 					.times(2)
 					.return_const(());
 			}));
-
-		app.update();
-		app.update();
+		app.update(); // ongoing 1
 		app.world_mut().write_message(CollisionEvent::Stopped(
 			actor,
 			target,
 			CollisionEventFlags::empty(),
 		));
-		app.update();
+		app.update(); // ongoing 2 + process messages
+		app.update(); // not ongoing any longer
 	}
 }

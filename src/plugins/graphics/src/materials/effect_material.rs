@@ -169,10 +169,21 @@ impl From<EffectFlag> for u32 {
 	}
 }
 
-#[derive(Debug, PartialEq, ShaderType)]
+#[derive(ShaderType, Debug, PartialEq, Default, Clone, Copy)]
 pub(crate) struct ImpactEffect {
 	position: Vec3,
 	strength: f32,
+}
+
+mod bytemuck_impls {
+	use super::*;
+	use bytemuck::{Pod, Zeroable};
+
+	// SAFETY: Only consists the `NoUninit` types `Vec3` and `f32` => 4 x f32 without any padding.
+	unsafe impl Pod for ImpactEffect {}
+
+	// SAFETY: All f32 values can meaningfully be zeroed
+	unsafe impl Zeroable for ImpactEffect {}
 }
 
 impl UpdateMaterial for EffectMaterial {
@@ -222,13 +233,15 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![ImpactEffect {
+				[ImpactEffect {
 					position: Vec3::new(1., 2., 3.),
 					strength: 0.5
-				}])
-				.data
+				}]
+				.as_slice()
 			),
-			buffers.get(&material.impacts).map(|b| &b.data)
+			buffers
+				.get(&material.impacts)
+				.and_then(|b| b.cast_slice::<ImpactEffect>())
 		);
 	}
 
@@ -251,13 +264,15 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![ImpactEffect {
+				[ImpactEffect {
 					position: Vec3::new(1., 5., -3.),
 					strength: 0.5
-				}])
-				.data
+				}]
+				.as_slice()
 			),
-			buffers.get(&material.impacts).map(|b| &b.data)
+			buffers
+				.get(&material.impacts)
+				.and_then(|b| b.cast_slice::<ImpactEffect>())
 		);
 	}
 
@@ -388,13 +403,15 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![ImpactEffect {
+				[ImpactEffect {
 					position: Vec3::new(2., 3., 4.),
 					strength: 0.5
-				}])
-				.data
+				}]
+				.as_slice()
 			),
-			buffers.get(&material.impacts).map(|b| &b.data)
+			buffers
+				.get(&material.impacts)
+				.and_then(|b| b.cast_slice::<ImpactEffect>())
 		);
 	}
 
@@ -429,13 +446,15 @@ mod tests {
 
 		assert_eq!(
 			Some(
-				&ShaderBuffer::from(vec![ImpactEffect {
+				[ImpactEffect {
 					position: Vec3::new(2., 3., 4.),
 					strength: 0.5
-				}])
-				.data
+				}]
+				.as_slice()
 			),
-			buffers.get(&material.impacts).map(|b| &b.data)
+			buffers
+				.get(&material.impacts)
+				.and_then(|b| b.cast_slice::<ImpactEffect>())
 		);
 	}
 

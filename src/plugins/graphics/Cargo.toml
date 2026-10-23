@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 # external
 bevy.workspace = true
+bytemuck = "1.25.2"
 nonmax = "0.5.5"
 serde.workspace = true
 

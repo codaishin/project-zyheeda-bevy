@@ -20,7 +20,7 @@ impl From<&Name> for MeshName {
 
 impl From<MeshName> for Name {
 	fn from(bone: MeshName) -> Self {
-		Name::from(&*bone)
+		Name::from((*bone).to_owned())
 	}
 }
 

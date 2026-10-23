@@ -34,7 +34,7 @@ impl RegisterDerivedComponent for App {
 }
 
 fn insert_if_new<TComponent, TDerived>(
-	on_insert: On<Insert, TComponent>,
+	on_insert: On<Insert<TComponent>>,
 	mut commands: ZyheedaCommands,
 	components: Query<&TComponent>,
 	param: StaticSystemParam<<TDerived as DerivableFrom<'_, '_, TComponent>>::TParam>,
@@ -52,7 +52,7 @@ fn insert_if_new<TComponent, TDerived>(
 }
 
 fn insert_always<TComponent, TDerived>(
-	on_insert: On<Insert, TComponent>,
+	on_insert: On<Insert<TComponent>>,
 	mut commands: ZyheedaCommands,
 	components: Query<&TComponent>,
 	param: StaticSystemParam<<TDerived as DerivableFrom<'_, '_, TComponent>>::TParam>,

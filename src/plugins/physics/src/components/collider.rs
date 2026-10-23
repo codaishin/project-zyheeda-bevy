@@ -175,7 +175,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_observer(
-			|on_insert: On<Insert, ColliderShape>,
+			|on_insert: On<Insert<ColliderShape>>,
 			 mut commands: Commands,
 			 shapes: Query<&ColliderShape>,
 			 param: StaticSystemParam<()>| {
@@ -280,6 +280,7 @@ mod tests {
 				.id();
 
 			app.update();
+			app.update();
 
 			assert_eq!(
 				(Some(vec![b]), Some(vec![a])),
@@ -321,6 +322,7 @@ mod tests {
 				))
 				.id();
 
+			app.update();
 			app.update();
 
 			assert_eq!(

@@ -4,7 +4,7 @@ use common::prelude::*;
 
 impl QuickbarPanel {
 	pub(crate) fn add_input_control<TActionKeyButton>(
-		trigger: On<Add, Self>,
+		trigger: On<Add<Self>>,
 		mut commands: ZyheedaCommands,
 		panels: Query<&Self>,
 	) where

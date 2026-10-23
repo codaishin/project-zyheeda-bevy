@@ -1,3 +1,5 @@
+use std::any::type_name;
+
 use crate::{
 	PhysicsSystems,
 	components::ongoing_effects::OngoingEffects,
@@ -31,7 +33,12 @@ impl AddPhysics for App {
 		TSaveGame::register_savable_component::<TTarget>(self);
 		TSaveGame::register_savable_component::<OngoingEffects<TActor, TTarget>>(self);
 
-		self.register_required_components::<TActor, OngoingEffects<TActor, TTarget>>();
+		let err =
+			self.try_register_required_components::<TActor, OngoingEffects<TActor, TTarget>>();
+		if let Err(err) = err {
+			error!("{}: {}", type_name::<TActor>(), err);
+		}
+
 		self.add_systems(
 			FixedPostUpdate,
 			FixedPostUpdate::delta

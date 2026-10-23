@@ -5,10 +5,10 @@ use common::prelude::*;
 impl StandardMaterials {
 	pub(crate) fn set_invisible_material(
 		invisible: &'static str,
-	) -> impl IntoObserverSystem<Add, GltfMaterialName, (), ()> {
+	) -> impl IntoObserverSystem<Add<GltfMaterialName>, (), ()> {
 		#[rustfmt::skip]
 		let system = move |
-			on_add: On<Add, GltfMaterialName>,
+			on_add: On<Add<GltfMaterialName>>,
 			mut commands: ZyheedaCommands,
 			names: Query<&GltfMaterialName>
 		| {

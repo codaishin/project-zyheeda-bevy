@@ -11,7 +11,7 @@ where
 	TAsset: AssetMarker,
 {
 	pub(crate) fn apply(
-		on_insert: On<Insert, Self>,
+		on_insert: On<Insert<Self>>,
 		mut commands: ZyheedaCommands,
 		mut caches: Local<HashMap<TypeId, Handle<TAsset>>>,
 		mut assets: ResMut<Assets<TAsset>>,

@@ -7,7 +7,7 @@ use common::prelude::*;
 
 impl Map {
 	pub(crate) fn apply_despawned_map_objects_persistence(
-		on_despawn: On<Despawn, SpawnedFrom>,
+		on_despawn: On<Despawn<SpawnedFrom>>,
 		mut maps: Query<&mut Self>,
 		spawned: Query<(&SpawnedFrom, &MapObjectOf), With<PersistentEntity>>,
 	) {

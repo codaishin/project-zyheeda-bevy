@@ -4,7 +4,7 @@ use common::prelude::*;
 
 impl TiedLifetimes {
 	pub(crate) fn despawn_relationships_on_remove(
-		on_remove: On<Remove, Self>,
+		on_remove: On<Remove<Self>>,
 		tied_lifetimes: Query<&Self>,
 		mut commands: ZyheedaCommands,
 	) {

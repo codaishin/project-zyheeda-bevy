@@ -4,10 +4,10 @@ use common::prelude::*;
 impl<T> IdentifyByPrefix for T where T: Component + Default {}
 
 pub(crate) trait IdentifyByPrefix: Component + Default {
-	fn identify_by_prefix(prefix: &'static str) -> impl IntoObserverSystem<Add, GltfMeshName, ()> {
+	fn identify_by_prefix(prefix: &'static str) -> impl IntoObserverSystem<Add<GltfMeshName>, ()> {
 		#[rustfmt::skip]
 		let observer = move |
-			on_add: On<Add, GltfMeshName>,
+			on_add: On<Add<GltfMeshName>>,
 			mut commands: ZyheedaCommands,
 			names: Query<&GltfMeshName>
 		| {

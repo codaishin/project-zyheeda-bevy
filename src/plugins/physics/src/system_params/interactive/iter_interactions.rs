@@ -25,7 +25,7 @@ mod tests {
 			update_root_collisions::UpdateRootCollisions,
 		},
 		systems::interactions::push_ongoing_collisions::PushOngoingCollisions,
-		tests::TestCollisionsPlugin,
+		tests::{AfterTestPhysicsBackend, TestCollisionsPlugin},
 	};
 	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use bevy_rapier3d::prelude::*;
@@ -42,8 +42,10 @@ mod tests {
 				UpdateRootCollisions::<Interactive>::push_ongoing_collisions,
 				RootCollisionsParam::<Interactive>::rotate,
 			)
+				.after(AfterTestPhysicsBackend)
 				.chain(),
 		);
+		app.update(); // init rapier backend
 
 		app
 	}

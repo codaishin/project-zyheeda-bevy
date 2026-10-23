@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 impl LoadWorldAsset {
 	pub(crate) fn execute(
-		trigger: On<Add, LoadWorldAsset>,
+		trigger: On<Add<LoadWorldAsset>>,
 		mut commands: ZyheedaCommands,
 		scenes: Query<&LoadWorldAsset>,
 	) -> Result<(), GltfSceneError> {

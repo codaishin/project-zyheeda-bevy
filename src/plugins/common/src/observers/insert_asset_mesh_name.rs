@@ -8,7 +8,7 @@ use zyheeda_core::prelude::NormalizedName;
 
 impl AssetMeshName {
 	pub(crate) fn insert(
-		inserted_name: On<Insert, GltfMeshName>,
+		inserted_name: On<Insert<GltfMeshName>>,
 		names: Query<&GltfMeshName>,
 		mut commands: ZyheedaCommands,
 	) {

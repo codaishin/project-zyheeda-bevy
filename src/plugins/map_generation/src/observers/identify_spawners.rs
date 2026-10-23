@@ -10,7 +10,7 @@ where
 {
 	pub(crate) fn identify(
 		types: &[(GetNormalizedName, T)],
-	) -> impl IntoObserverSystem<Add, GltfMeshName, ()> {
+	) -> impl IntoObserverSystem<Add<GltfMeshName>, ()> {
 		let types = types
 			.iter()
 			.map(|(n, i)| (n(), *i))
@@ -18,7 +18,7 @@ where
 
 		#[rustfmt::skip]
 		let observer = move |
-			added_name: On<Add, GltfMeshName>,
+			added_name: On<Add<GltfMeshName>>,
 			names: Query<&GltfMeshName>,
 			mut commands: ZyheedaCommands,
 		| {

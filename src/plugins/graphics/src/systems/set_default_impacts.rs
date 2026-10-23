@@ -7,7 +7,7 @@ impl EffectMaterial {
 	) -> Result<(), InvalidGenerationError> {
 		buffers.insert(
 			&*NO_IMPACTS,
-			ShaderBuffer::from(Vec::<ImpactEffect>::default()),
+			ShaderBuffer::from(vec![ImpactEffect::default()]), // Empty `ShaderBuffer`s are not allowed, so we add one no-op element.
 		)
 	}
 }
@@ -30,7 +30,7 @@ mod tests {
 	}
 
 	#[test]
-	fn set_empty() -> Result<(), RunSystemError> {
+	fn set_empty_with_one_zero_strength_impact() -> Result<(), RunSystemError> {
 		let mut app = setup();
 
 		_ = app
@@ -38,11 +38,11 @@ mod tests {
 			.run_system_once(EffectMaterial::set_default_impacts);
 
 		assert_eq!(
-			Some(&ShaderBuffer::from(Vec::<ImpactEffect>::default()).data),
+			Some([ImpactEffect::default()].as_slice()),
 			app.world()
 				.resource::<Assets<ShaderBuffer>>()
 				.get(&*NO_IMPACTS)
-				.map(|s| &s.data)
+				.and_then(|s| s.cast_slice::<ImpactEffect>())
 		);
 		Ok(())
 	}

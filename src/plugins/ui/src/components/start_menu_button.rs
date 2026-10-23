@@ -5,12 +5,17 @@ use crate::{
 		trigger_game_state::TriggerState,
 	},
 };
-use bevy::{ecs::system::StaticSystemParam, prelude::*};
+use bevy::{
+	ecs::system::StaticSystemParam,
+	picking::hover::Hovered,
+	prelude::*,
+	ui_widgets::Button,
+};
 use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
-#[require(Button, Node = Self::node())]
+#[require(Button, Hovered, Node = Self::node())]
 pub(crate) struct StartMenuButton {
 	pub(crate) label: Localized,
 	pub(crate) trigger_state: GameState,

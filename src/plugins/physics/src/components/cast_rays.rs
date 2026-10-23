@@ -4,10 +4,7 @@ use bevy::{
 	prelude::*,
 	utils::default,
 };
-use bevy_rapier3d::{
-	geometry::CollisionGroups,
-	pipeline::{QueryFilter, QueryFilterFlags},
-};
+use bevy_rapier3d::prelude::*;
 use common::traits::handles_physics::TimeOfImpact;
 use std::collections::HashMap;
 #[cfg(test)]
@@ -155,6 +152,7 @@ mod tests_ray_filter_from_query_filter {
 			groups: Some(CollisionGroups {
 				memberships: Group::all(),
 				filters: Group::empty(),
+				test_mode: InteractionTestMode::And,
 			}),
 			exclude_collider: Some(fake_entity!(42)),
 			exclude_rigid_body: Some(fake_entity!(24)),
@@ -167,6 +165,7 @@ mod tests_ray_filter_from_query_filter {
 				Some(CollisionGroups {
 					memberships: Group::all(),
 					filters: Group::empty(),
+					test_mode: InteractionTestMode::And,
 				}),
 				Some(fake_entity!(42)),
 				Some(fake_entity!(24)),
@@ -196,6 +195,7 @@ mod test_ray_filter_from_query_filter {
 			groups: Some(CollisionGroups {
 				memberships: Group::all(),
 				filters: Group::empty(),
+				test_mode: InteractionTestMode::And,
 			}),
 			exclude_collider: Some(fake_entity!(42)),
 			exclude_rigid_body: Some(fake_entity!(24)),
@@ -209,6 +209,7 @@ mod test_ray_filter_from_query_filter {
 				groups: Some(CollisionGroups {
 					memberships: Group::all(),
 					filters: Group::empty(),
+					test_mode: InteractionTestMode::And,
 				}),
 				exclude_collider: Some(fake_entity!(42)),
 				exclude_rigid_body: Some(fake_entity!(24)),
@@ -220,7 +221,7 @@ mod test_ray_filter_from_query_filter {
 	#[test]
 	fn predicate_error() {
 		let mut query_filter = QueryFilter::new();
-		query_filter.predicate = Some(&|_| false);
+		query_filter.predicate = Some(&|_, _| false);
 
 		let ray_filter = RayFilter::try_from(query_filter);
 

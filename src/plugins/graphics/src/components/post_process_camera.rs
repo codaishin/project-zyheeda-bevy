@@ -1,11 +1,12 @@
 use bevy::{
 	prelude::*,
-	render::{extract_component::ExtractComponent, render_resource::ShaderType},
+	render::{RenderApp, extract_component::ExtractComponent, render_resource::ShaderType},
 };
 use common::prelude::*;
 use macros::asset_path;
 
 #[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType)]
+#[extract_app(RenderApp)]
 pub(crate) struct PostProcessCamera {
 	outline_color: LinearRgba,
 	outline_width: f32,

@@ -4,6 +4,7 @@ use bevy::{
 	asset::RenderAssetUsages,
 	prelude::*,
 	render::{
+		RenderApp,
 		extract_resource::ExtractResource,
 		render_resource::{Extent3d, TextureDimension, TextureFormat, TextureUsages},
 	},
@@ -12,6 +13,7 @@ use common::prelude::*;
 use std::marker::PhantomData;
 
 #[derive(Resource, Debug, PartialEq, Clone, ExtractResource)]
+#[extract_app(RenderApp)]
 pub(crate) struct CameraRenderTarget<T, TImage = Image>
 where
 	T: ThreadSafe,

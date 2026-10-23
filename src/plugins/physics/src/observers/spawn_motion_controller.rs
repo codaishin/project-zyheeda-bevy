@@ -6,7 +6,7 @@ const MOTION_CONTROLLER_OFFSET: Units = Units::from_f32(0.01);
 
 impl MotionControllerOf {
 	pub(crate) fn spawn(
-		on_add: On<Add, MotionCollider>,
+		on_add: On<Add<MotionCollider>>,
 		mut commands: ZyheedaCommands,
 		transforms: Query<&Transform>,
 	) {

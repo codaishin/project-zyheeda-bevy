@@ -7,7 +7,7 @@ use common::prelude::*;
 
 impl SpawnerActive {
 	pub(crate) fn remove_from_disabled_sources(
-		on_add: On<Add, MapObjectOf>,
+		on_add: On<Add<MapObjectOf>>,
 		mut commands: ZyheedaCommands,
 		objects: Query<(&MapObjectOf, &GltfMeshName), With<Self>>,
 		maps: Query<&Map>,
