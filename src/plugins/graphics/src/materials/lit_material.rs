@@ -27,7 +27,7 @@ pub(crate) struct LitMaterial {
 }
 
 impl LitMaterial {
-	pub(crate) const SHADER: &str = asset_path!("shaders/lit_shader.wgsl");
+	pub(crate) const SHADER: &str = asset_path!("shaders/lit_shader.wesl");
 	pub(crate) const RANGE: Units = Units::from_u8(15);
 	pub(crate) const MIN_LIGHT: f32 = 0.01;
 

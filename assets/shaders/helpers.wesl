@@ -1,5 +1,4 @@
-#import bevy_pbr::mesh_view_bindings::view
-#import bevy_pbr::forward_io::VertexOutput
+import bevy_pbr::render::{forward_io::VertexOutput, mesh_view_bindings::view};
 
 /// Adapted from fresnel example in https://github.com/rust-adventure/bevy-examples
 fn fresnel(mesh: VertexOutput, power: f32) -> f32 {

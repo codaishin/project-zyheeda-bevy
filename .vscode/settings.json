@@ -25,7 +25,7 @@
 	"[github-actions-workflow]": {
 		"editor.insertSpaces": true,
 	},
-	"[wgsl]": {
+	"[wesl]": {
 		"editor.tabSize": 4,
 		"editor.insertSpaces": true,
 		"editor.defaultFormatter": "wgsl-analyzer.wgsl-analyzer"
@@ -118,6 +118,7 @@
 		"uvec",
 		"uvsphere",
 		"Wasd",
+		"wesl",
 		"wgsl",
 		"withf",
 		"Writeback",

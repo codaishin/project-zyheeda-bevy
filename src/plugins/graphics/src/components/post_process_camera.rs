@@ -15,7 +15,7 @@ pub(crate) struct PostProcessCamera {
 }
 
 impl PostProcessCamera {
-	pub(crate) const SHADER_PATH: &str = asset_path!("shaders/post_processing.wgsl");
+	pub(crate) const SHADER_PATH: &str = asset_path!("shaders/post_processing.wesl");
 
 	pub(crate) fn new(args: PostProcessArgs) -> Self {
 		Self {

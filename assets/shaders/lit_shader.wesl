@@ -1,25 +1,30 @@
-#import bevy_pbr::{
+import bevy_pbr::render::{
     pbr_fragment::pbr_input_from_standard_material,
-    pbr_functions::alpha_discard,
-}
+    pbr_functions::alpha_discard
+};
+import bevy_pbr::render::forward_io::VertexOutput;
 
-#ifdef PREPASS_PIPELINE
-#import bevy_pbr::{
-    prepass_io::{VertexOutput, FragmentOutput},
-    pbr_deferred_functions::deferred_output,
-}
-#else
-#import bevy_pbr::{
-    forward_io::{VertexOutput, FragmentOutput},
-    pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing},
-}
-#endif
+@if(PREPASS_PIPELINE)
+import bevy_pbr::{
+    deferred::functions::deferred_output,
+    prepass::io::{FragmentOutput as FragmentPrepassOutput, VertexOutput as VertexPrepassOutput}
+};
+@else
+import bevy_pbr::render::{
+    forward_io::{FragmentOutput},
+    pbr_functions::{apply_pbr_lighting, main_pass_post_lighting_processing}
+};
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(100) var<uniform> light_position: vec3<f32>;
-@group(#{MATERIAL_BIND_GROUP}) @binding(101) var<uniform> range: f32;
-@group(#{MATERIAL_BIND_GROUP}) @binding(102) var<uniform> min_light: f32;
-@group(#{MATERIAL_BIND_GROUP}) @binding(103) var los_texture: texture_cube<f32>;
-@group(#{MATERIAL_BIND_GROUP}) @binding(104) var los_sampler: sampler;
+@group(constants::MATERIAL_BIND_GROUP) @binding(100)
+var<uniform> light_position: vec3<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(101)
+var<uniform> range: f32;
+@group(constants::MATERIAL_BIND_GROUP) @binding(102)
+var<uniform> min_light: f32;
+@group(constants::MATERIAL_BIND_GROUP) @binding(103)
+var los_texture: texture_cube<f32>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(104)
+var los_sampler: sampler;
 
 // corrects for the right/left handed coordinate systems mismatch between bevy and wgsl
 const CUBEMAP_SAMPLE_CORRECTION: vec3<f32> = vec3(1.0, 1.0, -1.0);
@@ -35,15 +40,16 @@ const IN_LIGHT_UPPER_BOUND = 0.2;
 
 const KERNEL_COUNT: u32 = 8;
 const KERNEL: array<vec2<f32>, KERNEL_COUNT> = array(
-    normalize(vec2(-1, -1)),
-    normalize(vec2(-1,  0)),
-    normalize(vec2(-1,  1)),
-    normalize(vec2( 0, -1)),
-    normalize(vec2( 0,  1)),
-    normalize(vec2( 1, -1)),
-    normalize(vec2( 1,  0)),
-    normalize(vec2( 1,  1)),
-);
+        normalize(vec2(-1, -1)),
+        normalize(vec2(-1, 0)),
+        normalize(vec2(-1, 1)),
+        normalize(vec2(0, -1)),
+        normalize(vec2(0, 1)),
+        normalize(vec2(1, -1)),
+        normalize(vec2(1, 0)),
+        normalize(vec2(1, 1)),
+    );
+
 const CONE_SAMPLE_COUNT = 10;
 const CONE_RADIUS: f32 = 0.002;
 
@@ -52,35 +58,67 @@ struct VecSample {
     y: vec3<f32>,
 }
 
+@if(PREPASS_PIPELINE)
 @fragment
-fn fragment(
-    in: VertexOutput,
+fn fragment_prepass(
+    in: VertexPrepassOutput,
     @builtin(front_facing) is_front: bool,
-) -> FragmentOutput {
+) -> FragmentPrepassOutput {
+    var in_forward = into_forward(in);
+    var pbr_input = pbr_input_from_standard_material(in_forward, is_front);
+
+    pbr_input.material.base_color = alpha_discard(
+            pbr_input.material.flags,
+            pbr_input.material.alpha_cutoff,
+            pbr_input.material.base_color,
+        );
+
+    return deferred_output(in, pbr_input);
+}
+
+@if(PREPASS_PIPELINE)
+fn into_forward(in: VertexPrepassOutput) -> VertexOutput {
+    return VertexOutput(
+            in.position,
+            in.world_position,
+            in.world_normal,
+            in.uv,
+            in.uv_b,
+            in.world_tangent,
+            in.color,
+            in.instance_index,
+            in.visibility_range_dither,
+        );
+}
+
+@if(!PREPASS_PIPELINE)
+@fragment
+fn fragment(in: VertexOutput, @builtin(front_facing) is_front: bool) -> FragmentOutput {
     var pbr_input = pbr_input_from_standard_material(in, is_front);
 
-    pbr_input.material.base_color = alpha_discard(pbr_input.material, pbr_input.material.base_color);
+    pbr_input.material.base_color = alpha_discard(
+            pbr_input.material.flags,
+            pbr_input.material.alpha_cutoff,
+            pbr_input.material.base_color,
+        );
 
-#ifdef PREPASS_PIPELINE
-    let out = deferred_output(in, pbr_input);
-#else
     var out: FragmentOutput;
     out.color = apply_pbr_lighting(pbr_input);
     out.color = main_pass_post_lighting_processing(pbr_input, out.color);
-#endif
 
-#ifdef NO_LIGHT
-    out.color = vec4(vec3(0), out.color.a);
-#endif
+    @if(NO_LIGHT) {
+        out.color = vec4(vec3(0), out.color.a);
+    }
 
-#ifdef LIGHT
-    let light = compute_light(in);
-    out.color = vec4(out.color.rgb * light, out.color.a);
-#endif
+    @if(LIGHT) {
+        let light = compute_light(in);
+        out.color = vec4(out.color.rgb * light, out.color.a);
+    }
 
     return out;
 }
 
+@if(!PREPASS_PIPELINE)
 fn compute_light(in: VertexOutput) -> f32 {
     var direction = in.world_position.xyz - light_position;
     let vertex_distance = length(direction);
@@ -95,11 +133,12 @@ fn compute_light(in: VertexOutput) -> f32 {
 
     direction = normalize(direction);
 
-#ifdef IGNORE_NDL
-    var ndl = 1.0;
-#else
-    var ndl = max(dot(-direction, normalize(in.world_normal.xyz)), 0.0);
-#endif
+    @if(IGNORE_NDL) {
+        var ndl = 1.0;
+    } @else {
+        var ndl = max(dot(-direction, normalize(in.world_normal.xyz)), 0.0);
+    }
+
     let bias = mix(LOW_NDL_BIAS, BIAS, ndl);
     let los_distance = get_los_distance(direction);
 
@@ -110,9 +149,9 @@ fn compute_light(in: VertexOutput) -> f32 {
     }
 
     let sample_vectors = compute_sample_vectors(direction);
-    for (var c: u32 = 0; c < CONE_SAMPLE_COUNT; c++) {
+    for(var c: u32 = 0; c < CONE_SAMPLE_COUNT; c++) {
         let radius = CONE_RADIUS * f32(c + 1);
-        for (var k: u32 = 0; k < KERNEL_COUNT; k++) {
+        for(var k: u32 = 0; k < KERNEL_COUNT; k++) {
             let kernel = KERNEL[k];
             let offset = sample_vectors.x * kernel.x + sample_vectors.y * kernel.y;
             let sample_direction = normalize(direction + offset * radius);
@@ -127,30 +166,30 @@ fn compute_light(in: VertexOutput) -> f32 {
     return final_light(visibility, vertex_distance, ndl);
 }
 
+@if(!PREPASS_PIPELINE)
 fn get_los_distance(direction: vec3<f32>) -> f32 {
-    return textureSample(
-        los_texture,
-        los_sampler,
-        direction * CUBEMAP_SAMPLE_CORRECTION
-    ).r * range;
+    return textureSample(los_texture, los_sampler, direction * CUBEMAP_SAMPLE_CORRECTION).r * range;
 }
 
+@if(!PREPASS_PIPELINE)
 fn compute_sample_vectors(direction: vec3<f32>) -> VecSample {
     var y = select(
-        vec3(1.0, 0.0, 0.0),
-        vec3(0.0, 1.0, 0.0),
-        abs(dot(direction, vec3(0, 1, 0))) < 0.9
-    );
+            vec3(1.0, 0.0, 0.0),
+            vec3(0.0, 1.0, 0.0),
+            abs(dot(direction, vec3(0, 1, 0))) < 0.9,
+        );
     let x = normalize(cross(direction, y));
     y = normalize(cross(direction, x));
 
     return VecSample(x, y);
 }
 
+@if(!PREPASS_PIPELINE)
 fn compute_visibility(los_distance: f32, distance: f32, bias: f32) -> f32 {
     return smoothstep(-bias, bias, los_distance - distance);
 }
 
+@if(!PREPASS_PIPELINE)
 fn final_light(visibility: f32, distance: f32, ndl: f32) -> f32 {
     let normalized_distance = distance / range;
     let light = max(1. - normalized_distance, min_light);

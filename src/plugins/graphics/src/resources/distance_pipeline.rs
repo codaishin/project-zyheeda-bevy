@@ -164,7 +164,7 @@ struct DistancePipeline {
 }
 
 impl DistancePipeline {
-	const SHADER: &str = asset_path!("shaders/distance.wgsl");
+	const SHADER: &str = asset_path!("shaders/distance.wesl");
 
 	#[allow(clippy::type_complexity)]
 	fn extract_camera_phases(

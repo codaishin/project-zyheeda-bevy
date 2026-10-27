@@ -119,7 +119,7 @@ impl Default for EffectMaterial {
 
 impl Material for EffectMaterial {
 	fn fragment_shader() -> ShaderRef {
-		"shaders/effect_shader.wgsl".into()
+		"shaders/effect_shader.wesl".into()
 	}
 
 	fn alpha_mode(&self) -> AlphaMode {
