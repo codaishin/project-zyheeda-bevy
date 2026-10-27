@@ -81,6 +81,10 @@ pub(crate) struct TooltipUIControl {
 	pub(crate) tooltip_delay: Duration,
 }
 
+impl TooltipUIControl {
+	const PX_OFFSET: f32 = 5.0;
+}
+
 impl<T> DespawnAllTooltips<TooltipContent<T>> for TooltipUIControl
 where
 	T: TooltipUiConfig + ThreadSafe,
@@ -135,8 +139,8 @@ where
 	) {
 		for (.., mut node, computed) in uis.iter_mut() {
 			let height = computed.size.y;
-			node.left = Val::Px(position.x);
-			node.top = Val::Px(position.y - height);
+			node.left = Val::Px(position.x + Self::PX_OFFSET);
+			node.top = Val::Px(position.y + Self::PX_OFFSET - height);
 		}
 	}
 }
@@ -437,13 +441,13 @@ mod tests {
 		assert_eq!(
 			vec![
 				Some(&Node {
-					left: Val::Px(42.),
-					top: Val::Px(11.),
+					left: Val::Px(42. + TooltipUIControl::PX_OFFSET),
+					top: Val::Px(11. + TooltipUIControl::PX_OFFSET),
 					..default()
 				}),
 				Some(&Node {
-					left: Val::Px(42.),
-					top: Val::Px(11.),
+					left: Val::Px(42. + TooltipUIControl::PX_OFFSET),
+					top: Val::Px(11. + TooltipUIControl::PX_OFFSET),
 					..default()
 				})
 			],
