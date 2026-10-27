@@ -23,4 +23,4 @@ mockall.workspace = true
 testing.workspace = true
 
 [features]
-debug-utils = ["common/debug-utils"]
+debug-utils = ["bevy/debug", "bevy/bevy_dev_tools", "common/debug-utils"]
