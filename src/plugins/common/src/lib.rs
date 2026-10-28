@@ -7,7 +7,6 @@ pub mod errors;
 pub mod observers;
 pub mod prelude;
 pub mod resources;
-pub mod system_params;
 pub mod systems;
 pub mod tools;
 pub mod traits;

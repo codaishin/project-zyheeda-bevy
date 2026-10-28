@@ -1,7 +1,7 @@
 pub(crate) mod key_select;
 pub(crate) mod skill_descriptor;
 
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::Button};
 use std::{collections::HashSet, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]

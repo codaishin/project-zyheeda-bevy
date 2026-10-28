@@ -1,18 +1,18 @@
 use crate::components::ui_disabled::UIDisabled;
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::Button};
 use common::prelude::*;
 
 impl UIDisabled {
 	pub(crate) fn apply(
 		mut commands: ZyheedaCommands,
 		mut removed_disables: RemovedComponents<UIDisabled>,
-		disabled: Query<Entity, (With<UIDisabled>, With<Interaction>)>,
-		can_be_interactive: Query<(), With<CanBeInteractive>>,
+		disabled: Query<Entity, (With<UIDisabled>, With<Button>)>,
+		can_be_interactive: Query<(), With<CanBeButton>>,
 	) {
 		for entity in &disabled {
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_remove::<Interaction>();
-				e.try_insert(CanBeInteractive);
+				e.try_remove::<Button>();
+				e.try_insert(CanBeButton);
 			});
 		}
 
@@ -22,14 +22,14 @@ impl UIDisabled {
 			}
 
 			commands.try_apply_on(&entity, |mut e| {
-				e.try_insert(Interaction::None);
+				e.try_insert(Button);
 			});
 		}
 	}
 }
 
 #[derive(Component)]
-pub(crate) struct CanBeInteractive;
+pub(crate) struct CanBeButton;
 
 #[cfg(test)]
 mod tests {
@@ -45,45 +45,39 @@ mod tests {
 	}
 
 	#[test]
-	fn remove_interaction() {
+	fn remove_button() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn((Interaction::None, UIDisabled)).id();
+		let entity = app.world_mut().spawn((Button, UIDisabled)).id();
 
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<Interaction>());
+		assert!(!app.world().entity(entity).contains::<Button>());
 	}
 
 	#[test]
-	fn do_not_remove_interaction_if_not_disabled() {
+	fn do_not_remove_button_if_not_disabled() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn(Interaction::None).id();
+		let entity = app.world_mut().spawn(Button).id();
 
 		app.update();
 
-		assert_eq!(
-			Some(&Interaction::None),
-			app.world().entity(entity).get::<Interaction>(),
-		);
+		assert!(app.world().entity(entity).contains::<Button>());
 	}
 
 	#[test]
-	fn reinsert_interaction() {
+	fn reinsert_button() {
 		let mut app = setup();
-		let entity = app.world_mut().spawn((Interaction::None, UIDisabled)).id();
+		let entity = app.world_mut().spawn((Button, UIDisabled)).id();
 
 		app.update();
 		app.world_mut().entity_mut(entity).remove::<UIDisabled>();
 		app.update();
 
-		assert_eq!(
-			Some(&Interaction::None),
-			app.world().entity(entity).get::<Interaction>(),
-		);
+		assert!(app.world().entity(entity).contains::<Button>());
 	}
 
 	#[test]
-	fn do_not_reinsert_interaction_if_entity_never_had_interaction() {
+	fn do_not_reinsert_button_if_entity_never_had_interaction() {
 		let mut app = setup();
 		let entity = app.world_mut().spawn(UIDisabled).id();
 
@@ -91,6 +85,6 @@ mod tests {
 		app.world_mut().entity_mut(entity).remove::<UIDisabled>();
 		app.update();
 
-		assert_eq!(None, app.world().entity(entity).get::<Interaction>());
+		assert!(!app.world().entity(entity).contains::<Button>());
 	}
 }

@@ -6,7 +6,7 @@ use bevy::prelude::*;
 
 impl PersistentEntities {
 	pub(crate) fn insert_entity(
-		on_insert: On<Insert, PersistentEntity>,
+		on_insert: On<Insert<PersistentEntity>>,
 		persistent_entities: Option<ResMut<Self>>,
 		entities: Query<&PersistentEntity>,
 	) {

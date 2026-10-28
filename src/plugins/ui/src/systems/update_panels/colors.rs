@@ -3,20 +3,20 @@ use crate::{
 	tools::PanelState,
 	traits::colors::HasPanelColors,
 };
-use bevy::prelude::*;
+use bevy::{picking::hover::Hovered, prelude::*, ui::Pressed};
 use common::prelude::*;
 
 pub fn panel_colors<TPanel: Component + View<PanelState> + HasPanelColors>(
 	mut commands: ZyheedaCommands,
-	mut panels: Query<(Entity, &Interaction, &TPanel, Option<&UIDisabled>), Without<ColorOverride>>,
+	mut panels: Query<ButtonComponents<TPanel>, Without<ColorOverride>>,
 ) {
-	for (entity, interaction, panel, disabled) in &mut panels {
-		let config = match (interaction, panel.view(), disabled) {
+	for (entity, pressed, hovered, panel, disabled) in &mut panels {
+		let config = match (pressed, hovered, panel.view(), disabled) {
 			(.., Some(UIDisabled)) => &TPanel::PANEL_COLORS.disabled,
-			(Interaction::Pressed, ..) => &TPanel::PANEL_COLORS.pressed,
-			(Interaction::Hovered, ..) => &TPanel::PANEL_COLORS.hovered,
-			(_, PanelState::Empty, _) => &TPanel::PANEL_COLORS.empty,
-			(_, PanelState::Filled, _) => &TPanel::PANEL_COLORS.filled,
+			(Some(Pressed), ..) => &TPanel::PANEL_COLORS.pressed,
+			(_, Some(Hovered(true)), ..) => &TPanel::PANEL_COLORS.hovered,
+			(.., PanelState::Empty, _) => &TPanel::PANEL_COLORS.empty,
+			(.., PanelState::Filled, _) => &TPanel::PANEL_COLORS.filled,
 		};
 
 		commands.try_apply_on(&entity, |mut e| {
@@ -28,6 +28,14 @@ pub fn panel_colors<TPanel: Component + View<PanelState> + HasPanelColors>(
 	}
 }
 
+type ButtonComponents<'a, TPanel> = (
+	Entity,
+	Option<&'a Pressed>,
+	Option<&'a Hovered>,
+	&'a TPanel,
+	Option<&'a UIDisabled>,
+);
+
 #[cfg(test)]
 mod tests {
 	#![allow(clippy::unwrap_used)]
@@ -38,6 +46,7 @@ mod tests {
 	};
 
 	#[derive(Component)]
+	#[require(Hovered)]
 	struct _Empty;
 
 	impl View<PanelState> for _Empty {
@@ -47,6 +56,7 @@ mod tests {
 	}
 
 	#[derive(Component)]
+	#[require(Hovered)]
 	struct _Filled;
 
 	impl View<PanelState> for _Filled {
@@ -110,11 +120,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app
 			.world_mut()
-			.spawn((
-				_Empty,
-				Interaction::Pressed,
-				BackgroundColor(Color::srgb(0.1, 0.2, 0.3)),
-			))
+			.spawn((_Empty, Pressed, BackgroundColor(Color::srgb(0.1, 0.2, 0.3))))
 			.id();
 
 		app.add_systems(Update, panel_colors::<_Empty>);
@@ -143,7 +149,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Empty,
-				Interaction::Hovered,
+				Hovered(true),
 				BackgroundColor(Color::srgb(0.1, 0.2, 0.3)),
 			))
 			.id();
@@ -172,11 +178,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app
 			.world_mut()
-			.spawn((
-				_Empty,
-				Interaction::None,
-				BackgroundColor(Color::srgb(0.1, 0.2, 0.3)),
-			))
+			.spawn((_Empty, BackgroundColor(Color::srgb(0.1, 0.2, 0.3))))
 			.id();
 
 		app.add_systems(Update, panel_colors::<_Empty>);
@@ -203,11 +205,7 @@ mod tests {
 		let mut app = App::new();
 		let agent = app
 			.world_mut()
-			.spawn((
-				_Filled,
-				Interaction::None,
-				BackgroundColor(Color::srgb(0.1, 0.2, 0.3)),
-			))
+			.spawn((_Filled, BackgroundColor(Color::srgb(0.1, 0.2, 0.3))))
 			.id();
 
 		app.add_systems(Update, panel_colors::<_Filled>);
@@ -236,7 +234,6 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Empty,
-				Interaction::Pressed,
 				BackgroundColor(Color::srgb(0.1, 0.2, 0.3)),
 				ColorOverride,
 			))
@@ -262,7 +259,6 @@ mod tests {
 			.world_mut()
 			.spawn((
 				_Empty,
-				Interaction::Pressed,
 				BackgroundColor(Color::srgb(0.1, 0.2, 0.3)),
 				UIDisabled,
 			))

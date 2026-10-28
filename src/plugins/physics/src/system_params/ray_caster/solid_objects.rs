@@ -3,7 +3,10 @@ use crate::{
 	system_params::ray_caster::RayCasterMut,
 };
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::{Real, *};
+use bevy_rapier3d::{
+	prelude::{Real, *},
+	rapier::geometry::Collider as RapierCollider,
+};
 use common::prelude::*;
 
 impl Raycast<SolidObjects> for RayCasterMut<'_, '_> {
@@ -26,6 +29,7 @@ impl Raycast<SolidObjects> for RayCasterMut<'_, '_> {
 					true => MOUSE_HOVERABLE_GROUP,
 					false => Group::all(),
 				},
+				test_mode: InteractionTestMode::And,
 			}),
 			..default()
 		};
@@ -48,8 +52,8 @@ impl Raycast<SolidObjects> for RayCasterMut<'_, '_> {
 }
 
 impl RayCasterMut<'_, '_> {
-	fn not_excluded(&self, exclude: Vec<Entity>) -> impl Fn(Entity) -> bool {
-		move |entity| {
+	fn not_excluded(&self, exclude: Vec<Entity>) -> impl Fn(Entity, &RapierCollider) -> bool {
+		move |entity, _| {
 			if exclude.contains(&entity) {
 				return false;
 			}
@@ -95,6 +99,7 @@ mod tests {
 			.spawn((ColliderRoot, Transform::default(), Collider::ball(0.5)))
 			.id();
 		app.update();
+		app.update();
 
 		let hit = app
 			.world_mut()
@@ -127,6 +132,7 @@ mod tests {
 			))
 			.id();
 		app.world_mut().spawn(());
+		app.update();
 		app.update();
 
 		let hit = app
@@ -165,6 +171,7 @@ mod tests {
 			.id();
 		app.world_mut().spawn(());
 		app.update();
+		app.update();
 
 		let hit = app
 			.world_mut()
@@ -196,6 +203,7 @@ mod tests {
 			Sensor,
 		));
 		app.update();
+		app.update();
 
 		let hit = app
 			.world_mut()
@@ -222,6 +230,7 @@ mod tests {
 			.world_mut()
 			.spawn((Transform::default(), Collider::ball(0.5)))
 			.id();
+		app.update();
 		app.update();
 
 		let hit = app
@@ -258,6 +267,7 @@ mod tests {
 			))
 			.id();
 		app.update();
+		app.update();
 
 		let hit = app
 			.world_mut()
@@ -278,7 +288,11 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			ColliderRoot,
-			CollisionGroups::new(Group::all() & !MOUSE_HOVERABLE_GROUP, RAY_GROUP),
+			CollisionGroups {
+				memberships: Group::all() & !MOUSE_HOVERABLE_GROUP,
+				filters: RAY_GROUP,
+				test_mode: InteractionTestMode::And,
+			},
 			Transform::default(),
 			Collider::ball(0.5),
 		));
@@ -290,6 +304,7 @@ mod tests {
 				Collider::ball(0.5),
 			))
 			.id();
+		app.update();
 		app.update();
 
 		let hit = app
@@ -319,7 +334,11 @@ mod tests {
 			.world_mut()
 			.spawn((
 				ColliderRoot,
-				CollisionGroups::new(Group::all() & !MOUSE_HOVERABLE_GROUP, RAY_GROUP),
+				CollisionGroups {
+					memberships: Group::all() & !MOUSE_HOVERABLE_GROUP,
+					filters: RAY_GROUP,
+					test_mode: InteractionTestMode::And,
+				},
 				Transform::default(),
 				Collider::ball(0.5),
 			))
@@ -329,6 +348,7 @@ mod tests {
 			Transform::from_xyz(0., -1., 0.),
 			Collider::ball(0.5),
 		));
+		app.update();
 		app.update();
 
 		let hit = app
@@ -357,7 +377,11 @@ mod tests {
 		let mut app = setup();
 		app.world_mut().spawn((
 			ColliderRoot,
-			CollisionGroups::new(Group::all(), Group::all() & !RAY_GROUP),
+			CollisionGroups {
+				memberships: Group::all(),
+				filters: Group::all() & !RAY_GROUP,
+				test_mode: InteractionTestMode::And,
+			},
 			Transform::default(),
 			Collider::ball(0.5),
 		));
@@ -369,6 +393,7 @@ mod tests {
 				Collider::ball(0.5),
 			))
 			.id();
+		app.update();
 		app.update();
 
 		let hit = app

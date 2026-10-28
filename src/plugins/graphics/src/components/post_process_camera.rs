@@ -1,11 +1,12 @@
 use bevy::{
 	prelude::*,
-	render::{extract_component::ExtractComponent, render_resource::ShaderType},
+	render::{RenderApp, extract_component::ExtractComponent, render_resource::ShaderType},
 };
 use common::prelude::*;
 use macros::asset_path;
 
 #[derive(Component, Default, Clone, Copy, ExtractComponent, ShaderType)]
+#[extract_app(RenderApp)]
 pub(crate) struct PostProcessCamera {
 	outline_color: LinearRgba,
 	outline_width: f32,
@@ -14,7 +15,7 @@ pub(crate) struct PostProcessCamera {
 }
 
 impl PostProcessCamera {
-	pub(crate) const SHADER_PATH: &str = asset_path!("shaders/post_processing.wgsl");
+	pub(crate) const SHADER_PATH: &str = asset_path!("shaders/post_processing.wesl");
 
 	pub(crate) fn new(args: PostProcessArgs) -> Self {
 		Self {

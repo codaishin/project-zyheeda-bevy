@@ -162,7 +162,7 @@ mod tests {
 			match ($left, $right) {
 				(Unchanged, Unchanged) => {}
 				(Pending(left), Pending(right)) => assert_eq!(left, right),
-				(PendingIfNeq(left), PendingIfNeq(right)) => {
+				(PendingIfDifferent(left), PendingIfDifferent(right)) => {
 					assert_eq!(left, right)
 				}
 				(left, right) => {

@@ -22,8 +22,8 @@ where
 }
 
 impl From<Localized> for Text {
-	fn from(Localized(string): Localized) -> Self {
-		Text((*string).to_owned())
+	fn from(localized: Localized) -> Self {
+		Text::from(&localized)
 	}
 }
 
@@ -34,13 +34,13 @@ impl From<&Localized> for Text {
 }
 
 impl From<Localized> for Name {
-	fn from(Localized(string): Localized) -> Self {
-		Name::from(&*string)
+	fn from(localized: Localized) -> Self {
+		Name::from(&localized)
 	}
 }
 
 impl From<&Localized> for Name {
 	fn from(Localized(string): &Localized) -> Self {
-		Name::from(&**string)
+		Name::from((**string).to_owned())
 	}
 }

@@ -1,4 +1,4 @@
-#import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput
+import bevy_core_pipeline::fullscreen_vertex_shader::FullscreenVertexOutput;
 
 @group(0) @binding(0) var world_depth: texture_depth_2d;
 @group(0) @binding(1) var world_depth_sampler: sampler_comparison;

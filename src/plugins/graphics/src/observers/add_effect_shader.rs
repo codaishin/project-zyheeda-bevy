@@ -8,7 +8,7 @@ use common::prelude::*;
 
 impl EffectMaterialData {
 	pub(crate) fn add_to<TComponent>(
-		on_add: On<Add, TComponent>,
+		on_add: On<Add<TComponent>>,
 		mut commands: ZyheedaCommands,
 		first_pass_image: Res<CameraRenderTarget<WorldPass>>,
 		mut materials: ResMut<Assets<EffectMaterial>>,

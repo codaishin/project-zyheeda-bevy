@@ -1,6 +1,7 @@
 use crate::components::{Dad, KeyedPanel};
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
+	picking::hover::Hovered,
 	prelude::*,
 };
 use common::prelude::*;
@@ -9,7 +10,7 @@ pub fn drop_item<TPlayer, TLoadout>(
 	mut commands: ZyheedaCommands,
 	dads: Query<&Dad>,
 	player: StaticSystemParam<TPlayer>,
-	panels: Query<(&Interaction, &KeyedPanel)>,
+	panels: Query<(&Hovered, &KeyedPanel)>,
 	mouse: Res<ButtonInput<MouseButton>>,
 	mut param: StaticSystemParam<TLoadout>,
 ) where
@@ -35,7 +36,7 @@ pub fn drop_item<TPlayer, TLoadout>(
 		return;
 	};
 
-	let Some((.., keyed_panel)) = panels.iter().find(is_hovered) else {
+	let Some(keyed_panel) = panels.iter().find_map(hovered) else {
 		return;
 	};
 
@@ -45,18 +46,18 @@ pub fn drop_item<TPlayer, TLoadout>(
 	});
 }
 
-fn is_hovered((interaction, ..): &(&Interaction, &KeyedPanel)) -> bool {
-	&&Interaction::Hovered == interaction
+fn hovered<'a>((hovered, panel): (&Hovered, &'a KeyedPanel)) -> Option<&'a KeyedPanel> {
+	match hovered {
+		Hovered(true) => Some(panel),
+		Hovered(false) => None,
+	}
 }
 
 #[cfg(test)]
 mod tests {
 	use super::*;
 	use crate::testing::{_Player, _PlayerParam};
-	use bevy::{
-		app::{App, Update},
-		ui::Interaction,
-	};
+	use bevy::app::{App, Update};
 	use testing::{SingleThreadedApp, assert_eq_any_of, set_input};
 
 	#[derive(Component, Debug, PartialEq, Default)]
@@ -94,7 +95,7 @@ mod tests {
 			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
+			.spawn((Hovered(true), KeyedPanel::from(SlotKey(11))));
 
 		set_input!(app, just_released(MOUSE_LEFT));
 		app.update();
@@ -115,9 +116,9 @@ mod tests {
 			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
+			.spawn((Hovered(true), KeyedPanel::from(SlotKey(11))));
 		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(12))));
+			.spawn((Hovered(true), KeyedPanel::from(SlotKey(12))));
 
 		set_input!(app, just_released(MOUSE_LEFT));
 		app.update();
@@ -146,7 +147,7 @@ mod tests {
 			.spawn((_Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
+			.spawn((Hovered(true), KeyedPanel::from(SlotKey(11))));
 
 		set_input!(app, just_released(MOUSE_LEFT));
 		app.update();
@@ -165,7 +166,7 @@ mod tests {
 			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
-			.spawn((Interaction::None, KeyedPanel::from(SlotKey(11))));
+			.spawn((Hovered(false), KeyedPanel::from(SlotKey(11))));
 
 		set_input!(app, just_released(MOUSE_LEFT));
 		app.update();
@@ -184,7 +185,7 @@ mod tests {
 			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
+			.spawn((Hovered(true), KeyedPanel::from(SlotKey(11))));
 
 		set_input!(app, released(MOUSE_LEFT));
 		app.update();
@@ -203,7 +204,7 @@ mod tests {
 			.spawn((_Player, _Container::default(), Dad::from(SlotKey(42))))
 			.id();
 		app.world_mut()
-			.spawn((Interaction::Hovered, KeyedPanel::from(SlotKey(11))));
+			.spawn((Hovered(true), KeyedPanel::from(SlotKey(11))));
 
 		set_input!(app, just_released(MOUSE_LEFT));
 		app.update();

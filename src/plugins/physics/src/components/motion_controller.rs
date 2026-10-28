@@ -90,6 +90,7 @@ impl Prefab<()> for MotionControllerOf {
 				filter_groups: Some(CollisionGroups {
 					memberships: AGENTS_GROUP,
 					filters: SKILLS_GROUP | TERRAIN_GROUP,
+					test_mode: InteractionTestMode::And,
 				}),
 				offset: CharacterLength::Absolute(*self.offset),
 				snap_to_ground: Some(CharacterLength::Absolute(*self.offset)),
@@ -98,6 +99,7 @@ impl Prefab<()> for MotionControllerOf {
 			CollisionGroups {
 				memberships: AGENTS_GROUP | MOUSE_HOVERABLE_GROUP,
 				filters: AGENTS_GROUP | SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP,
+				test_mode: InteractionTestMode::And,
 			},
 		));
 		Ok(())
@@ -269,7 +271,8 @@ mod tests {
 		assert_eq!(
 			Some(&CollisionGroups {
 				memberships: AGENTS_GROUP | MOUSE_HOVERABLE_GROUP,
-				filters: AGENTS_GROUP | SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP
+				filters: AGENTS_GROUP | SKILLS_GROUP | TERRAIN_GROUP | RAY_GROUP,
+				test_mode: InteractionTestMode::And,
 			}),
 			entity.get::<CollisionGroups>(),
 		);

@@ -4,7 +4,6 @@ pub(crate) mod add_tooltip;
 pub(crate) mod build_combo_tree_layout;
 pub(crate) mod colors;
 pub(crate) mod insert_ui_content;
-pub(crate) mod is_released;
 pub(crate) mod tooltip_ui_control;
 pub(crate) mod trigger_game_state;
 pub(crate) mod ui_traits;

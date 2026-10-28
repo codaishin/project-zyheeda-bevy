@@ -6,6 +6,7 @@ edition.workspace = true
 [dependencies]
 # external
 bevy.workspace = true
+bytemuck = "1.25.2"
 nonmax = "0.5.5"
 serde.workspace = true
 
@@ -23,4 +24,4 @@ test-case.workspace = true
 testing.workspace = true
 
 [features]
-debug-utils = ["common/debug-utils"]
+debug-utils = ["bevy/debug", "bevy/bevy_dev_tools", "common/debug-utils"]

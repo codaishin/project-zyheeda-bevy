@@ -1,5 +1,3 @@
-pub(crate) mod button_interaction;
-pub(crate) mod button_state;
 pub(crate) mod combo_overview;
 pub(crate) mod combo_skill_button;
 pub(crate) mod dispatch_text_color;
@@ -24,7 +22,7 @@ pub(crate) mod ui_disabled;
 pub(crate) mod ui_overlay;
 pub(crate) mod with_node;
 
-use bevy::prelude::*;
+use bevy::{picking::hover::Hovered, prelude::*, ui_widgets::Button};
 use combo_skill_button::Horizontal;
 use common::prelude::*;
 use std::marker::PhantomData;
@@ -42,6 +40,7 @@ where
 }
 
 #[derive(Component, Debug, Clone, Copy)]
+#[require(Button, Hovered)]
 pub struct KeyedPanel(pub LoadoutKey);
 
 impl<TKey> From<TKey> for KeyedPanel

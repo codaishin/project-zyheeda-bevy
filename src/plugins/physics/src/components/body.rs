@@ -38,6 +38,7 @@ impl Body {
 			CollisionGroups {
 				memberships: TERRAIN_GROUP,
 				filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
+				test_mode: InteractionTestMode::And,
 			},
 		)
 	}
@@ -53,6 +54,7 @@ impl Body {
 			CollisionGroups {
 				memberships: INTERACTIVE_GROUP,
 				filters: INTERACTIVE_GROUP | RAY_GROUP,
+				test_mode: InteractionTestMode::And,
 			},
 		)
 	}
@@ -312,7 +314,8 @@ mod tests {
 				assert_eq!(
 					Some(&CollisionGroups {
 						memberships: TERRAIN_GROUP,
-						filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP
+						filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
+						test_mode: InteractionTestMode::And,
 					}),
 					entity.get::<CollisionGroups>(),
 				);
@@ -510,6 +513,7 @@ mod tests {
 				Some(&CollisionGroups {
 					memberships: INTERACTIVE_GROUP,
 					filters: INTERACTIVE_GROUP | RAY_GROUP,
+					test_mode: InteractionTestMode::And,
 				}),
 				child.get::<CollisionGroups>(),
 			);

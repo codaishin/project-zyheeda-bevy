@@ -16,7 +16,7 @@ use std::fmt::Display;
 
 impl AnchoredSkillDirty {
 	pub(crate) fn process<TRayCaster>(
-		on_add: On<Add, Self>,
+		on_add: On<Add<Self>>,
 		commands: ZyheedaCommands,
 		lookup: StaticSystemParam<MountPointsLookup<SkillMountBone>>,
 		ray_caster: StaticSystemParam<TRayCaster>,
@@ -33,7 +33,7 @@ impl AnchoredSkillDirty {
 	}
 
 	fn system_internal<TLookup, TRayCaster, TMountError>(
-		on_add: On<Add, Self>,
+		on_add: On<Add<Self>>,
 		mut commands: ZyheedaCommands,
 		mut lookup: StaticSystemParam<TLookup>,
 		ray_caster: StaticSystemParam<TRayCaster>,

@@ -7,7 +7,7 @@ use bevy::prelude::*;
 
 impl ChildOfPersistent {
 	pub(crate) fn insert_child_of(
-		on_insert: On<Insert, Self>,
+		on_insert: On<Insert<Self>>,
 		mut commands: ZyheedaCommands,
 		children_of_persistent: Query<&Self>,
 	) {

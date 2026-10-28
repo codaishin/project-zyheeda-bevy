@@ -2,29 +2,28 @@ use crate::{
 	components::action_key_interaction::ActionKeyInteraction,
 	resources::mouse_override::MouseOverride,
 };
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::Activate};
 
 impl MouseOverride {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn set_active(
-		interactions: Query<(Entity, &ActionKeyInteraction, &Interaction), Changed<Interaction>>,
+		activate: On<Activate>,
+		buttons: Query<(Entity, &ActionKeyInteraction)>,
 		mut mouse_override: ResMut<Self>,
 	) {
 		if matches!(*mouse_override, Self::Active { input_state, .. } if input_state.is_some()) {
 			return;
 		}
 
-		for (panel, ActionKeyInteraction { action_key, .. }, interaction) in &interactions {
-			if interaction != &Interaction::Pressed {
-				continue;
-			}
+		let Ok((panel, button)) = buttons.get(activate.entity) else {
+			return;
+		};
 
-			*mouse_override = Self::Active {
-				panel,
-				action: *action_key,
-				input_state: None,
-			};
-		}
+		*mouse_override = Self::Active {
+			panel,
+			action: button.action_key,
+			input_state: None,
+		};
 	}
 }
 
@@ -33,7 +32,6 @@ mod tests {
 	use super::*;
 	use crate::resources::mouse_override::MouseOverride;
 	use common::prelude::*;
-	use test_case::test_case;
 	use testing::{SingleThreadedApp, fake_entity};
 
 	#[derive(Resource, Debug, PartialEq)]
@@ -43,32 +41,24 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.insert_resource(mouse_override);
-		app.add_systems(
-			Update,
-			(
-				MouseOverride::set_active,
-				|o: Res<MouseOverride>, mut commands: Commands| {
-					commands.insert_resource(_OverrideChanged(o.is_changed()));
-				},
-			)
-				.chain(),
-		);
+		app.add_observer(MouseOverride::set_active);
+		app.add_systems(Update, |o: Res<MouseOverride>, mut commands: Commands| {
+			commands.insert_resource(_OverrideChanged(o.is_changed()));
+		});
 
 		app
 	}
 
 	#[test]
-	fn set_on_press() {
+	fn set_on_activate() {
 		let mut app = setup(MouseOverride::Idle);
 		let entity = app
 			.world_mut()
-			.spawn((
-				Interaction::Pressed,
-				ActionKeyInteraction {
-					action_key: ActionKey::from(HandSlot::Left),
-					override_active: false,
-				},
-			))
+			.spawn(ActionKeyInteraction {
+				action_key: ActionKey::from(HandSlot::Left),
+				override_active: false,
+			})
+			.trigger(|entity| Activate { entity })
 			.id();
 
 		app.update();
@@ -83,17 +73,13 @@ mod tests {
 		);
 	}
 
-	#[test_case(Interaction::Hovered; "hovered")]
-	#[test_case(Interaction::None; "none")]
-	fn set_not_set_when_not_pressed(interaction: Interaction) {
+	#[test]
+	fn not_set_when_not_activated() {
 		let mut app = setup(MouseOverride::Idle);
-		app.world_mut().spawn((
-			interaction,
-			ActionKeyInteraction {
-				action_key: ActionKey::default(),
-				override_active: false,
-			},
-		));
+		app.world_mut().spawn(ActionKeyInteraction {
+			action_key: ActionKey::default(),
+			override_active: false,
+		});
 
 		app.update();
 
@@ -112,13 +98,11 @@ mod tests {
 		});
 		let entity = app
 			.world_mut()
-			.spawn((
-				Interaction::Pressed,
-				ActionKeyInteraction {
-					action_key: ActionKey::from(HandSlot::Left),
-					override_active: false,
-				},
-			))
+			.spawn(ActionKeyInteraction {
+				action_key: ActionKey::from(HandSlot::Left),
+				override_active: false,
+			})
+			.trigger(|entity| Activate { entity })
 			.id();
 
 		app.update();
@@ -140,13 +124,12 @@ mod tests {
 			action: ActionKey::default(),
 			input_state: Some(InputState::just_pressed()),
 		});
-		app.world_mut().spawn((
-			Interaction::Pressed,
-			ActionKeyInteraction {
+		app.world_mut()
+			.spawn(ActionKeyInteraction {
 				action_key: ActionKey::default(),
 				override_active: false,
-			},
-		));
+			})
+			.trigger(|entity| Activate { entity });
 
 		app.update();
 
@@ -163,13 +146,12 @@ mod tests {
 	#[test]
 	fn act_only_once() {
 		let mut app = setup(MouseOverride::Idle);
-		app.world_mut().spawn((
-			Interaction::Pressed,
-			ActionKeyInteraction {
+		app.world_mut()
+			.spawn(ActionKeyInteraction {
 				action_key: ActionKey::default(),
 				override_active: false,
-			},
-		));
+			})
+			.trigger(|entity| Activate { entity });
 
 		app.update();
 		app.update();
@@ -181,36 +163,11 @@ mod tests {
 	}
 
 	#[test]
-	fn act_again_if_interaction_changed() {
-		let mut app = setup(MouseOverride::Idle);
-		let entity = app
-			.world_mut()
-			.spawn((
-				Interaction::Pressed,
-				ActionKeyInteraction {
-					action_key: ActionKey::default(),
-					override_active: false,
-				},
-			))
-			.id();
-
-		app.update();
-		app.world_mut()
-			.entity_mut(entity)
-			.get_mut::<Interaction>()
-			.as_deref_mut();
-		app.update();
-
-		assert_eq!(
-			&_OverrideChanged(true),
-			app.world().resource::<_OverrideChanged>()
-		);
-	}
-
-	#[test]
 	fn do_nothing_when_quickbar_interaction_missing() {
 		let mut app = setup(MouseOverride::Idle);
-		app.world_mut().spawn(Interaction::Pressed);
+		app.world_mut()
+			.spawn(())
+			.trigger(|entity| Activate { entity });
 
 		app.update();
 

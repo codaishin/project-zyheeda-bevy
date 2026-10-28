@@ -221,7 +221,7 @@ mod tests {
 		let mut app = App::new().single_threaded(Update);
 
 		app.add_observer(
-			|on_insert: On<Insert, _CountA>, mut q: Query<&mut _CountA>, a: Query<(), With<_A>>| {
+			|on_insert: On<Insert<_CountA>>, mut q: Query<&mut _CountA>, a: Query<(), With<_A>>| {
 				let Ok(mut knows) = q.get_mut(on_insert.entity) else {
 					panic!("THERE WAS NO `_KnowA` present");
 				};

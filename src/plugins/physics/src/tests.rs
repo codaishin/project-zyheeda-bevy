@@ -13,5 +13,15 @@ impl Plugin for TestCollisionsPlugin {
 			ScenePlugin,
 			RapierPhysicsPlugin::<NoUserData>::default(),
 		));
+		app.configure_sets(
+			Update,
+			AfterTestPhysicsBackend
+				.after(PhysicsSet::SyncBackend)
+				.after(PhysicsSet::StepSimulation)
+				.after(PhysicsSet::Writeback),
+		);
 	}
 }
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub(crate) struct AfterTestPhysicsBackend;

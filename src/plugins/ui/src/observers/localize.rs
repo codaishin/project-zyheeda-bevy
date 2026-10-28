@@ -7,7 +7,7 @@ use common::prelude::*;
 
 impl UILabel {
 	pub(crate) fn localize<TLocalizer>(
-		on_insert: On<Insert, UILabel<Token>>,
+		on_insert: On<Insert<UILabel<Token>>>,
 		mut commands: ZyheedaCommands,
 		labels: Query<&UILabel<Token>>,
 		localizer: StaticSystemParam<TLocalizer>,

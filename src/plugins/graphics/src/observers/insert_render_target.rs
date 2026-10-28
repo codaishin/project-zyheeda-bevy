@@ -6,7 +6,7 @@ impl<T> InsertRenderTarget for T where T: Component {}
 
 pub(crate) trait InsertRenderTarget: Component + Sized {
 	fn insert_render_target(
-		on_insert: On<Insert, Self>,
+		on_insert: On<Insert<Self>>,
 		target: Res<CameraRenderTarget<Self>>,
 		mut commands: ZyheedaCommands,
 	) {

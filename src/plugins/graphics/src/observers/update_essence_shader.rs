@@ -7,7 +7,7 @@ use common::prelude::*;
 
 impl MaterialOverride {
 	pub(crate) fn update_essence_shader(
-		on_insert: On<Insert, Self>,
+		on_insert: On<Insert<Self>>,
 		commands: ZyheedaCommands,
 		assets: ResMut<Assets<EssenceMaterial>>,
 		overrides: Query<&Self>,
@@ -27,7 +27,7 @@ impl MaterialOverride {
 	}
 
 	fn update_essence_shader_internal<TAssets>(
-		on_insert: On<Insert, Self>,
+		on_insert: On<Insert<Self>>,
 		commands: ZyheedaCommands,
 		assets: ResMut<TAssets>,
 		overrides: Query<&Self>,

@@ -16,7 +16,11 @@ impl Raycast<Terrain> for RayCasterMut<'_, '_> {
 			Real::MAX,
 			true,
 			QueryFilter {
-				groups: Some(CollisionGroups::new(RAY_GROUP, TERRAIN_GROUP)),
+				groups: Some(CollisionGroups {
+					memberships: RAY_GROUP,
+					filters: TERRAIN_GROUP,
+					test_mode: InteractionTestMode::And,
+				}),
 				..default()
 			},
 		)?;
@@ -28,25 +32,14 @@ impl Raycast<Terrain> for RayCasterMut<'_, '_> {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::resources::world_camera::WorldCamera;
-	use bevy::{
-		ecs::system::{RunSystemError, RunSystemOnce},
-		mesh::MeshPlugin,
-		scene::ScenePlugin,
-	};
+	use crate::{resources::world_camera::WorldCamera, tests::TestCollisionsPlugin};
+	use bevy::ecs::system::{RunSystemError, RunSystemOnce};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_plugins((
-			MinimalPlugins,
-			TransformPlugin,
-			AssetPlugin::default(),
-			MeshPlugin,
-			ScenePlugin,
-			RapierPhysicsPlugin::<NoUserData>::default(),
-		));
+		app.add_plugins(TestCollisionsPlugin);
 		app.init_resource::<WorldCamera>();
 
 		app
@@ -60,9 +53,14 @@ mod tests {
 			direction: Dir3::NEG_Y,
 		};
 		app.world_mut().spawn((
-			CollisionGroups::new(TERRAIN_GROUP, RAY_GROUP),
+			CollisionGroups {
+				memberships: TERRAIN_GROUP,
+				filters: RAY_GROUP,
+				test_mode: InteractionTestMode::And,
+			},
 			Collider::ball(0.5),
 		));
+		app.update();
 		app.update();
 
 		let hit = app
@@ -86,9 +84,11 @@ mod tests {
 			CollisionGroups {
 				memberships: Group::all() & !TERRAIN_GROUP,
 				filters: RAY_GROUP,
+				test_mode: InteractionTestMode::And,
 			},
 			Collider::ball(0.5),
 		));
+		app.update();
 		app.update();
 
 		let hit = app
@@ -112,9 +112,11 @@ mod tests {
 			CollisionGroups {
 				memberships: TERRAIN_GROUP,
 				filters: Group::all() & !RAY_GROUP,
+				test_mode: InteractionTestMode::And,
 			},
 			Collider::ball(0.5),
 		));
+		app.update();
 		app.update();
 
 		let hit = app

@@ -1,19 +1,31 @@
-#import bevy_pbr::forward_io::VertexOutput
-#import bevy_pbr::mesh_view_bindings::view
-#import bevy_pbr::view_transformations::position_world_to_ndc
-#import bevy_pbr::view_transformations::ndc_to_uv
-#import bevy_pbr::mesh_view_bindings
-#import bevy_render::globals::Globals
-#import "shaders/helpers.wgsl"::fresnel
+import bevy_pbr::render::forward_io::VertexOutput;
+import bevy_pbr::render::mesh_view_bindings::view;
+import bevy_pbr::render::view_transformations::position_world_to_ndc;
+import bevy_pbr::render::view_transformations::ndc_to_uv;
+import bevy_pbr::render::mesh_view_bindings;
+import bevy_render::globals::Globals;
+import super::helpers::fresnel;
 
-@group(0) @binding(11) var<uniform> globals: Globals;
+@group(0) @binding(11)
+var<uniform> globals: Globals;
 
-@group(#{MATERIAL_BIND_GROUP}) @binding(0) var first_pass_texture: texture_2d<f32>;
-@group(#{MATERIAL_BIND_GROUP}) @binding(1) var first_pass_sampler: sampler;
-@group(#{MATERIAL_BIND_GROUP}) @binding(2) var<uniform> base_color: vec4<f32>;
-@group(#{MATERIAL_BIND_GROUP}) @binding(3) var<uniform> fresnel_color: vec4<f32>;
-@group(#{MATERIAL_BIND_GROUP}) @binding(4) var<uniform> effect_flags: u32;
-@group(#{MATERIAL_BIND_GROUP}) @binding(5) var<storage> impacts: array<Impact>;
+@group(constants::MATERIAL_BIND_GROUP) @binding(0)
+var first_pass_texture: texture_2d<f32>;
+
+@group(constants::MATERIAL_BIND_GROUP) @binding(1)
+var first_pass_sampler: sampler;
+
+@group(constants::MATERIAL_BIND_GROUP) @binding(2)
+var<uniform> base_color: vec4<f32>;
+
+@group(constants::MATERIAL_BIND_GROUP) @binding(3)
+var<uniform> fresnel_color: vec4<f32>;
+
+@group(constants::MATERIAL_BIND_GROUP) @binding(4)
+var<uniform> effect_flags: u32;
+
+@group(constants::MATERIAL_BIND_GROUP) @binding(5)
+var<storage> impacts: array<Impact>;
 
 struct Impact {
     position: vec3<f32>,
@@ -38,10 +50,7 @@ const IMPACT_SMOOTHNESS: f32 = 8;
 const IMPACT_INTENSITY: f32 = 10;
 
 @fragment
-fn fragment(
-    mesh: VertexOutput,
-    @builtin(front_facing) is_front: bool,
-) -> @location(0) vec4<f32> {
+fn fragment(mesh: VertexOutput, @builtin(front_facing) is_front: bool) -> @location(0) vec4<f32> {
     var output = vec4(0.);
     var impact_color = vec4(0.);
 
@@ -77,8 +86,13 @@ fn fresnel_effect(mesh: VertexOutput) -> vec4<f32> {
 fn impact_strength(mesh: VertexOutput) -> f32 {
     var highest_strength = 0.0;
 
-    for (var i = u32(0); i < arrayLength(&impacts); i++) {
+    for(var i = u32(0); i < arrayLength(&impacts); i++) {
         let impact = impacts[i];
+
+        if impact.strength == 0.0 {
+            continue;
+        }
+
         let distance = length(mesh.world_position.xyz - impact.position);
         let distance_relative = min(distance / IMPACT_RADIUS, 1.0);
         let strength = pow(1.0 - distance_relative, IMPACT_SMOOTHNESS) * impact.strength;

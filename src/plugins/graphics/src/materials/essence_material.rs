@@ -16,7 +16,7 @@ pub struct EssenceMaterial {
 
 impl Material for EssenceMaterial {
 	fn fragment_shader() -> ShaderRef {
-		"shaders/essence_shader.wgsl".into()
+		"shaders/essence_shader.wesl".into()
 	}
 
 	fn alpha_mode(&self) -> AlphaMode {

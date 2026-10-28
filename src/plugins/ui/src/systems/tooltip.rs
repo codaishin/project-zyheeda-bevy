@@ -13,6 +13,7 @@ use crate::{
 };
 use bevy::{
 	ecs::system::{StaticSystemParam, SystemParam},
+	picking::hover::Hovered,
 	prelude::*,
 };
 use common::prelude::*;
@@ -23,7 +24,7 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 	localize: StaticSystemParam<TLocalization>,
 	ui_control: Res<TUIControl>,
 	windows: Query<&TWindow>,
-	changed_tooltip_interactions: Query<(Entity, &Tooltip<T>, &Interaction), Changed<Interaction>>,
+	changed_tooltips: Query<(Entity, &Tooltip<T>, &Hovered), Changed<Hovered>>,
 	mut tooltip_uis: Query<(Entity, &TUI, &mut Node, &ComputedNode)>,
 	removed_tooltips: RemovedComponents<Tooltip<T>>,
 ) where
@@ -45,7 +46,7 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 		return;
 	};
 
-	if !changed_tooltip_interactions.is_empty() {
+	if !changed_tooltips.is_empty() {
 		ui_control.despawn_all(&tooltip_uis, &mut commands);
 	} else {
 		ui_control.update_position(&mut tooltip_uis, MouseVec2(position));
@@ -55,17 +56,17 @@ pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
 		ui_control.despawn_outdated(&tooltip_uis, &mut commands, removed_tooltips);
 	}
 
-	for (entity, tooltip, _) in changed_tooltip_interactions.iter().filter(is_hovering) {
+	for (entity, tooltip, ..) in changed_tooltips.iter().filter(is_hovering) {
 		ui_control.spawn(&mut commands, localize.deref(), entity, tooltip);
 	}
 }
 
-fn is_hovering<T>((.., interaction): &(Entity, &Tooltip<T>, &Interaction)) -> bool
+fn is_hovering<T>((.., Hovered(hovered)): &(Entity, &Tooltip<T>, &Hovered)) -> bool
 where
 	T: TooltipUiConfig + ThreadSafe,
 	Tooltip<T>: InsertUiContent,
 {
-	interaction == &&Interaction::Hovered
+	*hovered
 }
 
 #[cfg(test)]
@@ -255,7 +256,7 @@ mod tests {
 				Tooltip::new(_T {
 					content: "My Content",
 				}),
-				Interaction::Hovered,
+				Hovered(true),
 			))
 			.id();
 
@@ -283,7 +284,7 @@ mod tests {
 		}));
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip::new(_T { content: "" }), Interaction::None));
+			.spawn((Tooltip::new(_T { content: "" }), Hovered(false)));
 
 		app.update();
 	}
@@ -298,7 +299,7 @@ mod tests {
 		}));
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
+			.spawn((Tooltip::new(_T { content: "" }), Hovered(true)));
 
 		app.update();
 		app.update();
@@ -315,14 +316,12 @@ mod tests {
 		app.world_mut().spawn(_Window(Some(default())));
 		let tooltip = app
 			.world_mut()
-			.spawn((Tooltip::new(_T { content: "" }), Interaction::None))
+			.spawn((Tooltip::new(_T { content: "" }), Hovered(false)))
 			.id();
 
 		app.update();
 
-		let mut tooltip = app.world_mut().entity_mut(tooltip);
-		let mut interaction = tooltip.get_mut::<Interaction>().unwrap();
-		*interaction = Interaction::Hovered;
+		app.world_mut().entity_mut(tooltip).insert(Hovered(true));
 
 		app.update();
 	}
@@ -356,7 +355,7 @@ mod tests {
 		}));
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
+			.spawn((Tooltip::new(_T { content: "" }), Hovered(true)));
 
 		app.update();
 	}
@@ -376,7 +375,7 @@ mod tests {
 
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
+			.spawn((Tooltip::new(_T { content: "" }), Hovered(true)));
 
 		app.update();
 
@@ -411,7 +410,7 @@ mod tests {
 		app.world_mut().spawn(_Window(Some(default())));
 		let tooltip = app
 			.world_mut()
-			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered))
+			.spawn((Tooltip::new(_T { content: "" }), Hovered(true)))
 			.id();
 
 		app.world_mut()
@@ -445,7 +444,7 @@ mod tests {
 
 		app.world_mut().spawn(_Window(Some(default())));
 		app.world_mut()
-			.spawn((Tooltip::new(_T { content: "" }), Interaction::Hovered));
+			.spawn((Tooltip::new(_T { content: "" }), Hovered(true)));
 
 		app.update();
 	}

@@ -1,21 +1,16 @@
 use crate::components::dropdown::Dropdown;
-use bevy::prelude::*;
+use bevy::{prelude::*, ui::Pressed};
 use common::prelude::*;
 
 pub(crate) fn dropdown_detect_focus_change<TItem: Sync + Send + 'static>(
-	dropdowns: Query<(Entity, &Dropdown<TItem>, &Interaction)>,
+	dropdowns: Query<Entity, (With<Pressed>, With<Dropdown<TItem>>)>,
 	mouse: Res<ButtonInput<MouseButton>>,
 ) -> Focus {
 	if !mouse.just_pressed(MouseButton::Left) {
 		return Focus::Unchanged;
 	}
 
-	dropdowns
-		.iter()
-		.filter(|(.., interaction)| interaction == &&Interaction::Pressed)
-		.map(|(entity, ..)| entity)
-		.collect::<Vec<_>>()
-		.into()
+	Focus::New(dropdowns.iter().collect::<Vec<_>>())
 }
 
 #[cfg(test)]
@@ -53,7 +48,7 @@ mod tests {
 		let mut app = setup();
 		let pressed = app
 			.world_mut()
-			.spawn((Dropdown::<()>::default(), Interaction::Pressed))
+			.spawn((Dropdown::<()>::default(), Pressed))
 			.id();
 		set_input!(app, just_pressed(MOUSE_LEFT));
 
@@ -68,8 +63,7 @@ mod tests {
 	#[test]
 	fn return_unchanged_if_mouse_left_not_just_pressed() {
 		let mut app = setup();
-		app.world_mut()
-			.spawn((Dropdown::<()>::default(), Interaction::Pressed));
+		app.world_mut().spawn((Dropdown::<()>::default(), Pressed));
 		set_input!(app, pressed(MOUSE_LEFT));
 
 		app.update();
@@ -83,8 +77,7 @@ mod tests {
 	#[test]
 	fn return_empty_if_not_interaction_pressed() {
 		let mut app = setup();
-		app.world_mut()
-			.spawn((Dropdown::<()>::default(), Interaction::None));
+		app.world_mut().spawn(Dropdown::<()>::default());
 		set_input!(app, just_pressed(MOUSE_LEFT));
 
 		app.update();

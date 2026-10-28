@@ -4,6 +4,7 @@ use crate::{
 	AddDropdown,
 	AddTooltip,
 	components::{
+		GlobalZIndexTop,
 		dropdown::Dropdown,
 		tooltip::{Tooltip, TooltipUiConfig},
 	},
@@ -13,6 +14,8 @@ use crate::{
 use bevy::{
 	ecs::{relationship::RelatedSpawnerCommands, system::SystemParam},
 	prelude::*,
+	ui::Pressed,
+	ui_widgets::Button,
 };
 use common::prelude::*;
 use std::marker::PhantomData;
@@ -203,12 +206,9 @@ fn update_button_text(
 
 fn replace_button_text<TLayout: ThreadSafe>(
 	mut buttons: Query<&mut DropdownButton>,
-	options: Query<(&ButtonOption<TLayout>, &Interaction), Changed<Interaction>>,
+	options: Query<&ButtonOption<TLayout>, Added<Pressed>>,
 ) {
-	for (options, interaction) in &options {
-		if interaction != &Interaction::Pressed {
-			continue;
-		}
+	for options in &options {
 		let Ok(mut button) = buttons.get_mut(options.target) else {
 			continue;
 		};
@@ -248,6 +248,7 @@ where
 		.add_dropdown::<TLocalization, ButtonOption<SingleColumn>>()
 		.add_dropdown::<TLocalization, ButtonOption<TwoColumns>>()
 		.add_dropdown::<TLocalization, ButtonOption<SingleRow, WithSubDropdown<SingleColumn>>>()
+		.add_systems(Startup, spawn_dropdown)
 		.add_systems(
 			Update,
 			(
@@ -256,15 +257,22 @@ where
 				replace_button_text::<TwoColumns>,
 				update_button_text,
 			),
-		)
-		.world_mut()
-		.spawn(Node {
-			position_type: PositionType::Absolute,
-			top: Val::Px(20.),
-			right: Val::Px(20.),
-			flex_direction: FlexDirection::Column,
-			..default()
-		})
+		);
+}
+
+fn spawn_dropdown(mut commands: Commands) {
+	commands
+		.spawn((
+			Name::from("Debug Dropdown"),
+			Node {
+				position_type: PositionType::Absolute,
+				top: Val::Px(20.),
+				right: Val::Px(20.),
+				flex_direction: FlexDirection::Column,
+				..default()
+			},
+			GlobalZIndexTop,
+		))
 		.with_children(|container| {
 			let mut button = container.spawn_empty();
 			button.insert((

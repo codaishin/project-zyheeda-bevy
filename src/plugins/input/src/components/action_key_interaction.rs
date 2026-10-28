@@ -1,8 +1,11 @@
-use bevy::prelude::*;
+use bevy::{
+	prelude::*,
+	ui_widgets::{ActivateOnPress, Button},
+};
 use common::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Interaction)]
+#[require(Button, ActivateOnPress)]
 pub struct ActionKeyInteraction {
 	pub(crate) action_key: ActionKey,
 	pub(crate) override_active: bool,

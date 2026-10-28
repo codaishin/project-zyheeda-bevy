@@ -112,8 +112,12 @@ impl<TDependencies> PhysicsPlugin<TDependencies> {
 		app.add_systems(rapier_schedule, apply_beam_blocks);
 		app.add_systems(Startup, set_rapier_time_step);
 		app.insert_resource(Time::<Fixed>::from_hz(*self.target_fps as f64));
-		app.register_required_components::<RigidBody, ColliderRoot>();
 		app.add_observer(LinearVelocity::apply);
+
+		let err = app.try_register_required_components::<RigidBody, ColliderRoot>();
+		if let Err(err) = err {
+			error!("RigidBody: {err}");
+		}
 	}
 }
 
