@@ -27,18 +27,19 @@ impl AddDropdown for App {
 		TItem: InsertUiContent + Sync + Send + 'static,
 		Dropdown<TItem>: GetRootNode + GetLayout,
 	{
-		self.add_systems(
-			Update,
-			(
-				dropdown_events::<TItem>,
-				dropdown_track_child_dropdowns::<TItem>,
-			),
-		)
-		.add_systems(
-			Last,
-			dropdown_detect_focus_change::<TItem>
-				.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
-				.pipe(dropdown_spawn_focused::<TLocalization, TItem>),
-		)
+		self.add_systems(Update, Dropdown::<TItem>::expand)
+			.add_systems(
+				Update,
+				(
+					dropdown_events::<TItem>,
+					dropdown_track_child_dropdowns::<TItem>,
+				),
+			)
+			.add_systems(
+				Last,
+				dropdown_detect_focus_change::<TItem>
+					.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
+					.pipe(dropdown_spawn_focused::<TLocalization, TItem>),
+			)
 	}
 }

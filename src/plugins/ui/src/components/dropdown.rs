@@ -1,7 +1,7 @@
 pub(crate) mod key_select;
 pub(crate) mod skill_descriptor;
 
-use bevy::prelude::*;
+use bevy::{ecs::entity::EntityHashSet, prelude::*};
 use std::{collections::HashSet, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
@@ -24,6 +24,14 @@ pub(crate) enum DropdownState {
 	Collapsed,
 	Expanded,
 }
+
+#[derive(Component, Debug, PartialEq)]
+#[relationship_target(relationship = DropdownEntityOf)]
+pub(crate) struct DropdownEntities(EntityHashSet);
+
+#[derive(Component, Debug, PartialEq)]
+#[relationship(relationship_target = DropdownEntities)]
+pub(crate) struct DropdownEntityOf(pub(crate) Entity);
 
 #[derive(Component, Debug, PartialEq)]
 pub(crate) struct DropdownUI<TItem> {
