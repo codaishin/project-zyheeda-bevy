@@ -25,6 +25,7 @@ use crate::{
 			Vertical,
 		},
 		dispatch_text_color::DispatchTextColor,
+		dropdown::DropdownState,
 		icon::{IconStack, IconStackItem},
 		key_select_dropdown_command::KeySelectDropdownCommand,
 		label::UILabel,
@@ -349,6 +350,7 @@ where
 
 	fn general_systems(&self, app: &mut App) {
 		app.register_derived_component::<MenuBackground, Node>()
+			.add_observer(DropdownState::set)
 			.add_prefab_observer::<IconStackItem, ()>()
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
 			.add_tooltip::<TLocalization::TLocalizationServer, Token>()

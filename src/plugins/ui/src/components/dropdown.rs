@@ -1,11 +1,11 @@
 pub(crate) mod key_select;
 pub(crate) mod skill_descriptor;
 
-use bevy::{prelude::*, ui_widgets::Button};
+use bevy::prelude::*;
 use std::{collections::HashSet, marker::PhantomData};
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Button)]
+#[require(DropdownState)]
 pub(crate) struct Dropdown<TItem> {
 	pub(crate) items: Vec<TItem>,
 }
@@ -16,6 +16,13 @@ impl<TItem> Default for Dropdown<TItem> {
 			items: Default::default(),
 		}
 	}
+}
+
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) enum DropdownState {
+	#[default]
+	Collapsed,
+	Expanded,
 }
 
 #[derive(Component, Debug, PartialEq)]
