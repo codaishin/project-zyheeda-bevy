@@ -1,6 +1,7 @@
 mod components;
 mod events;
 mod observers;
+mod resources;
 mod states;
 mod systems;
 mod tools;
@@ -25,6 +26,7 @@ use crate::{
 			Vertical,
 		},
 		dispatch_text_color::DispatchTextColor,
+		dropdown::DropdownActive,
 		icon::{IconStack, IconStackItem},
 		key_select_dropdown_command::KeySelectDropdownCommand,
 		label::UILabel,
@@ -32,6 +34,7 @@ use crate::{
 		ui_disabled::UIDisabled,
 		with_node::WithNode,
 	},
+	resources::dropdown_change::DropdownChanged,
 	systems::{
 		combos::update_combos_view::UpdateComboOverview,
 		set_game_state::set_game_state,
@@ -348,8 +351,10 @@ where
 	}
 
 	fn general_systems(&self, app: &mut App) {
-		app.register_derived_component::<MenuBackground, Node>()
+		app.init_resource::<DropdownChanged>()
+			.register_derived_component::<MenuBackground, Node>()
 			.add_prefab_observer::<IconStackItem, ()>()
+			.add_observer(DropdownActive::set_activity)
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
 			.add_tooltip::<TLocalization::TLocalizationServer, Token>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
