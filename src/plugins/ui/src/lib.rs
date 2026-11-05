@@ -43,7 +43,10 @@ use crate::{
 	traits::add_gui::AddLoadGui,
 	visualization::unusable::Unusable,
 };
-use bevy::prelude::*;
+use bevy::{
+	prelude::*,
+	ui_widgets::{ActivateOnPress, Button},
+};
 use common::{prelude::*, tools::path::Path};
 use components::{
 	combo_overview::ComboOverview,
@@ -243,8 +246,8 @@ where
 	}
 
 	fn combo_overview(&self, app: &mut App) {
-		type VerticalItem<TId> = ComboSkillButton<DropdownItem<Vertical>, TId>;
-		type HorizontalItem<TId> = ComboSkillButton<DropdownItem<Horizontal>, TId>;
+		type Vertically<TId> = ComboSkillButton<DropdownItem<Vertical>, TId>;
+		type Horizontally<TId> = ComboSkillButton<DropdownItem<Horizontal>, TId>;
 		type Trigger<TId> = ComboSkillButton<DropdownTrigger, TId>;
 
 		let combo_overview = Gui::ComboOverview;
@@ -253,18 +256,25 @@ where
 			combo_overview,
 		);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
-		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkillID>>();
-		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalItem<TLoadout::TSkillID>>(
-		);
+
 		app.add_observer(
 			DeleteSkill::from_combos::<TPlayers::TPlayer, TLoadout::TLoadoutMut, TLoadout::TSkillID>,
 		);
+
+		app.add_dropdown::<TLocalization::TLocalizationServer, Vertically<TLoadout::TSkillID>>();
+		app.register_required_components::<Vertically<TLoadout::TSkillID>, Button>();
+		app.register_required_components::<Vertically<TLoadout::TSkillID>, ActivateOnPress>();
 		app.add_observer(
-			VerticalItem::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
+			Vertically::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
 		);
+
+		app.add_dropdown::<TLocalization::TLocalizationServer, Horizontally<TLoadout::TSkillID>>();
+		app.register_required_components::<Horizontally<TLoadout::TSkillID>, Button>();
+		app.register_required_components::<Horizontally<TLoadout::TSkillID>, ActivateOnPress>();
 		app.add_observer(
-			HorizontalItem::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
+			Horizontally::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
 		);
+
 		app.add_systems(
 			Update,
 			(

@@ -22,7 +22,11 @@ pub(crate) mod ui_disabled;
 pub(crate) mod ui_overlay;
 pub(crate) mod with_node;
 
-use bevy::{picking::hover::Hovered, prelude::*, ui_widgets::Button};
+use bevy::{
+	picking::hover::Hovered,
+	prelude::*,
+	ui_widgets::{ActivateOnPress, Button},
+};
 use combo_skill_button::Horizontal;
 use common::prelude::*;
 use std::marker::PhantomData;
@@ -74,6 +78,7 @@ impl<TLayout> SkillSelectDropdownCommand<TLayout> {
 }
 
 #[derive(Component, Debug, PartialEq)]
+#[require(Button, ActivateOnPress)]
 pub(crate) struct DeleteSkill {
 	pub(crate) key_path: Vec<SlotKey>,
 }

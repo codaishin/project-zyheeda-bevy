@@ -4,7 +4,7 @@ use super::{
 	combo_skill_button::Horizontal,
 };
 use crate::traits::{GetComponent, GetKey, insert_ui_content::InsertUiContent};
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*, ui_widgets::Button};
 use common::prelude::*;
 
 #[derive(Debug, PartialEq, Clone)]
@@ -19,7 +19,7 @@ impl GetKey<SlotKey> for AppendSkill {
 }
 
 #[derive(Component, Debug, PartialEq, Clone)]
-#[require(Node)]
+#[require(Button, Node)]
 pub(crate) struct KeySelect<TExtra> {
 	pub(crate) extra: TExtra,
 	pub(crate) key_path: Vec<SlotKey>,
@@ -35,7 +35,7 @@ where
 		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
-		let Some(component) = self.component(()) else {
+		let Some(component) = self.get_bundle(()) else {
 			return;
 		};
 		let Some(slot_key) = self.extra.get_key(&self.key_path) else {
@@ -54,10 +54,10 @@ where
 }
 
 impl GetComponent for KeySelect<AppendSkill> {
-	type TComponent = SkillSelectDropdownCommand<Horizontal>;
+	type TBundle = SkillSelectDropdownCommand<Horizontal>;
 	type TInput = ();
 
-	fn component(&self, _: ()) -> Option<Self::TComponent> {
+	fn get_bundle(&self, _: ()) -> Option<Self::TBundle> {
 		Some(SkillSelectDropdownCommand::new(
 			[self.key_path.clone(), vec![self.extra.on]].concat(),
 		))
@@ -81,7 +81,7 @@ mod tests {
 				SlotKey(11),
 				SlotKey(204)
 			])),
-			select.component(())
+			select.get_bundle(())
 		)
 	}
 }

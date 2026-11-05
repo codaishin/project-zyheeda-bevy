@@ -1,5 +1,5 @@
 use crate::{AppendSkill, Dropdown, KeySelect, traits::GetComponent};
-use bevy::prelude::*;
+use bevy::{prelude::*, ui_widgets::Button};
 use common::prelude::*;
 use std::{collections::HashSet, hash::Hash};
 
@@ -10,10 +10,10 @@ pub(crate) struct KeySelectDropdownCommand<TExtra> {
 }
 
 impl GetComponent for KeySelectDropdownCommand<AppendSkillCommand> {
-	type TComponent = Dropdown<KeySelect<AppendSkill>>;
+	type TBundle = (Dropdown<KeySelect<AppendSkill>>, Button);
 	type TInput = ExcludeKeys<SlotKey>;
 
-	fn component(&self, ExcludeKeys(excluded): Self::TInput) -> Option<Self::TComponent> {
+	fn get_bundle(&self, ExcludeKeys(excluded): Self::TInput) -> Option<Self::TBundle> {
 		let items = HandSlot::iterator()
 			.map(SlotKey::from)
 			.filter(|key| !excluded.contains(key))
@@ -27,7 +27,7 @@ impl GetComponent for KeySelectDropdownCommand<AppendSkillCommand> {
 			return None;
 		}
 
-		Some(Dropdown { items })
+		Some((Dropdown { items }, Button))
 	}
 }
 
@@ -52,7 +52,7 @@ mod tests {
 			key_path: vec![SlotKey::from(HandSlot::Left)],
 		};
 
-		assert_eq!(None, command.component(ExcludeKeys(keys)));
+		assert!(command.get_bundle(ExcludeKeys(keys)).is_none());
 	}
 
 	#[test]
@@ -73,7 +73,9 @@ mod tests {
 				},
 				key_path: vec![SlotKey::from(HandSlot::Right)]
 			}]),
-			command.component(ExcludeKeys(exclude)).map(|d| d.items)
+			command
+				.get_bundle(ExcludeKeys(exclude))
+				.map(|(d, ..)| d.items)
 		);
 	}
 }

@@ -44,8 +44,8 @@ pub(crate) trait GetKey<TKey> {
 }
 
 pub(crate) trait GetComponent {
-	type TComponent: Component;
+	type TBundle: Bundle;
 	type TInput;
 
-	fn component(&self, input: Self::TInput) -> Option<Self::TComponent>;
+	fn get_bundle(&self, input: Self::TInput) -> Option<Self::TBundle>;
 }

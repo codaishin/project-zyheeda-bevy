@@ -4,7 +4,7 @@ use crate::{
 	tools::PanelState,
 	traits::{LoadUi, colors::HasPanelColors, insert_ui_content::InsertUiContent},
 };
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*, ui_widgets::Button};
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::prelude::*;
 
 #[derive(Component)]
@@ -135,7 +135,6 @@ fn add_grid<TKey>(
 				for _ in 0..element_count_x {
 					parent
 						.spawn((
-							Button,
 							KeyedPanel::from(element_key()),
 							InventoryPanel::from(PanelState::Empty),
 							Node {

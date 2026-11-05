@@ -53,11 +53,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(&Tooltip::new(Localized::from("my text"))), true),
-			(
-				app.world().entity(entity).get::<Tooltip<Localized>>(),
-				app.world().entity(entity).contains::<Button>(),
-			),
+			Some(&Tooltip::new(Localized::from("my text"))),
+			app.world().entity(entity).get::<Tooltip<Localized>>(),
 		);
 	}
 
@@ -132,11 +129,8 @@ mod tests {
 		app.update();
 
 		assert_eq!(
-			(Some(&Tooltip::new(Localized::from("my text"))), true),
-			(
-				app.world().entity(entity).get::<Tooltip<Localized>>(),
-				app.world().entity(entity).contains::<Button>(),
-			),
+			Some(&Tooltip::new(Localized::from("my text"))),
+			app.world().entity(entity).get::<Tooltip<Localized>>(),
 		);
 	}
 }
