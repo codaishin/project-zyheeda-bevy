@@ -27,12 +27,12 @@ pub(crate) trait LoadUi<TAssetServer: LoadAsset> {
 	fn load_ui(server: &mut TAssetServer) -> Self;
 }
 
-pub(crate) trait GetRootNode {
-	fn root_node(&self) -> Node;
+pub(crate) trait GetContainerNode {
+	fn get_container_node(&self) -> Node;
 }
 
 pub(crate) trait GetLayout {
-	fn layout(&self) -> Layout;
+	fn get_layout(&self) -> Layout;
 }
 
 pub(crate) trait InsertContentOn {
@@ -44,8 +44,8 @@ pub(crate) trait GetKey<TKey> {
 }
 
 pub(crate) trait GetComponent {
-	type TComponent: Component;
+	type TBundle: Bundle;
 	type TInput;
 
-	fn component(&self, input: Self::TInput) -> Option<Self::TComponent>;
+	fn get_bundle(&self, input: Self::TInput) -> Option<Self::TBundle>;
 }

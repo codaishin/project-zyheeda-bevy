@@ -1,6 +1,6 @@
 mod components;
-mod events;
 mod observers;
+mod resources;
 mod states;
 mod systems;
 mod tools;
@@ -25,6 +25,7 @@ use crate::{
 			Vertical,
 		},
 		dispatch_text_color::DispatchTextColor,
+		dropdown::DropdownActive,
 		icon::{IconStack, IconStackItem},
 		key_select_dropdown_command::KeySelectDropdownCommand,
 		label::UILabel,
@@ -32,6 +33,7 @@ use crate::{
 		ui_disabled::UIDisabled,
 		with_node::WithNode,
 	},
+	resources::dropdown_change::DropdownChanged,
 	systems::{
 		combos::update_combos_view::UpdateComboOverview,
 		set_game_state::set_game_state,
@@ -41,7 +43,10 @@ use crate::{
 	traits::add_gui::AddLoadGui,
 	visualization::unusable::Unusable,
 };
-use bevy::prelude::*;
+use bevy::{
+	prelude::*,
+	ui_widgets::{ActivateOnPress, Button},
+};
 use common::{prelude::*, tools::path::Path};
 use components::{
 	combo_overview::ComboOverview,
@@ -65,7 +70,6 @@ use components::{
 	tooltip::{Tooltip, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
-use events::DropdownMessage;
 use macros::asset_path;
 use states::menus_change_able::MenusChangeable;
 use std::{marker::PhantomData, time::Duration};
@@ -146,10 +150,6 @@ where
 			.insert_resource(TooltipUIControl {
 				tooltip_delay: Duration::from_millis(500),
 			});
-	}
-
-	fn messages(&self, app: &mut App) {
-		app.add_message::<DropdownMessage>();
 	}
 
 	fn state_control(&self, app: &mut App) {
@@ -246,8 +246,8 @@ where
 	}
 
 	fn combo_overview(&self, app: &mut App) {
-		type VerticalItem<TId> = ComboSkillButton<DropdownItem<Vertical>, TId>;
-		type HorizontalItem<TId> = ComboSkillButton<DropdownItem<Horizontal>, TId>;
+		type Vertically<TId> = ComboSkillButton<DropdownItem<Vertical>, TId>;
+		type Horizontally<TId> = ComboSkillButton<DropdownItem<Horizontal>, TId>;
 		type Trigger<TId> = ComboSkillButton<DropdownTrigger, TId>;
 
 		let combo_overview = Gui::ComboOverview;
@@ -256,18 +256,25 @@ where
 			combo_overview,
 		);
 		app.add_dropdown::<TLocalization::TLocalizationServer, KeySelect<AppendSkill>>();
-		app.add_dropdown::<TLocalization::TLocalizationServer, VerticalItem<TLoadout::TSkillID>>();
-		app.add_dropdown::<TLocalization::TLocalizationServer, HorizontalItem<TLoadout::TSkillID>>(
-		);
+
 		app.add_observer(
 			DeleteSkill::from_combos::<TPlayers::TPlayer, TLoadout::TLoadoutMut, TLoadout::TSkillID>,
 		);
+
+		app.add_dropdown::<TLocalization::TLocalizationServer, Vertically<TLoadout::TSkillID>>();
+		app.register_required_components::<Vertically<TLoadout::TSkillID>, Button>();
+		app.register_required_components::<Vertically<TLoadout::TSkillID>, ActivateOnPress>();
 		app.add_observer(
-			VerticalItem::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
+			Vertically::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
 		);
+
+		app.add_dropdown::<TLocalization::TLocalizationServer, Horizontally<TLoadout::TSkillID>>();
+		app.register_required_components::<Horizontally<TLoadout::TSkillID>, Button>();
+		app.register_required_components::<Horizontally<TLoadout::TSkillID>, ActivateOnPress>();
 		app.add_observer(
-			HorizontalItem::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
+			Horizontally::<TLoadout::TSkillID>::update::<TPlayers::TPlayer, TLoadout::TLoadoutMut>,
 		);
+
 		app.add_systems(
 			Update,
 			(
@@ -348,8 +355,10 @@ where
 	}
 
 	fn general_systems(&self, app: &mut App) {
-		app.register_derived_component::<MenuBackground, Node>()
+		app.init_resource::<DropdownChanged>()
+			.register_derived_component::<MenuBackground, Node>()
 			.add_prefab_observer::<IconStackItem, ()>()
+			.add_observer(DropdownActive::set_activity)
 			.add_observer(UILabel::localize::<TLocalization::TLocalizationServer>)
 			.add_tooltip::<TLocalization::TLocalizationServer, Token>()
 			.add_tooltip::<TLocalization::TLocalizationServer, Localized>()
@@ -373,6 +382,7 @@ where
 				)
 					.run_if(TLoading::is_loaded(LoadingEssentialAssets)),
 			)
+			.add_systems(Last, DropdownChanged::reset.after(ApplyDropdown))
 			.add_systems(Last, WithNode::system);
 	}
 }
@@ -400,7 +410,6 @@ where
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);
-		self.messages(app);
 		self.state_control(app);
 		self.loading_screen(app, LoadingEssentialAssets);
 		self.loading_screen(app, LoadingGame);
@@ -416,3 +425,6 @@ where
 		debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
 	}
 }
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct ApplyDropdown;

@@ -1,14 +1,5 @@
-use super::{GetLayout, GetRootNode, insert_ui_content::InsertUiContent};
-use crate::{
-	Dropdown,
-	systems::dropdown::{
-		despawn_when_no_children_pressed::dropdown_despawn_when_no_children_pressed,
-		detect_focus_change::dropdown_detect_focus_change,
-		events::dropdown_events,
-		spawn_focused::dropdown_spawn_focused,
-		track_child_dropdowns::dropdown_track_child_dropdowns,
-	},
-};
+use super::{GetContainerNode, GetLayout, insert_ui_content::InsertUiContent};
+use crate::{ApplyDropdown, Dropdown, resources::dropdown_change::DropdownChanged};
 use bevy::{ecs::system::SystemParam, prelude::*};
 use common::prelude::*;
 
@@ -17,7 +8,7 @@ pub(crate) trait AddDropdown {
 	where
 		TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 		TItem: InsertUiContent + Sync + Send + 'static,
-		Dropdown<TItem>: GetRootNode + GetLayout;
+		Dropdown<TItem>: GetContainerNode + GetLayout;
 }
 
 impl AddDropdown for App {
@@ -25,20 +16,11 @@ impl AddDropdown for App {
 	where
 		TLocalization: for<'w, 's> SystemParam<Item<'w, 's>: Localize> + ThreadSafe,
 		TItem: InsertUiContent + Sync + Send + 'static,
-		Dropdown<TItem>: GetRootNode + GetLayout,
+		Dropdown<TItem>: GetContainerNode + GetLayout,
 	{
 		self.add_systems(
-			Update,
-			(
-				dropdown_events::<TItem>,
-				dropdown_track_child_dropdowns::<TItem>,
-			),
-		)
-		.add_systems(
 			Last,
-			dropdown_detect_focus_change::<TItem>
-				.pipe(dropdown_despawn_when_no_children_pressed::<TItem>)
-				.pipe(dropdown_spawn_focused::<TLocalization, TItem>),
+			DropdownChanged::apply::<TLocalization, TItem>.in_set(ApplyDropdown),
 		)
 	}
 }

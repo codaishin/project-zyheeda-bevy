@@ -1,11 +1,11 @@
 pub(crate) mod key_select;
 pub(crate) mod skill_descriptor;
 
-use bevy::{prelude::*, ui_widgets::Button};
-use std::{collections::HashSet, marker::PhantomData};
+use crate::components::GlobalZIndexTop;
+use bevy::prelude::*;
 
 #[derive(Component, Debug, PartialEq)]
-#[require(Button)]
+#[require(IsDropdown)]
 pub(crate) struct Dropdown<TItem> {
 	pub(crate) items: Vec<TItem>,
 }
@@ -18,28 +18,20 @@ impl<TItem> Default for Dropdown<TItem> {
 	}
 }
 
+#[derive(Component, Debug, PartialEq, Default)]
+pub(crate) struct IsDropdown;
+
 #[derive(Component, Debug, PartialEq)]
-pub(crate) struct DropdownUI<TItem> {
-	phantom_data: PhantomData<TItem>,
-	pub(crate) child_dropdowns: HashSet<Entity>,
-	pub(crate) source: Entity,
-}
+#[relationship_target(relationship = DropdownContainerOf)]
+pub(crate) struct DropdownActive(Entity);
 
-impl<TItem> DropdownUI<TItem> {
-	pub(crate) fn new(source: Entity) -> Self {
-		Self {
-			source,
-			child_dropdowns: default(),
-			phantom_data: PhantomData,
-		}
-	}
-
-	#[cfg(test)]
-	pub(crate) fn with_child_dropdowns<const N: usize>(self, child_dropdowns: [Entity; N]) -> Self {
-		Self {
-			source: self.source,
-			child_dropdowns: HashSet::from(child_dropdowns),
-			phantom_data: PhantomData,
-		}
+impl DropdownActive {
+	pub(crate) fn container(&self) -> Entity {
+		self.0
 	}
 }
+
+#[derive(Component, Debug, PartialEq)]
+#[relationship(relationship_target = DropdownActive)]
+#[require(GlobalZIndexTop)]
+pub(crate) struct DropdownContainerOf(pub(crate) Entity);

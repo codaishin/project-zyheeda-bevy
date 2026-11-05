@@ -7,16 +7,16 @@ use crate::{
 		combo_skill_button::{ComboSkillButton, DropdownItem, Horizontal, Vertical},
 	},
 	tools::Layout,
-	traits::{GetLayout, GetRootNode},
+	traits::{GetContainerNode, GetLayout},
 };
 use bevy::prelude::*;
 use common::prelude::*;
 
-impl<TId> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TId>>
+impl<TId> GetContainerNode for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TId>>
 where
 	TId: Debug + PartialEq + ThreadSafe + Clone,
 {
-	fn root_node(&self) -> Node {
+	fn get_container_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
 			top: Val::from(ComboOverview::SKILL_BUTTON_DIMENSIONS.height_inner()),
@@ -30,16 +30,16 @@ impl<TId> GetLayout for Dropdown<ComboSkillButton<DropdownItem<Vertical>, TId>>
 where
 	TId: Debug + PartialEq + ThreadSafe + Clone,
 {
-	fn layout(&self) -> Layout {
+	fn get_layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}
 }
 
-impl<TId> GetRootNode for Dropdown<ComboSkillButton<DropdownItem<Horizontal>, TId>>
+impl<TId> GetContainerNode for Dropdown<ComboSkillButton<DropdownItem<Horizontal>, TId>>
 where
 	TId: Debug + PartialEq + ThreadSafe + Clone,
 {
-	fn root_node(&self) -> Node {
+	fn get_container_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
 			top: Val::from(ComboOverview::KEY_BUTTON_DIMENSIONS.minimum_inner()),
@@ -53,7 +53,7 @@ impl<TId> GetLayout for Dropdown<ComboSkillButton<DropdownItem<Horizontal>, TId>
 where
 	TId: Debug + PartialEq + ThreadSafe + Clone,
 {
-	fn layout(&self) -> Layout {
+	fn get_layout(&self) -> Layout {
 		Layout::SINGLE_ROW
 	}
 }

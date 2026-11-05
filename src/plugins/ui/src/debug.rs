@@ -9,13 +9,12 @@ use crate::{
 		tooltip::{Tooltip, TooltipUiConfig},
 	},
 	tools::Layout,
-	traits::{GetLayout, GetRootNode},
+	traits::{GetContainerNode, GetLayout},
 };
 use bevy::{
 	ecs::{relationship::RelatedSpawnerCommands, system::SystemParam},
 	prelude::*,
-	ui::Pressed,
-	ui_widgets::Button,
+	ui_widgets::{Activate, ActivateOnPress, Button},
 };
 use common::prelude::*;
 use std::marker::PhantomData;
@@ -26,9 +25,8 @@ struct DropdownButton {
 }
 
 impl DropdownButton {
-	fn bundle() -> (Button, Node, BorderColor, BackgroundColor) {
+	fn bundle() -> impl Bundle {
 		(
-			Button,
 			Node {
 				width: Val::Px(60.),
 				height: Val::Px(60.),
@@ -37,8 +35,8 @@ impl DropdownButton {
 				align_items: AlignItems::Center,
 				..default()
 			},
-			Color::srgb(0.8, 0.7, 0.23).into(),
-			Color::WHITE.into(),
+			BorderColor::from(Color::srgb(0.8, 0.7, 0.23)),
+			BackgroundColor::from(Color::WHITE),
 		)
 	}
 
@@ -81,8 +79,11 @@ impl InsertUiContent for Tooltip<ButtonTooltip> {
 }
 
 struct SingleRow;
+
 struct SingleColumn;
+
 struct TwoColumns;
+
 struct WithSubDropdown<TLayout>(PhantomData<TLayout>);
 
 impl<TLayout> Default for WithSubDropdown<TLayout> {
@@ -128,14 +129,14 @@ where
 		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
-		let option = (
+		parent.spawn((
 			DropdownButton::bundle(),
+			Button,
+			ActivateOnPress,
 			self.clone(),
 			Tooltip::new(ButtonTooltip(format!("Button: {}", self.value))),
-		);
-		parent.spawn(option).with_children(|button| {
-			button.spawn((Text::new(self.value), DropdownButton::text_style()));
-		});
+			children![(Text::new(self.value), DropdownButton::text_style())],
+		));
 	}
 }
 
@@ -147,21 +148,19 @@ impl<TLayout: ThreadSafe, TSubLayout: ThreadSafe> InsertUiContent
 		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
-		let option = (
+		parent.spawn((
 			DropdownButton::bundle(),
 			Dropdown {
 				items: get_button_options_numbered::<TSubLayout>(self.target),
 			},
 			Tooltip::new(ButtonTooltip("Button: subs".to_owned())),
-		);
-		parent.spawn(option).with_children(|button| {
-			button.spawn((Text::new("subs"), DropdownButton::text_style()));
-		});
+			children![(Text::new("subs"), DropdownButton::text_style())],
+		));
 	}
 }
 
-impl<TLayout: ThreadSafe, TValue> GetRootNode for Dropdown<ButtonOption<TLayout, TValue>> {
-	fn root_node(&self) -> Node {
+impl<TLayout: ThreadSafe, TValue> GetContainerNode for Dropdown<ButtonOption<TLayout, TValue>> {
+	fn get_container_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
 			top: Val::Percent(0.),
@@ -172,19 +171,19 @@ impl<TLayout: ThreadSafe, TValue> GetRootNode for Dropdown<ButtonOption<TLayout,
 }
 
 impl<TValue> GetLayout for Dropdown<ButtonOption<SingleRow, TValue>> {
-	fn layout(&self) -> Layout {
+	fn get_layout(&self) -> Layout {
 		Layout::SINGLE_ROW
 	}
 }
 
 impl<TValue> GetLayout for Dropdown<ButtonOption<SingleColumn, TValue>> {
-	fn layout(&self) -> Layout {
+	fn get_layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}
 }
 
 impl<TValue> GetLayout for Dropdown<ButtonOption<TwoColumns, TValue>> {
-	fn layout(&self) -> Layout {
+	fn get_layout(&self) -> Layout {
 		Layout::LastColumn(Index(1))
 	}
 }
@@ -205,16 +204,19 @@ fn update_button_text(
 }
 
 fn replace_button_text<TLayout: ThreadSafe>(
+	activated: On<Activate>,
 	mut buttons: Query<&mut DropdownButton>,
-	options: Query<&ButtonOption<TLayout>, Added<Pressed>>,
+	options: Query<&ButtonOption<TLayout>>,
 ) {
-	for options in &options {
-		let Ok(mut button) = buttons.get_mut(options.target) else {
-			continue;
-		};
+	let Ok(option) = options.get(activated.entity) else {
+		return;
+	};
 
-		button.text = options.value;
-	}
+	let Ok(mut button) = buttons.get_mut(option.target) else {
+		return;
+	};
+
+	button.text = option.value;
 }
 
 fn get_button_options_numbered<TLayout: ThreadSafe>(target: Entity) -> Vec<ButtonOption<TLayout>> {
@@ -248,16 +250,11 @@ where
 		.add_dropdown::<TLocalization, ButtonOption<SingleColumn>>()
 		.add_dropdown::<TLocalization, ButtonOption<TwoColumns>>()
 		.add_dropdown::<TLocalization, ButtonOption<SingleRow, WithSubDropdown<SingleColumn>>>()
+		.add_observer(replace_button_text::<SingleRow>)
+		.add_observer(replace_button_text::<SingleColumn>)
+		.add_observer(replace_button_text::<TwoColumns>)
 		.add_systems(Startup, spawn_dropdown)
-		.add_systems(
-			Update,
-			(
-				replace_button_text::<SingleRow>,
-				replace_button_text::<SingleColumn>,
-				replace_button_text::<TwoColumns>,
-				update_button_text,
-			),
-		);
+		.add_systems(Update, update_button_text);
 }
 
 fn spawn_dropdown(mut commands: Commands) {

@@ -46,7 +46,7 @@ fn insert_key_select_dropdown<TPlayer, TLoadout, TExtra>(
 
 	for (entity, insert_command) in &dropdown_commands {
 		let next_keys = ctx.next_keys(&insert_command.key_path);
-		let Some(component) = insert_command.component(ExcludeKeys(next_keys)) else {
+		let Some(component) = insert_command.get_bundle(ExcludeKeys(next_keys)) else {
 			commands.try_apply_on(&entity, |e| e.try_despawn());
 			continue;
 		};
@@ -98,10 +98,10 @@ mod tests {
 	}
 
 	impl GetComponent for KeySelectDropdownCommand<_Extra> {
-		type TComponent = _Component;
+		type TBundle = _Component;
 		type TInput = ExcludeKeys<SlotKey>;
 
-		fn component(&self, excluded: Self::TInput) -> Option<Self::TComponent> {
+		fn get_bundle(&self, excluded: Self::TInput) -> Option<Self::TBundle> {
 			match self.extra {
 				_Extra::None => None,
 				_Extra::Some => Some(_Component(excluded)),

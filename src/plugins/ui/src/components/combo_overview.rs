@@ -18,7 +18,7 @@ use crate::{
 		insert_ui_content::InsertUiContent,
 	},
 };
-use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*, ui_widgets::Button};
+use bevy::{ecs::relationship::RelatedSpawnerCommands, prelude::*};
 use common::prelude::*;
 use macros::asset_path;
 use std::fmt::Debug;
@@ -89,7 +89,7 @@ impl ComboOverview<()> {
 		}
 	}
 
-	pub(crate) fn skill_button<TIcon>(icon: TIcon) -> (Button, Node, Icon, BackgroundColor)
+	pub(crate) fn skill_button<TIcon>(icon: TIcon) -> (Node, Icon, BackgroundColor)
 	where
 		SkillButtonIcon: From<TIcon>,
 	{
@@ -113,7 +113,7 @@ impl ComboOverview<()> {
 			SkillButtonIcon::Transparent => (Icon::None, BackgroundColor(Color::NONE)),
 		};
 
-		(Button, node, image, background_color)
+		(node, image, background_color)
 	}
 
 	pub(crate) fn skill_key_button_offset_node() -> Node {
@@ -168,9 +168,8 @@ impl ComboOverview<()> {
 		}
 	}
 
-	pub(crate) fn skill_key_button() -> (Button, Node, BackgroundColor, BorderColor) {
+	pub(crate) fn skill_key_button() -> (Node, BackgroundColor, BorderColor) {
 		(
-			Button,
 			Node {
 				width: Val::from(Self::KEY_BUTTON_DIMENSIONS.width),
 				height: Val::from(Self::KEY_BUTTON_DIMENSIONS.height),
@@ -182,9 +181,8 @@ impl ComboOverview<()> {
 		)
 	}
 
-	pub(crate) fn modify_button() -> (Button, Node, BackgroundColor, BorderColor) {
+	pub(crate) fn modify_button() -> (Node, BackgroundColor, BorderColor) {
 		(
-			Button,
 			Node {
 				width: Val::from(Self::MODIFY_BUTTON_DIMENSIONS.width),
 				height: Val::from(Self::MODIFY_BUTTON_DIMENSIONS.height),
