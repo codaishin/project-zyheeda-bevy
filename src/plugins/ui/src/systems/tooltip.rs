@@ -20,7 +20,7 @@ use common::prelude::*;
 use std::ops::Deref;
 
 pub(crate) fn tooltip<T, TLocalization, TUI, TUIControl, TWindow>(
-	mut commands: Commands,
+	mut commands: ZyheedaCommands,
 	localize: StaticSystemParam<TLocalization>,
 	ui_control: Res<TUIControl>,
 	windows: Query<&TWindow>,
@@ -119,7 +119,7 @@ mod tests {
 		fn despawn_all(
 			&self,
 			uis: &Query<(Entity, &_UI, &mut Node, &ComputedNode)>,
-			commands: &mut Commands,
+			commands: &mut ZyheedaCommands,
 		) where
 			_UI: Component + Sized,
 		{
@@ -131,7 +131,7 @@ mod tests {
 		fn despawn_outdated(
 			&self,
 			uis: &Query<(Entity, &_UI, &mut Node, &ComputedNode)>,
-			commands: &mut Commands,
+			commands: &mut ZyheedaCommands,
 			outdated_tooltips: RemovedComponents<Tooltip<_T>>,
 		) where
 			_UI: Component + Sized,
@@ -155,7 +155,7 @@ mod tests {
 	impl SpawnTooltips<_T, Res<'_, _Localize>> for _UIControl {
 		fn spawn(
 			&self,
-			commands: &mut Commands,
+			commands: &mut ZyheedaCommands,
 			localize: &Res<_Localize>,
 			tooltip_entity: Entity,
 			tooltip: &Tooltip<_T>,
@@ -181,7 +181,7 @@ mod tests {
 			fn despawn_all<'a, 'b, 'c, 'd, 'e, 'f, 'g>(
 				&self,
 				uis: &Query<'a, 'b, (Entity, &'c _UI, &'d  mut Node, &'e ComputedNode)>,
-				commands: & mut Commands<'f, 'g>
+				commands: & mut ZyheedaCommands<'f, 'g>
 			) where
 				Self: Component + Sized;
 		}
@@ -189,7 +189,7 @@ mod tests {
 			fn despawn_outdated<'a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i>(
 				&self,
 				uis: &Query<'a, 'b, (Entity, &'c  _UI, &'d  mut Node, &'e ComputedNode)>,
-				commands: &mut Commands<'f, 'g>,
+				commands: &mut ZyheedaCommands<'f, 'g>,
 				outdated_tooltips: RemovedComponents<'h, 'i, Tooltip<_T>>,
 			) where
 				Self: Component + Sized;
@@ -205,7 +205,7 @@ mod tests {
 		impl SpawnTooltips<_T, _Localize> for _UIControl {
 			fn spawn<'a, 'b>(
 				&self,
-				commands: &mut Commands<'a, 'b>,
+				commands: &mut ZyheedaCommands<'a, 'b>,
 				localize: & _Localize,
 				entity: Entity,
 				tooltip: &Tooltip<_T>,

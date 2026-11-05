@@ -7,7 +7,7 @@ pub(crate) trait DespawnAllTooltips<TUI> {
 	fn despawn_all(
 		&self,
 		uis: &Query<(Entity, &TUI, &mut Node, &ComputedNode)>,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 	) where
 		TUI: Component + Sized;
 }
@@ -20,7 +20,7 @@ where
 	fn despawn_outdated(
 		&self,
 		uis: &Query<(Entity, &TUI, &mut Node, &ComputedNode)>,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		outdated_tooltips: RemovedComponents<Tooltip<T>>,
 	) where
 		TUI: Component + Sized;
@@ -46,7 +46,7 @@ where
 {
 	fn spawn(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		localize: &TLocalization,
 		tooltip_entity: Entity,
 		tooltip: &Tooltip<T>,
