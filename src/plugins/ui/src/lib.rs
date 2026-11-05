@@ -1,5 +1,4 @@
 mod components;
-mod events;
 mod observers;
 mod resources;
 mod states;
@@ -68,7 +67,6 @@ use components::{
 	tooltip::{Tooltip, TooltipUIControl},
 	ui_overlay::UIOverlay,
 };
-use events::DropdownMessage;
 use macros::asset_path;
 use states::menus_change_able::MenusChangeable;
 use std::{marker::PhantomData, time::Duration};
@@ -149,10 +147,6 @@ where
 			.insert_resource(TooltipUIControl {
 				tooltip_delay: Duration::from_millis(500),
 			});
-	}
-
-	fn messages(&self, app: &mut App) {
-		app.add_message::<DropdownMessage>();
 	}
 
 	fn state_control(&self, app: &mut App) {
@@ -378,6 +372,7 @@ where
 				)
 					.run_if(TLoading::is_loaded(LoadingEssentialAssets)),
 			)
+			.add_systems(Last, DropdownChanged::reset.after(ApplyDropdown))
 			.add_systems(Last, WithNode::system);
 	}
 }
@@ -405,7 +400,6 @@ where
 {
 	fn build(&self, app: &mut App) {
 		self.resources(app);
-		self.messages(app);
 		self.state_control(app);
 		self.loading_screen(app, LoadingEssentialAssets);
 		self.loading_screen(app, LoadingGame);
@@ -421,3 +415,6 @@ where
 		debug::setup_dropdown_test::<TLocalization::TLocalizationServer>(app);
 	}
 }
+
+#[derive(SystemSet, Debug, PartialEq, Eq, Hash, Clone, Copy)]
+struct ApplyDropdown;

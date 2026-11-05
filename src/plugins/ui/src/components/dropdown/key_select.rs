@@ -5,12 +5,12 @@ use crate::{
 		key_select::{AppendSkill, KeySelect},
 	},
 	tools::Layout,
-	traits::{GetLayout, GetRootNode},
+	traits::{GetContainerNode, GetLayout},
 };
 use bevy::prelude::*;
 
-impl GetRootNode for Dropdown<KeySelect<AppendSkill>> {
-	fn root_node(&self) -> Node {
+impl GetContainerNode for Dropdown<KeySelect<AppendSkill>> {
+	fn get_container_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
 			top: Val::from(ComboOverview::MODIFY_BUTTON_DIMENSIONS.minimum_inner()),
@@ -21,7 +21,7 @@ impl GetRootNode for Dropdown<KeySelect<AppendSkill>> {
 }
 
 impl<TExtra> GetLayout for Dropdown<KeySelect<TExtra>> {
-	fn layout(&self) -> Layout {
+	fn get_layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}
 }

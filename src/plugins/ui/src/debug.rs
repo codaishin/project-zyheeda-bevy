@@ -9,7 +9,7 @@ use crate::{
 		tooltip::{Tooltip, TooltipUiConfig},
 	},
 	tools::Layout,
-	traits::{GetLayout, GetRootNode},
+	traits::{GetContainerNode, GetLayout},
 };
 use bevy::{
 	ecs::{relationship::RelatedSpawnerCommands, system::SystemParam},
@@ -128,14 +128,12 @@ where
 		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
-		let option = (
+		parent.spawn((
 			DropdownButton::bundle(),
 			self.clone(),
 			Tooltip::new(ButtonTooltip(format!("Button: {}", self.value))),
-		);
-		parent.spawn(option).with_children(|button| {
-			button.spawn((Text::new(self.value), DropdownButton::text_style()));
-		});
+			children![(Text::new(self.value), DropdownButton::text_style())],
+		));
 	}
 }
 
@@ -147,21 +145,19 @@ impl<TLayout: ThreadSafe, TSubLayout: ThreadSafe> InsertUiContent
 		_: &TLocalization,
 		parent: &mut RelatedSpawnerCommands<ChildOf>,
 	) {
-		let option = (
+		parent.spawn((
 			DropdownButton::bundle(),
 			Dropdown {
 				items: get_button_options_numbered::<TSubLayout>(self.target),
 			},
 			Tooltip::new(ButtonTooltip("Button: subs".to_owned())),
-		);
-		parent.spawn(option).with_children(|button| {
-			button.spawn((Text::new("subs"), DropdownButton::text_style()));
-		});
+			children![(Text::new("subs"), DropdownButton::text_style())],
+		));
 	}
 }
 
-impl<TLayout: ThreadSafe, TValue> GetRootNode for Dropdown<ButtonOption<TLayout, TValue>> {
-	fn root_node(&self) -> Node {
+impl<TLayout: ThreadSafe, TValue> GetContainerNode for Dropdown<ButtonOption<TLayout, TValue>> {
+	fn get_container_node(&self) -> Node {
 		Node {
 			position_type: PositionType::Absolute,
 			top: Val::Percent(0.),
@@ -172,19 +168,19 @@ impl<TLayout: ThreadSafe, TValue> GetRootNode for Dropdown<ButtonOption<TLayout,
 }
 
 impl<TValue> GetLayout for Dropdown<ButtonOption<SingleRow, TValue>> {
-	fn layout(&self) -> Layout {
+	fn get_layout(&self) -> Layout {
 		Layout::SINGLE_ROW
 	}
 }
 
 impl<TValue> GetLayout for Dropdown<ButtonOption<SingleColumn, TValue>> {
-	fn layout(&self) -> Layout {
+	fn get_layout(&self) -> Layout {
 		Layout::SINGLE_COLUMN
 	}
 }
 
 impl<TValue> GetLayout for Dropdown<ButtonOption<TwoColumns, TValue>> {
-	fn layout(&self) -> Layout {
+	fn get_layout(&self) -> Layout {
 		Layout::LastColumn(Index(1))
 	}
 }
