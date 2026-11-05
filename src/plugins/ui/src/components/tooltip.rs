@@ -92,13 +92,10 @@ where
 	fn despawn_all(
 		&self,
 		uis: &Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 	) {
 		for (entity, ..) in uis {
-			let Ok(mut entity) = commands.get_entity(entity) else {
-				continue;
-			};
-			entity.despawn();
+			commands.try_apply_on(&entity, |e| e.try_despawn());
 		}
 	}
 }
@@ -111,7 +108,7 @@ where
 	fn despawn_outdated(
 		&self,
 		uis: &Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		mut outdated_tooltips: RemovedComponents<Tooltip<T>>,
 	) {
 		let outdated = outdated_tooltips.read().collect::<Vec<_>>();
@@ -120,10 +117,7 @@ where
 		};
 
 		for (entity, ..) in uis.iter().filter(is_outdated) {
-			let Ok(mut entity) = commands.get_entity(entity) else {
-				continue;
-			};
-			entity.despawn();
+			commands.try_apply_on(&entity, |e| e.try_despawn());
 		}
 	}
 }
@@ -153,7 +147,7 @@ where
 {
 	fn spawn(
 		&self,
-		commands: &mut Commands,
+		commands: &mut ZyheedaCommands,
 		localize: &TLocalization,
 		tooltip_entity: Entity,
 		tooltip: &Tooltip<T>,
@@ -208,7 +202,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			|uis: Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>,
-			 mut commands: Commands| {
+			 mut commands: ZyheedaCommands| {
 				TooltipUIControl::default().despawn_all(&uis, &mut commands);
 			},
 		);
@@ -225,7 +219,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			|uis: Query<(Entity, &TooltipContent<T>, &mut Node, &ComputedNode)>,
-			 mut commands: Commands,
+			 mut commands: ZyheedaCommands,
 			 outdated_tooltips: RemovedComponents<Tooltip<T>>| {
 				TooltipUIControl::default().despawn_outdated(
 					&uis,
@@ -281,7 +275,7 @@ mod tests {
 		app.init_resource::<_Localize>();
 		app.add_systems(
 			Update,
-			move |mut commands: Commands,
+			move |mut commands: ZyheedaCommands,
 			      mut localize: ResMut<_Localize>,
 			      tooltips: Query<(Entity, &Tooltip<_T>)>| {
 				for (entity, tooltip) in &tooltips {
