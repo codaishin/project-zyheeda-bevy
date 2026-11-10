@@ -1,14 +1,19 @@
-use crate::components::motion_controller::{MotionControlled, OldTranslation};
+use crate::components::motion_controller::{MaybeInMotion, MotionControlled, OldTranslation};
 use bevy::prelude::*;
+use common::traits::thread_safe::ThreadSafe;
 
-impl MotionControlled {
+impl<TExtra> MotionControlled<TExtra>
+where
+	TExtra: MaybeInMotion + ThreadSafe,
+{
 	pub(crate) fn interpolate_position(
 		In(OverstepFraction(overstep)): In<OverstepFraction>,
 		controlled: Query<(&mut Transform, &Self)>,
 		controllers: Query<(&Transform, &OldTranslation), Without<Self>>,
 	) {
 		for (mut transform, controlled) in controlled {
-			let Ok((controller, OldTranslation(old))) = controllers.get(controlled.id()) else {
+			let Ok((controller, OldTranslation(old))) = controllers.get(controlled.controller())
+			else {
 				continue;
 			};
 
@@ -33,7 +38,7 @@ impl OverstepFraction {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::motion_controller::MotionControllerOf;
+	use crate::components::motion_controller::{MotionCollider, MotionControllerOf};
 	use testing::{IsChanged, SingleThreadedApp};
 
 	fn setup(overstep: OverstepFraction) -> App {
@@ -42,7 +47,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				(move || overstep).pipe(MotionControlled::interpolate_position),
+				(move || overstep).pipe(MotionControlled::<MotionCollider>::interpolate_position),
 				IsChanged::<Transform>::detect,
 			)
 				.chain(),
@@ -56,7 +61,7 @@ mod tests {
 		let mut app = setup(OverstepFraction(1.));
 		let entity = app.world_mut().spawn(Transform::default()).id();
 		app.world_mut().spawn((
-			MotionControllerOf::entity(entity),
+			MotionControllerOf::motion_collider(entity),
 			OldTranslation(Vec3::new(1., 2., 3.)),
 			Transform::from_xyz(1., 2., 5.),
 		));
@@ -74,7 +79,7 @@ mod tests {
 		let mut app = setup(OverstepFraction(0.));
 		let entity = app.world_mut().spawn(Transform::default()).id();
 		app.world_mut().spawn((
-			MotionControllerOf::entity(entity),
+			MotionControllerOf::motion_collider(entity),
 			OldTranslation(Vec3::new(1., 2., 3.)),
 			Transform::from_xyz(1., 2., 5.),
 		));
@@ -92,7 +97,7 @@ mod tests {
 		let mut app = setup(OverstepFraction(0.5));
 		let entity = app.world_mut().spawn(Transform::default()).id();
 		app.world_mut().spawn((
-			MotionControllerOf::entity(entity),
+			MotionControllerOf::motion_collider(entity),
 			OldTranslation(Vec3::new(1., 2., 3.)),
 			Transform::from_xyz(1., 2., 5.),
 		));
@@ -112,7 +117,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(entity),
+				MotionControllerOf::motion_collider(entity),
 				OldTranslation(Vec3::new(1., 2., 3.)),
 				Transform::from_xyz(1., 2., 5.),
 			))

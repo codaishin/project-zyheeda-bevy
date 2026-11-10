@@ -1,17 +1,21 @@
 use crate::components::{
 	character_motion::IsInMotion,
 	immobilized::Immobilized,
-	motion_controller::{MotionControlled, OldTranslation},
+	motion_controller::{MaybeInMotion, MotionControlled, OldTranslation},
 };
 use bevy::prelude::*;
+use common::traits::thread_safe::ThreadSafe;
 
-impl MotionControlled {
+impl<TTarget> MotionControlled<TTarget>
+where
+	TTarget: MaybeInMotion + ThreadSafe,
+{
 	pub(crate) fn track_old_translation(
 		controlled: Query<&Self, (With<IsInMotion>, Without<Immobilized>)>,
 		mut controllers: Query<(&Transform, &mut OldTranslation)>,
 	) {
 		for controlled in controlled {
-			let Ok((transform, mut old)) = controllers.get_mut(controlled.id()) else {
+			let Ok((transform, mut old)) = controllers.get_mut(controlled.controller()) else {
 				continue;
 			};
 
@@ -23,13 +27,16 @@ impl MotionControlled {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::motion_controller::MotionControllerOf;
+	use crate::components::motion_controller::{MotionCollider, MotionControllerOf};
 	use testing::SingleThreadedApp;
 
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, MotionControlled::track_old_translation);
+		app.add_systems(
+			Update,
+			MotionControlled::<MotionCollider>::track_old_translation,
+		);
 
 		app
 	}
@@ -42,7 +49,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				MotionControllerOf::entity(controlled),
+				MotionControllerOf::motion_collider(controlled),
 			))
 			.id();
 
@@ -62,7 +69,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				MotionControllerOf::entity(controlled),
+				MotionControllerOf::motion_collider(controlled),
 			))
 			.id();
 
@@ -82,7 +89,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				Transform::from_xyz(1., 2., 3.),
-				MotionControllerOf::entity(controlled),
+				MotionControllerOf::motion_collider(controlled),
 			))
 			.id();
 

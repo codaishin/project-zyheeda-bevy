@@ -2,7 +2,7 @@ use crate::components::{
 	affected::gravity_affected::GravityPull,
 	collider::AGENTS_GROUP,
 	immobilized::Immobilized,
-	motion_controller::{MotionControlled, OldTranslation},
+	motion_controller::{MotionCollider, MotionControlled, OldTranslation},
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -23,15 +23,15 @@ pub(crate) trait ApplyPull:
 				&Transform,
 				&mut OldTranslation,
 			),
-			Without<MotionControlled>,
+			Without<MotionControlled<MotionCollider>>,
 		>,
-		controlled: Query<(Entity, &mut Self, &MotionControlled)>,
+		controlled: Query<(Entity, &mut Self, &MotionControlled<MotionCollider>)>,
 		transforms: Query<&GlobalTransform>,
 	) {
 		let delta_secs = delta.as_secs_f32();
 
 		for (entity, mut gravity_affected, ctrl) in controlled {
-			let Ok((mut ctrl, current, mut old)) = controllers.get_mut(ctrl.id()) else {
+			let Ok((mut ctrl, current, mut old)) = controllers.get_mut(ctrl.controller()) else {
 				continue;
 			};
 
@@ -184,7 +184,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 2., 3.),
 				KinematicCharacterController::default(),
 			))
@@ -221,7 +221,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -268,7 +268,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -322,7 +322,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -371,7 +371,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController {
 					filter_groups: Some(CollisionGroups {
@@ -411,7 +411,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -463,7 +463,7 @@ mod tests {
 			))
 			.id();
 		app.world_mut().spawn((
-			MotionControllerOf::entity(agent),
+			MotionControllerOf::motion_collider(agent),
 			Transform::from_xyz(1., 0., 0.),
 			KinematicCharacterController::default(),
 		));
@@ -486,7 +486,7 @@ mod tests {
 			.spawn((Transform::default(), Immobilized, _GravityTarget::from([])))
 			.id();
 		app.world_mut().spawn((
-			MotionControllerOf::entity(agent),
+			MotionControllerOf::motion_collider(agent),
 			Transform::from_xyz(1., 0., 0.),
 			KinematicCharacterController::default(),
 		));
@@ -508,7 +508,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 0., 0.),
 				KinematicCharacterController {
 					filter_groups: Some(CollisionGroups {
@@ -561,7 +561,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(3., 0., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -604,7 +604,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(3., 1., 0.),
 				KinematicCharacterController::default(),
 			))
@@ -647,7 +647,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(3., 0., 0.),
 				KinematicCharacterController::default(),
 			))
