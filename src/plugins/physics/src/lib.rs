@@ -58,7 +58,7 @@ use crate::{
 		apply_pull::ApplyPull,
 		insert_affected::InsertAffected,
 		interactions::push_ongoing_collisions::PushOngoingCollisions,
-		interpolate_position::OverstepFraction,
+		motion_controlled::interpolate_position::OverstepFraction,
 		prevent_tunneling::PreventTunneling,
 	},
 };
@@ -193,7 +193,7 @@ where
 			.add_systems(
 				FixedPreUpdate,
 				(
-					MotionControlled::track_translation,
+					MotionControlled::track_old_translation,
 					FixedUpdate::delta.pipe(MotionControlled::set_translation),
 					FixedUpdate::delta.pipe(MotionControlled::apply_gravity),
 				)

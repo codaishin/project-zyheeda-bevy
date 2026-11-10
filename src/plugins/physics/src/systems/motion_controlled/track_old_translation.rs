@@ -6,7 +6,7 @@ use crate::components::{
 use bevy::prelude::*;
 
 impl MotionControlled {
-	pub(crate) fn track_translation(
+	pub(crate) fn track_old_translation(
 		controlled: Query<&Self, (With<IsInMotion>, Without<Immobilized>)>,
 		mut controllers: Query<(&Transform, &mut OldTranslation)>,
 	) {
@@ -29,7 +29,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, MotionControlled::track_translation);
+		app.add_systems(Update, MotionControlled::track_old_translation);
 
 		app
 	}
