@@ -15,12 +15,13 @@ use crate::{
 	},
 	observers::skill_prefab::ApplyMotionPrefab,
 };
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
 
 impl ApplyMotionPrefab for Skill {
-	fn apply_motion_prefab(&self, entity: &mut ZyheedaEntityCommands) -> RigidBody {
-		match &self.shape {
+	fn apply_motion_prefab(&self, entity: &mut EntityCommands) {
+		let rigid_body = match &self.shape {
 			SkillShape::SphereAoE(SphereAoE { max_range, .. }) => {
 				entity.try_insert(GroundTarget {
 					caster: self.caster,
@@ -71,6 +72,8 @@ impl ApplyMotionPrefab for Skill {
 
 				RigidBody::Fixed
 			}
-		}
+		};
+
+		entity.try_insert(rigid_body);
 	}
 }
