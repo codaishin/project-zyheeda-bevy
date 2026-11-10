@@ -192,6 +192,7 @@ where
 			// Character Motion
 			.add_prefab_observer::<MotionControllerOf<MotionCollider>, ()>()
 			.add_observer(MotionControllerOf::spawn)
+			.add_observer(MotionControllerOf::despawn_controlled)
 			.add_systems(
 				FixedPreUpdate,
 				(
