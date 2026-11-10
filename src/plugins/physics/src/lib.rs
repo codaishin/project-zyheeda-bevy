@@ -199,6 +199,7 @@ where
 					MotionControlled::<Skill>::track_old_translation,
 					FixedUpdate::delta.pipe(MotionControlled::set_translation),
 					FixedUpdate::delta.pipe(MotionControlled::apply_gravity),
+					MotionControlled::set_rotation,
 				)
 					.chain_weak(),
 			)
