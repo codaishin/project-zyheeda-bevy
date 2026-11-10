@@ -193,10 +193,11 @@ where
 			.add_systems(
 				FixedPreUpdate,
 				(
+					MotionControlled::track_translation,
 					FixedUpdate::delta.pipe(MotionControlled::set_translation),
 					FixedUpdate::delta.pipe(MotionControlled::apply_gravity),
 				)
-					.chain(),
+					.chain_weak(),
 			)
 			.add_systems(
 				FixedPostUpdate,
