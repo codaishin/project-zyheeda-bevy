@@ -94,7 +94,7 @@ pub(crate) trait SkillPrefab:
 		));
 
 		let mut controller = commands.spawn((
-			MotionControllerOf::entity(root),
+			MotionControllerOf::skill(root),
 			PersistentRoot(*persistent_entity),
 			Blockable(obj),
 			cont_effects,

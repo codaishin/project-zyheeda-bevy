@@ -32,7 +32,7 @@ use crate::{
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		model::PhysicsModel,
-		motion_controller::{MotionControlled, MotionControllerOf},
+		motion_controller::{MotionCollider, MotionControlled, MotionControllerOf},
 		self_skill_scale::SelfSkillScale,
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
@@ -178,6 +178,8 @@ where
 		Self::configure_schedules(app, FixedPostUpdate);
 		self.configure_physics(app, FixedUpdate);
 
+		let fixed_overstep = OverstepFraction::fixed;
+
 		app
 			// World camera
 			.init_resource::<WorldCamera>()
@@ -188,12 +190,13 @@ where
 			// Models
 			.add_prefab_observer::<PhysicsModel, ()>()
 			// Character Motion
-			.add_prefab_observer::<MotionControllerOf, ()>()
+			.add_prefab_observer::<MotionControllerOf<MotionCollider>, ()>()
 			.add_observer(MotionControllerOf::spawn)
 			.add_systems(
 				FixedPreUpdate,
 				(
-					MotionControlled::track_old_translation,
+					MotionControlled::<MotionCollider>::track_old_translation,
+					MotionControlled::<Skill>::track_old_translation,
 					FixedUpdate::delta.pipe(MotionControlled::set_translation),
 					FixedUpdate::delta.pipe(MotionControlled::apply_gravity),
 				)
@@ -205,8 +208,11 @@ where
 			)
 			.add_systems(
 				Update,
-				OverstepFraction::fixed
-					.pipe(MotionControlled::interpolate_position)
+				(
+					fixed_overstep.pipe(MotionControlled::<MotionCollider>::interpolate_position),
+					fixed_overstep.pipe(MotionControlled::<Skill>::interpolate_position),
+				)
+					.chain()
 					.in_set(PhysicsSystems::Interpolate),
 			)
 			// Animations

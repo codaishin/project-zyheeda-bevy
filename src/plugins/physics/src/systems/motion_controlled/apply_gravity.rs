@@ -1,11 +1,14 @@
-use crate::components::{character_gravity::CharacterGravity, motion_controller::MotionControlled};
+use crate::components::{
+	character_gravity::CharacterGravity,
+	motion_controller::{MotionCollider, MotionControlled},
+};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use std::time::Duration;
 
 pub(crate) const GRAVITY: f32 = 1.;
 
-impl MotionControlled {
+impl MotionControlled<MotionCollider> {
 	pub(crate) fn apply_gravity(
 		delta: In<Duration>,
 		characters: Query<(&mut CharacterGravity, &Self)>,
@@ -17,7 +20,7 @@ impl MotionControlled {
 		let delta_secs = delta.as_secs_f32();
 
 		for (mut gravity, controller) in characters {
-			let Ok((mut controller, state)) = controllers.get_mut(controller.id()) else {
+			let Ok((mut controller, state)) = controllers.get_mut(controller.controller()) else {
 				continue;
 			};
 
@@ -66,7 +69,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				KinematicCharacterControllerOutput::default(),
 				KinematicCharacterController::default(),
 			))
@@ -91,7 +94,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				KinematicCharacterControllerOutput::default(),
 				KinematicCharacterController::default(),
 			))
@@ -122,7 +125,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				KinematicCharacterControllerOutput::default(),
 				KinematicCharacterController {
 					translation: Some(Vec3::new(1., 2., 3.)),
@@ -150,7 +153,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				KinematicCharacterControllerOutput::default(),
 				KinematicCharacterController {
 					translation: Some(Vec3::new(1., 2., 3.)),
@@ -187,7 +190,7 @@ mod tests {
 		let entity = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				KinematicCharacterControllerOutput {
 					grounded: true,
 					..default()

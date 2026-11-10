@@ -1,26 +1,26 @@
 use crate::components::{
 	character_motion::{ApplyMotion, IsInMotion},
 	immobilized::Immobilized,
-	motion_controller::{MotionControlled, MotionControllerOf},
+	motion_controller::{MotionCollider, MotionControlled, MotionControllerOf},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
 use std::time::Duration;
 
-impl MotionControlled {
+impl MotionControlled<MotionCollider> {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn set_translation(
 		delta: In<Duration>,
 		controlled: Query<(&ApplyMotion, &Self), (Without<Immobilized>, With<IsInMotion>)>,
 		mut controllers: Query<(
 			&mut KinematicCharacterController,
-			&MotionControllerOf,
+			&MotionControllerOf<MotionCollider>,
 			&Transform,
 		)>,
 	) {
 		for (ApplyMotion(motion), ctrl) in controlled {
-			let Ok((mut ctrl, ctrl_of, transform)) = controllers.get_mut(ctrl.id()) else {
+			let Ok((mut ctrl, ctrl_of, transform)) = controllers.get_mut(ctrl.controller()) else {
 				continue;
 			};
 
@@ -77,7 +77,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf::entity(agent),
+					MotionControllerOf::motion_collider(agent),
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
 				))
@@ -108,7 +108,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf::entity(agent),
+					MotionControllerOf::motion_collider(agent),
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
 				))
@@ -139,7 +139,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf::entity(agent).with_offset(Units::from(0.2)),
+					MotionControllerOf::motion_collider(agent).with_offset(Units::from(0.2)),
 					Transform::from_xyz(1., 2., 3.),
 					KinematicCharacterController::default(),
 				))
@@ -174,7 +174,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf::entity(agent),
+					MotionControllerOf::motion_collider(agent),
 					Transform::default(),
 					KinematicCharacterController::default(),
 				))
@@ -205,7 +205,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf::entity(agent),
+					MotionControllerOf::motion_collider(agent),
 					Transform::default(),
 					KinematicCharacterController::default(),
 				))
@@ -242,7 +242,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf::entity(agent),
+					MotionControllerOf::motion_collider(agent),
 					Transform::default(),
 					KinematicCharacterController::default(),
 				))
@@ -273,7 +273,7 @@ mod tests {
 			let entity = app
 				.world_mut()
 				.spawn((
-					MotionControllerOf::entity(agent),
+					MotionControllerOf::motion_collider(agent),
 					Transform::default(),
 					KinematicCharacterController::default(),
 				))
