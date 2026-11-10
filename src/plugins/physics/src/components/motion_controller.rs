@@ -93,6 +93,10 @@ where
 	pub(crate) fn get_offset(&self) -> Units {
 		self.offset
 	}
+
+	pub(crate) fn get_entity(&self) -> Entity {
+		self.entity
+	}
 }
 
 impl Prefab<()> for MotionControllerOf<MotionCollider> {

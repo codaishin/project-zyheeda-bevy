@@ -1,3 +1,4 @@
+pub(crate) mod despawn_controlled;
 pub(crate) mod insert_effects;
 pub(crate) mod lifetime;
 pub(crate) mod process_dirty_anchor;
