@@ -9,6 +9,7 @@ pub(crate) mod character_gravity;
 pub(crate) mod character_motion;
 pub(crate) mod collider;
 pub(crate) mod collision_domains;
+pub(crate) mod controller;
 pub(crate) mod default_attributes;
 pub(crate) mod dragged_colliders;
 pub(crate) mod effects;

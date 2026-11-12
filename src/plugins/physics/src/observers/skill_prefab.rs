@@ -4,6 +4,7 @@ use crate::components::{
 	collider::{AGENTS_GROUP, ColliderShape, RAY_GROUP, SKILLS_GROUP},
 	collision_domains::Physical,
 	effects::Effects,
+	impact_able::ImpactAble,
 	model::PhysicsModel,
 	motion_controller::{MotionBehavior, MotionControllerOf},
 	persistent_root::PersistentRoot,
@@ -104,6 +105,7 @@ fn physical(
 	controller.insert((
 		Blockable(obj),
 		PersistentRoot(*persistent_entity),
+		ImpactAble,
 		cont_effects.clone(),
 		children![
 			(
@@ -159,21 +161,17 @@ fn visual(
 	entity.try_insert((
 		#[cfg(feature = "debug-utils")]
 		Name::from("Skill Visuals"),
+		*self_skill_scale,
 		IsInMotion,
 		Visibility::Visible,
 		Transform::default(),
-		*self_skill_scale,
+		VisualSkillContact,
+		cont_effects,
 		children![
 			(
-				Visibility::Visible,
-				VisualSkillContact,
-				Transform::default(),
-				cont_effects,
-				children![(
-					SkillTransformOf(controller),
-					cont_model.transform,
-					cont_model.model,
-				)]
+				SkillTransformOf(controller),
+				cont_model.transform,
+				cont_model.model,
 			),
 			(
 				Visibility::Visible,
