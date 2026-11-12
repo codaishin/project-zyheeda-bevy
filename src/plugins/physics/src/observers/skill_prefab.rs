@@ -5,7 +5,7 @@ use crate::components::{
 	collision_domains::Physical,
 	effects::Effects,
 	model::PhysicsModel,
-	motion_controller::MotionControllerOf,
+	motion_controller::{MotionControllerOf, MotionBehavior},
 	persistent_root::PersistentRoot,
 	self_skill_scale::SelfSkillScale,
 	skill::{SkillContactRoot, SkillProjectionRoot},
@@ -94,7 +94,6 @@ pub(crate) trait SkillPrefab:
 		));
 
 		let mut controller = commands.spawn((
-			MotionControllerOf::skill(root),
 			PersistentRoot(*persistent_entity),
 			Blockable(obj),
 			cont_effects,
@@ -124,7 +123,9 @@ pub(crate) trait SkillPrefab:
 			],
 		));
 
-		skill.apply_motion_prefab(&mut controller);
+		let movement_behavior = skill.apply_motion_prefab(&mut controller);
+
+		controller.try_insert(MotionControllerOf::skill(root).with_behavior(movement_behavior));
 
 		if let Some(lifetime) = skill.get_lifetime() {
 			controller.try_insert(Lifetime::from(lifetime));
@@ -167,7 +168,7 @@ pub(crate) trait GetProjectionPrefab {
 }
 
 pub(crate) trait ApplyMotionPrefab {
-	fn apply_motion_prefab(&self, entity: &mut EntityCommands);
+	fn apply_motion_prefab(&self, entity: &mut EntityCommands) -> MotionBehavior;
 }
 
 #[derive(Debug, PartialEq, Clone)]

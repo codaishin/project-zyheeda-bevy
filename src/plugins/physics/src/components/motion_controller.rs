@@ -15,7 +15,7 @@ use crate::components::{
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
-use std::{fmt::Display, marker::PhantomData};
+use std::{fmt::Display, marker::PhantomData, ops::Deref};
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
@@ -27,6 +27,14 @@ pub(crate) struct MotionCollider {
 #[derive(Component, Debug, PartialEq, Default)]
 #[require(Transform)]
 pub(crate) struct OldTranslation(pub(crate) Vec3);
+
+impl Deref for OldTranslation {
+	type Target = Vec3;
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
 
 #[derive(Component, Debug, PartialEq)]
 #[relationship_target(relationship = MotionControllerOf<TTarget>, linked_spawn)]
@@ -58,6 +66,7 @@ where
 	#[relationship]
 	entity: Entity,
 	offset: Units,
+	behavior: MotionBehavior,
 	_target: PhantomData<TTarget>,
 }
 
@@ -66,6 +75,7 @@ impl MotionControllerOf<MotionCollider> {
 		Self {
 			entity,
 			offset: Units::ZERO,
+			behavior: MotionBehavior::Interpolated,
 			_target: PhantomData,
 		}
 	}
@@ -76,6 +86,7 @@ impl MotionControllerOf<Skill> {
 		Self {
 			entity,
 			offset: Units::ZERO,
+			behavior: MotionBehavior::Interpolated,
 			_target: PhantomData,
 		}
 	}
@@ -96,6 +107,15 @@ where
 
 	pub(crate) fn get_entity(&self) -> Entity {
 		self.entity
+	}
+
+	pub(crate) fn behavior(&self) -> MotionBehavior {
+		self.behavior
+	}
+
+	pub(crate) const fn with_behavior(mut self, behavior: MotionBehavior) -> Self {
+		self.behavior = behavior;
+		self
 	}
 }
 
@@ -141,10 +161,16 @@ impl Prefab<()> for MotionControllerOf<MotionCollider> {
 	}
 }
 
-pub(crate) trait MaybeInMotion {}
+pub(crate) trait MaybeInMotion: internal::MaybeInMotion {}
 
-impl MaybeInMotion for MotionCollider {}
-impl MaybeInMotion for Skill {}
+impl<T> MaybeInMotion for T where T: internal::MaybeInMotion {}
+
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
+pub(crate) enum MotionBehavior {
+	#[default]
+	Interpolated,
+	Set,
+}
 
 #[derive(Debug, PartialEq)]
 pub(crate) struct MotionControlParametersMissing(Entity);
@@ -167,6 +193,16 @@ impl ErrorData for MotionControlParametersMissing {
 	fn into_details(self) -> impl Display {
 		self
 	}
+}
+
+mod internal {
+	use super::*;
+
+	pub(crate) trait MaybeInMotion {}
+
+	impl MaybeInMotion for MotionCollider {}
+
+	impl MaybeInMotion for Skill {}
 }
 
 #[cfg(test)]
