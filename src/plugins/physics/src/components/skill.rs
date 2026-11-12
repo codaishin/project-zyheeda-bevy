@@ -29,11 +29,11 @@ pub struct Skill {
 
 #[derive(Component, Debug, PartialEq)]
 #[require(ColliderRoot, Transform, Visibility, ImpactAble)]
-pub struct SkillContactRoot;
+pub struct VisualSkillContact;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(ColliderRoot, Transform, Visibility)]
-pub struct SkillProjectionRoot;
+pub struct VisualSkillProjection;
 
 #[serde_model]
 #[derive(Debug, PartialEq, Clone, Copy)]
