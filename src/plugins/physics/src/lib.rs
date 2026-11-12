@@ -32,7 +32,7 @@ use crate::{
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		model::PhysicsModel,
-		motion_controller::{MotionController, MotionControllerOf},
+		motion_controller::{MotionControlled, MotionControllerOf},
 		self_skill_scale::SelfSkillScale,
 		set_velocity_forward::SetVelocityForward,
 		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
@@ -58,7 +58,7 @@ use crate::{
 		apply_pull::ApplyPull,
 		insert_affected::InsertAffected,
 		interactions::push_ongoing_collisions::PushOngoingCollisions,
-		interpolate_position::OverstepFraction,
+		motion_controlled::interpolate_position::OverstepFraction,
 		prevent_tunneling::PreventTunneling,
 	},
 };
@@ -193,19 +193,20 @@ where
 			.add_systems(
 				FixedPreUpdate,
 				(
-					FixedPreUpdate::delta.pipe(MotionController::set_translation),
-					FixedPreUpdate::delta.pipe(MotionController::apply_gravity),
+					MotionControlled::track_old_translation,
+					FixedUpdate::delta.pipe(MotionControlled::set_translation),
+					FixedUpdate::delta.pipe(MotionControlled::apply_gravity),
 				)
-					.chain(),
+					.chain_weak(),
 			)
 			.add_systems(
 				FixedPostUpdate,
-				FixedPostUpdate::delta.pipe(MotionController::set_done),
+				FixedUpdate::delta.pipe(MotionControlled::set_done),
 			)
 			.add_systems(
 				Update,
 				OverstepFraction::fixed
-					.pipe(MotionController::interpolate_position)
+					.pipe(MotionControlled::interpolate_position)
 					.in_set(PhysicsSystems::Interpolate),
 			)
 			// Animations
@@ -244,7 +245,7 @@ where
 				FixedPreUpdate,
 				(
 					GravityAffected::insert_from::<DefaultAttributes>,
-					FixedPreUpdate::delta.pipe(GravityAffected::apply_pull),
+					FixedUpdate::delta.pipe(GravityAffected::apply_pull),
 				)
 					.chain(),
 			)
@@ -293,7 +294,7 @@ where
 				(
 					// Collect physical collections
 					(
-						FixedPostUpdate::delta
+						FixedUpdate::delta
 							.pipe(CastRays::to_prevent_tunneling)
 							.pipe(CastRays::execute)
 							.pipe(OnError::log),

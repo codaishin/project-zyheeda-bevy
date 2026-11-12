@@ -1,14 +1,14 @@
 use crate::components::{
 	character_motion::{ApplyMotion, IsInMotion},
 	immobilized::Immobilized,
-	motion_controller::{MotionController, MotionControllerOf, OldTranslation},
+	motion_controller::{MotionControlled, MotionControllerOf},
 };
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
 use std::time::Duration;
 
-impl MotionController {
+impl MotionControlled {
 	#[allow(clippy::type_complexity)]
 	pub(crate) fn set_translation(
 		delta: In<Duration>,
@@ -17,11 +17,10 @@ impl MotionController {
 			&mut KinematicCharacterController,
 			&MotionControllerOf,
 			&Transform,
-			&mut OldTranslation,
 		)>,
 	) {
 		for (ApplyMotion(motion), ctrl) in controlled {
-			let Ok((mut ctrl, ctrl_of, transform, mut old)) = controllers.get_mut(ctrl.id()) else {
+			let Ok((mut ctrl, ctrl_of, transform)) = controllers.get_mut(ctrl.id()) else {
 				continue;
 			};
 
@@ -39,7 +38,6 @@ impl MotionController {
 				CharacterMotion::Done => continue,
 			};
 
-			*old = OldTranslation(transform.translation);
 			ctrl.translation = Some(target_translation);
 		}
 	}
@@ -56,7 +54,7 @@ mod tests {
 
 		app.add_systems(
 			Update,
-			(move || delta).pipe(MotionController::set_translation),
+			(move || delta).pipe(MotionControlled::set_translation),
 		);
 
 		app
@@ -64,34 +62,6 @@ mod tests {
 
 	mod target_motion {
 		use super::*;
-
-		#[test]
-		fn set_agent_old_translation() {
-			let delta = Duration::from_millis(100);
-			let mut app = setup(delta);
-			let agent = app
-				.world_mut()
-				.spawn(ApplyMotion::from(CharacterMotion::ToTarget {
-					speed: Speed(UnitsPerSecond::from(1.)),
-					target: Vec3::new(3., -1., 11.),
-				}))
-				.id();
-			let entity = app
-				.world_mut()
-				.spawn((
-					MotionControllerOf::entity(agent),
-					Transform::from_xyz(1., 2., 3.),
-					KinematicCharacterController::default(),
-				))
-				.id();
-
-			app.update();
-
-			assert_eq!(
-				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
-				app.world().entity(entity).get::<OldTranslation>(),
-			);
-		}
 
 		#[test]
 		fn set_target_translation() {
@@ -189,34 +159,6 @@ mod tests {
 
 	mod direction_motion {
 		use super::*;
-
-		#[test]
-		fn set_old_translation() {
-			let delta = Duration::from_millis(100);
-			let mut app = setup(delta);
-			let agent = app
-				.world_mut()
-				.spawn(ApplyMotion::from(CharacterMotion::Direction {
-					speed: Speed(UnitsPerSecond::from(1.)),
-					direction: Dir3::NEG_Y,
-				}))
-				.id();
-			let entity = app
-				.world_mut()
-				.spawn((
-					MotionControllerOf::entity(agent),
-					Transform::from_xyz(1., 2., 3.),
-					KinematicCharacterController::default(),
-				))
-				.id();
-
-			app.update();
-
-			assert_eq!(
-				Some(&OldTranslation(Vec3::new(1., 2., 3.))),
-				app.world().entity(entity).get::<OldTranslation>(),
-			);
-		}
 
 		#[test]
 		fn set_target_translation() {

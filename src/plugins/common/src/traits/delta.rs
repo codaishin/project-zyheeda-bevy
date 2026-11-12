@@ -21,15 +21,7 @@ mod internal {
 		type TTime = Virtual;
 	}
 
-	impl Delta for FixedPreUpdate {
-		type TTime = Fixed;
-	}
-
 	impl Delta for FixedUpdate {
-		type TTime = Fixed;
-	}
-
-	impl Delta for FixedPostUpdate {
 		type TTime = Fixed;
 	}
 }
