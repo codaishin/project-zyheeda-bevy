@@ -2,6 +2,7 @@ use crate::{
 	components::{
 		cast_rays::{CastRayFor, CastRays, RayCastResult},
 		collider::ColliderOf,
+		controller::ControllerOf,
 		impact_able::ImpactAble,
 	},
 	events::impact_event::ImpactEvent,
@@ -14,7 +15,7 @@ impl CastRays {
 	pub(crate) fn emit_beam_impacts(
 		cast_rays: Query<&Self>,
 		mut commands: ZyheedaCommands,
-		can_be_impacted: Query<(), With<ImpactAble>>,
+		can_be_impacted: Query<Option<&ControllerOf>, With<ImpactAble>>,
 		child_colliders: Query<&ColliderOf>,
 	) {
 		for CastRays { results } in cast_rays {
@@ -22,11 +23,16 @@ impl CastRays {
 				continue;
 			};
 
-			let entity = Self::get_root(hit, child_colliders);
+			let root = Self::get_root(hit, child_colliders);
 
-			if !can_be_impacted.contains(entity) {
+			let Ok(impact_able) = can_be_impacted.get(root) else {
 				continue;
-			}
+			};
+
+			let entity = match impact_able {
+				Some(ControllerOf(controlled)) => *controlled,
+				None => root,
+			};
 
 			commands.trigger_observers_for(ImpactEvent { entity, position });
 		}
@@ -158,5 +164,39 @@ mod tests {
 		app.update();
 
 		assert_eq!(&_Record(vec![]), app.world().resource::<_Record>(),);
+	}
+
+	#[test]
+	fn emit_impact_for_controlled() {
+		let mut app = setup();
+		let controlled = app.world_mut().spawn_empty().id();
+		let entity = app
+			.world_mut()
+			.spawn((ControllerOf(controlled), ImpactAble))
+			.id();
+		app.world_mut().spawn(CastRays {
+			results: HashMap::from([(
+				CastRayFor::Beam,
+				RayCastResult {
+					hit: Some(entity),
+					toi: toi!(11.),
+					args: RayCasterArgs {
+						origin: Vec3::new(1., 2., 3.),
+						direction: Dir3::Y,
+						..default()
+					},
+				},
+			)]),
+		});
+
+		app.update();
+
+		assert_eq!(
+			&_Record(vec![ImpactEvent {
+				entity: controlled,
+				position: vec_not_nan!(1., 13., 3.),
+			}]),
+			app.world().resource::<_Record>(),
+		);
 	}
 }

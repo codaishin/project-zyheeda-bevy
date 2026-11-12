@@ -191,6 +191,7 @@ where
 			.add_prefab_observer::<PhysicsModel, ()>()
 			// Character Motion
 			.add_prefab_observer::<MotionControllerOf<MotionCollider>, ()>()
+			.add_prefab_observer::<MotionControllerOf<Skill>, ()>()
 			.add_observer(MotionControllerOf::spawn)
 			.add_observer(MotionControllerOf::despawn_controlled)
 			.add_systems(

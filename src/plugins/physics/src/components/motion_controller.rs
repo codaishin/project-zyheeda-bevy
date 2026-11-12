@@ -10,6 +10,7 @@ use crate::components::{
 		TERRAIN_GROUP,
 	},
 	collision_domains::Physical,
+	controller::ControllerOf,
 	skill::Skill,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
@@ -133,6 +134,7 @@ impl Prefab<()> for MotionControllerOf<MotionCollider> {
 		};
 
 		entity.try_insert((
+			ControllerOf(self.entity),
 			*transform,
 			Physical::Contact,
 			RigidBody::KinematicPositionBased,
@@ -157,6 +159,20 @@ impl Prefab<()> for MotionControllerOf<MotionCollider> {
 				test_mode: InteractionTestMode::And,
 			},
 		));
+		Ok(())
+	}
+}
+
+impl Prefab<()> for MotionControllerOf<Skill> {
+	type TError = Unreachable;
+	type TSystemParam = ();
+
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+		_: StaticSystemParam<Self::TSystemParam>,
+	) -> Result<(), Self::TError> {
+		entity.try_insert(ControllerOf(self.entity));
 		Ok(())
 	}
 }
