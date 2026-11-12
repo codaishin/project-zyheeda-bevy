@@ -35,7 +35,7 @@ use crate::{
 		motion_controller::{MotionCollider, MotionControlled, MotionControllerOf},
 		self_skill_scale::SelfSkillScale,
 		set_velocity_forward::SetVelocityForward,
-		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
+		skill::{Skill, VisualSkillContact, VisualSkillProjection},
 		target::SkillTargetInternal,
 		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
@@ -377,8 +377,8 @@ impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {
-	type TSkillContact = SkillContactRoot;
-	type TSkillProjection = SkillProjectionRoot;
+	type TSkillContact = VisualSkillContact;
+	type TSkillProjection = VisualSkillProjection;
 }
 
 impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies> {
