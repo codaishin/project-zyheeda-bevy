@@ -18,7 +18,6 @@ use crate::{
 	app::add_physics::AddPhysics,
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
-		anchored_colliders::AnchoredColliders,
 		anchored_skill::{AnchoredSkill, AnchoredSkillDirty},
 		async_collider::AsyncCollider,
 		body::Body,
@@ -28,6 +27,7 @@ use crate::{
 		collider::{ColliderRoot, ColliderShape},
 		collision_domains::{Interactive, Physical},
 		default_attributes::DefaultAttributes,
+		dragged_colliders::DraggedColliders,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
@@ -275,10 +275,10 @@ where
 					.in_set(PhysicsSystems::Prep)
 					.run_if(not(TGameState::game_paused())),
 			)
-			// Anchored Colliders
+			// Dragged Colliders
 			.add_systems(
 				FixedPreUpdate,
-				AnchoredColliders::drag
+				DraggedColliders::drag
 					.in_set(PhysicsSystems::Interpolate)
 					.run_if(not(TGameState::game_paused())),
 			)

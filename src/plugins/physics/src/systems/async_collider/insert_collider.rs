@@ -1,6 +1,6 @@
 use crate::components::{
-	anchored_colliders::AnchoredColliderTo,
 	async_collider::{AsyncCollider, ColliderType, Source},
+	dragged_colliders::DragColliderWith,
 };
 use bevy::{ecs::component::Mutable, prelude::*};
 use bevy_rapier3d::prelude::*;
@@ -9,7 +9,7 @@ use std::fmt::Display;
 
 impl AsyncCollider {
 	pub(crate) fn insert_collider(
-		colliders: Query<(Entity, &mut Self, Option<&AnchoredColliderTo>)>,
+		colliders: Query<(Entity, &mut Self, Option<&DragColliderWith>)>,
 		meshes: Query<&Mesh3d>,
 		commands: ZyheedaCommands,
 		server: ResMut<AssetServer>,
@@ -25,7 +25,7 @@ impl AsyncCollider {
 	}
 
 	fn insert_collider_via<TAssetServer, TCollider>(
-		mut colliders: Query<(Entity, &mut Self, Option<&AnchoredColliderTo>)>,
+		mut colliders: Query<(Entity, &mut Self, Option<&DragColliderWith>)>,
 		meshes: Query<&Mesh3d>,
 		mut commands: ZyheedaCommands,
 		mut server: ResMut<TAssetServer>,
@@ -39,7 +39,7 @@ impl AsyncCollider {
 
 		for (entity, mut async_collider, anchor) in &mut colliders {
 			let mesh_entity = match anchor {
-				Some(AnchoredColliderTo(entity)) => *entity,
+				Some(DragColliderWith(entity)) => *entity,
 				None => entity,
 			};
 			let mesh = meshes.get(mesh_entity);
@@ -270,7 +270,7 @@ mod tests {
 			.world_mut()
 			.spawn((
 				AsyncCollider::concave(Source::MeshOfEntity),
-				AnchoredColliderTo(anchor),
+				DragColliderWith(anchor),
 			))
 			.id();
 

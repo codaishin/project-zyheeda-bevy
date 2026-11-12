@@ -1,5 +1,4 @@
 pub(crate) mod affected;
-pub(crate) mod anchored_colliders;
 pub(crate) mod anchored_skill;
 pub(crate) mod async_collider;
 pub(crate) mod blockable;
@@ -11,6 +10,7 @@ pub(crate) mod character_motion;
 pub(crate) mod collider;
 pub(crate) mod collision_domains;
 pub(crate) mod default_attributes;
+pub(crate) mod dragged_colliders;
 pub(crate) mod effects;
 pub(crate) mod ground_target;
 pub(crate) mod immobilized;

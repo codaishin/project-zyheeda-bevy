@@ -1,12 +1,12 @@
-use crate::components::anchored_colliders::{AnchoredColliderTo, AnchoredColliders};
+use crate::components::dragged_colliders::{DragColliderWith, DraggedColliders};
 use bevy::prelude::*;
 
-impl AnchoredColliders {
+impl DraggedColliders {
 	pub(crate) fn drag(
-		anchored: Query<(&AnchoredColliderTo, &mut Transform)>,
+		anchored: Query<(&DragColliderWith, &mut Transform)>,
 		anchors: Query<&GlobalTransform>,
 	) {
-		for (AnchoredColliderTo(anchor), mut transform) in anchored {
+		for (DragColliderWith(anchor), mut transform) in anchored {
 			let Ok(anchor) = anchors.get(*anchor) else {
 				continue;
 			};
@@ -24,7 +24,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_systems(Update, AnchoredColliders::drag);
+		app.add_systems(Update, DraggedColliders::drag);
 
 		app
 	}
@@ -38,7 +38,7 @@ mod tests {
 				.looking_to(Dir3::X, Dir3::Y),
 		);
 		let anchor = app.world_mut().spawn(global).id();
-		let anchored = app.world_mut().spawn(AnchoredColliderTo(anchor)).id();
+		let anchored = app.world_mut().spawn(DragColliderWith(anchor)).id();
 
 		app.update();
 
