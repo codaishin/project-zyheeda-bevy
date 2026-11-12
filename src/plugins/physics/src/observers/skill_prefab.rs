@@ -103,7 +103,7 @@ fn physical(
 	));
 
 	controller.insert((
-		Blockable(obj),
+		Blockable::from(obj).ignoring(skill.get_caster()),
 		PersistentRoot(*persistent_entity),
 		ImpactAble,
 		cont_effects.clone(),

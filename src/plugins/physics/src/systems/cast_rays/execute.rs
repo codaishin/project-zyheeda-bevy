@@ -42,7 +42,7 @@ impl CastRays {
 		strategy: In<TStrategy>,
 		strategy_args: Query<TStrategy::TQuery>,
 		objects: Query<(Entity, &mut Self, &GlobalTransform)>,
-		blockers: Query<&BlockerTypes>,
+		blockers: Query<(&BlockerTypes, Option<&PersistentEntity>)>,
 		contacts: Query<(Option<&ColliderOf>, &Physical)>,
 		cast_ray: StaticSystemParam<ReadRapierContext>,
 	) -> Result<(), RayError>
@@ -63,7 +63,7 @@ impl CastRays {
 		In(strategy): In<TStrategy>,
 		strategy_args: Query<TStrategy::TQuery>,
 		objects: Query<(Entity, &mut Self, &GlobalTransform)>,
-		blockers: Query<&BlockerTypes>,
+		blockers: Query<(&BlockerTypes, Option<&PersistentEntity>)>,
 		contacts: Query<(Option<&ColliderOf>, &Physical)>,
 		cast_ray: StaticSystemParam<TGetRayCaster>,
 	) -> Result<(), RayError<TCasterError>>
@@ -100,8 +100,7 @@ impl CastRays {
 			};
 			let mut toi = args.max_toi;
 			let mut hit = None;
-			let is_blocked =
-				|hit: &RayHit| Self::ray_blocked(hit, blockers, strategy.blocked_by, contacts);
+			let is_blocked = |hit: &RayHit| Self::ray_blocked(hit, &blockers, &strategy, contacts);
 
 			if let Some(blocked) = hits.into_iter().find(is_blocked) {
 				let new_toi = (*blocked.toi + BIAS).clamp(0., *args.max_toi);
@@ -144,8 +143,8 @@ impl CastRays {
 
 	fn ray_blocked(
 		hit: &RayHit,
-		blockers: Query<&BlockerTypes>,
-		blocked_by: &HashSet<Blocker>,
+		blockers: &Query<(&BlockerTypes, Option<&PersistentEntity>)>,
+		strategy: &Strategy,
 		contacts: Query<(Option<&ColliderOf>, &Physical)>,
 	) -> bool {
 		let entity = match contacts.get(hit.entity) {
@@ -154,11 +153,15 @@ impl CastRays {
 			_ => return false,
 		};
 
-		let Ok(BlockerTypes(blockers)) = blockers.get(entity) else {
+		let Ok((BlockerTypes(blockers), blocker)) = blockers.get(entity) else {
 			return false;
 		};
 
-		!blockers.is_disjoint(blocked_by)
+		if matches!(blocker, Some(blocker) if strategy.ignore_blocker == Some(blocker)) {
+			return false;
+		}
+
+		!blockers.is_disjoint(strategy.blocked_by)
 	}
 }
 
@@ -195,6 +198,7 @@ pub(crate) struct Strategy<'a> {
 	cast_for: CastRayFor,
 	toi: TimeOfImpact,
 	blocked_by: &'a HashSet<Blocker>,
+	ignore_blocker: Option<&'a PersistentEntity>,
 	origin_offset: Units,
 }
 
@@ -211,9 +215,9 @@ impl CastRayStrategy for BeamStrategy {
 
 	fn instance<'a>(
 		&self,
-		Blockable(obj): ROQueryItem<'a, 'a, Self::TQuery>,
+		Blockable { object, ignore }: ROQueryItem<'a, 'a, Self::TQuery>,
 	) -> Option<Strategy<'a>> {
-		let PhysicalObject::Beam { range, blocked_by } = obj else {
+		let PhysicalObject::Beam { range, blocked_by } = object else {
 			return None;
 		};
 
@@ -221,6 +225,7 @@ impl CastRayStrategy for BeamStrategy {
 			cast_for: CastRayFor::Beam,
 			toi: TimeOfImpact::from(*range),
 			blocked_by,
+			ignore_blocker: ignore.as_ref(),
 			origin_offset: Units::ZERO,
 		})
 	}
@@ -235,9 +240,13 @@ impl CastRayStrategy for PreventTunnelingStrategy {
 
 	fn instance<'a>(
 		&self,
-		(Blockable(obj), velocity, Projectile { leading_edge }): ROQueryItem<'a, 'a, Self::TQuery>,
+		(Blockable { object, ignore }, velocity, Projectile { leading_edge }): ROQueryItem<
+			'a,
+			'a,
+			Self::TQuery,
+		>,
 	) -> Option<Strategy<'a>> {
-		let PhysicalObject::Fragile { destroyed_by } = obj else {
+		let PhysicalObject::Fragile { destroyed_by } = object else {
 			return None;
 		};
 
@@ -245,6 +254,7 @@ impl CastRayStrategy for PreventTunnelingStrategy {
 			cast_for: CastRayFor::TunnelingPrevention,
 			toi: TimeOfImpact::from(Units::from(self.delta_secs * velocity.linear.length())),
 			blocked_by: destroyed_by,
+			ignore_blocker: ignore.as_ref(),
 			origin_offset: *leading_edge,
 		})
 	}
@@ -279,6 +289,7 @@ mod tests {
 				cast_for,
 				toi,
 				blockers,
+				ignore,
 				offset,
 			}: ROQueryItem<'a, 'a, Self::TQuery>,
 		) -> Option<Strategy<'a>> {
@@ -286,6 +297,7 @@ mod tests {
 				cast_for: *cast_for,
 				toi: *toi,
 				blocked_by: blockers,
+				ignore_blocker: ignore.as_ref(),
 				origin_offset: *offset,
 			})
 		}
@@ -297,6 +309,7 @@ mod tests {
 		cast_for: CastRayFor,
 		toi: TimeOfImpact,
 		blockers: HashSet<Blocker>,
+		ignore: Option<PersistentEntity>,
 		offset: Units,
 	}
 
@@ -379,6 +392,7 @@ mod tests {
 					cast_for: CastRayFor::TunnelingPrevention,
 					toi: toi!(11000.),
 					blockers: HashSet::from([]),
+					ignore: None,
 					offset: Units::from(0.5),
 				},
 				Physical::Contact,
@@ -430,6 +444,7 @@ mod tests {
 						cast_for: CastRayFor::TunnelingPrevention,
 						toi: toi!(11000.),
 						blockers: HashSet::from([]),
+						ignore: None,
 						offset: Units::from(1.),
 					},
 					Physical::Contact,
@@ -494,6 +509,7 @@ mod tests {
 						cast_for: CastRayFor::Beam,
 						toi: toi!(11000.),
 						blockers: HashSet::from([Blocker::Force, Blocker::Character]),
+						ignore: None,
 						offset: Units::ZERO,
 					},
 					Physical::Contact,
@@ -559,6 +575,7 @@ mod tests {
 						cast_for: CastRayFor::Beam,
 						toi: toi!(11000.),
 						blockers: HashSet::from([Blocker::Force, Blocker::Character]),
+						ignore: None,
 						offset: Units::ZERO,
 					},
 					Physical::Contact,
@@ -621,6 +638,7 @@ mod tests {
 						cast_for: CastRayFor::Beam,
 						toi: toi!(11000.),
 						blockers: HashSet::from([Blocker::Force, Blocker::Character]),
+						ignore: None,
 						offset: Units::ZERO,
 					},
 					Physical::Contact,
@@ -683,6 +701,7 @@ mod tests {
 						cast_for: CastRayFor::Beam,
 						toi: toi!(11000.),
 						blockers: HashSet::from([Blocker::Force, Blocker::Character]),
+						ignore: None,
 						offset: Units::ZERO,
 					},
 					Physical::Contact,
@@ -735,6 +754,7 @@ mod tests {
 						cast_for: CastRayFor::Beam,
 						toi: toi!(11000.),
 						blockers: HashSet::from([Blocker::Force, Blocker::Character]),
+						ignore: None,
 						offset: Units::ZERO,
 					},
 					Physical::Contact,
@@ -762,6 +782,71 @@ mod tests {
 			);
 			Ok(())
 		}
+
+		#[test]
+		fn ignore_block() -> Result<(), RunSystemError> {
+			let ignore = PersistentEntity::default();
+			let mut app = setup(|world| {
+				Mock_RayCaster::new_mock(|mock| {
+					let blocker = world
+						.spawn((
+							ignore,
+							BlockerTypes(HashSet::from([Blocker::Physical])),
+							Physical::Contact,
+						))
+						.id();
+					mock.expect_cast_ray_continuously_sorted()
+						.return_const(Ok(Sorted::from([
+							RayHit {
+								entity: fake_entity!(42),
+								toi: toi!(11.),
+							},
+							RayHit {
+								entity: blocker,
+								toi: toi!(110.),
+							},
+							RayHit {
+								entity: fake_entity!(40),
+								toi: toi!(1100.),
+							},
+						])));
+				})
+			});
+			let entity = app
+				.world_mut()
+				.spawn((
+					_StrategyArgs {
+						cast_for: CastRayFor::TunnelingPrevention,
+						toi: toi!(11000.),
+						blockers: HashSet::from([Blocker::Physical]),
+						ignore: Some(ignore),
+						offset: Units::from(1.),
+					},
+					Physical::Contact,
+				))
+				.id();
+
+			_ = app.world_mut().run_system_once_with(
+				CastRays::execute_internal::<_Strategy, Res<_GetRayCaster>, Unreachable>,
+				_Strategy,
+			)?;
+
+			assert_eq_approx!(
+				Some(&CastRays {
+					results: HashMap::from([(
+						CastRayFor::TunnelingPrevention,
+						RayCastResult {
+							args: ray_args(Vec3::new(0., 0., -1.), Dir3::NEG_Z),
+							toi: toi!(11000.),
+							hit: None,
+						}
+					)])
+				}),
+				app.world().entity(entity).get::<CastRays>(),
+				0.05,
+			);
+			Ok(())
+		}
 	}
 
 	mod error {
@@ -781,6 +866,7 @@ mod tests {
 					cast_for: CastRayFor::Beam,
 					toi: toi!(11000.),
 					blockers: HashSet::from([]),
+					ignore: None,
 					offset: Units::ZERO,
 				})
 				.id();
@@ -812,6 +898,7 @@ mod tests {
 				cast_for: CastRayFor::Beam,
 				toi: toi!(11000.),
 				blockers: HashSet::from([]),
+				ignore: None,
 				offset: Units::ZERO,
 			});
 
@@ -867,6 +954,7 @@ mod tests {
 				cast_for: CastRayFor::Beam,
 				toi: toi!(11000.),
 				blockers: HashSet::from([]),
+				ignore: None,
 				offset: Units::ZERO,
 			});
 
