@@ -1,5 +1,4 @@
 use crate::components::{
-	anchored_colliders::AnchoredColliderTo,
 	blocker_types::BlockerTypes,
 	collider::{
 		AGENTS_GROUP,
@@ -11,6 +10,7 @@ use crate::components::{
 		TERRAIN_GROUP,
 	},
 	collision_domains::{Interactive, Physical},
+	dragged_colliders::DragColliderWith,
 	impact_able::ImpactAble,
 	motion_controller::MotionCollider,
 };
@@ -81,7 +81,7 @@ impl Prefab<()> for Body {
 			Some(core) => {
 				let entity = match core.shape {
 					Shape::StaticGltfMesh3d => {
-						commands.spawn(AnchoredColliderTo(entity.entity_id())).id()
+						commands.spawn(DragColliderWith(entity.entity_id())).id()
 					}
 					_ => entity.entity_id(),
 				};
@@ -365,8 +365,8 @@ mod tests {
 
 				let mut anchored = app
 					.world_mut()
-					.query_filtered::<&AnchoredColliderTo, With<BlockerTypes>>();
-				let [AnchoredColliderTo(anchor)] = assert_count!(1, anchored.iter(app.world()));
+					.query_filtered::<&DragColliderWith, With<BlockerTypes>>();
+				let [DragColliderWith(anchor)] = assert_count!(1, anchored.iter(app.world()));
 				assert_eq!(&entity, anchor);
 			}
 		}
