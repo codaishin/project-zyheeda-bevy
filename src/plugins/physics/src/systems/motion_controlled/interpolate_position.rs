@@ -1,27 +1,42 @@
-use crate::components::motion_controller::{MaybeInMotion, MotionControlled, OldTranslation};
+use crate::components::motion_controller::{
+	MaybeInMotion,
+	MotionBehavior,
+	MotionControlled,
+	MotionControllerOf,
+	OldTranslation,
+};
 use bevy::prelude::*;
 use common::traits::thread_safe::ThreadSafe;
 
-impl<TExtra> MotionControlled<TExtra>
+impl<TTarget> MotionControlled<TTarget>
 where
-	TExtra: MaybeInMotion + ThreadSafe,
+	TTarget: MaybeInMotion + ThreadSafe,
 {
 	pub(crate) fn interpolate_position(
 		In(OverstepFraction(overstep)): In<OverstepFraction>,
 		controlled: Query<(&mut Transform, &Self)>,
-		controllers: Query<(&Transform, &OldTranslation), Without<Self>>,
+		controllers: Query<
+			(&Transform, &OldTranslation, &MotionControllerOf<TTarget>),
+			Without<Self>,
+		>,
 	) {
-		for (mut transform, controlled) in controlled {
-			let Ok((controller, OldTranslation(old))) = controllers.get(controlled.controller())
-			else {
+		for (mut dst, controlled) in controlled {
+			let Ok((src, old, controller)) = controllers.get(controlled.controller()) else {
 				continue;
 			};
 
-			if controller.translation == *old {
+			if src.translation == **old {
 				continue;
 			}
 
-			transform.translation = old.lerp(controller.translation, overstep);
+			match controller.behavior() {
+				MotionBehavior::Interpolated => {
+					dst.translation = old.lerp(src.translation, overstep);
+				}
+				MotionBehavior::Set => {
+					dst.translation = src.translation;
+				}
+			}
 		}
 	}
 }
@@ -38,7 +53,11 @@ impl OverstepFraction {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::motion_controller::{MotionCollider, MotionControllerOf};
+	use crate::components::motion_controller::{
+		MotionBehavior,
+		MotionCollider,
+		MotionControllerOf,
+	};
 	use testing::{IsChanged, SingleThreadedApp};
 
 	fn setup(overstep: OverstepFraction) -> App {
@@ -106,6 +125,24 @@ mod tests {
 
 		assert_eq!(
 			Some(&Transform::from_xyz(1., 2., 4.)),
+			app.world().entity(entity).get::<Transform>(),
+		);
+	}
+
+	#[test]
+	fn set_directly() {
+		let mut app = setup(OverstepFraction(0.5));
+		let entity = app.world_mut().spawn(Transform::default()).id();
+		app.world_mut().spawn((
+			MotionControllerOf::motion_collider(entity).with_behavior(MotionBehavior::Set),
+			OldTranslation(Vec3::new(1., 2., 3.)),
+			Transform::from_xyz(1., 2., 5.),
+		));
+
+		app.update();
+
+		assert_eq!(
+			Some(&Transform::from_xyz(1., 2., 5.)),
 			app.world().entity(entity).get::<Transform>(),
 		);
 	}
