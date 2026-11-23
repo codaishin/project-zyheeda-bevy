@@ -25,7 +25,7 @@ where
 				continue;
 			};
 
-			if src.translation == **old {
+			if src.translation == **old && dst.translation == **old {
 				continue;
 			}
 
@@ -147,28 +147,50 @@ mod tests {
 		);
 	}
 
-	#[test]
-	fn do_nothing_if_old_translation_is_new_translation() {
-		let mut app = setup(OverstepFraction(1.));
-		let entity = app.world_mut().spawn(Transform::default()).id();
-		let ctrl = app
-			.world_mut()
-			.spawn((
-				MotionControllerOf::motion_collider(entity),
-				OldTranslation(Vec3::new(1., 2., 3.)),
+	mod old_translation_is_new_translation {
+		use super::*;
+
+		#[test]
+		fn do_nothing() {
+			let mut app = setup(OverstepFraction(1.));
+			let entity = app.world_mut().spawn(Transform::default()).id();
+			let ctrl = app
+				.world_mut()
+				.spawn((
+					MotionControllerOf::motion_collider(entity),
+					OldTranslation(Vec3::new(1., 2., 3.)),
+					Transform::from_xyz(1., 2., 5.),
+				))
+				.id();
+
+			app.update();
+			app.world_mut()
+				.entity_mut(ctrl)
+				.insert(OldTranslation(Vec3::new(1., 2., 5.)));
+			app.update();
+
+			assert_eq!(
+				Some(&IsChanged::FALSE),
+				app.world().entity(entity).get::<IsChanged<Transform>>(),
+			);
+		}
+
+		#[test]
+		fn set_directly_if_controlled_has_different_translation() {
+			let mut app = setup(OverstepFraction(0.5));
+			let entity = app.world_mut().spawn(Transform::default()).id();
+			app.world_mut().spawn((
+				MotionControllerOf::motion_collider(entity).with_behavior(MotionBehavior::Set),
+				OldTranslation(Vec3::new(1., 2., 5.)),
 				Transform::from_xyz(1., 2., 5.),
-			))
-			.id();
+			));
 
-		app.update();
-		app.world_mut()
-			.entity_mut(ctrl)
-			.insert(OldTranslation(Vec3::new(1., 2., 5.)));
-		app.update();
+			app.update();
 
-		assert_eq!(
-			Some(&IsChanged::FALSE),
-			app.world().entity(entity).get::<IsChanged<Transform>>(),
-		);
+			assert_eq!(
+				Some(&Transform::from_xyz(1., 2., 5.)),
+				app.world().entity(entity).get::<Transform>(),
+			);
+		}
 	}
 }
