@@ -3115,7 +3115,6 @@ name = "frame_limiter"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "common",
  "zyheeda_core",
 ]
 
@@ -4239,7 +4238,6 @@ dependencies = [
  "bevy",
  "common",
  "macros",
- "mockall",
  "serde",
  "test-case",
  "testing",
@@ -5393,20 +5391,16 @@ dependencies = [
  "localization",
  "macros",
  "map_generation",
- "mockall",
  "movement",
  "path_finding",
  "physics",
  "savegame",
  "serde",
  "serde_json",
- "test-case",
- "testing",
  "tracing",
  "ui",
  "unic-langid",
  "uuid",
- "yaml_serde",
  "zyheeda_core",
 ]
 
@@ -7994,6 +7988,5 @@ dependencies = [
  "serde_json",
  "test-case",
  "testing",
- "tracing",
  "yaml_serde",
 ]

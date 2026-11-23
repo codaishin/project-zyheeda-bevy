@@ -94,12 +94,3 @@ savegame = { path = "src/plugins/savegame" }
 # internal crates
 macros.workspace = true
 zyheeda_core.workspace = true
-
-[dev-dependencies]
-# external
-mockall.workspace = true
-test-case.workspace = true
-yaml_serde.workspace = true
-
-# internal
-testing.workspace = true
