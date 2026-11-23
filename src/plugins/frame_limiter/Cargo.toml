@@ -8,5 +8,4 @@ edition.workspace = true
 bevy.workspace = true
 
 #internal
-common.workspace = true
 zyheeda_core.workspace = true

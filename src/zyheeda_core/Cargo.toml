@@ -6,7 +6,6 @@ edition.workspace = true
 [dependencies]
 # external
 serde.workspace = true
-tracing.workspace = true
 
 # internal
 macros.workspace = true
