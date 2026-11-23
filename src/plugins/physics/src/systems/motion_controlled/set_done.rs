@@ -1,12 +1,12 @@
 use crate::components::{
 	character_motion::{ApplyMotion, IsInMotion},
-	motion_controller::{MotionControlled, OldTranslation},
+	motion_controller::{MotionCollider, MotionControlled, OldTranslation},
 };
 use bevy::prelude::*;
 use common::prelude::*;
 use std::time::Duration;
 
-impl MotionControlled {
+impl MotionControlled<MotionCollider> {
 	pub(crate) fn set_done(
 		In(delta): In<Duration>,
 		mut commands: ZyheedaCommands,
@@ -15,10 +15,10 @@ impl MotionControlled {
 		mut old_translation: Query<&mut OldTranslation>,
 	) {
 		for (entity, apply, ctrl) in controlled {
-			let Ok(ctrl_transform) = transforms.get(ctrl.id()) else {
+			let Ok(ctrl_transform) = transforms.get(ctrl.controller()) else {
 				continue;
 			};
-			let Ok(mut old_translation) = old_translation.get_mut(ctrl.id()) else {
+			let Ok(mut old_translation) = old_translation.get_mut(ctrl.controller()) else {
 				continue;
 			};
 
@@ -93,8 +93,10 @@ mod tests {
 			.world_mut()
 			.spawn(ApplyMotion::from(CharacterMotion::Done))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf::entity(agent), Transform::default()));
+		app.world_mut().spawn((
+			MotionControllerOf::motion_collider(agent),
+			Transform::default(),
+		));
 
 		app.update();
 
@@ -127,7 +129,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 2., 3.),
 			))
 			.id();
@@ -170,7 +172,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 2., 3.),
 			))
 			.id();
@@ -216,7 +218,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 2., 3.),
 			))
 			.id();
@@ -263,7 +265,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 2., 3.),
 			))
 			.id();
@@ -310,7 +312,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 2., 3.),
 			))
 			.id();
@@ -350,7 +352,7 @@ mod tests {
 		let ctrl = app
 			.world_mut()
 			.spawn((
-				MotionControllerOf::entity(agent),
+				MotionControllerOf::motion_collider(agent),
 				Transform::from_xyz(1., 2., 3.),
 			))
 			.id();
@@ -386,8 +388,10 @@ mod tests {
 				target: Vec3::ZERO,
 			}))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf::entity(agent), Transform::default()));
+		app.world_mut().spawn((
+			MotionControllerOf::motion_collider(agent),
+			Transform::default(),
+		));
 
 		app.update();
 		app.update();
@@ -408,8 +412,10 @@ mod tests {
 				target: Vec3::ZERO,
 			}))
 			.id();
-		app.world_mut()
-			.spawn((MotionControllerOf::entity(agent), Transform::default()));
+		app.world_mut().spawn((
+			MotionControllerOf::motion_collider(agent),
+			Transform::default(),
+		));
 
 		app.update();
 		app.world_mut().entity_mut(agent).insert(IsInMotion);

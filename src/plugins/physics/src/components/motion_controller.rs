@@ -10,11 +10,13 @@ use crate::components::{
 		TERRAIN_GROUP,
 	},
 	collision_domains::Physical,
+	controller::ControllerOf,
+	skill::Skill,
 };
 use bevy::{ecs::system::StaticSystemParam, prelude::*};
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
-use std::fmt::Display;
+use std::{fmt::Display, marker::PhantomData, ops::Deref};
 
 #[derive(Component, Debug, PartialEq)]
 #[component(immutable)]
@@ -27,33 +29,74 @@ pub(crate) struct MotionCollider {
 #[require(Transform)]
 pub(crate) struct OldTranslation(pub(crate) Vec3);
 
-#[derive(Component, Debug, PartialEq)]
-#[relationship_target(relationship = MotionControllerOf, linked_spawn)]
-pub(crate) struct MotionControlled(Entity);
+impl Deref for OldTranslation {
+	type Target = Vec3;
 
-impl MotionControlled {
-	pub(crate) fn id(&self) -> Entity {
-		self.0
+	fn deref(&self) -> &Self::Target {
+		&self.0
 	}
 }
 
 #[derive(Component, Debug, PartialEq)]
-#[relationship(relationship_target = MotionControlled)]
+#[relationship_target(relationship = MotionControllerOf<TTarget>, linked_spawn)]
+pub(crate) struct MotionControlled<TTarget>
+where
+	TTarget: MaybeInMotion + ThreadSafe,
+{
+	#[relationship]
+	controller: Entity,
+	_target: PhantomData<TTarget>,
+}
+
+impl<TTarget> MotionControlled<TTarget>
+where
+	TTarget: MaybeInMotion + ThreadSafe,
+{
+	pub(crate) fn controller(&self) -> Entity {
+		self.controller
+	}
+}
+
+#[derive(Component, Debug, PartialEq)]
+#[relationship(relationship_target = MotionControlled<TTarget>)]
 #[require(OldTranslation)]
-pub(crate) struct MotionControllerOf {
+pub(crate) struct MotionControllerOf<TTarget>
+where
+	TTarget: MaybeInMotion + ThreadSafe,
+{
 	#[relationship]
 	entity: Entity,
 	offset: Units,
+	behavior: MotionBehavior,
+	_target: PhantomData<TTarget>,
 }
 
-impl MotionControllerOf {
-	pub(crate) const fn entity(entity: Entity) -> Self {
+impl MotionControllerOf<MotionCollider> {
+	pub(crate) const fn motion_collider(entity: Entity) -> Self {
 		Self {
 			entity,
 			offset: Units::ZERO,
+			behavior: MotionBehavior::Interpolated,
+			_target: PhantomData,
 		}
 	}
+}
 
+impl MotionControllerOf<Skill> {
+	pub(crate) const fn skill(entity: Entity) -> Self {
+		Self {
+			entity,
+			offset: Units::ZERO,
+			behavior: MotionBehavior::Interpolated,
+			_target: PhantomData,
+		}
+	}
+}
+
+impl<TTarget> MotionControllerOf<TTarget>
+where
+	TTarget: MaybeInMotion + ThreadSafe,
+{
 	pub(crate) const fn with_offset(mut self, offset: Units) -> Self {
 		self.offset = offset;
 		self
@@ -62,9 +105,22 @@ impl MotionControllerOf {
 	pub(crate) fn get_offset(&self) -> Units {
 		self.offset
 	}
+
+	pub(crate) fn get_entity(&self) -> Entity {
+		self.entity
+	}
+
+	pub(crate) fn behavior(&self) -> MotionBehavior {
+		self.behavior
+	}
+
+	pub(crate) const fn with_behavior(mut self, behavior: MotionBehavior) -> Self {
+		self.behavior = behavior;
+		self
+	}
 }
 
-impl Prefab<()> for MotionControllerOf {
+impl Prefab<()> for MotionControllerOf<MotionCollider> {
 	type TError = MotionControlParametersMissing;
 	type TSystemParam = Query<'static, 'static, (&'static MotionCollider, &'static Transform)>;
 
@@ -78,6 +134,7 @@ impl Prefab<()> for MotionControllerOf {
 		};
 
 		entity.try_insert((
+			ControllerOf(self.entity),
 			*transform,
 			Physical::Contact,
 			RigidBody::KinematicPositionBased,
@@ -106,6 +163,31 @@ impl Prefab<()> for MotionControllerOf {
 	}
 }
 
+impl Prefab<()> for MotionControllerOf<Skill> {
+	type TError = Unreachable;
+	type TSystemParam = ();
+
+	fn insert_prefab_components(
+		&self,
+		entity: &mut impl PrefabEntityCommands,
+		_: StaticSystemParam<Self::TSystemParam>,
+	) -> Result<(), Self::TError> {
+		entity.try_insert(ControllerOf(self.entity));
+		Ok(())
+	}
+}
+
+pub(crate) trait MaybeInMotion: internal::MaybeInMotion {}
+
+impl<T> MaybeInMotion for T where T: internal::MaybeInMotion {}
+
+#[derive(Debug, PartialEq, Default, Clone, Copy)]
+pub(crate) enum MotionBehavior {
+	#[default]
+	Interpolated,
+	Set,
+}
+
 #[derive(Debug, PartialEq)]
 pub(crate) struct MotionControlParametersMissing(Entity);
 
@@ -129,6 +211,16 @@ impl ErrorData for MotionControlParametersMissing {
 	}
 }
 
+mod internal {
+	use super::*;
+
+	pub(crate) trait MaybeInMotion {}
+
+	impl MaybeInMotion for MotionCollider {}
+
+	impl MaybeInMotion for Skill {}
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
@@ -141,7 +233,7 @@ mod tests {
 	fn setup() -> App {
 		let mut app = App::new().single_threaded(Update);
 
-		app.add_prefab_observer::<MotionControllerOf, ()>();
+		app.add_prefab_observer::<MotionControllerOf<MotionCollider>, ()>();
 
 		app
 	}
@@ -157,7 +249,9 @@ mod tests {
 			.spawn((Transform::from_xyz(1., 2., 3.), MotionCollider { shape }))
 			.id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
+		let entity = app
+			.world_mut()
+			.spawn(MotionControllerOf::motion_collider(agent));
 
 		assert_eq!(
 			Some(&Transform::from_xyz(1., 2., 3.)),
@@ -173,7 +267,9 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
+		let entity = app
+			.world_mut()
+			.spawn(MotionControllerOf::motion_collider(agent));
 
 		assert_eq!(Some(&ColliderOf(agent)), entity.get::<ColliderOf>());
 	}
@@ -186,7 +282,9 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
+		let entity = app
+			.world_mut()
+			.spawn(MotionControllerOf::motion_collider(agent));
 
 		assert_eq!(
 			Some(&ColliderShape::from(shape)),
@@ -202,7 +300,9 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
+		let entity = app
+			.world_mut()
+			.spawn(MotionControllerOf::motion_collider(agent));
 
 		assert_eq!(Some(&Physical::Contact), entity.get::<Physical>());
 	}
@@ -215,7 +315,9 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
+		let entity = app
+			.world_mut()
+			.spawn(MotionControllerOf::motion_collider(agent));
 
 		assert_eq!(
 			(
@@ -245,7 +347,7 @@ mod tests {
 
 		let entity = app
 			.world_mut()
-			.spawn(MotionControllerOf::entity(agent).with_offset(Units::from(0.5)));
+			.spawn(MotionControllerOf::motion_collider(agent).with_offset(Units::from(0.5)));
 
 		assert_eq!(
 			Some((
@@ -266,7 +368,9 @@ mod tests {
 		});
 		let agent = app.world_mut().spawn(MotionCollider { shape }).id();
 
-		let entity = app.world_mut().spawn(MotionControllerOf::entity(agent));
+		let entity = app
+			.world_mut()
+			.spawn(MotionControllerOf::motion_collider(agent));
 
 		assert_eq!(
 			Some(&CollisionGroups {

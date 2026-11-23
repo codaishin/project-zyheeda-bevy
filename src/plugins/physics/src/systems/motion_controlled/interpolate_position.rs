@@ -1,22 +1,42 @@
-use crate::components::motion_controller::{MotionControlled, OldTranslation};
+use crate::components::motion_controller::{
+	MaybeInMotion,
+	MotionBehavior,
+	MotionControlled,
+	MotionControllerOf,
+	OldTranslation,
+};
 use bevy::prelude::*;
+use common::traits::thread_safe::ThreadSafe;
 
-impl MotionControlled {
+impl<TTarget> MotionControlled<TTarget>
+where
+	TTarget: MaybeInMotion + ThreadSafe,
+{
 	pub(crate) fn interpolate_position(
 		In(OverstepFraction(overstep)): In<OverstepFraction>,
 		controlled: Query<(&mut Transform, &Self)>,
-		controllers: Query<(&Transform, &OldTranslation), Without<Self>>,
+		controllers: Query<
+			(&Transform, &OldTranslation, &MotionControllerOf<TTarget>),
+			Without<Self>,
+		>,
 	) {
-		for (mut transform, controlled) in controlled {
-			let Ok((controller, OldTranslation(old))) = controllers.get(controlled.id()) else {
+		for (mut dst, controlled) in controlled {
+			let Ok((src, old, controller)) = controllers.get(controlled.controller()) else {
 				continue;
 			};
 
-			if controller.translation == *old {
+			if src.translation == **old && dst.translation == **old {
 				continue;
 			}
 
-			transform.translation = old.lerp(controller.translation, overstep);
+			match controller.behavior() {
+				MotionBehavior::Interpolated => {
+					dst.translation = old.lerp(src.translation, overstep);
+				}
+				MotionBehavior::Set => {
+					dst.translation = src.translation;
+				}
+			}
 		}
 	}
 }
@@ -33,7 +53,11 @@ impl OverstepFraction {
 #[cfg(test)]
 mod tests {
 	use super::*;
-	use crate::components::motion_controller::MotionControllerOf;
+	use crate::components::motion_controller::{
+		MotionBehavior,
+		MotionCollider,
+		MotionControllerOf,
+	};
 	use testing::{IsChanged, SingleThreadedApp};
 
 	fn setup(overstep: OverstepFraction) -> App {
@@ -42,7 +66,7 @@ mod tests {
 		app.add_systems(
 			Update,
 			(
-				(move || overstep).pipe(MotionControlled::interpolate_position),
+				(move || overstep).pipe(MotionControlled::<MotionCollider>::interpolate_position),
 				IsChanged::<Transform>::detect,
 			)
 				.chain(),
@@ -56,7 +80,7 @@ mod tests {
 		let mut app = setup(OverstepFraction(1.));
 		let entity = app.world_mut().spawn(Transform::default()).id();
 		app.world_mut().spawn((
-			MotionControllerOf::entity(entity),
+			MotionControllerOf::motion_collider(entity),
 			OldTranslation(Vec3::new(1., 2., 3.)),
 			Transform::from_xyz(1., 2., 5.),
 		));
@@ -74,7 +98,7 @@ mod tests {
 		let mut app = setup(OverstepFraction(0.));
 		let entity = app.world_mut().spawn(Transform::default()).id();
 		app.world_mut().spawn((
-			MotionControllerOf::entity(entity),
+			MotionControllerOf::motion_collider(entity),
 			OldTranslation(Vec3::new(1., 2., 3.)),
 			Transform::from_xyz(1., 2., 5.),
 		));
@@ -92,7 +116,7 @@ mod tests {
 		let mut app = setup(OverstepFraction(0.5));
 		let entity = app.world_mut().spawn(Transform::default()).id();
 		app.world_mut().spawn((
-			MotionControllerOf::entity(entity),
+			MotionControllerOf::motion_collider(entity),
 			OldTranslation(Vec3::new(1., 2., 3.)),
 			Transform::from_xyz(1., 2., 5.),
 		));
@@ -106,27 +130,67 @@ mod tests {
 	}
 
 	#[test]
-	fn do_nothing_if_old_translation_is_new_translation() {
-		let mut app = setup(OverstepFraction(1.));
+	fn set_directly() {
+		let mut app = setup(OverstepFraction(0.5));
 		let entity = app.world_mut().spawn(Transform::default()).id();
-		let ctrl = app
-			.world_mut()
-			.spawn((
-				MotionControllerOf::entity(entity),
-				OldTranslation(Vec3::new(1., 2., 3.)),
-				Transform::from_xyz(1., 2., 5.),
-			))
-			.id();
+		app.world_mut().spawn((
+			MotionControllerOf::motion_collider(entity).with_behavior(MotionBehavior::Set),
+			OldTranslation(Vec3::new(1., 2., 3.)),
+			Transform::from_xyz(1., 2., 5.),
+		));
 
-		app.update();
-		app.world_mut()
-			.entity_mut(ctrl)
-			.insert(OldTranslation(Vec3::new(1., 2., 5.)));
 		app.update();
 
 		assert_eq!(
-			Some(&IsChanged::FALSE),
-			app.world().entity(entity).get::<IsChanged<Transform>>(),
+			Some(&Transform::from_xyz(1., 2., 5.)),
+			app.world().entity(entity).get::<Transform>(),
 		);
+	}
+
+	mod old_translation_is_new_translation {
+		use super::*;
+
+		#[test]
+		fn do_nothing() {
+			let mut app = setup(OverstepFraction(1.));
+			let entity = app.world_mut().spawn(Transform::default()).id();
+			let ctrl = app
+				.world_mut()
+				.spawn((
+					MotionControllerOf::motion_collider(entity),
+					OldTranslation(Vec3::new(1., 2., 3.)),
+					Transform::from_xyz(1., 2., 5.),
+				))
+				.id();
+
+			app.update();
+			app.world_mut()
+				.entity_mut(ctrl)
+				.insert(OldTranslation(Vec3::new(1., 2., 5.)));
+			app.update();
+
+			assert_eq!(
+				Some(&IsChanged::FALSE),
+				app.world().entity(entity).get::<IsChanged<Transform>>(),
+			);
+		}
+
+		#[test]
+		fn set_directly_if_controlled_has_different_translation() {
+			let mut app = setup(OverstepFraction(0.5));
+			let entity = app.world_mut().spawn(Transform::default()).id();
+			app.world_mut().spawn((
+				MotionControllerOf::motion_collider(entity).with_behavior(MotionBehavior::Set),
+				OldTranslation(Vec3::new(1., 2., 5.)),
+				Transform::from_xyz(1., 2., 5.),
+			));
+
+			app.update();
+
+			assert_eq!(
+				Some(&Transform::from_xyz(1., 2., 5.)),
+				app.world().entity(entity).get::<Transform>(),
+			);
+		}
 	}
 }

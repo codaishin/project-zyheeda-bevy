@@ -4,7 +4,7 @@ use common::prelude::*;
 
 const MOTION_CONTROLLER_OFFSET: Units = Units::from_f32(0.01);
 
-impl MotionControllerOf {
+impl MotionControllerOf<MotionCollider> {
 	pub(crate) fn spawn(
 		on_add: On<Add<MotionCollider>>,
 		mut commands: ZyheedaCommands,
@@ -15,7 +15,8 @@ impl MotionControllerOf {
 			.map_or(Vec3::ZERO, |t| t.translation);
 
 		commands.spawn((
-			MotionControllerOf::entity(on_add.entity).with_offset(MOTION_CONTROLLER_OFFSET),
+			MotionControllerOf::motion_collider(on_add.entity)
+				.with_offset(MOTION_CONTROLLER_OFFSET),
 			OldTranslation(translation),
 		));
 	}
@@ -48,10 +49,12 @@ mod tests {
 
 		let agent = app.world_mut().spawn(params()).id();
 
-		let mut controllers = app.world_mut().query::<&MotionControllerOf>();
+		let mut controllers = app
+			.world_mut()
+			.query::<&MotionControllerOf<MotionCollider>>();
 		let [controller] = assert_count!(1, controllers.iter(app.world()));
 		assert_eq!(
-			&MotionControllerOf::entity(agent).with_offset(MOTION_CONTROLLER_OFFSET),
+			&MotionControllerOf::motion_collider(agent).with_offset(MOTION_CONTROLLER_OFFSET),
 			controller
 		);
 	}
@@ -63,14 +66,14 @@ mod tests {
 		let agent = app.world_mut().spawn(params()).id();
 		let mut controllers = app
 			.world_mut()
-			.query_filtered::<Entity, With<MotionControllerOf>>();
+			.query_filtered::<Entity, With<MotionControllerOf<MotionCollider>>>();
 		let [controller] = assert_count!(1, controllers.iter(app.world()));
 		app.world_mut().despawn(controller);
 		app.world_mut().entity_mut(agent).insert(params());
 
 		let mut controllers = app
 			.world_mut()
-			.query_filtered::<(), With<MotionControllerOf>>();
+			.query_filtered::<(), With<MotionControllerOf<MotionCollider>>>();
 		assert_count!(0, controllers.iter(app.world()));
 	}
 }

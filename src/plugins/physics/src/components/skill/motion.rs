@@ -2,6 +2,7 @@ use crate::{
 	components::{
 		anchored_skill::AnchoredSkill,
 		ground_target::GroundTarget,
+		motion_controller::MotionBehavior,
 		projectile::Projectile,
 		set_velocity_forward::SetVelocityForward,
 		skill::{
@@ -15,22 +16,27 @@ use crate::{
 	},
 	observers::skill_prefab::ApplyMotionPrefab,
 };
+use bevy::prelude::*;
 use bevy_rapier3d::prelude::*;
 use common::prelude::*;
 
 impl ApplyMotionPrefab for Skill {
-	fn apply_motion_prefab(&self, entity: &mut ZyheedaEntityCommands) -> RigidBody {
+	fn apply_motion_prefab(&self, entity: &mut EntityCommands) -> MotionBehavior {
 		match &self.shape {
 			SkillShape::SphereAoE(SphereAoE { max_range, .. }) => {
-				entity.try_insert(GroundTarget {
-					caster: self.caster,
-					max_cast_range: *max_range,
-				});
+				entity.try_insert((
+					RigidBody::Fixed,
+					GroundTarget {
+						caster: self.caster,
+						max_cast_range: *max_range,
+					},
+				));
 
-				RigidBody::Fixed
+				MotionBehavior::Set
 			}
 			SkillShape::Projectile(..) => {
 				entity.try_insert((
+					RigidBody::Dynamic,
 					GravityScale(0.),
 					Ccd::enabled(),
 					Projectile {
@@ -49,27 +55,29 @@ impl ApplyMotionPrefab for Skill {
 					));
 				}
 
-				RigidBody::Dynamic
+				MotionBehavior::Interpolated
 			}
 			SkillShape::Beam(..) => {
-				entity.try_insert(
+				entity.try_insert((
+					RigidBody::Fixed,
 					AnchoredSkill::to(self.caster.0)
 						.on(self.mount)
 						.looking_at_skill_target()
 						.always(),
-				);
+				));
 
-				RigidBody::Fixed
+				MotionBehavior::Set
 			}
 			SkillShape::Shield(..) => {
-				entity.try_insert(
+				entity.try_insert((
+					RigidBody::Fixed,
 					AnchoredSkill::to(self.caster.0)
 						.on(self.mount)
 						.with_attached_rotation()
 						.always(),
-				);
+				));
 
-				RigidBody::Fixed
+				MotionBehavior::Set
 			}
 		}
 	}

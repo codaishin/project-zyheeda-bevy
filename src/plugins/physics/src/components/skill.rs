@@ -5,12 +5,7 @@ mod lifetime;
 mod motion;
 mod projection;
 
-use crate::components::{
-	collider::ColliderRoot,
-	impact_able::ImpactAble,
-	model::PhysicsModel,
-	skill::dto::SkillDto,
-};
+use crate::components::{collider::ColliderRoot, model::PhysicsModel, skill::dto::SkillDto};
 use bevy::prelude::*;
 use common::prelude::*;
 use macros::{SavableComponent, asset_path, serde_model};
@@ -28,12 +23,12 @@ pub struct Skill {
 }
 
 #[derive(Component, Debug, PartialEq)]
-#[require(ColliderRoot, Transform, Visibility, ImpactAble)]
-pub struct SkillContactRoot;
+#[require(ColliderRoot, Transform, Visibility)]
+pub struct VisualSkillContact;
 
 #[derive(Component, Debug, PartialEq)]
 #[require(ColliderRoot, Transform, Visibility)]
-pub struct SkillProjectionRoot;
+pub struct VisualSkillProjection;
 
 #[serde_model]
 #[derive(Debug, PartialEq, Clone, Copy)]

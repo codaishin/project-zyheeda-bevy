@@ -1,7 +1,7 @@
-pub(crate) mod anchored_colliders;
 pub(crate) mod apply_pull;
 pub(crate) mod async_collider;
 pub(crate) mod cast_rays;
+pub(crate) mod dragged_colliders;
 pub(crate) mod ground_target;
 pub(crate) mod insert_affected;
 pub(crate) mod interactions;

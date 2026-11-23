@@ -1,12 +1,15 @@
 use crate::components::{
 	blockable::Blockable,
-	collider::{AGENTS_GROUP, ColliderShape, RAY_GROUP, SKILLS_GROUP},
+	character_motion::IsInMotion,
+	collider::{AGENTS_GROUP, ColliderRoot, ColliderShape, RAY_GROUP, SKILLS_GROUP},
 	collision_domains::Physical,
 	effects::Effects,
+	impact_able::ImpactAble,
 	model::PhysicsModel,
+	motion_controller::{MotionBehavior, MotionControllerOf},
 	persistent_root::PersistentRoot,
 	self_skill_scale::SelfSkillScale,
-	skill::{SkillContactRoot, SkillProjectionRoot},
+	skill::{VisualSkillContact, VisualSkillProjection},
 	skill_transform::SkillTransformOf,
 };
 use bevy::prelude::*;
@@ -51,70 +54,140 @@ pub(crate) trait SkillPrefab:
 		let Some(self_skill_scale) = get_scale(cached_scale, scale_from_caster) else {
 			return Err(SkillSpawnError::SelfSkillScaleMissing(*persistent_entity));
 		};
-		let Some(mut entity) = commands.get_mut(&root) else {
-			return Ok(());
-		};
-		let rigid_body = skill.apply_motion_prefab(&mut entity);
-		let (obj, cont_model, cont_collider, cont_effects) =
-			skill.get_contact_prefab(self_skill_scale);
-		let (proj_model, proj_collider, proj_effects) =
-			skill.get_projection_prefab(self_skill_scale);
-		let collision_group = CollisionGroups {
-			memberships: SKILLS_GROUP,
-			filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
-			test_mode: InteractionTestMode::And,
+
+		let (cont_model, cont_effects, proj_model, proj_effects, controller) = physical(
+			&mut commands,
+			root,
+			skill,
+			persistent_entity,
+			self_skill_scale,
+		);
+
+		let Some(entity) = commands.get_mut(&root) else {
+			return Err(SkillSpawnError::EntityMissing(root));
 		};
 
-		entity.try_insert((
-			PersistentRoot(*persistent_entity),
-			Blockable(obj),
-			rigid_body,
-			SkillContactRoot,
+		visual(
+			entity,
+			controller,
+			self_skill_scale,
+			cont_model,
 			cont_effects,
-			*self_skill_scale,
-			children![
-				(
-					SkillTransformOf(root),
-					cont_model.transform,
-					cont_model.model,
-				),
-				(
-					SkillTransformOf(root),
-					collision_group,
-					cont_collider.transform,
-					cont_collider.shape,
-					Physical::Contact,
-					Sensor,
-				),
-				(
-					PersistentRoot(*persistent_entity),
-					SkillProjectionRoot,
-					proj_effects,
-					children![
-						(
-							SkillTransformOf(root),
-							proj_model.transform,
-							proj_model.model
-						),
-						(
-							SkillTransformOf(root),
-							collision_group,
-							proj_collider.transform,
-							proj_collider.shape,
-							Physical::Projection,
-							Sensor,
-						),
-					]
-				)
-			],
-		));
-
-		if let Some(lifetime) = skill.get_lifetime() {
-			entity.try_insert(Lifetime::from(lifetime));
-		};
+			proj_model,
+			proj_effects,
+		);
 
 		Ok(())
 	}
+}
+
+fn physical(
+	commands: &mut ZyheedaCommands<'_, '_>,
+	root: Entity,
+	skill: &impl SkillPrefab,
+	persistent_entity: &PersistentEntity,
+	self_skill_scale: &SelfSkillScale,
+) -> (SubModel, Effects, SubModel, Effects, Entity) {
+	let (obj, cont_model, cont_collider, cont_effects) = skill.get_contact_prefab(self_skill_scale);
+	let (proj_model, proj_collider, proj_effects) = skill.get_projection_prefab(self_skill_scale);
+	let collision_group = CollisionGroups {
+		memberships: SKILLS_GROUP,
+		filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
+		test_mode: InteractionTestMode::And,
+	};
+
+	let mut controller = commands.spawn((
+		#[cfg(feature = "debug-utils")]
+		Name::from("Skill Physical"),
+		*self_skill_scale,
+	));
+
+	controller.insert((
+		Blockable::from(obj).ignoring(skill.get_caster()),
+		PersistentRoot(*persistent_entity),
+		ImpactAble,
+		ColliderRoot,
+		cont_effects.clone(),
+		children![
+			(
+				SkillTransformOf(controller.id()),
+				collision_group,
+				cont_collider.transform,
+				cont_collider.shape,
+				Physical::Contact,
+				Sensor,
+			),
+			(
+				PersistentRoot(*persistent_entity),
+				Transform::default(),
+				ColliderRoot,
+				proj_effects.clone(),
+				children![(
+					SkillTransformOf(controller.id()),
+					collision_group,
+					proj_collider.transform,
+					proj_collider.shape,
+					Physical::Projection,
+					Sensor,
+				)]
+			)
+		],
+	));
+
+	let movement_behavior = skill.apply_motion_prefab(&mut controller);
+
+	controller.try_insert(MotionControllerOf::skill(root).with_behavior(movement_behavior));
+
+	if let Some(lifetime) = skill.get_lifetime() {
+		controller.try_insert(Lifetime::from(lifetime));
+	};
+
+	(
+		cont_model,
+		cont_effects,
+		proj_model,
+		proj_effects,
+		controller.id(),
+	)
+}
+
+fn visual(
+	mut entity: ZyheedaEntityCommands<'_>,
+	controller: Entity,
+	self_skill_scale: &SelfSkillScale,
+	cont_model: SubModel,
+	cont_effects: Effects,
+	proj_model: SubModel,
+	proj_effects: Effects,
+) {
+	entity.try_insert((
+		#[cfg(feature = "debug-utils")]
+		Name::from("Skill Visuals"),
+		*self_skill_scale,
+		IsInMotion,
+		Visibility::Visible,
+		Transform::default(),
+		VisualSkillContact,
+		cont_effects,
+		children![
+			(
+				SkillTransformOf(controller),
+				cont_model.transform,
+				cont_model.model,
+			),
+			(
+				Visibility::Visible,
+				VisualSkillProjection,
+				Transform::default(),
+				proj_effects,
+				children![(
+					SkillTransformOf(controller),
+					proj_model.transform,
+					proj_model.model,
+				)]
+			)
+		],
+	));
 }
 
 fn get_scale<'a>(
@@ -150,7 +223,7 @@ pub(crate) trait GetProjectionPrefab {
 }
 
 pub(crate) trait ApplyMotionPrefab {
-	fn apply_motion_prefab(&self, entity: &mut ZyheedaEntityCommands) -> RigidBody;
+	fn apply_motion_prefab(&self, entity: &mut EntityCommands) -> MotionBehavior;
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -173,6 +246,7 @@ pub(crate) struct ContactCollider {
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum SkillSpawnError {
+	EntityMissing(Entity),
 	SelfSkillScaleMissing(PersistentEntity),
 }
 
@@ -181,6 +255,7 @@ impl Display for SkillSpawnError {
 		use SkillSpawnError::*;
 
 		match self {
+			EntityMissing(e) => write!(f, "{e}: missing"),
 			SelfSkillScaleMissing(e) => write!(f, "{e:?}: missing `SelfSkillScale`"),
 		}
 	}
@@ -197,697 +272,5 @@ impl ErrorData for SkillSpawnError {
 
 	fn into_details(self) -> impl Display {
 		self
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	#![allow(clippy::unwrap_used)]
-	use super::*;
-	use crate::components::{
-		persistent_root::PersistentRoot,
-		skill::SkillContactRoot,
-		skill_transform::SkillTransformOf,
-	};
-	use std::{
-		collections::HashSet,
-		sync::{LazyLock, OnceLock},
-	};
-	use testing::{SingleThreadedApp, assert_related_count};
-
-	#[derive(Component, Debug, PartialEq)]
-	struct _Motion;
-
-	static SKILL: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
-	static CASTER: LazyLock<PersistentEntity> = LazyLock::new(PersistentEntity::default);
-
-	#[derive(Component)]
-	#[require(PersistentEntity = *SKILL)]
-	struct _Skill {
-		used_contact_scale: OnceLock<Scale<3>>,
-		used_projection_scale: OnceLock<Scale<3>>,
-		rigid_body: RigidBody,
-		lifetime: Option<Duration>,
-		caster: PersistentEntity,
-		contact: (PhysicalObject, SubModel, ContactCollider, Effects),
-		projection: (SubModel, ProjectionCollider, Effects),
-	}
-
-	impl _Skill {
-		fn default_object() -> PhysicalObject {
-			PhysicalObject::Fragile {
-				destroyed_by: HashSet::from([]),
-			}
-		}
-
-		fn default_model() -> SubModel {
-			SubModel {
-				model: PhysicsModel::Model(Model::None),
-				transform: Transform::default(),
-			}
-		}
-
-		fn default_contact_collider() -> ContactCollider {
-			ContactCollider {
-				shape: ColliderShape::from(Shape::Parameters(ShapeParameters::Sphere {
-					radius: Units::ZERO,
-				})),
-				transform: Transform::default(),
-			}
-		}
-
-		fn default_projection_collider() -> ProjectionCollider {
-			ProjectionCollider {
-				shape: ColliderShape::from(Shape::Parameters(ShapeParameters::Sphere {
-					radius: Units::from(1.),
-				})),
-				transform: Transform::default(),
-			}
-		}
-
-		fn default_effects() -> Effects {
-			Effects(vec![])
-		}
-	}
-
-	impl Default for _Skill {
-		fn default() -> Self {
-			Self {
-				used_contact_scale: OnceLock::new(),
-				used_projection_scale: OnceLock::new(),
-				rigid_body: RigidBody::Dynamic,
-				lifetime: None,
-				caster: *CASTER,
-				contact: (
-					Self::default_object(),
-					Self::default_model(),
-					Self::default_contact_collider(),
-					Effects(vec![]),
-				),
-				projection: (
-					Self::default_model(),
-					Self::default_projection_collider(),
-					Effects(vec![]),
-				),
-			}
-		}
-	}
-
-	impl GetCaster for _Skill {
-		fn get_caster(&self) -> PersistentEntity {
-			self.caster
-		}
-	}
-
-	impl GetLifetime for _Skill {
-		fn get_lifetime(&self) -> Option<Duration> {
-			self.lifetime
-		}
-	}
-
-	impl ApplyMotionPrefab for _Skill {
-		fn apply_motion_prefab(&self, entity: &mut ZyheedaEntityCommands) -> RigidBody {
-			entity.try_insert(_Motion);
-
-			self.rigid_body
-		}
-	}
-
-	impl GetContactPrefab for _Skill {
-		fn get_contact_prefab(
-			&self,
-			SelfSkillScale(scale): &SelfSkillScale,
-		) -> (PhysicalObject, SubModel, ContactCollider, Effects) {
-			self.used_contact_scale.set(*scale).unwrap();
-			self.contact.clone()
-		}
-	}
-	impl GetProjectionPrefab for _Skill {
-		fn get_projection_prefab(
-			&self,
-			SelfSkillScale(scale): &SelfSkillScale,
-		) -> (SubModel, ProjectionCollider, Effects) {
-			self.used_projection_scale.set(*scale).unwrap();
-			self.projection.clone()
-		}
-	}
-
-	macro_rules! assert_projection_count {
-		($count:literal, $app:expr, $skill:expr) => {
-			assert_related_count!(ChildOf, $count, $app, $skill, |e| {
-				if e.contains::<SkillProjectionRoot>() {
-					Some(e.id())
-				} else {
-					None
-				}
-			})
-		};
-	}
-
-	#[derive(Resource, Debug, PartialEq)]
-	struct _Result(Result<(), SkillSpawnError>);
-
-	impl _Result {
-		fn record(In(result): In<Result<(), SkillSpawnError>>, mut c: Commands) {
-			c.insert_resource(_Result(result));
-		}
-	}
-
-	fn setup_with_caster(self_sill_scale: Scale<3>) -> App {
-		let mut app = App::new().single_threaded(Update);
-
-		app.add_plugins(CommonPlugin::with_asset_loading(false));
-		app.world_mut()
-			.spawn((*CASTER, SelfSkillScale(self_sill_scale)));
-		app.add_observer(_Skill::prefab.pipe(_Result::record));
-
-		app
-	}
-
-	fn setup_with_caster_without_scale() -> App {
-		let mut app = App::new().single_threaded(Update);
-
-		app.add_plugins(CommonPlugin::with_asset_loading(false));
-		app.world_mut().spawn(*CASTER);
-		app.add_observer(_Skill::prefab.pipe(_Result::record));
-
-		app
-	}
-
-	fn setup_without_caster() -> App {
-		let mut app = App::new().single_threaded(Update);
-
-		app.add_plugins(CommonPlugin::with_asset_loading(false));
-		app.add_observer(_Skill::prefab.pipe(_Result::record));
-
-		app
-	}
-
-	mod root {
-		use super::*;
-
-		#[test]
-		fn error_if_self_skill_scale_missing() {
-			let mut app = setup_with_caster_without_scale();
-
-			app.world_mut().spawn(_Skill::default());
-
-			assert_eq!(
-				&_Result(Err(SkillSpawnError::SelfSkillScaleMissing(*SKILL))),
-				app.world().resource::<_Result>(),
-			);
-		}
-
-		#[test]
-		fn insert_blockable() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill {
-				contact: (
-					PhysicalObject::Beam {
-						range: Units::from(11.),
-						blocked_by: HashSet::from([]),
-					},
-					_Skill::default_model(),
-					_Skill::default_contact_collider(),
-					_Skill::default_effects(),
-				),
-				..default()
-			});
-
-			assert_eq!(
-				Some(&Blockable(PhysicalObject::Beam {
-					range: Units::from(11.),
-					blocked_by: HashSet::from([]),
-				})),
-				skill.get::<Blockable>(),
-			);
-		}
-
-		#[test]
-		fn insert_lifetime() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill {
-				lifetime: Some(Duration::from_hours(1)),
-				..default()
-			});
-
-			assert_eq!(
-				Some(&Lifetime::from(Duration::from_hours(1))),
-				skill.get::<Lifetime>(),
-			);
-		}
-
-		#[test]
-		fn insert_contact() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill::default());
-
-			assert_eq!(Some(&SkillContactRoot), skill.get::<SkillContactRoot>());
-		}
-
-		#[test]
-		fn spawn_projection_child() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill::default()).id();
-
-			assert_projection_count!(1, app, skill);
-		}
-
-		#[test]
-		fn insert_self_skill_scale() {
-			let mut app = setup_with_caster(scale!(1., 2., 3.));
-
-			let skill = app.world_mut().spawn(_Skill::default());
-
-			assert_eq!(
-				Some(&SelfSkillScale(scale!(1., 2., 3.))),
-				skill.get::<SelfSkillScale>()
-			);
-		}
-	}
-
-	mod contact {
-		use super::*;
-
-		#[test]
-		fn insert_persistent_root() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill::default());
-
-			assert_eq!(Some(&PersistentRoot(*SKILL)), skill.get::<PersistentRoot>(),)
-		}
-
-		#[test]
-		fn use_scale() {
-			let mut app = setup_with_caster(scale!(1., 2., 3.));
-
-			let skill = app.world_mut().spawn(_Skill::default()).id();
-
-			assert_eq!(
-				Some(&scale!(1., 2., 3.)),
-				app.world()
-					.entity(skill)
-					.get::<_Skill>()
-					.and_then(|s| s.used_contact_scale.get()),
-			);
-		}
-
-		#[test]
-		fn prefer_own_scale() {
-			let mut app = setup_with_caster(scale!(1., 2., 3.));
-
-			let skill = app
-				.world_mut()
-				.spawn((SelfSkillScale(scale!(3., 2., 1.)), _Skill::default()))
-				.id();
-
-			assert_eq!(
-				Some(&scale!(3., 2., 1.)),
-				app.world()
-					.entity(skill)
-					.get::<_Skill>()
-					.and_then(|s| s.used_contact_scale.get()),
-			);
-		}
-
-		#[test]
-		fn use_own_scale_if_caster_missing() {
-			let mut app = setup_without_caster();
-
-			let skill = app
-				.world_mut()
-				.spawn((SelfSkillScale(scale!(3., 2., 1.)), _Skill::default()))
-				.id();
-
-			assert_eq!(
-				Some(&scale!(3., 2., 1.)),
-				app.world()
-					.entity(skill)
-					.get::<_Skill>()
-					.and_then(|s| s.used_contact_scale.get()),
-			);
-		}
-
-		#[test]
-		fn spawn_model_child() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app
-				.world_mut()
-				.spawn(_Skill {
-					contact: (
-						_Skill::default_object(),
-						SubModel {
-							model: PhysicsModel::Model(Model::scene("asset/path")),
-							transform: Transform::from_xyz(1., 2., 3.),
-						},
-						_Skill::default_contact_collider(),
-						_Skill::default_effects(),
-					),
-					..default()
-				})
-				.id();
-
-			let [model, ..] = assert_related_count!(ChildOf, 3, app, skill);
-			assert_eq!(
-				(
-					Some(&PhysicsModel::Model(Model::scene("asset/path"))),
-					Some(&Transform::from_xyz(1., 2., 3.))
-				),
-				(model.get::<PhysicsModel>(), model.get::<Transform>(),),
-			);
-		}
-
-		#[test]
-		fn spawn_collider_child() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app
-				.world_mut()
-				.spawn(_Skill {
-					contact: (
-						_Skill::default_object(),
-						_Skill::default_model(),
-						ContactCollider {
-							shape: ColliderShape::from(Shape::Parameters(
-								ShapeParameters::Sphere {
-									radius: Units::from(42.),
-								},
-							)),
-							transform: Transform::from_xyz(1., 2., 3.),
-						},
-						_Skill::default_effects(),
-					),
-					..default()
-				})
-				.id();
-
-			let [_, collider, _] = assert_related_count!(ChildOf, 3, app, skill);
-			assert_eq!(
-				(
-					Some(&Physical::Contact),
-					Some(&ColliderShape::from(Shape::Parameters(
-						ShapeParameters::Sphere {
-							radius: Units::from(42.),
-						}
-					))),
-					Some(&Transform::from_xyz(1., 2., 3.)),
-					Some(&CollisionGroups {
-						memberships: SKILLS_GROUP,
-						filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
-						test_mode: InteractionTestMode::And,
-					})
-				),
-				(
-					collider.get::<Physical>(),
-					collider.get::<ColliderShape>(),
-					collider.get::<Transform>(),
-					collider.get::<CollisionGroups>(),
-				),
-			);
-		}
-
-		#[test]
-		fn spawn_collider_rapier_sensor() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill::default()).id();
-
-			let [_, collider, _] = assert_related_count!(ChildOf, 3, app, skill);
-			assert_eq!(Some(&Sensor), collider.get::<Sensor>());
-		}
-
-		#[test]
-		fn add_skill_transform_children() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill::default()).id();
-
-			let [model, collider, ..] = assert_related_count!(ChildOf, 3, app, skill);
-			assert_eq!(
-				(
-					Some(&SkillTransformOf(skill)),
-					Some(&SkillTransformOf(skill))
-				),
-				(
-					model.get::<SkillTransformOf>(),
-					collider.get::<SkillTransformOf>()
-				),
-			);
-		}
-
-		#[test]
-		fn add_effects() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill {
-				contact: (
-					_Skill::default_object(),
-					_Skill::default_model(),
-					_Skill::default_contact_collider(),
-					Effects(vec![SkillEffect::Force(Force)]),
-				),
-				..default()
-			});
-
-			assert_eq!(
-				Some(&Effects(vec![SkillEffect::Force(Force)])),
-				skill.get::<Effects>(),
-			);
-		}
-	}
-
-	mod projection {
-		use super::*;
-
-		#[test]
-		fn insert_persistent_root() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill::default()).id();
-
-			let [projection] = assert_projection_count!(1, app, skill);
-			assert_eq!(
-				Some(&PersistentRoot(*SKILL)),
-				app.world().entity(projection).get::<PersistentRoot>(),
-			);
-		}
-
-		#[test]
-		fn use_scale() {
-			let mut app = setup_with_caster(scale!(1., 2., 3.));
-
-			let skill = app.world_mut().spawn(_Skill::default()).id();
-
-			assert_eq!(
-				Some(&scale!(1., 2., 3.)),
-				app.world()
-					.entity(skill)
-					.get::<_Skill>()
-					.and_then(|s| s.used_projection_scale.get()),
-			);
-		}
-
-		#[test]
-		fn prefer_own_scale_scale() {
-			let mut app = setup_with_caster(scale!(1., 2., 3.));
-
-			let skill = app
-				.world_mut()
-				.spawn((SelfSkillScale(scale!(3., 2., 1.)), _Skill::default()))
-				.id();
-
-			assert_eq!(
-				Some(&scale!(3., 2., 1.)),
-				app.world()
-					.entity(skill)
-					.get::<_Skill>()
-					.and_then(|s| s.used_projection_scale.get()),
-			);
-		}
-
-		#[test]
-		fn use_own_scale_if_caster_missing() {
-			let mut app = setup_without_caster();
-
-			let skill = app
-				.world_mut()
-				.spawn((SelfSkillScale(scale!(3., 2., 1.)), _Skill::default()))
-				.id();
-
-			assert_eq!(
-				Some(&scale!(3., 2., 1.)),
-				app.world()
-					.entity(skill)
-					.get::<_Skill>()
-					.and_then(|s| s.used_projection_scale.get()),
-			);
-		}
-
-		#[test]
-		fn spawn_model_child() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app
-				.world_mut()
-				.spawn(_Skill {
-					projection: (
-						SubModel {
-							model: PhysicsModel::Model(Model::scene("asset/path")),
-							transform: Transform::from_xyz(1., 2., 3.),
-						},
-						_Skill::default_projection_collider(),
-						_Skill::default_effects(),
-					),
-					..default()
-				})
-				.id();
-
-			let [projection] = assert_projection_count!(1, app, skill);
-			let [model, ..] = assert_related_count!(ChildOf, 2, app, projection);
-			assert_eq!(
-				(
-					Some(&PhysicsModel::Model(Model::scene("asset/path"))),
-					Some(&Transform::from_xyz(1., 2., 3.))
-				),
-				(model.get::<PhysicsModel>(), model.get::<Transform>(),),
-			);
-		}
-
-		#[test]
-		fn spawn_collider_child() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app
-				.world_mut()
-				.spawn(_Skill {
-					projection: (
-						_Skill::default_model(),
-						ProjectionCollider {
-							shape: ColliderShape::from(Shape::Parameters(
-								ShapeParameters::Sphere {
-									radius: Units::from(42.),
-								},
-							)),
-							transform: Transform::from_xyz(1., 2., 3.),
-						},
-						_Skill::default_effects(),
-					),
-					..default()
-				})
-				.id();
-
-			let [projection] = assert_projection_count!(1, app, skill);
-			let [.., collider] = assert_related_count!(ChildOf, 2, app, projection);
-			assert_eq!(
-				(
-					Some(&Physical::Projection),
-					Some(&ColliderShape::from(Shape::Parameters(
-						ShapeParameters::Sphere {
-							radius: Units::from(42.),
-						}
-					))),
-					Some(&Transform::from_xyz(1., 2., 3.)),
-					Some(&CollisionGroups {
-						memberships: SKILLS_GROUP,
-						filters: SKILLS_GROUP | AGENTS_GROUP | RAY_GROUP,
-						test_mode: InteractionTestMode::And,
-					})
-				),
-				(
-					collider.get::<Physical>(),
-					collider.get::<ColliderShape>(),
-					collider.get::<Transform>(),
-					collider.get::<CollisionGroups>(),
-				),
-			);
-		}
-
-		#[test]
-		fn spawn_collider_rapier_sensor() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill::default()).id();
-
-			let [projection] = assert_projection_count!(1, app, skill);
-			let [.., collider] = assert_related_count!(ChildOf, 2, app, projection);
-			assert_eq!(Some(&Sensor), collider.get::<Sensor>());
-		}
-
-		#[test]
-		fn add_skill_transform_children() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app.world_mut().spawn(_Skill::default()).id();
-
-			let [projection] = assert_projection_count!(1, app, skill);
-			let [model, collider] = assert_related_count!(ChildOf, 2, app, projection);
-			assert_eq!(
-				(
-					Some(&SkillTransformOf(skill)),
-					Some(&SkillTransformOf(skill))
-				),
-				(
-					model.get::<SkillTransformOf>(),
-					collider.get::<SkillTransformOf>()
-				),
-			);
-		}
-
-		#[test]
-		fn add_effects() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let skill = app
-				.world_mut()
-				.spawn(_Skill {
-					projection: (
-						_Skill::default_model(),
-						_Skill::default_projection_collider(),
-						Effects(vec![SkillEffect::Force(Force)]),
-					),
-					..default()
-				})
-				.id();
-
-			let [.., projection] = assert_related_count!(ChildOf, 3, app, skill);
-			assert_eq!(
-				Some(&Effects(vec![SkillEffect::Force(Force)])),
-				projection.get::<Effects>(),
-			);
-		}
-	}
-
-	mod motion {
-		use super::*;
-
-		#[test]
-		fn apply_motion() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let entity = app.world_mut().spawn(_Skill::default());
-
-			assert_eq!(Some(&_Motion), entity.get::<_Motion>());
-		}
-
-		#[test]
-		fn insert_rigid_body() {
-			let mut app = setup_with_caster(Scale::default());
-
-			let entity = app.world_mut().spawn(_Skill {
-				rigid_body: RigidBody::KinematicPositionBased,
-				..default()
-			});
-
-			assert_eq!(
-				Some(&RigidBody::KinematicPositionBased),
-				entity.get::<RigidBody>()
-			);
-		}
 	}
 }

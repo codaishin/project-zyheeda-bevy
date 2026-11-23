@@ -18,7 +18,6 @@ use crate::{
 	app::add_physics::AddPhysics,
 	components::{
 		affected::{force_affected::ForceAffected, gravity_affected::GravityAffected, life::Life},
-		anchored_colliders::AnchoredColliders,
 		anchored_skill::{AnchoredSkill, AnchoredSkillDirty},
 		async_collider::AsyncCollider,
 		body::Body,
@@ -28,14 +27,15 @@ use crate::{
 		collider::{ColliderRoot, ColliderShape},
 		collision_domains::{Interactive, Physical},
 		default_attributes::DefaultAttributes,
+		dragged_colliders::DraggedColliders,
 		effects::{Effects, force::ForceEffect},
 		ground_target::GroundTarget,
 		lifetime::{LifetimeTiedTo, TiedLifetimes},
 		model::PhysicsModel,
-		motion_controller::{MotionControlled, MotionControllerOf},
+		motion_controller::{MotionCollider, MotionControlled, MotionControllerOf},
 		self_skill_scale::SelfSkillScale,
 		set_velocity_forward::SetVelocityForward,
-		skill::{Skill, SkillContactRoot, SkillProjectionRoot},
+		skill::{Skill, VisualSkillContact, VisualSkillProjection},
 		target::SkillTargetInternal,
 		velocity::LinearVelocity,
 		when_traveled::DestroyAfterDistanceTraveled,
@@ -178,6 +178,8 @@ where
 		Self::configure_schedules(app, FixedPostUpdate);
 		self.configure_physics(app, FixedUpdate);
 
+		let fixed_overstep = OverstepFraction::fixed;
+
 		app
 			// World camera
 			.init_resource::<WorldCamera>()
@@ -188,14 +190,18 @@ where
 			// Models
 			.add_prefab_observer::<PhysicsModel, ()>()
 			// Character Motion
-			.add_prefab_observer::<MotionControllerOf, ()>()
+			.add_prefab_observer::<MotionControllerOf<MotionCollider>, ()>()
+			.add_prefab_observer::<MotionControllerOf<Skill>, ()>()
 			.add_observer(MotionControllerOf::spawn)
+			.add_observer(MotionControllerOf::despawn_controlled)
 			.add_systems(
 				FixedPreUpdate,
 				(
-					MotionControlled::track_old_translation,
+					MotionControlled::<MotionCollider>::track_old_translation,
+					MotionControlled::<Skill>::track_old_translation,
 					FixedUpdate::delta.pipe(MotionControlled::set_translation),
 					FixedUpdate::delta.pipe(MotionControlled::apply_gravity),
+					MotionControlled::set_rotation,
 				)
 					.chain_weak(),
 			)
@@ -205,8 +211,11 @@ where
 			)
 			.add_systems(
 				Update,
-				OverstepFraction::fixed
-					.pipe(MotionControlled::interpolate_position)
+				(
+					fixed_overstep.pipe(MotionControlled::<MotionCollider>::interpolate_position),
+					fixed_overstep.pipe(MotionControlled::<Skill>::interpolate_position),
+				)
+					.chain()
 					.in_set(PhysicsSystems::Interpolate),
 			)
 			// Animations
@@ -267,10 +276,10 @@ where
 					.in_set(PhysicsSystems::Prep)
 					.run_if(not(TGameState::game_paused())),
 			)
-			// Anchored Colliders
+			// Dragged Colliders
 			.add_systems(
 				FixedPreUpdate,
-				AnchoredColliders::drag
+				DraggedColliders::drag
 					.in_set(PhysicsSystems::Interpolate)
 					.run_if(not(TGameState::game_paused())),
 			)
@@ -369,8 +378,8 @@ impl<TDependencies> HandlesNewPhysicalSkill for PhysicsPlugin<TDependencies> {
 }
 
 impl<TDependencies> HandlesPhysicalSkillComponents for PhysicsPlugin<TDependencies> {
-	type TSkillContact = SkillContactRoot;
-	type TSkillProjection = SkillProjectionRoot;
+	type TSkillContact = VisualSkillContact;
+	type TSkillProjection = VisualSkillProjection;
 }
 
 impl<TDependencies> HandlesInteractiveDetection for PhysicsPlugin<TDependencies> {
