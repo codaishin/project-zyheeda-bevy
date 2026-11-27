@@ -41,7 +41,7 @@ impl CastRays {
 	pub(crate) fn execute<TStrategy>(
 		strategy: In<TStrategy>,
 		strategy_args: Query<TStrategy::TQuery>,
-		objects: Query<(Entity, &mut Self, &GlobalTransform)>,
+		objects: Query<(Entity, &mut Self, &Transform)>,
 		blockers: Query<(&BlockerTypes, Option<&PersistentEntity>)>,
 		contacts: Query<(Option<&ColliderOf>, &Physical)>,
 		cast_ray: StaticSystemParam<ReadRapierContext>,
@@ -62,7 +62,7 @@ impl CastRays {
 	fn execute_internal<TStrategy, TGetRayCaster, TCasterError>(
 		In(strategy): In<TStrategy>,
 		strategy_args: Query<TStrategy::TQuery>,
-		objects: Query<(Entity, &mut Self, &GlobalTransform)>,
+		objects: Query<(Entity, &mut Self, &Transform)>,
 		blockers: Query<(&BlockerTypes, Option<&PersistentEntity>)>,
 		contacts: Query<(Option<&ColliderOf>, &Physical)>,
 		cast_ray: StaticSystemParam<TGetRayCaster>,
@@ -121,12 +121,12 @@ impl CastRays {
 	}
 
 	fn ray_caster_args(
-		transform: &GlobalTransform,
+		transform: &Transform,
 		max_toi: TimeOfImpact,
 		offset: Units,
 	) -> RayCasterArgs {
 		RayCasterArgs {
-			origin: transform.translation() + transform.forward() * *offset,
+			origin: transform.translation + transform.forward() * *offset,
 			direction: transform.forward(),
 			max_toi,
 			solid: true,
@@ -304,7 +304,7 @@ mod tests {
 	}
 
 	#[derive(Component)]
-	#[require(CastRays, GlobalTransform)]
+	#[require(CastRays, Transform)]
 	struct _StrategyArgs {
 		cast_for: CastRayFor,
 		toi: TimeOfImpact,
@@ -385,9 +385,7 @@ mod tests {
 		fn call_with_proper_args() -> Result<(), RunSystemError> {
 			let mut app = setup(|_| Mock_RayCaster::new_mock(assert_call_args));
 			app.world_mut().spawn((
-				GlobalTransform::from(
-					Transform::from_xyz(1., 2., 3.).looking_to(Dir3::NEG_Y, Vec3::Y),
-				),
+				Transform::from_xyz(1., 2., 3.).looking_to(Dir3::NEG_Y, Vec3::Y),
 				_StrategyArgs {
 					cast_for: CastRayFor::TunnelingPrevention,
 					toi: toi!(11000.),
