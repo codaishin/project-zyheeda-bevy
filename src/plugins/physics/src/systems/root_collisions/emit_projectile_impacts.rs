@@ -1,5 +1,10 @@
 use crate::{
-	components::{collision_domains::Physical, impact_able::ImpactAble, projectile::Projectile},
+	components::{
+		collision_domains::Physical,
+		controller::ControllerOf,
+		impact_able::ImpactAble,
+		projectile::Projectile,
+	},
 	events::impact_event::ImpactEvent,
 	resources::root_collisions::{RootCollisions, RootCollisionsParam},
 };
@@ -10,7 +15,7 @@ impl RootCollisionsParam<'static, 'static, Physical> {
 	pub(crate) fn emit_projectile_impacts(
 		mut commands: ZyheedaCommands,
 		root_collisions: Res<RootCollisions<Physical>>,
-		can_be_impacted: Query<(), With<ImpactAble>>,
+		can_be_impacted: Query<Option<&ControllerOf>, With<ImpactAble>>,
 		projectiles: Query<(Entity, &GlobalTransform, &Projectile)>,
 	) {
 		for (entity, transform, Projectile { leading_edge }) in projectiles {
@@ -21,14 +26,16 @@ impl RootCollisionsParam<'static, 'static, Physical> {
 			};
 
 			for entity in root_collisions.ongoing(&entity) {
-				if !can_be_impacted.contains(*entity) {
+				let Ok(impact_able) = can_be_impacted.get(*entity) else {
 					continue;
-				}
+				};
 
-				commands.trigger_observers_for(ImpactEvent {
-					entity: *entity,
-					position,
-				});
+				let entity = match impact_able {
+					Some(ControllerOf(controlled)) => *controlled,
+					None => *entity,
+				};
+
+				commands.trigger_observers_for(ImpactEvent { entity, position });
 			}
 		}
 	}
@@ -119,6 +126,42 @@ mod tests {
 		app.update();
 
 		assert_eq!(&_Record(vec![]), app.world().resource::<_Record>(),);
+
+		Ok(())
+	}
+
+	#[test]
+	fn set_impact_with_projectile_leading_edge_through_controller_of() -> Result<(), RunSystemError>
+	{
+		let mut app = setup();
+		let impacted = app.world_mut().spawn_empty().id();
+		let controller = app
+			.world_mut()
+			.spawn((ImpactAble, ControllerOf(impacted)))
+			.id();
+		let projectile = app
+			.world_mut()
+			.spawn((
+				GlobalTransform::from(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y)),
+				Projectile {
+					leading_edge: Units::from(0.5),
+				},
+			))
+			.id();
+		app.world_mut()
+			.run_system_once(move |mut p: RootCollisionsParam<Physical>| {
+				p.update(projectile, [controller]);
+			})?;
+
+		app.update();
+
+		assert_eq!(
+			&_Record(vec![ImpactEvent {
+				entity: impacted,
+				position: vec_not_nan!(1.5, 2., 3.),
+			}]),
+			app.world().resource::<_Record>(),
+		);
 
 		Ok(())
 	}
