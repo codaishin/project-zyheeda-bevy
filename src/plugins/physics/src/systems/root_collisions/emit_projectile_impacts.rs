@@ -16,10 +16,10 @@ impl RootCollisionsParam<'static, 'static, Physical> {
 		mut commands: ZyheedaCommands,
 		root_collisions: Res<RootCollisions<Physical>>,
 		can_be_impacted: Query<Option<&ControllerOf>, With<ImpactAble>>,
-		projectiles: Query<(Entity, &GlobalTransform, &Projectile)>,
+		projectiles: Query<(Entity, &Transform, &Projectile)>,
 	) {
 		for (entity, transform, Projectile { leading_edge }) in projectiles {
-			let loading_edge = transform.translation() + transform.forward() * **leading_edge;
+			let loading_edge = transform.translation + transform.forward() * **leading_edge;
 
 			let Ok(position) = VecNotNan::try_from(loading_edge) else {
 				continue;
@@ -81,7 +81,7 @@ mod tests {
 		let projectile = app
 			.world_mut()
 			.spawn((
-				GlobalTransform::from(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y)),
+				Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y),
 				Projectile {
 					leading_edge: Units::from(0.5),
 				},
@@ -112,7 +112,7 @@ mod tests {
 		let projectile = app
 			.world_mut()
 			.spawn((
-				GlobalTransform::from(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y)),
+				Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y),
 				Projectile {
 					leading_edge: Units::from(0.5),
 				},
@@ -142,7 +142,7 @@ mod tests {
 		let projectile = app
 			.world_mut()
 			.spawn((
-				GlobalTransform::from(Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y)),
+				Transform::from_xyz(1., 2., 3.).looking_to(Dir3::X, Dir3::Y),
 				Projectile {
 					leading_edge: Units::from(0.5),
 				},
