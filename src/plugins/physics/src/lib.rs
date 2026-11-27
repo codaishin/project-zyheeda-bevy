@@ -301,7 +301,7 @@ where
 			.add_systems(
 				FixedPostUpdate,
 				(
-					// Collect physical collections
+					// Collect physical collisions
 					(
 						FixedUpdate::delta
 							.pipe(CastRays::to_prevent_tunneling)
